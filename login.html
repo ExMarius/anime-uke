@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Anime Original</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            background: #1a1a2e;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #6a11cb;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ccc;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #0f0f23;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #6a11cb;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(90deg, #6a11cb, #2575fc);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .btn-login:hover {
+            opacity: 0.9;
+        }
+        
+        .test-accounts {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #6a11cb;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: rgba(255,107,107,0.1);
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-dragon"></i> Anime Original
+        </div>
+        <div class="nav-links">
+            <a href="index.html"><i class="fas fa-home"></i> Înapoi acasă</a>
+        </div>
+    </nav>
+
+    <div class="login-container">
+        <h2><i class="fas fa-sign-in-alt"></i> Autentificare</h2>
+        
+        <div class="form-group">
+            <label for="username">Username sau Email:</label>
+            <input type="text" id="username" placeholder="admin sau admin@anime.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Parolă:</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        
+        <button class="btn-login" onclick="attemptLogin()">
+            <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+        
+        <div class="error-message" id="error-message">
+            <!-- Mesaj de eroare -->
+        </div>
+        
+        <div class="test-accounts">
+            <h3><i class="fas fa-vial"></i> Conturi de test:</h3>
+            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                <li><strong>Admin:</strong> admin / admin123</li>
+                <li><strong>Membru:</strong> membru / membru123</li>
+                <li><strong>Subscriber:</strong> subscriber / sub123</li>
+            </ul>
+        </div>
+        
+        <a href="index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Înapoi la site
+        </a>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        function attemptLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-message');
+            
+            if (!username || !password) {
+                errorMsg.textContent = 'Completează ambele câmpuri!';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            const result = window.loginUser(username, password);
+            
+            if (result.success) {
+                window.location.href = 'index.html';
+            } else {
+                errorMsg.textContent = result.message;
+                errorMsg.style.display = 'block';
+            }
+        }
+        
+        // Permite login cu Enter
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+    </script>
+</body>
+</html>
