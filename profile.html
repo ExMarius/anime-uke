@@ -5,197 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil - Anime Uke</title>
     
-    <!-- Bootstrap 4 -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    
-    <!-- Custom CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
-    
-    <style>
-        .profile-header {
-            background: linear-gradient(45deg, #920d0d, #6d0019);
-            padding: 40px 0;
-            margin-bottom: -50px;
-            position: relative;
-        }
-        
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            color: #920d0d;
-            border: 5px solid #1a1a2e;
-            margin: 0 auto 20px;
-        }
-        
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 15px;
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.15);
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .activity-item {
-            padding: 10px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-    </style>
 </head>
-<body class="main-body">
-    <!-- Simplified Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark anime-navbar">
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <span class="brand-text">ANIME UKE</span>
+                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
             </a>
             <div id="userNavItem"></div>
         </div>
     </nav>
-    
-    <!-- Profile Header -->
-    <div class="profile-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-3 text-center">
-                    <div class="profile-avatar" id="profileAvatar">?</div>
-                </div>
-                <div class="col-md-9">
-                    <h1 id="profileUsername" class="text-white">Loading...</h1>
-                    <div class="mt-2">
-                        <span class="badge badge-danger mr-2" id="profileRole">Role</span>
-                        <span class="text-white-50">
-                            <i class="fa fa-calendar"></i> Membru din: 
-                            <span id="profileCreated">-</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+
     <!-- Profile Content -->
-    <div class="container mt-5 pt-4">
+    <div class="container py-4">
         <div class="row">
-            <!-- Left Column - Stats -->
             <div class="col-md-4">
-                <div class="box-content">
-                    <h4><i class="fa fa-chart-bar"></i> Statistici</h4>
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <div class="stat-card">
-                                <div class="stat-number" id="watchedEpisodes">0</div>
-                                <small>Episoade</small>
-                            </div>
+                <!-- Profile Card -->
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="user-avatar mb-3" id="profileAvatar">
+                            <!-- Avatar-ul se va încărca din JS -->
                         </div>
-                        <div class="col-6">
-                            <div class="stat-card">
-                                <div class="stat-number" id="completedSeries">0</div>
-                                <small>Serii</small>
-                            </div>
+                        <h3 id="profileUsername">Loading...</h3>
+                        <div class="mb-3">
+                            <span class="badge bg-danger" id="profileRole">Role</span>
                         </div>
-                        <div class="col-6">
-                            <div class="stat-card">
-                                <div class="stat-number" id="watchTime">0</div>
-                                <small>Ore</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-card">
-                                <div class="stat-number" id="accountAge">0</div>
-                                <small>Zile</small>
-                            </div>
+                        
+                        <div class="list-group">
+                            <a href="settings.html" class="list-group-item list-group-item-action">
+                                <i class="fas fa-cog"></i> Setări Cont
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" onclick="logout()">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
                         </div>
                     </div>
-                    
-                    <div class="mt-4">
-                        <h5><i class="fa fa-info-circle"></i> Informații</h5>
-                        <div class="light-container p-3 mt-2">
-                            <div class="mb-2">
-                                <strong>Email:</strong><br>
-                                <span id="profileEmail">-</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Ultima activitate:</strong><br>
-                                <span id="profileLastLogin">-</span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>Status:</strong><br>
-                                <span class="badge badge-success">Activ</span>
-                            </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="card mt-4">
+                    <div class="card-header bg-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Statistici Rapide</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Episoade vizionate</small>
+                            <h4 id="statsEpisodes">0</h4>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Serii completate</small>
+                            <h4 id="statsSeries">0</h4>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Zile membru</small>
+                            <h4 id="statsDays">0</h4>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Right Column - Activity -->
             <div class="col-md-8">
-                <div class="box-content">
-                    <h4><i class="fa fa-history"></i> Activitate Recentă</h4>
-                    <div class="mt-3" id="recentActivity">
-                        <div class="text-center py-4">
-                            <i class="fa fa-spinner fa-spin fa-2x text-muted"></i>
-                            <p class="mt-2">Se încarcă activitatea...</p>
+                <!-- User Info -->
+                <div class="card mb-4">
+                    <div class="card-header bg-dark">
+                        <h4 class="mb-0"><i class="fas fa-info-circle"></i> Informații Cont</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong>Username:</strong><br>
+                                <span id="infoUsername">-</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Email:</strong><br>
+                                <span id="infoEmail">-</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Membru din:</strong><br>
+                                <span id="infoCreated">-</span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Ultima activitate:</strong><br>
+                                <span id="infoLastLogin">-</span>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Quick Actions -->
-                <div class="box-content mt-4">
-                    <h4><i class="fa fa-bolt"></i> Acțiuni Rapide</h4>
-                    <div class="row mt-3">
-                        <div class="col-md-4 mb-2">
-                            <a href="settings.html" class="btn btn-anime btn-block">
-                                <i class="fa fa-cog"></i> Setări
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <a href="index.html" class="btn btn-anime btn-block">
-                                <i class="fa fa-home"></i> Acasă
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <button onclick="logout()" class="btn btn-outline-light btn-block">
-                                <i class="fa fa-sign-out"></i> Logout
-                            </button>
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header bg-dark">
+                        <h4 class="mb-0"><i class="fas fa-history"></i> Activitate Recentă</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentActivity">
+                            <p class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin"></i> Se încarcă activitatea...
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Scripts -->
     <script src="config.js"></script>
     <script src="script.js"></script>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Profile page loaded');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('👤 Profile page loaded');
             
             // Verifică login
             if (!requireLogin()) {
@@ -203,82 +130,63 @@
             }
             
             const user = getCurrentUser();
-            console.log('👤 Current user:', user);
+            console.log('User data:', user);
             
             // Update profile info
-            document.getElementById('profileAvatar').textContent = user.avatar || user.username.charAt(0).toUpperCase();
+            document.getElementById('profileAvatar').innerHTML = 
+                user.avatar || user.username.charAt(0).toUpperCase();
             document.getElementById('profileUsername').textContent = user.username;
             document.getElementById('profileRole').textContent = user.role.toUpperCase();
             
-            if (user.email) {
-                document.getElementById('profileEmail').textContent = user.email;
-            }
-            
-            if (user.created) {
-                document.getElementById('profileCreated').textContent = user.created;
-                
-                // Calculate account age in days
-                const createdDate = new Date(user.created);
-                const today = new Date();
-                const diffTime = Math.abs(today - createdDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                document.getElementById('accountAge').textContent = diffDays;
-            }
-            
-            if (user.lastLogin) {
-                const lastLoginDate = new Date(user.lastLogin);
-                document.getElementById('profileLastLogin').textContent = 
-                    lastLoginDate.toLocaleString('ro-RO');
-            }
+            document.getElementById('infoUsername').textContent = user.username;
+            document.getElementById('infoEmail').textContent = 
+                user.email || `${user.username}@animeuke.com`;
+            document.getElementById('infoCreated').textContent = 
+                user.created || 'Necunoscută';
+            document.getElementById('infoLastLogin').textContent = 
+                new Date(user.lastLogin || new Date()).toLocaleString('ro-RO');
             
             // Generate mock stats
-            document.getElementById('watchedEpisodes').textContent = 
+            document.getElementById('statsEpisodes').textContent = 
                 Math.floor(Math.random() * 500) + 50;
-            document.getElementById('completedSeries').textContent = 
-                Math.floor(Math.random() * 50) + 5;
-            document.getElementById('watchTime').textContent = 
-                Math.floor(Math.random() * 300) + 50;
+            document.getElementById('statsSeries').textContent = 
+                Math.floor(Math.random() * 30) + 5;
+            
+            // Calculate membership days
+            if (user.created) {
+                const created = new Date(user.created);
+                const today = new Date();
+                const days = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+                document.getElementById('statsDays').textContent = days;
+            }
             
             // Generate mock activity
-            generateMockActivity();
+            const activities = [
+                'Ai vizionat episodul 1100 din One Piece',
+                'Ai adăugat "Naruto" la lista de urmărit',
+                'Ai evaluat "Attack on Titan" cu 5 stele',
+                'Ai completat seria "Demon Slayer"',
+                'Ai postat un comentariu la "Jujutsu Kaisen"'
+            ];
+            
+            let activityHTML = '';
+            activities.forEach((activity, index) => {
+                activityHTML += `
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 ${index === activities.length - 1 ? 'border-0 mb-0' : ''}">
+                    <div>
+                        <i class="fas fa-play-circle text-danger me-2"></i>
+                        ${activity}
+                    </div>
+                    <small class="text-muted">Acum ${index + 1} ${index === 0 ? 'oră' : 'zile'}</small>
+                </div>
+                `;
+            });
+            
+            document.getElementById('recentActivity').innerHTML = activityHTML;
             
             // Update navbar
             updateUIBasedOnLogin();
-            
-            function generateMockActivity() {
-                const activities = [
-                    { action: 'Ai vizionat episodul 1100 din One Piece', time: 'Acum 2 ore' },
-                    { action: 'Ai adăugat "Naruto" la lista de urmărit', time: 'Acum 1 zi' },
-                    { action: 'Ai completat seria "Attack on Titan"', time: 'Acum 3 zile' },
-                    { action: 'Ai evaluat "Demon Slayer" cu 5 stele', time: 'Acum 1 săptămână' },
-                    { action: 'Ai adăugat un comentariu la "Jujutsu Kaisen"', time: 'Acum 2 săptămâni' }
-                ];
-                
-                let html = '';
-                activities.forEach(activity => {
-                    html += `
-                    <div class="activity-item">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <i class="fa fa-play-circle text-danger mr-2"></i>
-                                ${activity.action}
-                            </div>
-                            <small class="text-muted">${activity.time}</small>
-                        </div>
-                    </div>
-                    `;
-                });
-                
-                document.getElementById('recentActivity').innerHTML = html;
-            }
         });
-        
-        // Logout function
-        function logout() {
-            if (confirm('Sigur vrei să te deconectezi?')) {
-                window.logout();
-            }
-        }
     </script>
 </body>
 </html>
