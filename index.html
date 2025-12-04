@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Original - Site Simplu</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><i class="fas fa-dragon"></i> Anime Original</div>
+        <div class="nav-links">
+            <a href="#home">Acasă</a>
+            <a href="#anime">Anime-uri</a>
+            <a href="#posts">Postări</a>
+            <a href="login.html" id="login-link"><i class="fas fa-sign-in-alt"></i> Login</a>
+        </div>
+    </nav>
+
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>Bine ai venit la Anime Original!</h1>
+            <p>Site-ul meu personal cu anime-uri create de mine.</p>
+            <div class="user-info" id="user-info"></div>
+        </div>
+    </section>
+
+    <section class="anime-section" id="anime">
+        <h2><i class="fas fa-film"></i> Anime-urile Mele</h2>
+        <div class="anime-grid">
+            <div class="anime-card">
+                <div class="anime-header">
+                    <h3>Spiritul Ninja</h3>
+                    <span class="season-tag">Sezon 1</span>
+                </div>
+                <p>O poveste epică despre un ninja care învață să controleze spiritele.</p>
+                <div class="episodes">
+                    <div class="episode" data-episode="1">
+                        Episodul 1: Începutul
+                        <span class="access public"><i class="fas fa-globe"></i> Public</span>
+                    </div>
+                    <div class="episode" data-episode="2">
+                        Episodul 2: Primul Spirit
+                        <span class="access member"><i class="fas fa-user-friends"></i> Membri</span>
+                    </div>
+                </div>
+                <button class="btn-view" onclick="viewAnime('spiritul-ninja')">
+                    <i class="fas fa-book-open"></i> Vezi Postări
+                </button>
+            </div>
+
+            <div class="anime-card">
+                <div class="anime-header">
+                    <h3>Dragon's Legacy</h3>
+                    <span class="season-tag">Sezon 2</span>
+                </div>
+                <p>Descoperă secretele antice ale dragonilor.</p>
+                <div class="episodes">
+                    <div class="episode" data-episode="1">
+                        Episodul 1: Oul de Dragon
+                        <span class="access subscriber"><i class="fas fa-crown"></i> Subscriberi</span>
+                    </div>
+                </div>
+                <button class="btn-view" onclick="viewAnime('dragons-legacy')">
+                    <i class="fas fa-book-open"></i> Vezi Postări
+                </button>
+            </div>
+
+            <div class="anime-card">
+                <div class="anime-header">
+                    <h3>Cyber Samurai</h3>
+                    <span class="season-tag">Sezon 1</span>
+                </div>
+                <p>Samurai în viitorul cybernetic.</p>
+                <div class="episodes">
+                    <div class="episode" data-episode="1">
+                        Episodul 1: Tokyo 2077
+                        <span class="access public"><i class="fas fa-globe"></i> Public</span>
+                    </div>
+                </div>
+                <button class="btn-view" onclick="viewAnime('cyber-samurai')">
+                    <i class="fas fa-book-open"></i> Vezi Postări
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="posts-section" id="posts">
+        <h2><i class="fas fa-newspaper"></i> Ultimele Postări</h2>
+        <div class="posts-container" id="posts-container">
+            <div class="loading">Se încarcă postările...</div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2024 Anime Original. Creat cu <i class="fas fa-heart"></i> de mine.</p>
+        <p class="admin-link"><a href="admin.html" id="admin-link" style="display: none;">
+            <i class="fas fa-cog"></i> Panou Admin</a></p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
