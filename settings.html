@@ -5,16 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setări - Anime Uke</title>
     
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .settings-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(146, 13, 13, 0.3);
+        }
+        
+        .settings-icon {
+            font-size: 2rem;
+            color: #920d0d;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .form-switch .form-check-input:checked {
+            background-color: #920d0d;
+            border-color: #920d0d;
+        }
+        
+        .danger-zone {
+            background: rgba(220, 53, 69, 0.1);
+            border: 2px solid #dc3545;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .settings-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-dark bg-dark-red">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
                 <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
@@ -27,125 +67,410 @@
     <div class="container py-4">
         <h1 class="mb-4"><i class="fas fa-cogs"></i> Setări Cont</h1>
         
+        <!-- Alert pentru mesaje -->
+        <div class="alert alert-success d-none" id="successAlert">
+            <i class="fas fa-check-circle"></i> <span id="successText"></span>
+        </div>
+        
         <div class="row">
+            <!-- Left Column - Settings Menu -->
             <div class="col-md-3">
-                <!-- Settings Menu -->
-                <div class="list-group">
-                    <a href="#profile" class="list-group-item list-group-item-action active" 
-                       data-bs-toggle="list">
-                        <i class="fas fa-user"></i> Profil
-                    </a>
-                    <a href="#security" class="list-group-item list-group-item-action" 
-                       data-bs-toggle="list">
-                        <i class="fas fa-lock"></i> Securitate
-                    </a>
-                    <a href="#notifications" class="list-group-item list-group-item-action" 
-                       data-bs-toggle="list">
-                        <i class="fas fa-bell"></i> Notificări
-                    </a>
-                    <a href="profile.html" class="list-group-item list-group-item-action">
-                        <i class="fas fa-arrow-left"></i> Înapoi la Profil
-                    </a>
+                <div class="settings-card">
+                    <h5 class="mb-4"><i class="fas fa-sliders-h"></i> Meniu Setări</h5>
+                    
+                    <div class="list-group list-group-flush">
+                        <a href="#profile" class="list-group-item list-group-item-action bg-transparent text-white border-0 active" 
+                           onclick="showSection('profile')">
+                            <i class="fas fa-user me-2"></i> Profil
+                        </a>
+                        <a href="#security" class="list-group-item list-group-item-action bg-transparent text-white border-0"
+                           onclick="showSection('security')">
+                            <i class="fas fa-lock me-2"></i> Securitate
+                        </a>
+                        <a href="#notifications" class="list-group-item list-group-item-action bg-transparent text-white border-0"
+                           onclick="showSection('notifications')">
+                            <i class="fas fa-bell me-2"></i> Notificări
+                        </a>
+                        <a href="#privacy" class="list-group-item list-group-item-action bg-transparent text-white border-0"
+                           onclick="showSection('privacy')">
+                            <i class="fas fa-eye me-2"></i> Privatitate
+                        </a>
+                        <a href="#appearance" class="list-group-item list-group-item-action bg-transparent text-white border-0"
+                           onclick="showSection('appearance')">
+                            <i class="fas fa-palette me-2"></i> Aspect
+                        </a>
+                    </div>
+                    
+                    <div class="mt-4 pt-3 border-top">
+                        <a href="profile.html" class="btn btn-outline-light w-100 mb-2">
+                            <i class="fas fa-arrow-left"></i> Înapoi la Profil
+                        </a>
+                        <a href="index.html" class="btn btn-outline-light w-100">
+                            <i class="fas fa-home"></i> Acasă
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Current User Info -->
+                <div class="settings-card mt-3">
+                    <h6><i class="fas fa-info-circle"></i> Informații Cont</h6>
+                    <div class="mt-3">
+                        <div class="small mb-2">
+                            <strong>Username:</strong><br>
+                            <span id="currentUsername">-</span>
+                        </div>
+                        <div class="small mb-2">
+                            <strong>Email:</strong><br>
+                            <span id="currentEmail">-</span>
+                        </div>
+                        <div class="small mb-2">
+                            <strong>Rol:</strong><br>
+                            <span class="badge bg-danger" id="currentRole">-</span>
+                        </div>
+                        <div class="small">
+                            <strong>Membru din:</strong><br>
+                            <span id="currentCreated">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             
+            <!-- Right Column - Settings Content -->
             <div class="col-md-9">
-                <!-- Tab Content -->
-                <div class="tab-content">
-                    <!-- Profile Tab -->
-                    <div class="tab-pane fade show active" id="profile">
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h4 class="mb-0"><i class="fas fa-user-edit"></i> Editare Profil</h4>
+                <!-- Profile Settings -->
+                <div class="settings-card" id="profileSection">
+                    <div class="settings-section">
+                        <i class="fas fa-user settings-icon"></i>
+                        <h4>Editare Profil</h4>
+                        <p class="text-muted">Modifică informațiile tale personale</p>
+                        
+                        <form id="profileForm" class="mt-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="settingsUsername" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="settingsUsername" 
+                                           placeholder="Username" readonly>
+                                    <small class="text-muted">Username-ul nu poate fi schimbat</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="settingsEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="settingsEmail" 
+                                           placeholder="Email" required>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <form id="profileForm">
-                                    <div class="mb-3">
-                                        <label for="settingsUsername" class="form-label">Username</label>
-                                        <input type="text" class="form-control" id="settingsUsername" 
-                                               value="Loading..." readonly>
-                                        <small class="text-muted">Username-ul nu poate fi schimbat</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="settingsEmail" class="form-label">Email</label>
-                                        <input type="email" class="form-control" id="settingsEmail" 
-                                               value="Loading...">
-                                    </div>
-                                    <button type="submit" class="btn btn-danger">
-                                        <i class="fas fa-save"></i> Salvează Modificări
-                                    </button>
-                                </form>
+                            
+                            <div class="mb-3">
+                                <label for="settingsBio" class="form-label">Bio</label>
+                                <textarea class="form-control" id="settingsBio" rows="3" 
+                                          placeholder="Spune ceva despre tine..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="settingsAvatar" class="form-label">Avatar Initial</label>
+                                <input type="text" class="form-control" id="settingsAvatar" 
+                                       placeholder="Introdu o literă" maxlength="1">
+                                <small class="text-muted">O singură literă pentru avatarul tău</small>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-save"></i> Salvează Modificările
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Security Settings -->
+                <div class="settings-card d-none" id="securitySection">
+                    <div class="settings-section">
+                        <i class="fas fa-lock settings-icon"></i>
+                        <h4>Securitate</h4>
+                        <p class="text-muted">Gestionează securitatea contului tău</p>
+                        
+                        <form id="passwordForm" class="mt-4">
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">Parola Curentă</label>
+                                <input type="password" class="form-control" id="currentPassword" 
+                                       placeholder="Introdu parola curentă" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">Parola Nouă</label>
+                                <input type="password" class="form-control" id="newPassword" 
+                                       placeholder="Introdu parola nouă" required minlength="6">
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar" id="passwordStrengthBar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Parola trebuie să aibă cel puțin 6 caractere</small>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="confirmPassword" class="form-label">Confirmă Parola Nouă</label>
+                                <input type="password" class="form-control" id="confirmPassword" 
+                                       placeholder="Introdu parola din nou" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-key"></i> Schimbă Parola
+                            </button>
+                        </form>
+                        
+                        <div class="mt-5 pt-4 border-top">
+                            <h5><i class="fas fa-shield-alt"></i> Securitate Avansată</h5>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="twoFactorAuth">
+                                <label class="form-check-label" for="twoFactorAuth">
+                                    Autentificare în doi pași (2FA)
+                                </label>
+                                <small class="d-block text-muted">Adaugă o secție de securitate în plus pentru contul tău</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="sessionSecurity" checked>
+                                <label class="form-check-label" for="sessionSecurity">
+                                    Delogare automată după inactivitate
+                                </label>
+                                <small class="d-block text-muted">Te va deloga automat după 30 de minute de inactivitate</small>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Security Tab -->
-                    <div class="tab-pane fade" id="security">
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h4 class="mb-0"><i class="fas fa-shield-alt"></i> Securitate</h4>
+                </div>
+                
+                <!-- Notifications Settings -->
+                <div class="settings-card d-none" id="notificationsSection">
+                    <div class="settings-section">
+                        <i class="fas fa-bell settings-icon"></i>
+                        <h4>Notificări</h4>
+                        <p class="text-muted">Gestionează preferințele tale de notificări</p>
+                        
+                        <div class="mt-4">
+                            <h6>Notificări prin Email</h6>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifEmail" checked>
+                                <label class="form-check-label" for="notifEmail">
+                                    Notificări generale
+                                </label>
+                                <small class="d-block text-muted">Primeste notificări despre actualizări și noutăți</small>
                             </div>
-                            <div class="card-body">
-                                <form id="passwordForm">
-                                    <div class="mb-3">
-                                        <label for="currentPassword" class="form-label">Parola Curentă</label>
-                                        <input type="password" class="form-control" id="currentPassword" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="newPassword" class="form-label">Parola Nouă</label>
-                                        <input type="password" class="form-control" id="newPassword" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="confirmPassword" class="form-label">Confirmă Parola Nouă</label>
-                                        <input type="password" class="form-control" id="confirmPassword" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-danger">
-                                        <i class="fas fa-key"></i> Schimbă Parola
-                                    </button>
-                                </form>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifNewEpisodes" checked>
+                                <label class="form-check-label" for="notifNewEpisodes">
+                                    Episoade noi
+                                </label>
+                                <small class="d-block text-muted">Notificări când apar episoade noi din seriile tale favorite</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifNews">
+                                <label class="form-check-label" for="notifNews">
+                                    Noutăți și anunțuri
+                                </label>
+                                <small class="d-block text-muted">Primeste noutăți despre anime și evenimente</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifPromotions">
+                                <label class="form-check-label" for="notifPromotions">
+                                    Promoții și oferte
+                                </label>
+                                <small class="d-block text-muted">Notificări despre promoții și reduceri</small>
                             </div>
                         </div>
+                        
+                        <div class="mt-5 pt-4 border-top">
+                            <h6>Notificări în Aplicație</h6>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifInApp" checked>
+                                <label class="form-check-label" for="notifInApp">
+                                    Notificări în aplicație
+                                </label>
+                                <small class="d-block text-muted">Afișează notificări în interiorul site-ului</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="notifSounds">
+                                <label class="form-check-label" for="notifSounds">
+                                    Sunete de notificare
+                                </label>
+                                <small class="d-block text-muted">Redă sunete când apar notificări noi</small>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-danger mt-4" onclick="saveNotificationSettings()">
+                            <i class="fas fa-save"></i> Salvează Setările
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Privacy Settings -->
+                <div class="settings-card d-none" id="privacySection">
+                    <div class="settings-section">
+                        <i class="fas fa-eye settings-icon"></i>
+                        <h4>Privatitate</h4>
+                        <p class="text-muted">Controlează cine vede informațiile tale</p>
+                        
+                        <div class="mt-4">
+                            <h6>Profil Public</h6>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="privacyProfile" checked>
+                                <label class="form-check-label" for="privacyProfile">
+                                    Profil vizibil public
+                                </label>
+                                <small class="d-block text-muted">Permite altor utilizatori să-ți vadă profilul</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="privacyActivity" checked>
+                                <label class="form-check-label" for="privacyActivity">
+                                    Activitate vizibilă
+                                </label>
+                                <small class="d-block text-muted">Arată activitatea ta recentă altor utilizatori</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="privacyWatchlist">
+                                <label class="form-check-label" for="privacyWatchlist">
+                                    Lista de urmărit publică
+                                </label>
+                                <small class="d-block text-muted">Permite altor utilizatori să-ți vadă lista de anime-uri urmărite</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-5 pt-4 border-top">
+                            <h6>Date Personale</h6>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="privacyEmail" checked>
+                                <label class="form-check-label" for="privacyEmail">
+                                    Ascunde email-ul
+                                </label>
+                                <small class="d-block text-muted">Nu afișa adresa de email în profilul public</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="privacyStats">
+                                <label class="form-check-label" for="privacyStats">
+                                    Statistici publice
+                                </label>
+                                <small class="d-block text-muted">Permite altor utilizatori să-ți vadă statisticile de vizionare</small>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-danger mt-4" onclick="savePrivacySettings()">
+                            <i class="fas fa-save"></i> Salvează Setările de Privatitate
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Appearance Settings -->
+                <div class="settings-card d-none" id="appearanceSection">
+                    <div class="settings-section">
+                        <i class="fas fa-palette settings-icon"></i>
+                        <h4>Aspect</h4>
+                        <p class="text-muted">Personalizează aspectul site-ului</p>
+                        
+                        <div class="mt-4">
+                            <h6>Temă</h6>
+                            <div class="row mt-3">
+                                <div class="col-md-4 mb-3">
+                                    <div class="theme-option p-3 rounded border" onclick="selectTheme('dark')" 
+                                         style="background: #1a1a2e; cursor: pointer;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="themeDark" checked>
+                                            <label class="form-check-label text-white" for="themeDark">
+                                                Întunecat
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="theme-option p-3 rounded border" onclick="selectTheme('light')" 
+                                         style="background: #f8f9fa; cursor: pointer;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="themeLight">
+                                            <label class="form-check-label text-dark" for="themeLight">
+                                                Deschis
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="theme-option p-3 rounded border" onclick="selectTheme('red')" 
+                                         style="background: #2d0b0b; cursor: pointer;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="themeRed">
+                                            <label class="form-check-label text-white" for="themeRed">
+                                                Roșu Anime
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-5 pt-4 border-top">
+                            <h6>Display Settings</h6>
+                            <div class="mt-3">
+                                <label for="fontSize" class="form-label">Mărime Font</label>
+                                <select class="form-control" id="fontSize">
+                                    <option value="small">Mic</option>
+                                    <option value="medium" selected>Mediu</option>
+                                    <option value="large">Mare</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="animations" checked>
+                                <label class="form-check-label" for="animations">
+                                    Animații
+                                </label>
+                                <small class="d-block text-muted">Activează animațiile și tranzițiile</small>
+                            </div>
+                            
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="compactMode">
+                                <label class="form-check-label" for="compactMode">
+                                    Mod Compact
+                                </label>
+                                <small class="d-block text-muted">Afișează mai mult conținut pe ecran</small>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-danger mt-4" onclick="saveAppearanceSettings()">
+                            <i class="fas fa-save"></i> Salvează Preferințele de Aspect
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Danger Zone -->
+                <div class="danger-zone">
+                    <h4 class="text-danger"><i class="fas fa-exclamation-triangle"></i> Zona de Pericol</h4>
+                    <p class="text-muted">Acțiuni permanente care nu pot fi anulate</p>
+                    
+                    <div class="mt-4">
+                        <button class="btn btn-outline-danger me-3" onclick="exportData()">
+                            <i class="fas fa-download"></i> Exportă Datele Tale
+                        </button>
+                        
+                        <button class="btn btn-outline-danger" onclick="deleteAccountPrompt()">
+                            <i class="fas fa-trash"></i> Șterge Contul
+                        </button>
                     </div>
                     
-                    <!-- Notifications Tab -->
-                    <div class="tab-pane fade" id="notifications">
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h4 class="mb-0"><i class="fas fa-bell"></i> Setări Notificări</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="notifEmail" checked>
-                                    <label class="form-check-label" for="notifEmail">
-                                        Notificări prin Email
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="notifNewEpisodes" checked>
-                                    <label class="form-check-label" for="notifNewEpisodes">
-                                        Notificări pentru episoade noi
-                                    </label>
-                                </div>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="notifNews" checked>
-                                    <label class="form-check-label" for="notifNews">
-                                        Noutăți și anunțuri
-                                    </label>
-                                </div>
-                                <button class="btn btn-danger" onclick="saveNotifications()">
-                                    <i class="fas fa-save"></i> Salvează Preferințe
-                                </button>
-                            </div>
-                        </div>
+                    <div class="mt-3 small text-muted">
+                        <i class="fas fa-info-circle"></i> Ștergerea contului este permanentă și va elimina toate datele tale.
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="config.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="script.js"></script>
     
     <script>
@@ -159,18 +484,41 @@
             
             const user = getCurrentUser();
             
-            // Populează formularul
+            // Populează informațiile utilizatorului
+            document.getElementById('currentUsername').textContent = user.username;
+            document.getElementById('currentEmail').textContent = user.email;
+            document.getElementById('currentRole').textContent = user.role.toUpperCase();
+            document.getElementById('currentCreated').textContent = user.created || 'Necunoscută';
+            
             document.getElementById('settingsUsername').value = user.username;
-            document.getElementById('settingsEmail').value = 
-                user.email || `${user.username}@animeuke.com`;
+            document.getElementById('settingsEmail').value = user.email;
+            document.getElementById('settingsAvatar').value = user.avatar || user.username.charAt(0).toUpperCase();
             
             // Update navbar
             updateUIBasedOnLogin();
             
+            // Load saved settings
+            loadSavedSettings();
+            
             // Handle profile form
             document.getElementById('profileForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                alert('Funcția de salvare profil va fi implementată în curând!');
+                
+                const email = document.getElementById('settingsEmail').value.trim();
+                const avatar = document.getElementById('settingsAvatar').value.trim();
+                
+                if (!email || !isValidEmail(email)) {
+                    showMessage('Introdu o adresă de email validă!', 'error');
+                    return;
+                }
+                
+                if (avatar && avatar.length !== 1) {
+                    showMessage('Avatar-ul trebuie să fie o singură literă!', 'error');
+                    return;
+                }
+                
+                // Here you would save to Firestore
+                showMessage('Setările au fost salvate! (Funcție demonstrativă)', 'success');
             });
             
             // Handle password form
@@ -182,37 +530,262 @@
                 const confirmPass = document.getElementById('confirmPassword').value;
                 
                 if (newPass !== confirmPass) {
-                    alert('Parolele nu coincid!');
+                    showMessage('Parolele nu coincid!', 'error');
                     return;
                 }
                 
                 if (newPass.length < 6) {
-                    alert('Parola trebuie să aibă cel puțin 6 caractere!');
+                    showMessage('Parola trebuie să aibă cel puțin 6 caractere!', 'error');
                     return;
                 }
                 
-                alert('Funcția de schimbare parolă va fi implementată în curând!');
+                // Password strength check
+                const strength = checkPasswordStrength(newPass);
+                if (strength < 2) {
+                    showMessage('Parola este prea slabă! Folosește litere, cifre și caractere speciale.', 'error');
+                    return;
+                }
+                
+                showMessage('Parola a fost schimbată cu succes! (Funcție demonstrativă)', 'success');
                 document.getElementById('passwordForm').reset();
+                document.getElementById('passwordStrengthBar').style.width = '0%';
+                document.getElementById('passwordStrengthBar').className = 'progress-bar';
             });
             
-            // Load saved notification preferences
-            const savedPrefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
-            document.getElementById('notifEmail').checked = savedPrefs.email !== false;
-            document.getElementById('notifNewEpisodes').checked = savedPrefs.episodes !== false;
-            document.getElementById('notifNews').checked = savedPrefs.news !== false;
+            // Password strength indicator
+            document.getElementById('newPassword').addEventListener('input', function() {
+                const password = this.value;
+                const strength = checkPasswordStrength(password);
+                const bar = document.getElementById('passwordStrengthBar');
+                
+                if (password.length === 0) {
+                    bar.style.width = '0%';
+                    bar.className = 'progress-bar';
+                    return;
+                }
+                
+                let width = 0;
+                let color = '';
+                
+                if (strength === 0) {
+                    width = 25;
+                    color = 'bg-danger';
+                } else if (strength === 1) {
+                    width = 50;
+                    color = 'bg-warning';
+                } else if (strength === 2) {
+                    width = 75;
+                    color = 'bg-info';
+                } else {
+                    width = 100;
+                    color = 'bg-success';
+                }
+                
+                bar.style.width = width + '%';
+                bar.className = 'progress-bar ' + color;
+            });
         });
         
-        // Save notification preferences
-        function saveNotifications() {
-            const prefs = {
+        // Funcții pentru schimbarea secțiunilor
+        function showSection(sectionId) {
+            // Ascunde toate secțiunile
+            ['profile', 'security', 'notifications', 'privacy', 'appearance'].forEach(section => {
+                const element = document.getElementById(section + 'Section');
+                if (element) {
+                    element.classList.add('d-none');
+                }
+                
+                // Update menu item
+                const menuItem = document.querySelector(`[href="#${section}"]`);
+                if (menuItem) {
+                    menuItem.classList.remove('active');
+                }
+            });
+            
+            // Arată secțiunea selectată
+            const sectionElement = document.getElementById(sectionId + 'Section');
+            if (sectionElement) {
+                sectionElement.classList.remove('d-none');
+            }
+            
+            // Update menu item
+            const menuItem = document.querySelector(`[href="#${sectionId}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
+        }
+        
+        // Load saved settings
+        function loadSavedSettings() {
+            const savedSettings = JSON.parse(localStorage.getItem('animeUkeSettings') || '{}');
+            
+            // Notification settings
+            if (savedSettings.notifications) {
+                document.getElementById('notifEmail').checked = savedSettings.notifications.email !== false;
+                document.getElementById('notifNewEpisodes').checked = savedSettings.notifications.episodes !== false;
+                document.getElementById('notifNews').checked = savedSettings.notifications.news !== false;
+                document.getElementById('notifPromotions').checked = savedSettings.notifications.promotions !== false;
+                document.getElementById('notifInApp').checked = savedSettings.notifications.inApp !== false;
+                document.getElementById('notifSounds').checked = savedSettings.notifications.sounds !== false;
+            }
+            
+            // Privacy settings
+            if (savedSettings.privacy) {
+                document.getElementById('privacyProfile').checked = savedSettings.privacy.profile !== false;
+                document.getElementById('privacyActivity').checked = savedSettings.privacy.activity !== false;
+                document.getElementById('privacyWatchlist').checked = savedSettings.privacy.watchlist || false;
+                document.getElementById('privacyEmail').checked = savedSettings.privacy.email !== false;
+                document.getElementById('privacyStats').checked = savedSettings.privacy.stats !== false;
+            }
+            
+            // Appearance settings
+            if (savedSettings.appearance) {
+                document.getElementById('fontSize').value = savedSettings.appearance.fontSize || 'medium';
+                document.getElementById('animations').checked = savedSettings.appearance.animations !== false;
+                document.getElementById('compactMode').checked = savedSettings.appearance.compactMode || false;
+                
+                // Theme
+                if (savedSettings.appearance.theme) {
+                    document.getElementById('theme' + savedSettings.appearance.theme.charAt(0).toUpperCase() + savedSettings.appearance.theme.slice(1)).checked = true;
+                }
+            }
+        }
+        
+        // Save notification settings
+        function saveNotificationSettings() {
+            const settings = {
                 email: document.getElementById('notifEmail').checked,
                 episodes: document.getElementById('notifNewEpisodes').checked,
-                news: document.getElementById('notifNews').checked
+                news: document.getElementById('notifNews').checked,
+                promotions: document.getElementById('notifPromotions').checked,
+                inApp: document.getElementById('notifInApp').checked,
+                sounds: document.getElementById('notifSounds').checked
             };
             
-            localStorage.setItem('notificationPrefs', JSON.stringify(prefs));
-            alert('Preferințele au fost salvate!');
+            saveSettings('notifications', settings);
+            showMessage('Setările de notificări au fost salvate!', 'success');
+        }
+        
+        // Save privacy settings
+        function savePrivacySettings() {
+            const settings = {
+                profile: document.getElementById('privacyProfile').checked,
+                activity: document.getElementById('privacyActivity').checked,
+                watchlist: document.getElementById('privacyWatchlist').checked,
+                email: document.getElementById('privacyEmail').checked,
+                stats: document.getElementById('privacyStats').checked
+            };
+            
+            saveSettings('privacy', settings);
+            showMessage('Setările de privatitate au fost salvate!', 'success');
+        }
+        
+        // Save appearance settings
+        function saveAppearanceSettings() {
+            const theme = document.querySelector('input[name="theme"]:checked').value;
+            const settings = {
+                theme: theme,
+                fontSize: document.getElementById('fontSize').value,
+                animations: document.getElementById('animations').checked,
+                compactMode: document.getElementById('compactMode').checked
+            };
+            
+            saveSettings('appearance', settings);
+            showMessage('Setările de aspect au fost salvate!', 'success');
+            
+            // Apply theme immediately
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+                document.body.classList.remove('red-theme');
+            } else if (theme === 'red') {
+                document.body.classList.add('red-theme');
+                document.body.classList.remove('light-theme');
+            } else {
+                document.body.classList.remove('light-theme', 'red-theme');
+            }
+        }
+        
+        // Save settings to localStorage
+        function saveSettings(category, settings) {
+            const allSettings = JSON.parse(localStorage.getItem('animeUkeSettings') || '{}');
+            allSettings[category] = settings;
+            localStorage.setItem('animeUkeSettings', JSON.stringify(allSettings));
+        }
+        
+        // Select theme
+        function selectTheme(theme) {
+            document.getElementById('theme' + theme.charAt(0).toUpperCase() + theme.slice(1)).checked = true;
+        }
+        
+        // Password strength checker
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            
+            if (password.length >= 6) strength++;
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            return Math.min(strength, 4);
+        }
+        
+        // Show message
+        function showMessage(message, type) {
+            const alert = document.getElementById('successAlert');
+            const text = document.getElementById('successText');
+            
+            text.textContent = message;
+            alert.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
+            alert.classList.remove('d-none');
+            
+            setTimeout(() => {
+                alert.classList.add('d-none');
+            }, 5000);
+        }
+        
+        // Email validation
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+        
+        // Export data
+        function exportData() {
+            const user = getCurrentUser();
+            const data = {
+                user: user,
+                exportDate: new Date().toISOString(),
+                settings: JSON.parse(localStorage.getItem('animeUkeSettings') || '{}')
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `anime-uke-data-${user.username}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showMessage('Datele tale au fost exportate cu succes!', 'success');
+        }
+        
+        // Delete account prompt
+        function deleteAccountPrompt() {
+            if (confirm('ESTI SIGUR că vrei să ștergi contul? Această acțiune este PERMANENTĂ și nu poate fi anulată!')) {
+                const password = prompt('Introdu parola ta pentru confirmare:');
+                if (password) {
+                    // Here you would delete from Firebase
+                    showMessage('Contul va fi șters. Aceasta este o funcție demonstrativă.', 'error');
+                    
+                    // In a real app, you would call:
+                    // auth.currentUser.delete()
+                    // db.collection('users').doc(user.uid).delete()
+                }
+            }
         }
     </script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
