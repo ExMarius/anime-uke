@@ -5,359 +5,259 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Anime Uke</title>
     
-    <!-- Bootstrap 4 -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    
-    <!-- Custom CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
     
     <style>
-        .admin-stats-card {
+        .stats-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
             text-align: center;
-            transition: all 0.3s;
+            border: 1px solid rgba(146, 13, 13, 0.3);
         }
         
-        .admin-stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-        
-        .admin-stats-card .stat-number {
+        .stats-number {
             font-size: 2.5rem;
             font-weight: bold;
+            color: #920d0d;
             margin: 10px 0;
-        }
-        
-        .admin-table th {
-            background: #920d0d;
-            color: white;
-            border: none;
-        }
-        
-        .admin-table td {
-            vertical-align: middle;
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #6d0019;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
         }
     </style>
 </head>
-<body class="main-body">
+<body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark anime-navbar">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <span class="brand-text">ANIME UKE - ADMIN</span>
+                <i class="fas fa-ghost"></i> <strong>ANIME UKE ADMIN</strong>
             </a>
-            
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.html">
-                            <i class="fa fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="admin.html">
-                            <i class="fa fa-dashboard"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="settings.html">
-                            <i class="fa fa-cog"></i> Setări
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <div id="userNavItem"></div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <div class="container mt-4">
-        <!-- Stats Cards -->
+
+    <!-- Admin Content -->
+    <div class="container py-4">
+        <h1 class="mb-4"><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+        
+        <!-- Stats -->
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="admin-stats-card" style="background: linear-gradient(45deg, #920d0d, #6d0019);">
-                    <i class="fa fa-users fa-2x"></i>
-                    <div class="stat-number" id="totalUsers">0</div>
+                <div class="stats-card">
+                    <i class="fas fa-users fa-2x"></i>
+                    <div class="stats-number" id="totalUsers">0</div>
                     <div>Utilizatori</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="admin-stats-card" style="background: linear-gradient(45deg, #2575fc, #6a11cb);">
-                    <i class="fa fa-film fa-2x"></i>
-                    <div class="stat-number" id="totalSeries">0</div>
-                    <div>Serii</div>
+                <div class="stats-card">
+                    <i class="fas fa-film fa-2x"></i>
+                    <div class="stats-number">42</div>
+                    <div>Serii Anime</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="admin-stats-card" style="background: linear-gradient(45deg, #00b09b, #96c93d);">
-                    <i class="fa fa-play-circle fa-2x"></i>
-                    <div class="stat-number" id="totalEpisodes">0</div>
+                <div class="stats-card">
+                    <i class="fas fa-play-circle fa-2x"></i>
+                    <div class="stats-number">1,248</div>
                     <div>Episoade</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="admin-stats-card" style="background: linear-gradient(45deg, #ff416c, #ff4b2b);">
-                    <i class="fa fa-line-chart fa-2x"></i>
-                    <div class="stat-number" id="todayVisits">0</div>
-                    <div>Vizite azi</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Admin Actions -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="box-content">
-                    <h4><i class="fa fa-bolt"></i> Acțiuni Rapide</h4>
-                    <div class="row mt-3">
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-anime btn-block" onclick="addNewSeries()">
-                                <i class="fa fa-plus"></i> Adaugă Serie
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-anime btn-block" onclick="addNewEpisode()">
-                                <i class="fa fa-plus-circle"></i> Adaugă Episod
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-anime btn-block" onclick="manageUsers()">
-                                <i class="fa fa-user-plus"></i> Gestionează Useri
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-anime btn-block" onclick="systemSettings()">
-                                <i class="fa fa-server"></i> Setări Sistem
-                            </button>
-                        </div>
-                    </div>
+                <div class="stats-card">
+                    <i class="fas fa-calendar-day fa-2x"></i>
+                    <div class="stats-number" id="currentDate"></div>
+                    <div>Data curentă</div>
                 </div>
             </div>
         </div>
         
         <!-- Users Table -->
-        <div class="row">
-            <div class="col-12">
-                <div class="box-content">
-                    <h4><i class="fa fa-users"></i> Utilizatori</h4>
-                    
-                    <div class="table-responsive mt-3">
-                        <table class="table admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Utilizator</th>
-                                    <th>Email</th>
-                                    <th>Rol</th>
-                                    <th>Data Înregistrării</th>
-                                    <th>Status</th>
-                                    <th>Acțiuni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usersTableBody">
-                                <!-- Users will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
+        <div class="card">
+            <div class="card-header bg-dark">
+                <h4 class="mb-0"><i class="fas fa-users-cog"></i> Management Utilizatori</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Data Înregistrării</th>
+                                <th>Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will load here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
         
-        <!-- System Info -->
+        <!-- Admin Actions -->
         <div class="row mt-4">
             <div class="col-md-6">
-                <div class="box-content">
-                    <h4><i class="fa fa-info-circle"></i> Informații Sistem</h4>
-                    <div class="mt-3">
-                        <div class="mb-2">
-                            <strong>Versiune:</strong> Anime Uke v1.0
-                        </div>
-                        <div class="mb-2">
-                            <strong>Ultimul backup:</strong> <span id="lastBackup">4 Dec 2025, 12:00</span>
-                        </div>
-                        <div class="mb-2">
-                            <strong>Server status:</strong> 
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="mb-2">
-                            <strong>Storage used:</strong> 
-                            <div class="progress mt-1">
-                                <div class="progress-bar" style="width: 45%">45%</div>
+                <div class="card">
+                    <div class="card-header bg-dark">
+                        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Adaugă User Nou</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="addUserForm">
+                            <div class="mb-3">
+                                <label for="newUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="newUsername" required>
                             </div>
-                        </div>
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">Parolă</label>
+                                <input type="password" class="form-control" id="newPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="newRole" class="form-label">Rol</label>
+                                <select class="form-control" id="newRole" required>
+                                    <option value="user">User</option>
+                                    <option value="membru">Membru</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-user-plus"></i> Adaugă User
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
             
             <div class="col-md-6">
-                <div class="box-content">
-                    <h4><i class="fa fa-terminal"></i> Comenzi Rapide</h4>
-                    <div class="mt-3">
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control anime-input" 
-                                   placeholder="Introdu comanda..." id="adminCommand">
-                            <div class="input-group-append">
-                                <button class="btn btn-anime" onclick="executeCommand()">
-                                    <i class="fa fa-play"></i> Execută
-                                </button>
-                            </div>
-                        </div>
-                        <div class="light-container p-3" style="height: 100px; overflow-y: auto;">
-                            <pre id="commandOutput" class="mb-0 small">> Sistem gata.</pre>
+                <div class="card">
+                    <div class="card-header bg-dark">
+                        <h5 class="mb-0"><i class="fas fa-cogs"></i> Acțiuni Rapide</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-light" onclick="location.reload()">
+                                <i class="fas fa-sync"></i> Reîncarcă Datele
+                            </button>
+                            <button class="btn btn-outline-light" onclick="exportUsers()">
+                                <i class="fas fa-download"></i> Exportă Useri
+                            </button>
+                            <button class="btn btn-outline-light" onclick="window.location.href='index.html'">
+                                <i class="fas fa-home"></i> Înapoi la Home
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Scripts -->
+    <script src="config.js"></script>
     <script src="script.js"></script>
+    
     <script>
-        // Check if user is admin
         document.addEventListener('DOMContentLoaded', function() {
-            const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+            console.log('🛡️ Admin panel loaded');
             
-            if (!user || user.role !== 'admin') {
-                // Redirect to home if not admin
-                alert('Acces interzis! Nu ai permisiuni de administrator.');
-                window.location.href = 'index.html';
+            // Verifică dacă user-ul este admin
+            if (!requireAdmin()) {
                 return;
             }
             
-            // Load stats
-            loadAdminStats();
-            loadUsersTable();
+            // Update UI
+            updateUIBasedOnLogin();
+            
+            // Încarcă userii
+            loadAdminUsers();
+            
+            // Setează data curentă
+            document.getElementById('currentDate').textContent = 
+                new Date().toLocaleDateString('ro-RO');
+            
+            // Formular pentru adăugare user
+            document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('newUsername').value.trim();
+                const password = document.getElementById('newPassword').value.trim();
+                const role = document.getElementById('newRole').value;
+                
+                if (!username || !password) {
+                    alert('Completează toate câmpurile!');
+                    return;
+                }
+                
+                try {
+                    const users = await getUsers();
+                    
+                    // Verifică dacă username-ul există deja
+                    if (users.some(u => u.username === username)) {
+                        alert('Username-ul există deja!');
+                        return;
+                    }
+                    
+                    // Creează noul user
+                    const newUser = {
+                        id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+                        username: username,
+                        password: password,
+                        role: role,
+                        avatar: username.charAt(0).toUpperCase(),
+                        created: new Date().toISOString().split('T')[0],
+                        lastLogin: new Date().toISOString()
+                    };
+                    
+                    users.push(newUser);
+                    
+                    // Salvează în JSONBin
+                    const response = await fetch(`${CONFIG.API_URL}/${CONFIG.BIN_ID}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': CONFIG.API_KEY
+                        },
+                        body: JSON.stringify({ users: users })
+                    });
+                    
+                    if (response.ok) {
+                        alert('User adăugat cu succes!');
+                        document.getElementById('addUserForm').reset();
+                        loadAdminUsers(); // Reîncarcă lista
+                    } else {
+                        alert('Eroare la adăugarea user-ului!');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error adding user:', error);
+                    alert('Eroare: ' + error.message);
+                }
+            });
         });
         
-        function loadAdminStats() {
-            // Mock data
-            document.getElementById('totalUsers').textContent = '142';
-            document.getElementById('totalSeries').textContent = '68';
-            document.getElementById('totalEpisodes').textContent = '14,268';
-            document.getElementById('todayVisits').textContent = '1,245';
-        }
-        
-        function loadUsersTable() {
-            const users = [
-                {id: 1, username: 'admin', email: 'admin@animeuke.com', role: 'admin', date: '2024-01-01', status: 'active'},
-                {id: 2, username: 'membru', email: 'membru@animeuke.com', role: 'membru', date: '2024-01-02', status: 'active'},
-                {id: 3, username: 'andrei', email: 'andrei@email.com', role: 'membru', date: '2024-01-03', status: 'active'},
-                {id: 4, username: 'maria', email: 'maria@email.com', role: 'membru', date: '2024-01-04', status: 'inactive'},
-                {id: 5, username: 'alex', email: 'alex@email.com', role: 'membru', date: '2024-01-05', status: 'active'},
-            ];
+        // Export users as JSON
+        function exportUsers() {
+            const user = getCurrentUser();
+            const data = {
+                exportedBy: user.username,
+                exportDate: new Date().toISOString(),
+                users: [] // Ar fi nevoie să încărci userii aici
+            };
             
-            let html = '';
-            users.forEach(user => {
-                const statusClass = user.status === 'active' ? 'badge-success' : 'badge-secondary';
-                
-                html += `
-                <tr>
-                    <td>${user.id}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="user-avatar mr-2">
-                                ${user.username.charAt(0).toUpperCase()}
-                            </div>
-                            ${user.username}
-                        </div>
-                    </td>
-                    <td>${user.email}</td>
-                    <td>
-                        <span class="badge ${user.role === 'admin' ? 'badge-danger' : 'badge-primary'}">
-                            ${user.role}
-                        </span>
-                    </td>
-                    <td>${user.date}</td>
-                    <td>
-                        <span class="badge ${statusClass}">
-                            ${user.status}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-anime" onclick="editUser(${user.id})">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger ml-1" onclick="deleteUser(${user.id})">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                `;
-            });
-            
-            document.getElementById('usersTableBody').innerHTML = html;
-        }
-        
-        function addNewSeries() {
-            alert('Funcția de adăugare serie va fi implementată în versiunea viitoare!');
-        }
-        
-        function addNewEpisode() {
-            alert('Funcția de adăugare episod va fi implementată în versiunea viitoare!');
-        }
-        
-        function manageUsers() {
-            alert('Funcția de gestionare useri va fi implementată în versiunea viitoare!');
-        }
-        
-        function systemSettings() {
-            alert('Funcția de setări sistem va fi implementată în versiunea viitoare!');
-        }
-        
-        function editUser(id) {
-            alert(`Editare user #${id} - Funcție în dezvoltare`);
-        }
-        
-        function deleteUser(id) {
-            if (confirm('Sigur vrei să ștergi acest utilizator?')) {
-                alert(`User #${id} a fost șters!`);
-                loadUsersTable();
-            }
-        }
-        
-        function executeCommand() {
-            const command = document.getElementById('adminCommand').value;
-            const output = document.getElementById('commandOutput');
-            
-            if (!command.trim()) {
-                output.innerHTML += '\n> Introdu o comandă!';
-                return;
-            }
-            
-            output.innerHTML += `\n> ${command}`;
-            
-            // Simple command responses
-            if (command === 'help') {
-                output.innerHTML += '\n> Comenzi disponibile: help, clear, users, stats';
-            } else if (command === 'clear') {
-                output.innerHTML = '> Console cleared.';
-            } else if (command === 'users') {
-                output.innerHTML += '\n> Total users: 142';
-            } else if (command === 'stats') {
-                output.innerHTML += '\n> System status: OK\n> Uptime: 99.9%\n> Memory: 45%';
-            } else {
-                output.innerHTML += `\n> Unknown command: "${command}"`;
-            }
-            
-            document.getElementById('adminCommand').value = '';
-            output.scrollTop = output.scrollHeight;
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'anime-uke-users-backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
