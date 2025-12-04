@@ -1,228 +1,150 @@
+// Anime Uke - Authentication System
+// DOAR admin și membru (fără subscriber)
+
+// Predefined users
 const USERS = [
-    { id: 1, username: 'admin', password: 'admin123', role: 'admin', email: 'admin@anime.com' },
-    { id: 2, username: 'membru', password: 'membru123', role: 'member', email: 'membru@anime.com' },
-    { id: 3, username: 'subscriber', password: 'sub123', role: 'subscriber', email: 'sub@anime.com' }
+    {
+        username: 'admin',
+        password: 'admin123',
+        email: 'admin@animeuke.com',
+        role: 'admin',
+        created: '2024-01-01'
+    },
+    {
+        username: 'membru',
+        password: 'membru123',
+        email: 'membru@animeuke.com',
+        role: 'membru',
+        created: '2024-01-02'
+    }
 ];
 
-const POSTS = [
-    { id: 1, title: 'Începutul Spiritului Ninja', content: 'Astăzi am început lucrul la primul episod din Spiritul Ninja...', author: 'admin', anime: 'Spiritul Ninja', season: 1, episode: 1, access: 'public', date: '2024-01-15', likes: 24 },
-    { id: 2, title: 'Design personaje Dragon\'s Legacy', content: 'Am creat primele schițe pentru personajele principale...', author: 'admin', anime: 'Dragon\'s Legacy', season: 2, episode: 1, access: 'subscriber', date: '2024-01-14', likes: 15 },
-    { id: 3, title: 'Update Cyber Samurai', content: 'Progrese bune la animațiile din episodul 1...', author: 'admin', anime: 'Cyber Samurai', season: 1, episode: 1, access: 'member', date: '2024-01-13', likes: 32 },
-    { id: 4, title: 'Noul website!', content: 'Bun venit pe noul website dedicat anime-urilor mele!', author: 'admin', anime: 'General', season: 0, episode: 0, access: 'public', date: '2024-01-12', likes: 45 }
-];
-
-// =================== FUNCȚII STORAGE ===================
-function saveUser(user) { 
-    localStorage.setItem('currentUser', JSON.stringify(user)); 
-    localStorage.setItem('isLoggedIn', 'true'); 
+// Check if user is logged in
+function checkLoginStatus() {
+    return localStorage.getItem('currentUser') !== null;
 }
 
-function loadUser() { 
-    const userStr = localStorage.getItem('currentUser'); 
-    return userStr ? JSON.parse(userStr) : null; 
-}
-
-function clearUser() { 
-    localStorage.removeItem('currentUser'); 
-    localStorage.setItem('isLoggedIn', 'false'); 
-}
-
-function isLoggedIn() { 
-    return localStorage.getItem('isLoggedIn') === 'true'; 
-}
-
-// =================== VERIFICARE ACCES ===================
-function hasAccess(requiredRole) {
-    const user = loadUser();
-    if (!user) return false;
-    
-    const roleHierarchy = { 
-        'visitor': 0, 
-        'member': 1, 
-        'subscriber': 2, 
-        'moderator': 3, 
-        'admin': 4 
-    };
-    
-    const userLevel = roleHierarchy[user.role] || 0;
-    const requiredLevel = roleHierarchy[requiredRole] || 0;
-    
-    return userLevel >= requiredLevel;
-}
-
-// =================== ÎNCĂRCARE POSTĂRI ===================
-function loadPosts() {
-    const container = document.getElementById('posts-container');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    const user = loadUser();
-    let hasAnyPosts = false;
-    
-    POSTS.forEach(post => {
-        // Verifică accesul la postare
-        if (post.access === 'public' || 
-            (user && post.access === 'member') ||
-            (user && user.role === 'subscriber' && post.access === 'subscriber') ||
-            (user && user.role === 'admin')) {
-            
-            hasAnyPosts = true;
-            
-            const postCard = document.createElement('div');
-            postCard.className = `post-card ${post.access}`;
-            
-            postCard.innerHTML = `
-                <div class="post-header">
-                    <div class="post-title">${post.title}</div>
-                    <span class="post-access access ${post.access}">
-                        <i class="fas ${post.access === 'public' ? 'fa-globe' : 
-                                      post.access === 'member' ? 'fa-user-friends' : 
-                                      'fa-crown'}"></i>
-                        ${post.access === 'public' ? 'Public' : 
-                         post.access === 'member' ? 'Membri' : 'Subscriberi'}
-                    </span>
-                </div>
-                <div class="post-content">
-                    ${post.content}
-                </div>
-                <div class="post-meta">
-                    <span>
-                        <i class="fas fa-film"></i> ${post.anime} 
-                        ${post.season > 0 ? `- Sezon ${post.season}` : ''}
-                    </span>
-                    <span>
-                        <i class="fas fa-heart"></i> ${post.likes} likes
-                    </span>
-                </div>
-                <div class="post-meta">
-                    <span><i class="fas fa-user"></i> ${post.author}</span>
-                    <span><i class="fas fa-calendar"></i> ${post.date}</span>
-                </div>
-            `;
-            
-            container.appendChild(postCard);
-        }
-    });
-    
-    if (!hasAnyPosts) {
-        container.innerHTML = '<div class="error">Nu ai acces la nicio postare momentan. Înregistrează-te pentru mai mult conținut!</div>';
-    }
-}
-
-// =================== UI UPDATES ===================
-function updateUI() {
-    const user = loadUser();
-    const userInfo = document.getElementById('user-info');
-    const loginLink = document.getElementById('login-link');
-    const adminLink = document.getElementById('admin-link');
-    
-    if (user) {
-        // User logat
-        loginLink.innerHTML = `<i class="fas fa-sign-out-alt"></i> Logout (${user.username})`;
-        loginLink.href = "#";
-        loginLink.onclick = function() { logout(); return false; };
-        
-        userInfo.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-user-circle" style="font-size: 2rem;"></i>
-                <div>
-                    <strong>${user.username}</strong>
-                    <span class="role-badge role-${user.role}">${user.role.toUpperCase()}</span>
-                </div>
-            </div>
-        `;
-        
-        // Arată link-ul către admin doar pentru admini
-        if (user.role === 'admin' && adminLink) {
-            adminLink.style.display = 'inline';
-        }
-    } else {
-        // User nelogat
-        loginLink.innerHTML = `<i class="fas fa-sign-in-alt"></i> Login`;
-        loginLink.href = "login.html";
-        loginLink.onclick = null;
-        
-        userInfo.innerHTML = '<p>Loghează-te pentru mai multe funcții!</p>';
-        
-        if (adminLink) {
-            adminLink.style.display = 'none';
-        }
-    }
-    
-    // Încarcă postările
-    loadPosts();
-}
-
-// =================== LOGIN/LOGOUT ===================
-function logout() {
-    if (confirm('Sigur vrei să te deconectezi?')) {
-        clearUser();
-        updateUI();
-        alert('Te-ai deconectat cu succes!');
-    }
-}
-
-// =================== LOGIN FUNCTION (pentru login.html) ===================
-window.loginUser = function(username, password) {
+// Login function
+function loginUser(username, password) {
+    // Find user
     const user = USERS.find(u => 
         (u.username === username || u.email === username) && 
         u.password === password
     );
     
     if (user) {
-        // Eliminăm parola din obiectul salvat
-        const { password: _, ...userWithoutPassword } = user;
-        saveUser(userWithoutPassword);
-        return { success: true, user: userWithoutPassword };
+        // Remove password before storing
+        const userToStore = { ...user };
+        delete userToStore.password;
+        
+        // Save to localStorage
+        localStorage.setItem('currentUser', JSON.stringify(userToStore));
+        
+        return {
+            success: true,
+            message: 'Login successful!',
+            user: userToStore
+        };
+    } else {
+        return {
+            success: false,
+            message: 'Username/email sau parolă incorectă!'
+        };
     }
-    
-    return { success: false, message: 'Username sau parolă incorectă' };
-};
-
-// =================== ANIME FUNCTIONS ===================
-function viewAnime(animeSlug) {
-    const user = loadUser();
-    
-    if (animeSlug === 'dragons-legacy' && (!user || user.role !== 'subscriber')) {
-        alert('Acest anime este disponibil doar pentru subscriberi!');
-        return;
-    }
-    
-    alert(`Vei fi redirecționat către ${animeSlug}...\n(Într-o versiune avansată, aici ai face redirect la o pagină dedicată)`);
 }
 
-// =================== EXPORT FUNCTIONS ===================
-window.loadUser = loadUser;
-window.logout = logout;
-window.hasAccess = hasAccess;
-window.isLoggedIn = isLoggedIn;
-window.loadPosts = loadPosts;
+// Logout function
+function logout() {
+    localStorage.removeItem('currentUser');
+    window.location.href = 'index.html';
+}
 
-// =================== INITIALIZATION ===================
+// Get current user
+function getCurrentUser() {
+    const userStr = localStorage.getItem('currentUser');
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+// Check if user has admin role
+function isAdmin() {
+    const user = getCurrentUser();
+    return user && user.role === 'admin';
+}
+
+// Check if user has member role
+function isMember() {
+    const user = getCurrentUser();
+    return user && user.role === 'membru';
+}
+
+// Redirect if not logged in
+function requireLogin(redirectUrl = 'login.html') {
+    if (!checkLoginStatus()) {
+        window.location.href = redirectUrl;
+        return false;
+    }
+    return true;
+}
+
+// Redirect if not admin
+function requireAdmin(redirectUrl = 'index.html') {
+    if (!isAdmin()) {
+        alert('Acces interzis! Numai administratorii pot accesa această pagină.');
+        window.location.href = redirectUrl;
+        return false;
+    }
+    return true;
+}
+
+// Update UI based on login status
+function updateUIBasedOnLogin() {
+    const user = getCurrentUser();
+    const loginBtn = document.getElementById('loginBtn');
+    const userInfo = document.getElementById('userInfo');
+    const adminLink = document.getElementById('adminLink');
+    
+    if (user && userInfo) {
+        // Show user info
+        userInfo.innerHTML = `
+            <span class="mr-2">Bun venit, <strong>${user.username}</strong></span>
+            <span class="badge badge-danger">${user.role}</span>
+            <button onclick="logout()" class="btn btn-sm btn-outline-light ml-2">
+                <i class="fa fa-sign-out"></i>
+            </button>
+        `;
+        userInfo.style.display = 'block';
+        
+        if (loginBtn) loginBtn.style.display = 'none';
+        
+        // Show admin link only for admin
+        if (adminLink && user.role === 'admin') {
+            adminLink.style.display = 'block';
+        }
+    } else if (loginBtn) {
+        // Show login button
+        loginBtn.style.display = 'block';
+        if (userInfo) userInfo.style.display = 'none';
+        if (adminLink) adminLink.style.display = 'none';
+    }
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    updateUI();
+    updateUIBasedOnLogin();
     
-    // Adaugă event listener pentru butoane
-    document.querySelectorAll('.btn-view').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const animeCard = this.closest('.anime-card');
-            const animeTitle = animeCard.querySelector('h3').textContent;
-            viewAnime(animeTitle.toLowerCase().replace(/\s+/g, '-'));
-        });
+    // Add logout functionality to all logout buttons
+    document.querySelectorAll('.logout-btn').forEach(btn => {
+        btn.addEventListener('click', logout);
     });
-    
-    // Activează butoanele pe baza accesului
-    const memberBtn = document.querySelector('.anime-card:nth-child(2) .btn-view');
-    const subscriberBtn = document.querySelector('.anime-card:nth-child(3) .btn-view');
-    
-    if (memberBtn && !hasAccess('member')) {
-        memberBtn.disabled = true;
-        memberBtn.innerHTML = `<i class="fas fa-lock"></i> Acces doar pentru membri`;
-    }
-    
-    if (subscriberBtn && !hasAccess('subscriber')) {
-        subscriberBtn.disabled = true;
-        subscriberBtn.innerHTML = `<i class="fas fa-crown"></i> Acces doar pentru subscriberi`;
-    }
 });
+
+// Export functions for use in HTML
+window.loginUser = loginUser;
+window.logout = logout;
+window.checkLoginStatus = checkLoginStatus;
+window.getCurrentUser = getCurrentUser;
+window.isAdmin = isAdmin;
+window.isMember = isMember;
+window.requireLogin = requireLogin;
+window.requireAdmin = requireAdmin;
+window.updateUIBasedOnLogin = updateUIBasedOnLogin;
