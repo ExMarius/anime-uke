@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - Anime Uke</title>
+    
+    <!-- Bootstrap 4 -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .profile-header {
+            background: linear-gradient(45deg, #920d0d, #6d0019);
+            padding: 40px 0;
+            margin-bottom: -50px;
+            position: relative;
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #920d0d;
+            border: 5px solid #1a1a2e;
+            margin: 0 auto 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .activity-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="main-body">
+    <!-- Simplified Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark anime-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <span class="brand-text">ANIME UKE</span>
+            </a>
+            <div id="userNavItem"></div>
+        </div>
+    </nav>
+    
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    <div class="profile-avatar" id="profileAvatar">?</div>
+                </div>
+                <div class="col-md-9">
+                    <h1 id="profileUsername" class="text-white">Loading...</h1>
+                    <div class="mt-2">
+                        <span class="badge badge-danger mr-2" id="profileRole">Role</span>
+                        <span class="text-white-50">
+                            <i class="fa fa-calendar"></i> Membru din: 
+                            <span id="profileCreated">-</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Content -->
+    <div class="container mt-5 pt-4">
+        <div class="row">
+            <!-- Left Column - Stats -->
+            <div class="col-md-4">
+                <div class="box-content">
+                    <h4><i class="fa fa-chart-bar"></i> Statistici</h4>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-number" id="watchedEpisodes">0</div>
+                                <small>Episoade</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-number" id="completedSeries">0</div>
+                                <small>Serii</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-number" id="watchTime">0</div>
+                                <small>Ore</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-number" id="accountAge">0</div>
+                                <small>Zile</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5><i class="fa fa-info-circle"></i> Informații</h5>
+                        <div class="light-container p-3 mt-2">
+                            <div class="mb-2">
+                                <strong>Email:</strong><br>
+                                <span id="profileEmail">-</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Ultima activitate:</strong><br>
+                                <span id="profileLastLogin">-</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Status:</strong><br>
+                                <span class="badge badge-success">Activ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Activity -->
+            <div class="col-md-8">
+                <div class="box-content">
+                    <h4><i class="fa fa-history"></i> Activitate Recentă</h4>
+                    <div class="mt-3" id="recentActivity">
+                        <div class="text-center py-4">
+                            <i class="fa fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="mt-2">Se încarcă activitatea...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="box-content mt-4">
+                    <h4><i class="fa fa-bolt"></i> Acțiuni Rapide</h4>
+                    <div class="row mt-3">
+                        <div class="col-md-4 mb-2">
+                            <a href="settings.html" class="btn btn-anime btn-block">
+                                <i class="fa fa-cog"></i> Setări
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <a href="index.html" class="btn btn-anime btn-block">
+                                <i class="fa fa-home"></i> Acasă
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button onclick="logout()" class="btn btn-outline-light btn-block">
+                                <i class="fa fa-sign-out"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Profile page loaded');
+            
+            // Verifică login
+            if (!requireLogin()) {
+                return;
+            }
+            
+            const user = getCurrentUser();
+            console.log('👤 Current user:', user);
+            
+            // Update profile info
+            document.getElementById('profileAvatar').textContent = user.avatar || user.username.charAt(0).toUpperCase();
+            document.getElementById('profileUsername').textContent = user.username;
+            document.getElementById('profileRole').textContent = user.role.toUpperCase();
+            
+            if (user.email) {
+                document.getElementById('profileEmail').textContent = user.email;
+            }
+            
+            if (user.created) {
+                document.getElementById('profileCreated').textContent = user.created;
+                
+                // Calculate account age in days
+                const createdDate = new Date(user.created);
+                const today = new Date();
+                const diffTime = Math.abs(today - createdDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                document.getElementById('accountAge').textContent = diffDays;
+            }
+            
+            if (user.lastLogin) {
+                const lastLoginDate = new Date(user.lastLogin);
+                document.getElementById('profileLastLogin').textContent = 
+                    lastLoginDate.toLocaleString('ro-RO');
+            }
+            
+            // Generate mock stats
+            document.getElementById('watchedEpisodes').textContent = 
+                Math.floor(Math.random() * 500) + 50;
+            document.getElementById('completedSeries').textContent = 
+                Math.floor(Math.random() * 50) + 5;
+            document.getElementById('watchTime').textContent = 
+                Math.floor(Math.random() * 300) + 50;
+            
+            // Generate mock activity
+            generateMockActivity();
+            
+            // Update navbar
+            updateUIBasedOnLogin();
+            
+            function generateMockActivity() {
+                const activities = [
+                    { action: 'Ai vizionat episodul 1100 din One Piece', time: 'Acum 2 ore' },
+                    { action: 'Ai adăugat "Naruto" la lista de urmărit', time: 'Acum 1 zi' },
+                    { action: 'Ai completat seria "Attack on Titan"', time: 'Acum 3 zile' },
+                    { action: 'Ai evaluat "Demon Slayer" cu 5 stele', time: 'Acum 1 săptămână' },
+                    { action: 'Ai adăugat un comentariu la "Jujutsu Kaisen"', time: 'Acum 2 săptămâni' }
+                ];
+                
+                let html = '';
+                activities.forEach(activity => {
+                    html += `
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <i class="fa fa-play-circle text-danger mr-2"></i>
+                                ${activity.action}
+                            </div>
+                            <small class="text-muted">${activity.time}</small>
+                        </div>
+                    </div>
+                    `;
+                });
+                
+                document.getElementById('recentActivity').innerHTML = html;
+            }
+        });
+        
+        // Logout function
+        function logout() {
+            if (confirm('Sigur vrei să te deconectezi?')) {
+                window.logout();
+            }
+        }
+    </script>
+</body>
+</html>
