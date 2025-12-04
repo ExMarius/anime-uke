@@ -1,97 +1,168 @@
-<!-- În login.html, la sfârșit înainte de </body> -->
-<script src="config.js"></script>
-<script src="script.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔐 Login page loaded');
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Anime Uke</title>
     
-    const loginForm = document.getElementById('loginForm');
-    const errorMessage = document.getElementById('error-message');
-    const errorText = document.getElementById('error-text');
-    
-    // Dacă e deja logat, redirect la home
-    if (checkLoginStatus()) {
-      console.log('✅ User already logged in, redirecting...');
-      window.location.href = 'index.html';
-      return;
-    }
-    
-    // Handle form submission
-    loginForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      console.log('📝 Form submitted');
-      
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      
-      // Validate inputs
-      if (!username || !password) {
-        showError('Completează ambele câmpuri!');
-        return;
-      }
-      
-      // Show loading
-      const submitBtn = loginForm.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Se conectează...';
-      submitBtn.disabled = true;
-      
-      console.log(`🔐 Attempting login for: ${username}`);
-      
-      try {
-        // Attempt login
-        const result = await loginUser(username, password);
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Anime Uke CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navbar simplă -->
+    <nav class="navbar navbar-dark bg-dark-red">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Login Container -->
+    <div class="login-container">
+        <div class="login-header">
+            <i class="fas fa-user-circle"></i>
+            <h2>Autentificare</h2>
+            <p class="text-muted">Intră în contul tău</p>
+        </div>
         
-        if (result.success) {
-          console.log('✅ Login successful!');
-          showSuccess('Conectat cu succes! Redirecționare...');
-          
-          // Redirect after 1 second
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 1000);
-          
-        } else {
-          console.log('❌ Login failed:', result.message);
-          showError(result.message);
-          submitBtn.innerHTML = originalText;
-          submitBtn.disabled = false;
-        }
+        <!-- Alert pentru erori -->
+        <div class="alert alert-danger d-none" id="errorAlert">
+            <i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span>
+        </div>
         
-      } catch (error) {
-        console.error('💥 Login error:', error);
-        showError('Eroare la conectare. Încearcă din nou.');
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
+        <!-- Formular Login -->
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user"></i> Username
+                </label>
+                <input type="text" class="form-control" id="username" 
+                       placeholder="ex: admin sau membru" required>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i> Parolă
+                </label>
+                <input type="password" class="form-control" id="password" 
+                       placeholder="Introdu parola ta" required>
+            </div>
+            
+            <button type="submit" class="btn btn-danger btn-lg w-100">
+                <i class="fas fa-sign-in-alt"></i> LOGIN
+            </button>
+        </form>
+        
+        <!-- Test Accounts -->
+        <div class="mt-4 p-3 bg-dark rounded">
+            <h6><i class="fas fa-vial"></i> Conturi de test:</h6>
+            <ul class="mb-0">
+                <li><strong>Admin:</strong> admin / admin123</li>
+                <li><strong>Membru:</strong> membru / membru123</li>
+            </ul>
+        </div>
+        
+        <!-- Back to Home -->
+        <div class="text-center mt-4">
+            <a href="index.html" class="text-white">
+                <i class="fas fa-arrow-left"></i> Înapoi la pagina principală
+            </a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
     
-    // Show error function
-    function showError(message) {
-      errorText.textContent = message;
-      errorMessage.className = 'alert alert-danger';
-      errorMessage.style.display = 'block';
-      
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        errorMessage.style.display = 'none';
-      }, 5000);
-    }
-    
-    // Show success function
-    function showSuccess(message) {
-      errorText.textContent = message;
-      errorMessage.className = 'alert alert-success';
-      errorMessage.style.display = 'block';
-    }
-    
-    // Allow login with Enter key
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        loginForm.dispatchEvent(new Event('submit'));
-      }
-    });
-    
-    console.log('✅ Login page ready');
-  });
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔐 Login page loaded');
+            
+            const form = document.getElementById('loginForm');
+            const errorAlert = document.getElementById('errorAlert');
+            const errorText = document.getElementById('errorText');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Dacă e deja logat, redirect
+            if (isLoggedIn()) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Handle form submit
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('📝 Form submitted');
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                
+                // Validare simplă
+                if (!username || !password) {
+                    showError('Completează toate câmpurile!');
+                    return;
+                }
+                
+                // Loading state
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se conectează...';
+                submitBtn.disabled = true;
+                
+                try {
+                    // Încearcă login
+                    const result = await loginUser(username, password);
+                    
+                    if (result.success) {
+                        console.log('✅ Login successful!');
+                        
+                        // Arată succes
+                        errorAlert.className = 'alert alert-success';
+                        errorText.textContent = 'Conectat cu succes! Redirecționare...';
+                        errorAlert.classList.remove('d-none');
+                        
+                        // Redirect după 1 secundă
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1000);
+                        
+                    } else {
+                        console.log('❌ Login failed');
+                        showError(result.message);
+                        submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> LOGIN';
+                        submitBtn.disabled = false;
+                    }
+                    
+                } catch (error) {
+                    console.error('💥 Login error:', error);
+                    showError('Eroare la conectare. Încearcă din nou.');
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> LOGIN';
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // Funcție pentru afișare eroare
+            function showError(message) {
+                errorText.textContent = message;
+                errorAlert.className = 'alert alert-danger';
+                errorAlert.classList.remove('d-none');
+                
+                // Ascunde eroarea după 5 secunde
+                setTimeout(() => {
+                    errorAlert.classList.add('d-none');
+                }, 5000);
+            }
+            
+            // Login cu Enter key
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
