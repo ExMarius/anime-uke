@@ -1,18 +1,29 @@
-// config.js - CONFIGURARE JSONBIN
+// config.js - CONFIGURARE JSONBIN pentru Anime Uke
 const JSONBIN_CONFIG = {
-  BIN_ID: "693177b4d0ea881f401260aa", // Înlocuiește cu Bin ID-ul tău
-  API_KEY: "$2a$10$chxy/E8m6jlMEUh7n7/qfuEDpFt.uv4AMZGCwfzju51RM.ApKwonO",    // Înlocuiește cu API Key-ul tău
+  BIN_ID: "693177b4d0ea881f401260aa",  // Bin ID-ul tău
+  API_KEY: "$2a$10$chxy/E8m6jlMEUh7n7/qfuEDpFt.uv4AMZGCwfzju51RM.ApKwonO",  // API Key-ul tău
   
-  // Nu modifica restul
+  // NU MODIFICA restul
   API_URL: "https://api.jsonbin.io/v3/b",
-  HEADERS: {
-    'Content-Type': 'application/json',
-    'X-Master-Key': "$2a$10$chxy/E8m6jlMEUh7n7/qfuEDpFt.uv4AMZGCwfzju51RM.ApKwonO" // Aici se pune același KEY
+  
+  get HEADERS() {
+    return {
+      'Content-Type': 'application/json',
+      'X-Master-Key': this.API_KEY
+    };
   }
 };
 
 // Salvează în localStorage pentru toate paginile
-localStorage.setItem('jsonbin_id', JSONBIN_CONFIG.BIN_ID);
-localStorage.setItem('jsonbin_key', JSONBIN_CONFIG.API_KEY);
+try {
+  localStorage.setItem('jsonbin_id', JSONBIN_CONFIG.BIN_ID);
+  localStorage.setItem('jsonbin_key', JSONBIN_CONFIG.API_KEY);
+  console.log('✅ JSONBin config loaded successfully');
+} catch (error) {
+  console.warn('⚠️ Could not save to localStorage:', error);
+}
 
-console.log('✅ JSONBin config loaded');
+// Export pentru module (dacă e nevoie)
+if (typeof module !== 'undefined') {
+  module.exports = JSONBIN_CONFIG;
+}
