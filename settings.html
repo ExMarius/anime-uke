@@ -5,273 +5,136 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setări - Anime Uke</title>
     
-    <!-- Bootstrap 4 -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    
-    <!-- Custom CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
-    
-    <style>
-        .settings-button {
-            height: 150px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            transition: all 0.3s;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .settings-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(146, 13, 13, 0.3);
-        }
-        
-        .settings-button .icon-big {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            color: #920d0d;
-        }
-        
-        .settings-button .link-cover {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-        }
-        
-        .settings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-    </style>
 </head>
-<body class="main-body">
+<body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark anime-navbar">
+    <nav class="navbar navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <span class="brand-text">ANIME UKE</span>
+                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
             </a>
-            
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.html">
-                            <i class="fa fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="settings.html">
-                            <i class="fa fa-cog"></i> Setări
-                        </a>
-                    </li>
-                    <li class="nav-item" id="adminNavItem">
-                        <!-- Admin link will appear here for admin users -->
-                    </li>
-                </ul>
-            </div>
+            <div id="userNavItem"></div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <div class="container mt-4">
+
+    <!-- Settings Content -->
+    <div class="container py-4">
+        <h1 class="mb-4"><i class="fas fa-cogs"></i> Setări Cont</h1>
+        
         <div class="row">
-            <!-- Sidebar -->
-            <div class="col-lg-3 mb-4">
-                <div class="box-content">
-                    <h4 class="text-center mb-4"><i class="fa fa-user-circle"></i> Meniu Setări</h4>
-                    
-                    <div class="list-group">
-                        <a href="#" class="list-group-item list-group-item-action active">
-                            <i class="fa fa-dashboard"></i> Dashboard
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fa fa-user"></i> Profil
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fa fa-lock"></i> Securitate
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fa fa-bell"></i> Notificări
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action">
-                            <i class="fa fa-eye"></i> Privatitate
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="logout()">
-                            <i class="fa fa-sign-out"></i> Logout
-                        </a>
-                    </div>
-                    
-                    <!-- User Info -->
-                    <div class="mt-4 text-center">
-                        <div class="mb-3">
-                            <i class="fa fa-user-circle fa-4x text-danger"></i>
-                        </div>
-                        <h5 id="settingsUsername">User</h5>
-                        <span class="badge badge-danger" id="settingsRole">Role</span>
-                    </div>
+            <div class="col-md-3">
+                <!-- Settings Menu -->
+                <div class="list-group">
+                    <a href="#profile" class="list-group-item list-group-item-action active" 
+                       data-bs-toggle="list">
+                        <i class="fas fa-user"></i> Profil
+                    </a>
+                    <a href="#security" class="list-group-item list-group-item-action" 
+                       data-bs-toggle="list">
+                        <i class="fas fa-lock"></i> Securitate
+                    </a>
+                    <a href="#notifications" class="list-group-item list-group-item-action" 
+                       data-bs-toggle="list">
+                        <i class="fas fa-bell"></i> Notificări
+                    </a>
+                    <a href="profile.html" class="list-group-item list-group-item-action">
+                        <i class="fas fa-arrow-left"></i> Înapoi la Profil
+                    </a>
                 </div>
             </div>
             
-            <!-- Main Settings Grid -->
-            <div class="col-lg-9">
-                <div class="box-content">
-                    <h2 class="section-title mb-4">
-                        <i class="fa fa-cogs"></i> Setări Cont
-                    </h2>
-                    
-                    <div class="settings-grid">
-                        <!-- Rang / Facțiuni / Teme -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-briefcase icon-big"></span>
-                                <div class="mt-2">Rang / Facțiuni / Teme</div>
+            <div class="col-md-9">
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Profile Tab -->
+                    <div class="tab-pane fade show active" id="profile">
+                        <div class="card">
+                            <div class="card-header bg-dark">
+                                <h4 class="mb-0"><i class="fas fa-user-edit"></i> Editare Profil</h4>
                             </div>
-                        </div>
-                        
-                        <!-- Magazin -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-shopping-bag icon-big"></span>
-                                <div class="mt-2">Magazin</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Despre tine -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-user-circle-o icon-big"></span>
-                                <div class="mt-2">Despre tine</div>
-                                <small class="text-muted">(sex, vârstă, locație)</small>
-                            </div>
-                        </div>
-                        
-                        <!-- Abonări serii -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-newspaper-o icon-big"></span>
-                                <div class="mt-2">Abonările tale la serii</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Serii recomandate -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-certificate icon-big"></span>
-                                <div class="mt-2">Serii recomandate de tine</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Episoade vizionate -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-film icon-big"></span>
-                                <div class="mt-2">Episoadele tale vizionate</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Serii vizionate -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-file-movie-o icon-big"></span>
-                                <div class="mt-2">Seriile tale vizionate</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Serii de vizionat -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-clock-o icon-big"></span>
-                                <div class="mt-2">Seriile planificate de vizionat</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Privatitate vizionate -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover" id="togglePrivacyWatched"></a>
-                                <span class="fa fa-eye icon-big" id="privacyWatchedIcon"></span>
-                                <div class="mt-2" id="privacyWatchedText">Privatitate vizionate</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Schimbă username -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-user-circle icon-big"></span>
-                                <div class="mt-2">Schimbă username</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Schimbă e-mail -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-envelope icon-big"></span>
-                                <div class="mt-2">Schimbă / verifică e-mail</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Schimbă parola -->
-                        <div class="settings-button light-container">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-key icon-big"></span>
-                                <div class="mt-2">Schimbă parola contului</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Șterge cont -->
-                        <div class="settings-button light-container" style="background: rgba(220, 53, 69, 0.1);">
-                            <div>
-                                <a href="#" class="link-cover"></a>
-                                <span class="fa fa-trash icon-big"></span>
-                                <div class="mt-2">Șterge cont</div>
+                            <div class="card-body">
+                                <form id="profileForm">
+                                    <div class="mb-3">
+                                        <label for="settingsUsername" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="settingsUsername" 
+                                               value="Loading..." readonly>
+                                        <small class="text-muted">Username-ul nu poate fi schimbat</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="settingsEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="settingsEmail" 
+                                               value="Loading...">
+                                    </div>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-save"></i> Salvează Modificări
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Current Settings -->
-                <div class="box-content mt-4">
-                    <h4><i class="fa fa-info-circle"></i> Informații Cont</h4>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="light-container p-3 mb-3">
-                                <strong>Username:</strong> <span id="currentUsername">-</span>
+                    
+                    <!-- Security Tab -->
+                    <div class="tab-pane fade" id="security">
+                        <div class="card">
+                            <div class="card-header bg-dark">
+                                <h4 class="mb-0"><i class="fas fa-shield-alt"></i> Securitate</h4>
+                            </div>
+                            <div class="card-body">
+                                <form id="passwordForm">
+                                    <div class="mb-3">
+                                        <label for="currentPassword" class="form-label">Parola Curentă</label>
+                                        <input type="password" class="form-control" id="currentPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">Parola Nouă</label>
+                                        <input type="password" class="form-control" id="newPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Confirmă Parola Nouă</label>
+                                        <input type="password" class="form-control" id="confirmPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-key"></i> Schimbă Parola
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="light-container p-3 mb-3">
-                                <strong>Rol:</strong> <span id="currentRole">-</span>
+                    </div>
+                    
+                    <!-- Notifications Tab -->
+                    <div class="tab-pane fade" id="notifications">
+                        <div class="card">
+                            <div class="card-header bg-dark">
+                                <h4 class="mb-0"><i class="fas fa-bell"></i> Setări Notificări</h4>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="light-container p-3 mb-3">
-                                <strong>Data înregistrării:</strong> <span id="registrationDate">-</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="light-container p-3 mb-3">
-                                <strong>Ultima activitate:</strong> <span id="lastActivity">-</span>
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="notifEmail" checked>
+                                    <label class="form-check-label" for="notifEmail">
+                                        Notificări prin Email
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="notifNewEpisodes" checked>
+                                    <label class="form-check-label" for="notifNewEpisodes">
+                                        Notificări pentru episoade noi
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="notifNews" checked>
+                                    <label class="form-check-label" for="notifNews">
+                                        Noutăți și anunțuri
+                                    </label>
+                                </div>
+                                <button class="btn btn-danger" onclick="saveNotifications()">
+                                    <i class="fas fa-save"></i> Salvează Preferințe
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -279,69 +142,77 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
+    
     <script>
-        // Check if user is logged in
         document.addEventListener('DOMContentLoaded', function() {
-            const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+            console.log('⚙️ Settings page loaded');
             
-            if (!user) {
-                // Redirect to login if not logged in
-                window.location.href = 'login.html';
+            // Verifică login
+            if (!requireLogin()) {
                 return;
             }
             
-            // Update UI with user info
-            document.getElementById('settingsUsername').textContent = user.username;
-            document.getElementById('settingsRole').textContent = user.role.toUpperCase();
-            document.getElementById('currentUsername').textContent = user.username;
-            document.getElementById('currentRole').textContent = user.role.toUpperCase();
+            const user = getCurrentUser();
             
-            // Show admin link if user is admin
-            if (user.role === 'admin') {
-                document.getElementById('adminNavItem').innerHTML = `
-                    <a class="nav-link" href="admin.html">
-                        <i class="fa fa-shield"></i> Admin
-                    </a>
-                `;
-            }
+            // Populează formularul
+            document.getElementById('settingsUsername').value = user.username;
+            document.getElementById('settingsEmail').value = 
+                user.email || `${user.username}@animeuke.com`;
             
-            // Set registration date (mock data)
-            document.getElementById('registrationDate').textContent = 
-                new Date().toLocaleDateString('ro-RO');
-            document.getElementById('lastActivity').textContent = 
-                new Date().toLocaleString('ro-RO');
+            // Update navbar
+            updateUIBasedOnLogin();
             
-            // Privacy toggle functionality
-            let privacyWatched = localStorage.getItem('privacyWatched') !== 'false';
-            
-            function updatePrivacyUI() {
-                const icon = document.getElementById('privacyWatchedIcon');
-                const text = document.getElementById('privacyWatchedText');
-                
-                if (privacyWatched) {
-                    icon.className = 'fa fa-eye-slash icon-big';
-                    text.textContent = 'Vizionate: Privat';
-                } else {
-                    icon.className = 'fa fa-eye icon-big';
-                    text.textContent = 'Vizionate: Public';
-                }
-            }
-            
-            document.getElementById('togglePrivacyWatched').addEventListener('click', function(e) {
+            // Handle profile form
+            document.getElementById('profileForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                privacyWatched = !privacyWatched;
-                localStorage.setItem('privacyWatched', privacyWatched);
-                updatePrivacyUI();
-                
-                // Show notification
-                alert('Setările de privatitate au fost actualizate!');
+                alert('Funcția de salvare profil va fi implementată în curând!');
             });
             
-            updatePrivacyUI();
+            // Handle password form
+            document.getElementById('passwordForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const currentPass = document.getElementById('currentPassword').value;
+                const newPass = document.getElementById('newPassword').value;
+                const confirmPass = document.getElementById('confirmPassword').value;
+                
+                if (newPass !== confirmPass) {
+                    alert('Parolele nu coincid!');
+                    return;
+                }
+                
+                if (newPass.length < 6) {
+                    alert('Parola trebuie să aibă cel puțin 6 caractere!');
+                    return;
+                }
+                
+                alert('Funcția de schimbare parolă va fi implementată în curând!');
+                document.getElementById('passwordForm').reset();
+            });
+            
+            // Load saved notification preferences
+            const savedPrefs = JSON.parse(localStorage.getItem('notificationPrefs') || '{}');
+            document.getElementById('notifEmail').checked = savedPrefs.email !== false;
+            document.getElementById('notifNewEpisodes').checked = savedPrefs.episodes !== false;
+            document.getElementById('notifNews').checked = savedPrefs.news !== false;
         });
+        
+        // Save notification preferences
+        function saveNotifications() {
+            const prefs = {
+                email: document.getElementById('notifEmail').checked,
+                episodes: document.getElementById('notifNewEpisodes').checked,
+                news: document.getElementById('notifNews').checked
+            };
+            
+            localStorage.setItem('notificationPrefs', JSON.stringify(prefs));
+            alert('Preferințele au fost salvate!');
+        }
     </script>
 </body>
 </html>
