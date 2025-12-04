@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Anime Uke</title>
     
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,6 +20,12 @@
             margin-bottom: 20px;
             text-align: center;
             border: 1px solid rgba(146, 13, 13, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(146, 13, 13, 0.2);
         }
         
         .stats-number {
@@ -28,6 +34,33 @@
             color: #920d0d;
             margin: 10px 0;
         }
+        
+        .admin-table th {
+            background: linear-gradient(45deg, #920d0d, #6d0019);
+            color: white;
+            border: none;
+        }
+        
+        .user-avatar-small {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: white;
+            color: #920d0d;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        
+        .admin-actions {
+            background: rgba(146, 13, 13, 0.1);
+            border: 1px solid #920d0d;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -35,7 +68,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <i class="fas fa-ghost"></i> <strong>ANIME UKE ADMIN</strong>
+                <i class="fas fa-shield-alt"></i> <strong>ANIME UKE ADMIN</strong>
             </a>
             <div id="userNavItem"></div>
         </div>
@@ -43,32 +76,32 @@
 
     <!-- Admin Content -->
     <div class="container py-4">
-        <h1 class="mb-4"><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+        <h1 class="mb-4"><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
         
-        <!-- Stats -->
+        <!-- Stats Cards -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
                 <div class="stats-card">
                     <i class="fas fa-users fa-2x"></i>
                     <div class="stats-number" id="totalUsers">0</div>
                     <div>Utilizatori</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
                 <div class="stats-card">
                     <i class="fas fa-film fa-2x"></i>
-                    <div class="stats-number">42</div>
+                    <div class="stats-number" id="totalSeries">42</div>
                     <div>Serii Anime</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
                 <div class="stats-card">
                     <i class="fas fa-play-circle fa-2x"></i>
-                    <div class="stats-number">1,248</div>
+                    <div class="stats-number" id="totalEpisodes">1,248</div>
                     <div>Episoade</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 col-6">
                 <div class="stats-card">
                     <i class="fas fa-calendar-day fa-2x"></i>
                     <div class="stats-number" id="currentDate"></div>
@@ -78,13 +111,16 @@
         </div>
         
         <!-- Users Table -->
-        <div class="card">
-            <div class="card-header bg-dark">
+        <div class="card mb-4">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="fas fa-users-cog"></i> Management Utilizatori</h4>
+                <button class="btn btn-sm btn-danger" onclick="loadAdminUsers()">
+                    <i class="fas fa-sync-alt"></i> Reîncarcă
+                </button>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table admin-table">
+                    <table class="table admin-table table-hover">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -92,11 +128,16 @@
                                 <th>Email</th>
                                 <th>Rol</th>
                                 <th>Data Înregistrării</th>
+                                <th>Ultima Activitate</th>
                                 <th>Acțiuni</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <!-- Users will load here -->
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Se încarcă utilizatorii...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -104,54 +145,64 @@
         </div>
         
         <!-- Admin Actions -->
-        <div class="row mt-4">
+        <div class="row">
             <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-dark">
-                        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Adaugă User Nou</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="addUserForm">
-                            <div class="mb-3">
-                                <label for="newUsername" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="newUsername" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="newPassword" class="form-label">Parolă</label>
-                                <input type="password" class="form-control" id="newPassword" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="newRole" class="form-label">Rol</label>
-                                <select class="form-control" id="newRole" required>
-                                    <option value="user">User</option>
-                                    <option value="membru">Membru</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-user-plus"></i> Adaugă User
-                            </button>
-                        </form>
-                    </div>
+                <div class="admin-actions">
+                    <h5><i class="fas fa-plus-circle"></i> Adaugă User Nou</h5>
+                    <form id="addUserForm" class="mt-3">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="newUsername" 
+                                   placeholder="Username" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" id="newEmail" 
+                                   placeholder="Email" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" class="form-control" id="newPassword" 
+                                   placeholder="Parolă" required minlength="6">
+                        </div>
+                        <div class="mb-3">
+                            <select class="form-control" id="newRole" required>
+                                <option value="">Selectează rolul</option>
+                                <option value="user">User</option>
+                                <option value="membru">Membru</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="fas fa-user-plus"></i> Adaugă User
+                        </button>
+                    </form>
                 </div>
             </div>
             
             <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-dark">
-                        <h5 class="mb-0"><i class="fas fa-cogs"></i> Acțiuni Rapide</h5>
+                <div class="admin-actions">
+                    <h5><i class="fas fa-cogs"></i> Acțiuni Rapide</h5>
+                    <div class="d-grid gap-2 mt-3">
+                        <button class="btn btn-outline-light" onclick="exportUsers()">
+                            <i class="fas fa-download"></i> Exportă Useri (JSON)
+                        </button>
+                        <button class="btn btn-outline-light" onclick="backupDatabase()">
+                            <i class="fas fa-database"></i> Backup Database
+                        </button>
+                        <button class="btn btn-outline-light" onclick="clearCache()">
+                            <i class="fas fa-trash"></i> Șterge Cache
+                        </button>
+                        <a href="index.html" class="btn btn-outline-light">
+                            <i class="fas fa-home"></i> Înapoi la Home
+                        </a>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-light" onclick="location.reload()">
-                                <i class="fas fa-sync"></i> Reîncarcă Datele
-                            </button>
-                            <button class="btn btn-outline-light" onclick="exportUsers()">
-                                <i class="fas fa-download"></i> Exportă Useri
-                            </button>
-                            <button class="btn btn-outline-light" onclick="window.location.href='index.html'">
-                                <i class="fas fa-home"></i> Înapoi la Home
-                            </button>
+                    
+                    <!-- System Info -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6><i class="fas fa-info-circle"></i> Informații Sistem</h6>
+                        <div class="small">
+                            <div>Firebase Project: <strong>anime-uke</strong></div>
+                            <div>Database: <span class="text-success">Online</span></div>
+                            <div>Auth: <span class="text-success">Active</span></div>
+                            <div>Plan: <span class="text-warning">Spark (Free)</span></div>
                         </div>
                     </div>
                 </div>
@@ -159,8 +210,13 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    
     <!-- Scripts -->
-    <script src="config.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="script.js"></script>
     
     <script>
@@ -175,90 +231,125 @@
             // Update UI
             updateUIBasedOnLogin();
             
-            // Încarcă userii
-            loadAdminUsers();
-            
             // Setează data curentă
             document.getElementById('currentDate').textContent = 
                 new Date().toLocaleDateString('ro-RO');
+            
+            // Încarcă userii
+            loadAdminUsers();
             
             // Formular pentru adăugare user
             document.getElementById('addUserForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 const username = document.getElementById('newUsername').value.trim();
+                const email = document.getElementById('newEmail').value.trim();
                 const password = document.getElementById('newPassword').value.trim();
                 const role = document.getElementById('newRole').value;
                 
-                if (!username || !password) {
+                if (!username || !email || !password || !role) {
                     alert('Completează toate câmpurile!');
                     return;
                 }
                 
+                if (!isValidEmail(email)) {
+                    alert('Introdu o adresă de email validă!');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    alert('Parola trebuie să aibă cel puțin 6 caractere!');
+                    return;
+                }
+                
+                // Loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se adaugă...';
+                submitBtn.disabled = true;
+                
                 try {
-                    const users = await getUsers();
+                    // Încearcă înregistrarea cu Firebase
+                    const result = await registerUser(username, email, password);
                     
-                    // Verifică dacă username-ul există deja
-                    if (users.some(u => u.username === username)) {
-                        alert('Username-ul există deja!');
-                        return;
-                    }
-                    
-                    // Creează noul user
-                    const newUser = {
-                        id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-                        username: username,
-                        password: password,
-                        role: role,
-                        avatar: username.charAt(0).toUpperCase(),
-                        created: new Date().toISOString().split('T')[0],
-                        lastLogin: new Date().toISOString()
-                    };
-                    
-                    users.push(newUser);
-                    
-                    // Salvează în JSONBin
-                    const response = await fetch(`${CONFIG.API_URL}/${CONFIG.BIN_ID}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Master-Key': CONFIG.API_KEY
-                        },
-                        body: JSON.stringify({ users: users })
-                    });
-                    
-                    if (response.ok) {
-                        alert('User adăugat cu succes!');
-                        document.getElementById('addUserForm').reset();
-                        loadAdminUsers(); // Reîncarcă lista
+                    if (result.success) {
+                        // Update user role in Firestore
+                        const user = getCurrentUser();
+                        if (user && user.uid) {
+                            try {
+                                await db.collection('users').doc(user.uid).update({
+                                    role: role
+                                });
+                                
+                                alert(`User "${username}" adăugat cu succes ca ${role}!`);
+                                document.getElementById('addUserForm').reset();
+                                loadAdminUsers(); // Reîncarcă lista
+                                
+                            } catch (error) {
+                                console.error('Error updating role:', error);
+                                alert('User adăugat, dar eroare la setarea rolului. Poți să-l modifici manual.');
+                                loadAdminUsers();
+                            }
+                        }
                     } else {
-                        alert('Eroare la adăugarea user-ului!');
+                        alert('Eroare: ' + result.message);
                     }
                     
                 } catch (error) {
                     console.error('Error adding user:', error);
-                    alert('Eroare: ' + error.message);
+                    alert('Eroare la adăugarea user-ului: ' + error.message);
+                } finally {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
                 }
             });
         });
         
+        // Funcție pentru validare email
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+        
         // Export users as JSON
-        function exportUsers() {
-            const user = getCurrentUser();
-            const data = {
-                exportedBy: user.username,
-                exportDate: new Date().toISOString(),
-                users: [] // Ar fi nevoie să încărci userii aici
-            };
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'anime-uke-users-backup.json';
-            a.click();
-            URL.revokeObjectURL(url);
+        async function exportUsers() {
+            try {
+                const users = await getAllUsers();
+                const data = {
+                    exportedBy: getCurrentUser().username,
+                    exportDate: new Date().toISOString(),
+                    totalUsers: users.length,
+                    users: users
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `anime-uke-users-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                alert(`Exportat ${users.length} utilizatori!`);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Eroare la export: ' + error.message);
+            }
+        }
+        
+        // Backup database (mock function)
+        function backupDatabase() {
+            alert('Backup-ul database-ului a fost inițiat! (Funcție demonstrativă)');
+        }
+        
+        // Clear cache
+        function clearCache() {
+            localStorage.removeItem('currentUser');
+            alert('Cache șters cu succes! Va trebui să te loghezi din nou.');
+            window.location.href = 'login.html';
         }
     </script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
