@@ -1,4 +1,4 @@
-/* Anime Uke - Final CSS */
+/* Anime Uke - Main Stylesheet */
 :root {
     --primary-red: #920d0d;
     --dark-red: #6d0019;
@@ -10,7 +10,7 @@
 }
 
 /* Body & Global */
-body.main-body {
+body {
     background-color: var(--dark-bg);
     color: var(--text-light);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -29,9 +29,8 @@ body.main-body {
     font-weight: bold;
 }
 
-.navbar-brand i {
-    color: #ffd700;
-    margin-right: 10px;
+.navbar-brand img {
+    filter: brightness(1.2);
 }
 
 .nav-link {
@@ -52,23 +51,6 @@ body.main-body {
     background: rgba(255, 255, 255, 0.15);
     color: white !important;
     font-weight: bold;
-}
-
-/* Dropdown */
-.dropdown-menu {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-}
-
-.dropdown-item {
-    color: var(--text-light);
-    transition: all 0.3s;
-}
-
-.dropdown-item:hover {
-    background: rgba(146, 13, 13, 0.2);
-    color: white;
 }
 
 /* Buttons */
@@ -100,13 +82,14 @@ body.main-body {
     transform: translateY(-3px);
 }
 
-.btn-primary {
-    background: #2575fc;
-    border: none;
+.btn-outline-danger {
+    border: 2px solid var(--primary-red);
+    color: var(--primary-red);
 }
 
-.btn-primary:hover {
-    background: #1a67e8;
+.btn-outline-danger:hover {
+    background: var(--primary-red);
+    color: white;
 }
 
 /* Cards */
@@ -265,23 +248,6 @@ body.main-body {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* Footer */
-footer {
-    background: rgba(0, 0, 0, 0.5);
-    border-top: 2px solid var(--primary-red);
-    margin-top: 50px;
-}
-
-footer a {
-    color: var(--text-light);
-    text-decoration: none;
-    transition: color 0.3s;
-}
-
-footer a:hover {
-    color: var(--primary-red);
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 12px;
@@ -345,34 +311,12 @@ a:hover {
 
 /* Responsive */
 @media (max-width: 768px) {
-    body.main-body {
+    body {
         padding-top: 66px;
     }
     
     .navbar-brand {
         font-size: 1.5rem;
-    }
-    
-    .hero-section {
-        padding: 60px 0;
-    }
-    
-    .hero-section h1 {
-        font-size: 2rem;
-    }
-    
-    .login-container,
-    .register-container {
-        margin: 50px 20px;
-        padding: 0;
-    }
-    
-    .stats-card {
-        padding: 15px;
-    }
-    
-    .stats-number {
-        font-size: 2rem;
     }
 }
 
@@ -401,27 +345,5 @@ a:hover {
     
     h3 {
         font-size: 1.3rem;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .navbar,
-    footer,
-    .btn,
-    .no-print {
-        display: none !important;
-    }
-    
-    body {
-        background: white !important;
-        color: black !important;
-        padding-top: 0 !important;
-    }
-    
-    .card {
-        border: 1px solid #ddd !important;
-        background: white !important;
-        color: black !important;
     }
 }
