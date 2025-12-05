@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Uke - Home</title>
+    <title>Anime Uke - Cel mai bun site de anime românesc</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,56 +13,131 @@
     <link rel="stylesheet" href="style.css">
     
     <style>
-        .hero-section {
-            background: linear-gradient(rgba(109, 0, 25, 0.9), rgba(109, 0, 25, 0.7)), 
-                        url('https://images.unsplash.com/photo-1639322537228-f710d846310a');
-            background-size: cover;
-            background-position: center;
-            color: white;
-            padding: 100px 0;
+        /* Logo și branding */
+        .logo-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px 0;
             text-align: center;
-            margin-top: 76px;
+            border-bottom: 5px solid #920d0d;
         }
         
+        .logo-img {
+            max-width: 300px;
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(146, 13, 13, 0.5));
+            transition: transform 0.3s;
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.05);
+        }
+        
+        .tagline {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-top: 15px;
+            opacity: 0.9;
+        }
+        
+        /* Hero Section */
+        .hero-section {
+            background: url('https://i.imgur.com/bg-pattern.jpg') center/cover;
+            padding: 80px 0;
+            position: relative;
+            margin-top: 20px;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 46, 0.9);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+        
+        /* Anime Cards */
         .anime-card {
             background: #1a1a2e;
-            border-radius: 10px;
+            border-radius: 15px;
             overflow: hidden;
-            transition: transform 0.3s;
-            margin-bottom: 20px;
-            border: 1px solid #920d0d;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            height: 100%;
         }
         
         .anime-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 10px 20px rgba(146, 13, 13, 0.3);
+            border-color: #920d0d;
+            box-shadow: 0 15px 30px rgba(146, 13, 13, 0.3);
         }
         
-        .anime-card img {
+        .anime-poster {
             width: 100%;
-            height: 200px;
+            height: 280px;
             object-fit: cover;
         }
         
-        .anime-card-body {
-            padding: 15px;
+        .anime-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #920d0d;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
         
-        .user-stats {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+        /* Quick Stats */
+        .stat-box {
+            background: rgba(146, 13, 13, 0.1);
             border-radius: 10px;
             padding: 20px;
-            margin-top: 30px;
-            border: 1px solid #920d0d;
+            text-align: center;
+            border: 1px solid rgba(146, 13, 13, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .stat-box:hover {
+            background: rgba(146, 13, 13, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #920d0d;
+            display: block;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo-img {
+                max-width: 200px;
+            }
+            
+            .hero-section {
+                padding: 40px 0;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
+                <img src="https://i.imgur.com/zocDECh.png" alt="Anime Uke Logo" height="40" class="d-inline-block align-text-top me-2">
+                <strong>ANIME UKE</strong>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -72,130 +147,222 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.html"><i class="fas fa-home"></i> Acasă</a>
+                        <a class="nav-link active" href="index.html">
+                            <i class="fas fa-home"></i> Acasă
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#anime"><i class="fas fa-film"></i> Anime</a>
+                        <a class="nav-link" href="anime/">
+                            <i class="fas fa-film"></i> Anime-uri
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#manga"><i class="fas fa-book"></i> Manga</a>
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-fire"></i> Trending
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-calendar"></i> Schedule
+                        </a>
                     </li>
                 </ul>
                 
-                <ul class="navbar-nav" id="authNav">
-                    <!-- Aici se încarcă Login/Register sau User Info -->
-                </ul>
+                <div class="navbar-nav" id="authNav">
+                    <!-- Se încarcă din JS -->
+                </div>
             </div>
         </div>
     </nav>
 
+    <!-- Logo Header -->
+    <div class="logo-header">
+        <div class="container">
+            <img src="https://i.imgur.com/zocDECh.png" alt="Anime Uke" class="logo-img">
+            <p class="tagline">
+                <i class="fas fa-star"></i> Cel mai bun site de anime cu subtitrări românești
+                <i class="fas fa-star"></i>
+            </p>
+        </div>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
-            <h1 class="display-4 fw-bold">Bine ai venit pe Anime Uke!</h1>
-            <p class="lead">Cel mai bun site pentru anime și manga în limba română</p>
-            <a href="#anime" class="btn btn-light btn-lg mt-3">
-                <i class="fas fa-play"></i> Vezi anime-uri
-            </a>
-        </div>
-    </section>
-
-    <!-- Main Content -->
-    <div class="container py-5">
-        <!-- Latest Anime -->
-        <h2 class="mb-4" id="anime"><i class="fas fa-star"></i> Anime-uri Populare</h2>
-        <div class="row" id="animeList">
-            <!-- Anime-urile se vor încărca din JavaScript -->
-        </div>
-
-        <!-- User Stats (dacă e logat) -->
-        <div class="user-stats" id="userStatsSection" style="display: none;">
-            <h4><i class="fas fa-chart-line"></i> Statisticile tale</h4>
-            <div class="row mt-3">
-                <div class="col-md-3 col-6">
-                    <div class="text-center p-3">
-                        <h2 class="text-danger" id="userEpisodes">0</h2>
-                        <p>Episoade vizionate</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="text-center p-3">
-                        <h2 class="text-danger" id="userSeries">0</h2>
-                        <p>Serii urmărite</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="text-center p-3">
-                        <h2 class="text-danger" id="userHours">0</h2>
-                        <p>Ore vizionate</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="text-center p-3">
-                        <h2 class="text-danger" id="userDays">0</h2>
-                        <p>Zile membru</p>
+            <div class="hero-content text-center">
+                <h1 class="display-4 fw-bold mb-4">Bine ai venit în lumea anime-ului!</h1>
+                <p class="lead mb-4">Mii de episoade în limba română, fără reclame enervante, la un click distanță.</p>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <a href="anime/" class="btn btn-danger btn-lg px-5 me-3">
+                            <i class="fas fa-play-circle"></i> Începe să vizionezi
+                        </a>
+                        <a href="user/watchlist.html" class="btn btn-outline-light btn-lg px-5">
+                            <i class="fas fa-heart"></i> Favorite
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <div class="container py-5">
+        <div class="row text-center mb-5">
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalAnime">42</span>
+                    <small>Serii Anime</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalEpisodes">1,248</span>
+                    <small>Episoade</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalHours">560</span>
+                    <small>Ore de Content</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-box">
+                    <span class="stat-number" id="activeUsers">300+</span>
+                    <small>Utilizatori Activi</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Anime -->
+        <h2 class="mb-4"><i class="fas fa-fire text-danger"></i> Anime-uri Populare</h2>
+        <div class="row" id="latestAnime">
+            <!-- Se încarcă din JS -->
+        </div>
+        
+        <!-- View All Button -->
+        <div class="text-center mt-5">
+            <a href="anime/" class="btn btn-outline-danger btn-lg">
+                <i class="fas fa-list"></i> Vezi toate anime-urile
+            </a>
+        </div>
     </div>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
+    <footer class="bg-dark text-white py-5 mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-6">
-                    <h5>ANIME UKE</h5>
-                    <p>© 2025 Toate drepturile rezervate.</p>
+                <div class="col-md-4">
+                    <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="50" class="mb-3">
+                    <p>Anime Uke - Platforma #1 pentru anime cu subtitrări românești.</p>
+                    <p class="text-muted small">© 2025 Anime Uke. Toate drepturile rezervate.</p>
                 </div>
-                <div class="col-md-6 text-end">
-                    <p>
-                        <a href="admin.html" class="text-white me-3" id="adminLink" style="display: none;">
-                            <i class="fas fa-shield-alt"></i> Admin
-                        </a>
-                        <a href="settings.html" class="text-white me-3" id="settingsLink" style="display: none;">
-                            <i class="fas fa-cog"></i> Setări
-                        </a>
-                        <a href="profile.html" class="text-white" id="profileLink" style="display: none;">
-                            <i class="fas fa-user"></i> Profil
-                        </a>
+                <div class="col-md-4">
+                    <h5>Linkuri Rapide</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="anime/" class="text-white-50">Toate anime-urile</a></li>
+                        <li><a href="#" class="text-white-50">Anime noi</a></li>
+                        <li><a href="#" class="text-white-50">Top săptămânal</a></li>
+                        <li><a href="admin/" class="text-white-50">Admin Panel</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Contact & Support</h5>
+                    <p class="text-white-50">
+                        <i class="fas fa-envelope me-2"></i> contact@animeuke.ro<br>
+                        <i class="fab fa-discord me-2"></i> Discord Server
                     </p>
+                    <div class="mt-3">
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-discord fa-lg"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-telegram fa-lg"></i></a>
+                    </div>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-    
     <!-- Scripts -->
-    <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
     
     <script>
-        // Încarcă anime-uri
-        const animeList = [
-            { title: "One Piece", episodes: 1100, genre: "Aventură", image: "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=600" },
-            { title: "Naruto", episodes: 720, genre: "Acțiune", image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=600" },
-            { title: "Attack on Titan", episodes: 88, genre: "Dramă", image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=600" },
-            { title: "Demon Slayer", episodes: 55, genre: "Fantasy", image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600" }
+        // Anime-uri hardcoded pentru homepage
+        const popularAnime = [
+            {
+                slug: "one-piece",
+                title: "One Piece",
+                description: "Aventura lui Luffy pentru a deveni Regele Piraților.",
+                episodes: 1100,
+                year: 1999,
+                status: "În desfășurare",
+                rating: 9.5,
+                poster: "https://i.imgur.com/zocDECh.png", // Înlocuiește cu poster real
+                genres: ["Aventură", "Acțiune", "Comedie"]
+            },
+            {
+                slug: "naruto",
+                title: "Naruto",
+                description: "Călătoria lui Naruto pentru a deveni Hokage.",
+                episodes: 720,
+                year: 2002,
+                status: "Terminat",
+                rating: 8.7,
+                poster: "https://i.imgur.com/naruto-poster.jpg", // Înlocuiește
+                genres: ["Acțiune", "Aventură"]
+            },
+            {
+                slug: "attack-on-titan",
+                title: "Attack on Titan",
+                description: "Lupta omenirii împotriva titanilor.",
+                episodes: 88,
+                year: 2013,
+                status: "Terminat",
+                rating: 9.0,
+                poster: "https://i.imgur.com/aot-poster.jpg", // Înlocuiește
+                genres: ["Acțiune", "Dramă", "Fantasy"]
+            },
+            {
+                slug: "demon-slayer",
+                title: "Demon Slayer",
+                description: "Tanjiro vrea să-și salveze sora transformată în demon.",
+                episodes: 55,
+                year: 2019,
+                status: "În desfășurare",
+                rating: 8.8,
+                poster: "https://i.imgur.com/ds-poster.jpg", // Înlocuiește
+                genres: ["Acțiune", "Fantasy"]
+            }
         ];
-
-        function loadAnime() {
-            const container = document.getElementById('animeList');
+        
+        function loadPopularAnime() {
+            const container = document.getElementById('latestAnime');
             let html = '';
             
-            animeList.forEach(anime => {
+            popularAnime.forEach(anime => {
                 html += `
-                <div class="col-md-3 col-sm-6">
+                <div class="col-md-3 col-sm-6 mb-4">
                     <div class="anime-card">
-                        <img src="${anime.image}" alt="${anime.title}">
-                        <div class="anime-card-body">
-                            <h5>${anime.title}</h5>
-                            <p><i class="fas fa-play-circle"></i> ${anime.episodes} episoade</p>
-                            <span class="badge bg-danger">${anime.genre}</span>
+                        <div class="position-relative">
+                            <img src="${anime.poster}" alt="${anime.title}" class="anime-poster">
+                            <span class="anime-status">${anime.status}</span>
+                        </div>
+                        <div class="p-3">
+                            <h5 class="mb-1">${anime.title}</h5>
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-play-circle"></i> ${anime.episodes} episoade
+                                <span class="mx-2">•</span>
+                                <i class="fas fa-star text-warning"></i> ${anime.rating}
+                            </p>
+                            <div class="mb-2">
+                                ${anime.genres.slice(0, 2).map(g => 
+                                    `<span class="badge bg-secondary me-1">${g}</span>`
+                                ).join('')}
+                            </div>
+                            <a href="anime/${anime.slug}/" class="btn btn-sm btn-danger w-100">
+                                <i class="fas fa-eye"></i> Vezi anime
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -204,34 +371,17 @@
             
             container.innerHTML = html;
         }
-
+        
         // Update UI la încărcare
         document.addEventListener('DOMContentLoaded', function() {
-            loadAnime();
+            loadPopularAnime();
             updateUIBasedOnLogin();
             
-            // Dacă user-ul este logat, arată statistici
-            const user = getCurrentUser();
-            if (user) {
-                document.getElementById('userStatsSection').style.display = 'block';
-                
-                // Generează statistici random
-                document.getElementById('userEpisodes').textContent = Math.floor(Math.random() * 500) + 50;
-                document.getElementById('userSeries').textContent = Math.floor(Math.random() * 30) + 5;
-                document.getElementById('userHours').textContent = Math.floor(Math.random() * 300) + 50;
-                
-                // Calculează zile membru
-                if (user.created) {
-                    const created = new Date(user.created);
-                    const today = new Date();
-                    const days = Math.floor((today - created) / (1000 * 60 * 60 * 24));
-                    document.getElementById('userDays').textContent = days;
-                }
-            }
+            // Setează datele curente
+            document.getElementById('totalAnime').textContent = popularAnime.length;
+            document.getElementById('totalEpisodes').textContent = 
+                popularAnime.reduce((sum, a) => sum + a.episodes, 0);
         });
     </script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
