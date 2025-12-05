@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil - Anime Uke</title>
     
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
     
     <style>
@@ -81,10 +78,6 @@
             background: rgba(255, 255, 255, 0.05);
         }
         
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
         .profile-tabs .nav-link {
             color: rgba(255, 255, 255, 0.7);
             border: none;
@@ -97,20 +90,29 @@
             background: transparent;
             border-bottom: 3px solid #920d0d;
         }
+        
+        .anime-progress {
+            margin-bottom: 20px;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
+                <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="40" class="me-2">
+                <strong>ANIME UKE</strong>
             </a>
             <div id="userNavItem"></div>
         </div>
     </nav>
 
-    <!-- Profile Header -->
     <div class="profile-header">
         <div class="container">
             <div class="row align-items-center">
@@ -137,9 +139,7 @@
         </div>
     </div>
 
-    <!-- Profile Content -->
     <div class="container py-4">
-        <!-- Profile Tabs -->
         <ul class="nav profile-tabs mb-4">
             <li class="nav-item">
                 <a class="nav-link active" data-bs-toggle="tab" href="#overview">
@@ -152,15 +152,13 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#achievements">
-                    <i class="fas fa-trophy"></i> Achievements
+                <a class="nav-link" data-bs-toggle="tab" href="#watchlist">
+                    <i class="fas fa-bookmark"></i> Watchlist
                 </a>
             </li>
         </ul>
         
-        <!-- Tab Content -->
         <div class="tab-content">
-            <!-- Overview Tab -->
             <div class="tab-pane fade show active" id="overview">
                 <div class="row">
                     <div class="col-md-4">
@@ -198,7 +196,6 @@
                             </div>
                         </div>
                         
-                        <!-- User Info -->
                         <div class="card">
                             <div class="card-header bg-dark">
                                 <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informații</h5>
@@ -225,32 +222,13 @@
                     </div>
                     
                     <div class="col-md-8">
-                        <!-- Favorite Anime -->
                         <div class="card mb-4">
                             <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-heart"></i> Anime-uri Favorite</h5>
-                                <button class="btn btn-sm btn-outline-light" onclick="addFavorite()">
-                                    <i class="fas fa-plus"></i> Adaugă
-                                </button>
+                                <h5 class="mb-0"><i class="fas fa-heart"></i> Anime-uri Urmărite</h5>
                             </div>
                             <div class="card-body">
-                                <div id="favoriteAnime">
-                                    <p class="text-center text-muted mb-0">
-                                        <i class="fas fa-film fa-2x mb-3 d-block"></i>
-                                        Nu ai anime-uri favorite încă.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Watch Progress -->
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h5 class="mb-0"><i class="fas fa-tasks"></i> Progres Vizionare</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
+                                <div class="anime-progress">
+                                    <div class="progress-label">
                                         <span>One Piece</span>
                                         <span>245 / 1100</span>
                                     </div>
@@ -258,17 +236,17 @@
                                         <div class="progress-bar bg-danger" style="width: 22%"></div>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span>Naruto Shippuden</span>
-                                        <span>320 / 500</span>
+                                <div class="anime-progress">
+                                    <div class="progress-label">
+                                        <span>Naruto</span>
+                                        <span>320 / 720</span>
                                     </div>
                                     <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-danger" style="width: 64%"></div>
+                                        <div class="progress-bar bg-danger" style="width: 44%"></div>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
+                                <div class="anime-progress">
+                                    <div class="progress-label">
                                         <span>Attack on Titan</span>
                                         <span>75 / 88</span>
                                     </div>
@@ -278,11 +256,35 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <div class="card">
+                            <div class="card-header bg-dark">
+                                <h5 class="mb-0"><i class="fas fa-trophy"></i> Achievements</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 col-6 mb-3 text-center">
+                                        <i class="fas fa-award fa-2x text-warning mb-2"></i>
+                                        <h6>Primul Episod</h6>
+                                        <small class="text-muted">Ai vizionat primul episod</small>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-3 text-center">
+                                        <i class="fas fa-fire fa-2x text-warning mb-2"></i>
+                                        <h6>Maratoner</h6>
+                                        <small class="text-muted">10 ore de vizionat</small>
+                                    </div>
+                                    <div class="col-md-4 col-6 mb-3 text-center">
+                                        <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                                        <h6>Fan Devotat</h6>
+                                        <small class="text-muted">5 serii urmărite</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Activity Tab -->
             <div class="tab-pane fade" id="activity">
                 <div class="card">
                     <div class="card-header bg-dark">
@@ -290,24 +292,69 @@
                     </div>
                     <div class="card-body">
                         <div id="recentActivity">
-                            <div class="text-center py-4">
-                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                                <p class="mt-2">Se încarcă activitatea...</p>
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-play-circle text-danger me-2"></i>
+                                        Ai vizionat episodul 1 din One Piece
+                                    </div>
+                                    <small class="text-muted">Acum 2 ore</small>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-bookmark text-warning me-2"></i>
+                                        Ai adăugat "Naruto" la watchlist
+                                    </div>
+                                    <small class="text-muted">Acum 1 zi</small>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Ai completat episodul 75 din Attack on Titan
+                                    </div>
+                                    <small class="text-muted">Acum 3 zile</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Achievements Tab -->
-            <div class="tab-pane fade" id="achievements">
+            <div class="tab-pane fade" id="watchlist">
                 <div class="card">
                     <div class="card-header bg-dark">
-                        <h5 class="mb-0"><i class="fas fa-trophy"></i> Achievements</h5>
+                        <h5 class="mb-0"><i class="fas fa-bookmark"></i> Watchlist</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row" id="achievementsList">
-                            <!-- Achievements will load here -->
+                        <div class="row" id="watchlistItems">
+                            <div class="col-md-4 mb-3">
+                                <div class="card anime-card-sm">
+                                    <img src="https://i.imgur.com/zocDECh.png" class="card-img-top" alt="One Piece">
+                                    <div class="card-body">
+                                        <h6 class="card-title">One Piece</h6>
+                                        <p class="card-text small">Episodul 246 din 1100</p>
+                                        <a href="anime/one-piece/" class="btn btn-sm btn-danger w-100">
+                                            Continuă să vizionezi
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card anime-card-sm">
+                                    <img src="https://i.imgur.com/naruto-poster.jpg" class="card-img-top" alt="Naruto">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Naruto</h6>
+                                        <p class="card-text small">Episodul 321 din 720</p>
+                                        <a href="anime/naruto/" class="btn btn-sm btn-danger w-100">
+                                            Continuă să vizionezi
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -315,12 +362,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     
-    <!-- Scripts -->
     <script src="firebase-config.js"></script>
     <script src="script.js"></script>
     
@@ -328,7 +373,6 @@
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('👤 Profile page loaded');
             
-            // Verifică login
             if (!requireLogin()) {
                 return;
             }
@@ -336,7 +380,6 @@
             const user = getCurrentUser();
             console.log('User data:', user);
             
-            // Update profile info
             document.getElementById('profileAvatar').textContent = 
                 user.avatar || user.username.charAt(0).toUpperCase();
             document.getElementById('profileUsername').textContent = user.username;
@@ -349,7 +392,6 @@
             if (user.created) {
                 document.getElementById('profileCreated').textContent = user.created;
                 
-                // Calculate account age in days
                 const createdDate = new Date(user.created);
                 const today = new Date();
                 const diffTime = Math.abs(today - createdDate);
@@ -357,11 +399,9 @@
                 document.getElementById('statsDays').textContent = diffDays;
             }
             
-            // Set last login
             document.getElementById('profileLastLogin').textContent = 
                 new Date().toLocaleString('ro-RO');
             
-            // Generate mock stats
             document.getElementById('statsEpisodes').textContent = 
                 Math.floor(Math.random() * 500) + 50;
             document.getElementById('statsSeries').textContent = 
@@ -369,89 +409,8 @@
             document.getElementById('statsHours').textContent = 
                 Math.floor(Math.random() * 300) + 50;
             
-            // Generate favorite anime
-            const favorites = [
-                { title: 'One Piece', episodes: 245, total: 1100 },
-                { title: 'Naruto Shippuden', episodes: 320, total: 500 },
-                { title: 'Attack on Titan', episodes: 75, total: 88 }
-            ];
-            
-            let favoritesHTML = '';
-            favorites.forEach(fav => {
-                const percentage = Math.round((fav.episodes / fav.total) * 100);
-                favoritesHTML += `
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <strong>${fav.title}</strong>
-                        <span>${fav.episodes} / ${fav.total} (${percentage}%)</span>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-danger" style="width: ${percentage}%"></div>
-                    </div>
-                </div>
-                `;
-            });
-            
-            document.getElementById('favoriteAnime').innerHTML = favoritesHTML;
-            
-            // Generate mock activity
-            const activities = [
-                { icon: 'fa-play-circle', action: 'Ai vizionat episodul 1100 din One Piece', time: 'Acum 2 ore', color: 'text-danger' },
-                { icon: 'fa-bookmark', action: 'Ai adăugat "Naruto" la lista de urmărit', time: 'Acum 1 zi', color: 'text-warning' },
-                { icon: 'fa-check-circle', action: 'Ai completat seria "Attack on Titan"', time: 'Acum 3 zile', color: 'text-success' },
-                { icon: 'fa-star', action: 'Ai evaluat "Demon Slayer" cu 5 stele', time: 'Acum 1 săptămână', color: 'text-info' },
-                { icon: 'fa-comment', action: 'Ai adăugat un comentariu la "Jujutsu Kaisen"', time: 'Acum 2 săptămâni', color: 'text-primary' }
-            ];
-            
-            let activityHTML = '';
-            activities.forEach(activity => {
-                activityHTML += `
-                <div class="activity-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas ${activity.icon} ${activity.color} me-2"></i>
-                            ${activity.action}
-                        </div>
-                        <small class="text-muted">${activity.time}</small>
-                    </div>
-                </div>
-                `;
-            });
-            
-            document.getElementById('recentActivity').innerHTML = activityHTML;
-            
-            // Generate achievements
-            const achievements = [
-                { icon: 'fa-award', title: 'Primul Episod', desc: 'Ai vizionat primul episod', unlocked: true },
-                { icon: 'fa-fire', title: 'Maratoner', desc: '10 ore de vizionat continuu', unlocked: true },
-                { icon: 'fa-crown', title: 'Master Anime', desc: '100 de serii completate', unlocked: false },
-                { icon: 'fa-comments', title: 'Comentator', desc: '50 de comentarii postate', unlocked: true },
-                { icon: 'fa-calendar', title: 'Devotat', desc: '30 de zile consecutive', unlocked: false },
-                { icon: 'fa-trophy', title: 'Legendă', desc: 'Toate achievements-urile', unlocked: false }
-            ];
-            
-            let achievementsHTML = '';
-            achievements.forEach(ach => {
-                achievementsHTML += `
-                <div class="col-md-4 col-6 mb-3">
-                    <div class="text-center p-3 ${ach.unlocked ? 'bg-dark rounded' : 'text-muted'}">
-                        <i class="fas ${ach.icon} fa-2x ${ach.unlocked ? 'text-warning' : ''} mb-2"></i>
-                        <h6 class="mb-1">${ach.title}</h6>
-                        <small class="d-block">${ach.desc}</small>
-                        ${ach.unlocked ? 
-                            '<span class="badge bg-success mt-2">Unlocked</span>' : 
-                            '<span class="badge bg-secondary mt-2">Locked</span>'}
-                    </div>
-                </div>
-                `;
-            });
-            
-            document.getElementById('achievementsList').innerHTML = achievementsHTML;
-            
-            // Update navbar
             updateUIBasedOnLogin();
             
-            // Initialize Bootstrap tabs
             const triggerTabList = [].slice.call(document.querySelectorAll('.profile-tabs a'));
             triggerTabList.forEach(function (triggerEl) {
                 const tabTrigger = new bootstrap.Tab(triggerEl);
@@ -461,18 +420,8 @@
                 });
             });
         });
-        
-        // Add favorite anime
-        function addFavorite() {
-            const anime = prompt('Introdu numele anime-ului favorit:');
-            if (anime) {
-                alert(`"${anime}" a fost adăugat la favorite!`);
-                // Here you would save to Firestore
-            }
-        }
     </script>
     
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
