@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime-uri - Anime Uke</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../style.css">
+    
+    <style>
+        /* Anime Grid */
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .anime-card {
+            background: #1a1a2e;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            height: 100%;
+        }
+        
+        .anime-card:hover {
+            transform: translateY(-10px);
+            border-color: #920d0d;
+            box-shadow: 0 15px 30px rgba(146, 13, 13, 0.3);
+        }
+        
+        .anime-poster {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+        }
+        
+        .anime-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #920d0d;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .search-box {
+            max-width: 500px;
+            margin: 0 auto 30px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .anime-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .anime-poster {
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
+        <div class="container">
+            <a class="navbar-brand" href="../index.html">
+                <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="40" class="me-2">
+                <strong>ANIME UKE</strong>
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="../index.html">
+                    <i class="fas fa-home"></i> Acasă
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <h1 class="mb-4"><i class="fas fa-film text-danger"></i> Toate Anime-urile</h1>
+        
+        <!-- Search Box -->
+        <div class="search-box">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-danger">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" class="form-control" id="searchInput" 
+                       placeholder="Caută anime...">
+                <button class="btn btn-danger" onclick="searchAnime()">
+                    Caută
+                </button>
+            </div>
+        </div>
+        
+        <!-- Anime Grid -->
+        <div class="anime-grid" id="animeGrid">
+            <!-- Anime cards will be loaded here -->
+        </div>
+        
+        <!-- No Results -->
+        <div id="noResults" class="text-center py-5" style="display: none;">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4>Nu am găsit niciun anime</h4>
+            <p>Încearcă cu alt cuvânt cheie.</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="text-center">
+                <p>© 2025 Anime Uke • Toate drepturile rezervate.</p>
+                <p class="text-muted small">
+                    Site dedicat fanilor anime din România.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Anime data
+        const animeList = [
+            {
+                slug: "one-piece",
+                title: "One Piece",
+                description: "Luffy vrea să devină Regele Piraților.",
+                episodes: 1100,
+                year: 1999,
+                status: "În desfășurare",
+                rating: 9.5,
+                poster: "https://i.imgur.com/zocDECh.png",
+                genres: ["Aventură", "Acțiune", "Comedie"]
+            },
+            {
+                slug: "naruto",
+                title: "Naruto",
+                description: "Călătoria lui Naruto pentru a deveni Hokage.",
+                episodes: 720,
+                year: 2002,
+                status: "Terminat",
+                rating: 8.7,
+                poster: "https://i.imgur.com/naruto-poster.jpg",
+                genres: ["Acțiune", "Aventură"]
+            },
+            {
+                slug: "attack-on-titan",
+                title: "Attack on Titan",
+                description: "Lupta omenirii împotriva titanilor.",
+                episodes: 88,
+                year: 2013,
+                status: "Terminat",
+                rating: 9.0,
+                poster: "https://i.imgur.com/aot-poster.jpg",
+                genres: ["Acțiune", "Dramă", "Fantasy"]
+            },
+            {
+                slug: "demon-slayer",
+                title: "Demon Slayer",
+                description: "Tanjiro vrea să-și salveze sora transformată în demon.",
+                episodes: 55,
+                year: 2019,
+                status: "În desfășurare",
+                rating: 8.8,
+                poster: "https://i.imgur.com/ds-poster.jpg",
+                genres: ["Acțiune", "Fantasy"]
+            }
+        ];
+        
+        function loadAnime() {
+            const grid = document.getElementById('animeGrid');
+            let html = '';
+            
+            animeList.forEach(anime => {
+                html += `
+                <div class="anime-card">
+                    <div class="position-relative">
+                        <img src="${anime.poster}" alt="${anime.title}" 
+                             class="anime-poster" loading="lazy">
+                        <span class="anime-status">${anime.status}</span>
+                    </div>
+                    <div class="p-3">
+                        <h5 class="mb-1">${anime.title}</h5>
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-play-circle"></i> ${anime.episodes} episoade
+                            <span class="mx-2">•</span>
+                            <i class="fas fa-calendar"></i> ${anime.year}
+                        </p>
+                        <div class="mb-2">
+                            ${anime.genres.slice(0, 3).map(g => 
+                                `<span class="badge bg-secondary me-1 mb-1">${g}</span>`
+                            ).join('')}
+                        </div>
+                        <p class="small text-muted mb-3">${anime.description.substring(0, 80)}...</p>
+                        <a href="${anime.slug}/" class="btn btn-sm btn-danger w-100">
+                            <i class="fas fa-eye"></i> Vezi anime
+                        </a>
+                    </div>
+                </div>
+                `;
+            });
+            
+            grid.innerHTML = html;
+        }
+        
+        function searchAnime() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const grid = document.getElementById('animeGrid');
+            const noResults = document.getElementById('noResults');
+            
+            let html = '';
+            let found = 0;
+            
+            animeList.forEach(anime => {
+                if (anime.title.toLowerCase().includes(searchTerm) || 
+                    anime.description.toLowerCase().includes(searchTerm) ||
+                    !searchTerm) {
+                    
+                    html += `
+                    <div class="anime-card">
+                        <div class="position-relative">
+                            <img src="${anime.poster}" alt="${anime.title}" 
+                                 class="anime-poster">
+                            <span class="anime-status">${anime.status}</span>
+                        </div>
+                        <div class="p-3">
+                            <h5 class="mb-1">${anime.title}</h5>
+                            <a href="${anime.slug}/" class="btn btn-sm btn-danger w-100">
+                                <i class="fas fa-eye"></i> Vezi anime
+                            </a>
+                        </div>
+                    </div>
+                    `;
+                    found++;
+                }
+            });
+            
+            grid.innerHTML = html;
+            
+            if (found === 0 && searchTerm) {
+                noResults.style.display = 'block';
+            } else {
+                noResults.style.display = 'none';
+            }
+        }
+        
+        // Load la pornire
+        document.addEventListener('DOMContentLoaded', loadAnime);
+        
+        // Search la Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchAnime();
+            }
+        });
+    </script>
+</body>
+</html>
