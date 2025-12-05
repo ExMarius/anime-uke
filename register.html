@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Înregistrare - Anime Uke</title>
     
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Anime Uke CSS -->
     <link rel="stylesheet" href="style.css">
     
     <style>
@@ -54,16 +51,15 @@
     </style>
 </head>
 <body class="main-body">
-    <!-- Navbar simplă -->
     <nav class="navbar navbar-dark bg-dark-red">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <i class="fas fa-ghost"></i> <strong>ANIME UKE</strong>
+                <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="40" class="me-2">
+                <strong>ANIME UKE</strong>
             </a>
         </div>
     </nav>
 
-    <!-- Register Container -->
     <div class="register-container">
         <div class="register-header">
             <i class="fas fa-user-plus"></i>
@@ -72,12 +68,10 @@
         </div>
         
         <div class="register-body">
-            <!-- Alert pentru mesaje -->
             <div class="alert d-none" id="messageAlert">
                 <i class="fas fa-info-circle"></i> <span id="messageText"></span>
             </div>
             
-            <!-- Formular Înregistrare -->
             <form id="registerForm">
                 <div class="mb-3">
                     <label for="regUsername" class="form-label">
@@ -129,7 +123,6 @@
                 </button>
             </form>
             
-            <!-- Login Link -->
             <div class="mt-4 text-center">
                 <p>Ai deja cont? <a href="login.html" class="text-white fw-bold">Autentifică-te aici</a></p>
                 <a href="index.html" class="text-white">
@@ -139,12 +132,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     
-    <!-- Scripts -->
     <script src="firebase-config.js"></script>
     <script src="script.js"></script>
     
@@ -158,7 +149,6 @@
             const passwordInput = document.getElementById('regPassword');
             const passwordStrength = document.getElementById('passwordStrength');
             
-            // Dacă e deja logat, redirect
             if (isLoggedIn()) {
                 showMessage('Ești deja logat! Redirecționare...', 'success');
                 setTimeout(() => {
@@ -167,7 +157,6 @@
                 return;
             }
             
-            // Password strength indicator
             passwordInput.addEventListener('input', function() {
                 const password = this.value;
                 let strength = '';
@@ -182,7 +171,6 @@
                 } else if (password.length < 10) {
                     strength = 'strength-good';
                 } else {
-                    // Check for special characters
                     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
                         strength = 'strength-strong';
                     } else {
@@ -195,7 +183,6 @@
                 }
             });
             
-            // Handle form submit
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 console.log('📝 Register form submitted');
@@ -205,7 +192,6 @@
                 const password = document.getElementById('regPassword').value;
                 const confirmPassword = document.getElementById('regConfirmPassword').value;
                 
-                // Validare
                 if (!username || !email || !password || !confirmPassword) {
                     showMessage('Completează toate câmpurile!', 'danger');
                     return;
@@ -241,19 +227,16 @@
                     return;
                 }
                 
-                // Loading state
                 const submitBtn = form.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Se înregistrează...';
                 submitBtn.disabled = true;
                 
                 try {
-                    // Încearcă înregistrarea
                     const result = await registerUser(username, email, password);
                     
                     if (result.success) {
                         showMessage('Cont creat cu succes! Se face login automat...', 'success');
-                        // Redirect se face automat în registerUser()
                     } else {
                         showMessage(result.message, 'danger');
                         submitBtn.innerHTML = originalText;
@@ -268,18 +251,15 @@
                 }
             });
             
-            // Funcție pentru validare email
             function isValidEmail(email) {
                 return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
             }
             
-            // Funcție pentru afișare mesaje
             function showMessage(message, type) {
                 messageText.textContent = message;
                 messageAlert.className = `alert alert-${type}`;
                 messageAlert.classList.remove('d-none');
                 
-                // Ascunde mesajul după 5 secunde
                 setTimeout(() => {
                     messageAlert.classList.add('d-none');
                 }, 5000);
@@ -287,7 +267,6 @@
         });
     </script>
     
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
