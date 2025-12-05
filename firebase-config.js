@@ -1,4 +1,4 @@
-// firebase-config.js - CONFIG-UL TĂU
+// firebase-config.js - Anime Uke V3
 const firebaseConfig = {
   apiKey: "AIzaSyBHXjIIuhzHBZ-jZvmoT37AWg9_upw3A1I",
   authDomain: "anime-uke.firebaseapp.com",
@@ -9,4 +9,4 @@ const firebaseConfig = {
   measurementId: "G-NNRVST2PVW"
 };
 
-console.log('🔥 Firebase Config loaded for Anime Uke');
+console.log('🔥 Firebase Config loaded for Anime Uke V3');
