@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaugă Anime - Admin Panel</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    
+    <style>
+        .admin-form-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            border: 2px solid #920d0d;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .episode-item {
+            background: #2d2d44;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark-red">
+        <div class="container">
+            <a class="navbar-brand" href="../index.html">
+                <i class="fas fa-ghost"></i> ANIME UKE ADMIN
+            </a>
+            <div>
+                <a href="index.html" class="btn btn-sm btn-outline-light me-2">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="../anime/" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-eye"></i> Vezi site
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="admin-form-container">
+            <h2 class="mb-4 text-center">
+                <i class="fas fa-plus-circle text-danger"></i> Adaugă Anime Nou
+            </h2>
+            
+            <form id="addAnimeForm">
+                <div class="form-section">
+                    <h4>1. Informații de bază</h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Titlu anime *</label>
+                            <input type="text" class="form-control" id="animeTitle" 
+                                   placeholder="ex: Attack on Titan" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Slug (URL) *</label>
+                            <input type="text" class="form-control" id="animeSlug" 
+                                   placeholder="ex: attack-on-titan" required>
+                            <small class="text-muted">Va fi: /anime/attack-on-titan/</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descriere</label>
+                        <textarea class="form-control" id="animeDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Anul lansării</label>
+                            <input type="number" class="form-control" id="animeYear" 
+                                   placeholder="ex: 2013">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Număr episoade</label>
+                            <input type="number" class="form-control" id="animeEpisodes" 
+                                   placeholder="ex: 88">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Rating (1-10)</label>
+                            <input type="number" class="form-control" id="animeRating" 
+                                   placeholder="ex: 9.0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4>2. Linkuri</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Poster URL</label>
+                        <input type="url" class="form-control" id="posterUrl" 
+                               placeholder="https://i.imgur.com/poster.jpg">
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h4>3. Status</h4>
+                    <div class="mb-3">
+                        <select class="form-control" id="animeStatus">
+                            <option value="În desfășurare">În desfășurare</option>
+                            <option value="Terminat">Terminat</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-danger btn-lg px-5">
+                        <i class="fas fa-save"></i> Salvează Anime
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../script.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verifică admin
+            if (!isAdmin()) {
+                alert('Numai administratorii pot adăuga anime!');
+                window.location.href = '../index.html';
+                return;
+            }
+            
+            updateUIBasedOnLogin();
+            
+            // Form submission
+            document.getElementById('addAnimeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const animeData = {
+                    title: document.getElementById('animeTitle').value,
+                    slug: document.getElementById('animeSlug').value.toLowerCase().replace(/\s+/g, '-'),
+                    description: document.getElementById('animeDescription').value,
+                    year: parseInt(document.getElementById('animeYear').value) || 0,
+                    episodes: parseInt(document.getElementById('animeEpisodes').value) || 0,
+                    rating: parseFloat(document.getElementById('animeRating').value) || 0,
+                    poster: document.getElementById('posterUrl').value,
+                    status: document.getElementById('animeStatus').value,
+                    genres: []
+                };
+                
+                // Salvează în localStorage (temporar)
+                saveAnime(animeData);
+            });
+        });
+        
+        function saveAnime(animeData) {
+            // Salvează în localStorage (în realitate, aici ar salva în Firebase)
+            let animeList = JSON.parse(localStorage.getItem('anime_uke_list') || '[]');
+            animeList.push({
+                slug: animeData.slug,
+                title: animeData.title,
+                poster: animeData.poster,
+                episodes: animeData.episodes,
+                year: animeData.year,
+                status: animeData.status
+            });
+            localStorage.setItem('anime_uke_list', JSON.stringify(animeList));
+            
+            alert(`✅ Anime "${animeData.title}" a fost salvat!\n\nSlug: ${animeData.slug}\n\nCreează manual folderul: /anime/${animeData.slug}/`);
+            
+            // Reset form
+            document.getElementById('addAnimeForm').reset();
+        }
+    </script>
+</body>
+</html>
