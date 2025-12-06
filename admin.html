@@ -3,425 +3,372 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil - Anime Uke</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Panou Admin - AnimeNexus</title>
     <link rel="stylesheet" href="style.css">
-    
     <style>
-        .profile-header {
-            background: linear-gradient(45deg, #920d0d, #6d0019);
-            padding: 60px 0 40px;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .profile-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1600');
-            background-size: cover;
-            opacity: 0.1;
-        }
-        
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: white;
-            color: #920d0d;
-            font-size: 3rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 5px solid #1a1a2e;
+        .admin-panel {
+            padding: 20px;
+            max-width: 1200px;
             margin: 0 auto;
-            position: relative;
-            z-index: 1;
         }
         
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
+        .admin-header {
+            background: linear-gradient(135deg, #920d0d 0%, #6d0019 100%);
+            padding: 20px;
             border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.15);
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
+            margin-bottom: 30px;
             color: white;
         }
         
-        .activity-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            transition: background 0.3s;
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
         }
         
-        .activity-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .profile-tabs .nav-link {
-            color: rgba(255, 255, 255, 0.7);
-            border: none;
-            border-radius: 0;
+        .admin-tab {
             padding: 10px 20px;
+            background: #2a2a2a;
+            border: none;
+            color: #ccc;
+            cursor: pointer;
+            border-radius: 5px;
         }
         
-        .profile-tabs .nav-link.active {
+        .admin-tab.active {
+            background: #920d0d;
             color: white;
-            background: transparent;
-            border-bottom: 3px solid #920d0d;
         }
         
-        .anime-progress {
+        .admin-section {
+            display: none;
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
             margin-bottom: 20px;
         }
         
-        .progress-label {
+        .admin-section.active {
+            display: block;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #ccc;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: white;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .btn-admin {
+            background: linear-gradient(135deg, #920d0d 0%, #6d0019 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .btn-admin:hover {
+            background: linear-gradient(135deg, #a82a2a 0%, #8a0019 100%);
+        }
+        
+        .preview-card {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .episode-list {
+            margin-top: 20px;
+        }
+        
+        .episode-item {
+            background: #2a2a2a;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            align-items: center;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .status-success {
+            background: #2e7d32;
+            color: white;
+        }
+        
+        .status-error {
+            background: #c62828;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red">
-        <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="40" class="me-2">
-                <strong>ANIME UKE</strong>
-            </a>
-            <div id="userNavItem"></div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="logo.png" alt="AnimeNexus" class="logo">
+                <span>Admin Panel</span>
+            </div>
+            <div class="nav-links">
+                <a href="/">← Înapoi la Site</a>
+            </div>
         </div>
     </nav>
 
-    <div class="profile-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-3 text-center">
-                    <div class="profile-avatar mb-3" id="profileAvatar">
-                        <!-- Avatar-ul se va încărca din JS -->
-                    </div>
+    <div class="admin-panel">
+        <div class="admin-header">
+            <h1>🎬 Panou de Administrare AnimeNexus</h1>
+            <p>Adaugă serii și episoade noi. Toate modificările apar instant pe site.</p>
+        </div>
+
+        <!-- TABS -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="showTab('add-serie')">➕ Adaugă Serie Nouă</button>
+            <button class="admin-tab" onclick="showTab('add-episode')">🎥 Adaugă Episod</button>
+            <button class="admin-tab" onclick="showTab('manage-series')">📋 Gestionează Serii</button>
+            <button class="admin-tab" onclick="showTab('view-data')">👁️ Vezi Datele</button>
+        </div>
+
+        <!-- ADD SERIE SECTION -->
+        <div id="add-serie" class="admin-section active">
+            <h2>Adaugă Serie Nouă</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">ID Serie (unic):</label>
+                    <input type="text" id="serieId" class="form-input" placeholder="one-piece" required>
+                    <small>Doar litere și cratime. Ex: one-piece, naruto-shippuden</small>
                 </div>
-                <div class="col-md-9">
-                    <h1 id="profileUsername" class="mb-2">Loading...</h1>
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <span class="badge bg-danger" id="profileRole">Role</span>
-                        <span class="text-white-50">
-                            <i class="fas fa-calendar"></i> Membru din: 
-                            <span id="profileCreated">-</span>
-                        </span>
-                        <span class="text-white-50 ms-3">
-                            <i class="fas fa-clock"></i> Ultima activitate: 
-                            <span id="profileLastLogin">-</span>
-                        </span>
+                
+                <div class="form-group">
+                    <label class="form-label">Titlu Serie:</label>
+                    <input type="text" id="serieTitlu" class="form-input" placeholder="One Piece" required>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Descriere:</label>
+                    <textarea id="serieDesc" class="form-textarea" rows="4" placeholder="Descrierea seriei..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Genuri (separate cu virgulă):</label>
+                    <input type="text" id="serieGenuri" class="form-input" placeholder="Aventură, Acțiune, Shounen" required>
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">URL Imagine:</label>
+                    <input type="text" id="serieImagine" class="form-input" placeholder="https://i.imgur.com/..." required>
+                    <small>Recomandat: 300x450 px</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Țară de origine:</label>
+                    <input type="text" id="serieTara" class="form-input" placeholder="Japonia" value="Japonia">
+                </div>
+            </div>
+            
+            <button class="btn-admin" onclick="addSerie()">💾 Salvează Serie</button>
+            <div id="serieStatus" class="status-message"></div>
+            
+            <!-- PREVIEW -->
+            <div class="preview-card">
+                <h3>Preview Serie:</h3>
+                <div id="seriePreview" class="series-card">
+                    <div class="serie-image" style="background-image: url('https://via.placeholder.com/300x450');"></div>
+                    <div class="serie-info">
+                        <h4>Titlu Serie</h4>
+                        <p>Descriere va apărea aici...</p>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="container py-4">
-        <ul class="nav profile-tabs mb-4">
-            <li class="nav-item">
-                <a class="nav-link active" data-bs-toggle="tab" href="#overview">
-                    <i class="fas fa-chart-bar"></i> Overview
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#activity">
-                    <i class="fas fa-history"></i> Activitate
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="tab" href="#watchlist">
-                    <i class="fas fa-bookmark"></i> Watchlist
-                </a>
-            </li>
-        </ul>
-        
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="overview">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card mb-4">
-                            <div class="card-header bg-dark">
-                                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Statistici</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-6 mb-3">
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="statsEpisodes">0</div>
-                                            <small>Episoade</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6 mb-3">
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="statsSeries">0</div>
-                                            <small>Serii</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="statsHours">0</div>
-                                            <small>Ore</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="statsDays">0</div>
-                                            <small>Zile</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informații</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <strong>Username:</strong><br>
-                                    <span id="infoUsername">-</span>
-                                </div>
-                                <div class="mb-3">
-                                    <strong>Email:</strong><br>
-                                    <span id="infoEmail">-</span>
-                                </div>
-                                <div class="mb-3">
-                                    <strong>Rol:</strong><br>
-                                    <span class="badge bg-danger" id="infoRole">-</span>
-                                </div>
-                                <div class="mb-3">
-                                    <strong>Status cont:</strong><br>
-                                    <span class="badge bg-success">Activ</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-8">
-                        <div class="card mb-4">
-                            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-heart"></i> Anime-uri Urmărite</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="anime-progress">
-                                    <div class="progress-label">
-                                        <span>One Piece</span>
-                                        <span>245 / 1100</span>
-                                    </div>
-                                    <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-danger" style="width: 22%"></div>
-                                    </div>
-                                </div>
-                                <div class="anime-progress">
-                                    <div class="progress-label">
-                                        <span>Naruto</span>
-                                        <span>320 / 720</span>
-                                    </div>
-                                    <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-danger" style="width: 44%"></div>
-                                    </div>
-                                </div>
-                                <div class="anime-progress">
-                                    <div class="progress-label">
-                                        <span>Attack on Titan</span>
-                                        <span>75 / 88</span>
-                                    </div>
-                                    <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-danger" style="width: 85%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header bg-dark">
-                                <h5 class="mb-0"><i class="fas fa-trophy"></i> Achievements</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4 col-6 mb-3 text-center">
-                                        <i class="fas fa-award fa-2x text-warning mb-2"></i>
-                                        <h6>Primul Episod</h6>
-                                        <small class="text-muted">Ai vizionat primul episod</small>
-                                    </div>
-                                    <div class="col-md-4 col-6 mb-3 text-center">
-                                        <i class="fas fa-fire fa-2x text-warning mb-2"></i>
-                                        <h6>Maratoner</h6>
-                                        <small class="text-muted">10 ore de vizionat</small>
-                                    </div>
-                                    <div class="col-md-4 col-6 mb-3 text-center">
-                                        <i class="fas fa-star fa-2x text-warning mb-2"></i>
-                                        <h6>Fan Devotat</h6>
-                                        <small class="text-muted">5 serii urmărite</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- ADD EPISODE SECTION -->
+        <div id="add-episode" class="admin-section">
+            <h2>Adaugă Episod Nou</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Selectează Serie:</label>
+                    <select id="selectSerie" class="form-select" onchange="loadSerieInfo()">
+                        <option value="">Alege o serie...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Număr Episod:</label>
+                    <input type="number" id="episodeNumber" class="form-input" min="1" required>
                 </div>
             </div>
             
-            <div class="tab-pane fade" id="activity">
-                <div class="card">
-                    <div class="card-header bg-dark">
-                        <h5 class="mb-0"><i class="fas fa-history"></i> Activitate Recentă</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="recentActivity">
-                            <div class="activity-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-play-circle text-danger me-2"></i>
-                                        Ai vizionat episodul 1 din One Piece
-                                    </div>
-                                    <small class="text-muted">Acum 2 ore</small>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-bookmark text-warning me-2"></i>
-                                        Ai adăugat "Naruto" la watchlist
-                                    </div>
-                                    <small class="text-muted">Acum 1 zi</small>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-check-circle text-success me-2"></i>
-                                        Ai completat episodul 75 din Attack on Titan
-                                    </div>
-                                    <small class="text-muted">Acum 3 zile</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Titlu Episod:</label>
+                    <input type="text" id="episodeTitlu" class="form-input" placeholder="Titlul episodului..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Link FileMoon:</label>
+                    <input type="text" id="episodeFilemoon" class="form-input" placeholder="https://filemoon.to/e/..." required>
                 </div>
             </div>
             
-            <div class="tab-pane fade" id="watchlist">
-                <div class="card">
-                    <div class="card-header bg-dark">
-                        <h5 class="mb-0"><i class="fas fa-bookmark"></i> Watchlist</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row" id="watchlistItems">
-                            <div class="col-md-4 mb-3">
-                                <div class="card anime-card-sm">
-                                    <img src="https://i.imgur.com/zocDECh.png" class="card-img-top" alt="One Piece">
-                                    <div class="card-body">
-                                        <h6 class="card-title">One Piece</h6>
-                                        <p class="card-text small">Episodul 246 din 1100</p>
-                                        <a href="anime/one-piece/" class="btn btn-sm btn-danger w-100">
-                                            Continuă să vizionezi
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card anime-card-sm">
-                                    <img src="https://i.imgur.com/naruto-poster.jpg" class="card-img-top" alt="Naruto">
-                                    <div class="card-body">
-                                        <h6 class="card-title">Naruto</h6>
-                                        <p class="card-text small">Episodul 321 din 720</p>
-                                        <a href="anime/naruto/" class="btn btn-sm btn-danger w-100">
-                                            Continuă să vizionezi
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Descriere Episod (opțional):</label>
+                    <textarea id="episodeDesc" class="form-textarea" rows="3" placeholder="Descriere episod..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Durată (minute):</label>
+                    <input type="number" id="episodeDurata" class="form-input" min="1" value="24">
                 </div>
             </div>
+            
+            <button class="btn-admin" onclick="addEpisode()">🎬 Adaugă Episod</button>
+            <div id="episodeStatus" class="status-message"></div>
+        </div>
+
+        <!-- MANAGE SERIES SECTION -->
+        <div id="manage-series" class="admin-section">
+            <h2>Seriile Tale</h2>
+            <div id="seriesList" class="episode-list">
+                <!-- Se încarcă dinamic -->
+            </div>
+        </div>
+
+        <!-- VIEW DATA SECTION -->
+        <div id="view-data" class="admin-section">
+            <h2>Datele Stocate</h2>
+            <div class="form-group">
+                <label class="form-label">Date JSON:</label>
+                <textarea id="jsonData" class="form-textarea" rows="20" readonly></textarea>
+            </div>
+            <button class="btn-admin" onclick="loadAllData()">🔄 Reîncarcă Datele</button>
+            <button class="btn-admin" onclick="exportData()">📥 Exportă JSON</button>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-    
-    <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
-    
+    <script src="app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('👤 Profile page loaded');
+        // Tab switching
+        function showTab(tabId) {
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
             
-            if (!requireLogin()) {
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+        
+        // Load series for dropdown
+        async function loadSeriesForSelect() {
+            const series = await getSeries();
+            const select = document.getElementById('selectSerie');
+            select.innerHTML = '<option value="">Alege o serie...</option>';
+            
+            series.forEach(serie => {
+                const option = document.createElement('option');
+                option.value = serie.id;
+                option.textContent = `${serie.titlu} (${serie.episoade?.length || 0} episoade)`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Load series for management
+        async function loadSeriesForManagement() {
+            const series = await getSeries();
+            const container = document.getElementById('seriesList');
+            
+            if (series.length === 0) {
+                container.innerHTML = '<p>Nu ai serii adăugate încă.</p>';
                 return;
             }
             
-            const user = getCurrentUser();
-            console.log('User data:', user);
-            
-            document.getElementById('profileAvatar').textContent = 
-                user.avatar || user.username.charAt(0).toUpperCase();
-            document.getElementById('profileUsername').textContent = user.username;
-            document.getElementById('profileRole').textContent = user.role.toUpperCase();
-            
-            document.getElementById('infoUsername').textContent = user.username;
-            document.getElementById('infoEmail').textContent = user.email;
-            document.getElementById('infoRole').textContent = user.role.toUpperCase();
-            
-            if (user.created) {
-                document.getElementById('profileCreated').textContent = user.created;
-                
-                const createdDate = new Date(user.created);
-                const today = new Date();
-                const diffTime = Math.abs(today - createdDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                document.getElementById('statsDays').textContent = diffDays;
-            }
-            
-            document.getElementById('profileLastLogin').textContent = 
-                new Date().toLocaleString('ro-RO');
-            
-            document.getElementById('statsEpisodes').textContent = 
-                Math.floor(Math.random() * 500) + 50;
-            document.getElementById('statsSeries').textContent = 
-                Math.floor(Math.random() * 30) + 5;
-            document.getElementById('statsHours').textContent = 
-                Math.floor(Math.random() * 300) + 50;
-            
-            updateUIBasedOnLogin();
-            
-            const triggerTabList = [].slice.call(document.querySelectorAll('.profile-tabs a'));
-            triggerTabList.forEach(function (triggerEl) {
-                const tabTrigger = new bootstrap.Tab(triggerEl);
-                triggerEl.addEventListener('click', function (event) {
-                    event.preventDefault();
-                    tabTrigger.show();
-                });
+            container.innerHTML = '';
+            series.forEach(serie => {
+                const div = document.createElement('div');
+                div.className = 'episode-item';
+                div.innerHTML = `
+                    <div>
+                        <h4>${serie.titlu}</h4>
+                        <small>ID: ${serie.id} | ${serie.episoade?.length || 0} episoade</small>
+                    </div>
+                    <div>
+                        <button onclick="editSerie('${serie.id}')">✏️ Edit</button>
+                        <button onclick="deleteSerie('${serie.id}')" style="background: #c62828;">🗑️ Șterge</button>
+                    </div>
+                `;
+                container.appendChild(div);
             });
+        }
+        
+        // Load all data for viewing
+        async function loadAllData() {
+            const series = await getSeries();
+            document.getElementById('jsonData').value = JSON.stringify(series, null, 2);
+        }
+        
+        // Export data
+        function exportData() {
+            const data = document.getElementById('jsonData').value;
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'anime-nexus-data.json';
+            a.click();
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSeriesForSelect();
+            loadSeriesForManagement();
+            loadAllData();
         });
     </script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
