@@ -1,404 +1,64 @@
-/* style.css - Stiluri pentru AnimeNexus */
-:root {
-    --primary-red: #920d0d;
-    --dark-red: #6d0019;
-    --background: #101010;
-    --card-bg: #1a1a1a;
-    --text-light: #ccc;
-    --text-dark: #333;
-    --accent: #ff6600;
-}
+/* Adaugă aceste stiluri la sfârșitul fișierului tău style.css */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Lato', sans-serif;
-    background: var(--background);
-    color: var(--text-light);
-    line-height: 1.6;
-}
-
-/* NAVBAR */
-.navbar {
-    background: rgba(0, 0, 0, 0.9);
-    padding: 15px 0;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    backdrop-filter: blur(10px);
-    border-bottom: 2px solid var(--primary-red);
-}
-
-.nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.nav-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.logo {
-    height: 40px;
-    width: auto;
-}
-
-.nav-brand span {
-    font-size: 24px;
-    font-weight: 900;
-    background: linear-gradient(135deg, #fff 0%, #ff6600 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.nav-links {
-    display: flex;
-    gap: 25px;
-}
-
-.nav-links a {
-    color: var(--text-light);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
-    padding: 5px 10px;
-    border-radius: 5px;
-}
-
-.nav-links a:hover {
-    color: var(--primary-red);
-}
-
+/* Admin specific styles */
 .admin-link {
-    background: var(--primary-red);
+    background: #920d0d;
     color: white !important;
-    padding: 8px 15px !important;
+    padding: 8px 16px !important;
     border-radius: 5px;
+    margin-left: 10px;
 }
 
 .admin-link:hover {
-    background: var(--dark-red) !important;
-}
-
-/* HERO SECTION */
-.hero {
-    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)),
-                url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=2070');
-    background-size: cover;
-    background-position: center;
-    padding: 100px 20px;
-    text-align: center;
-}
-
-.hero-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.hero h1 {
-    font-size: 48px;
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, #fff 0%, #ff6600 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.hero p {
-    font-size: 20px;
-    margin-bottom: 30px;
-    color: #aaa;
-}
-
-.btn-hero {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--primary-red) 0%, var(--dark-red) 100%);
-    color: white;
-    padding: 15px 30px;
-    text-decoration: none;
-    border-radius: 50px;
-    font-weight: bold;
-    font-size: 18px;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.btn-hero:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(146, 13, 13, 0.3);
-}
-
-/* SECTIONS */
-.section {
-    padding: 60px 20px;
-}
-
-.bg-dark {
-    background: rgba(26, 26, 26, 0.5);
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.section-title {
-    font-size: 32px;
-    margin-bottom: 40px;
-    text-align: center;
-    position: relative;
-}
-
-.section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-    height: 3px;
-    background: var(--primary-red);
-}
-
-/* EPISODES GRID */
-.episodes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 30px;
-    margin-top: 30px;
-}
-
-.episode-card {
-    background: linear-gradient(135deg, rgba(61,0,10,0.8) 0%, rgba(26,26,26,1) 100%);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid #333;
-}
-
-.episode-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(146, 13, 13, 0.2);
-}
-
-.episode-thumbnail {
-    height: 200px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-}
-
-.episode-badge {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    background: var(--primary-red);
-    color: white;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-weight: bold;
-}
-
-.episode-info {
-    padding: 20px;
-}
-
-.episode-info h4 {
-    color: #aaa;
-    font-size: 14px;
-    margin-bottom: 5px;
-}
-
-.episode-info h3 {
-    font-size: 18px;
-    margin-bottom: 10px;
-    min-height: 54px;
-}
-
-.episode-meta {
-    display: flex;
-    justify-content: space-between;
-    color: #777;
-    font-size: 14px;
-    margin-bottom: 15px;
-}
-
-.btn-watch {
-    display: block;
-    background: var(--primary-red);
-    color: white;
-    text-align: center;
-    padding: 10px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: background 0.3s;
-}
-
-.btn-watch:hover {
-    background: var(--dark-red);
-}
-
-/* SERIES GRID */
-.series-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 30px;
-    margin-top: 30px;
-}
-
-.series-card-link {
-    text-decoration: none;
-    color: inherit;
-}
-
-.series-card {
-    background: linear-gradient(135deg, rgba(61,0,10,0.8) 0%, rgba(26,26,26,1) 100%);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: transform 0.3s;
-    border: 1px solid #333;
-    height: 100%;
-}
-
-.series-card:hover {
-    transform: translateY(-5px);
-}
-
-.series-image {
-    height: 350px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-}
-
-.series-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px;
-    text-align: center;
-}
-
-.episode-count {
-    color: white;
-    font-weight: bold;
-}
-
-.series-content {
-    padding: 20px;
-}
-
-.series-content h3 {
-    font-size: 18px;
-    margin-bottom: 10px;
-    min-height: 54px;
-}
-
-.series-desc {
-    color: #aaa;
-    font-size: 14px;
-    margin-bottom: 15px;
-    min-height: 60px;
-}
-
-.series-genres {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
+    background: #6d0019 !important;
 }
 
 .genre {
     background: rgba(146, 13, 13, 0.2);
     color: #ff6666;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: 15px;
     font-size: 12px;
-}
-
-/* FOOTER */
-.footer {
-    background: #000;
-    padding: 40px 20px;
-    text-align: center;
-    border-top: 2px solid var(--primary-red);
-}
-
-.footer-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.footer-logo {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.logo-small {
-    height: 30px;
-    width: auto;
-}
-
-.footer-note {
-    color: #777;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-/* LOADING & NO DATA */
-.loading {
-    text-align: center;
-    padding: 40px;
-    color: #777;
+    display: inline-block;
+    margin: 2px;
 }
 
 .no-data {
     text-align: center;
     padding: 40px;
-    color: #777;
+    color: #888;
+    font-size: 18px;
     grid-column: 1 / -1;
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
-    .hero h1 {
-        font-size: 32px;
-    }
-    
-    .episodes-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .series-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-    
-    .nav-links {
-        display: none;
-    }
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 16px;
 }
 
-@media (max-width: 480px) {
-    .series-grid {
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .form-grid {
         grid-template-columns: 1fr;
     }
     
-    .hero {
-        padding: 60px 20px;
+    .admin-tabs {
+        flex-direction: column;
+    }
+    
+    .admin-tab {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .episode-item {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .episode-item > div:last-child {
+        align-self: flex-start;
     }
 }
