@@ -1,303 +1,378 @@
-// Anime Uke - Complete System
-console.log('🚀 Anime Uke System Starting...');
+// app.js - Sistem complet de gestionare anime
+// Folosește LocalStorage ca fallback, dar pe Cloudflare Pages poți folosi KV Storage
 
-// ==================== FIREBASE INIT ====================
-let auth, db;
+const STORAGE_KEY = 'anime_nexus_data';
 
-try {
-    if (typeof firebaseConfig !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-        console.log('✅ Firebase initialized');
+// ====== FUNCȚII DE BAZĂ ======
+
+// Salvează toate datele
+async function saveAllData(data) {
+    try {
+        // Pe Cloudflare Pages, aici ai folosi KV Storage
+        // await ANIME_KV.put('series', JSON.stringify(data));
+        
+        // Pentru local development, folosim localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return true;
+    } catch (error) {
+        console.error('Eroare la salvarea datelor:', error);
+        return false;
     }
-} catch (error) {
-    console.error('❌ Firebase error:', error);
 }
 
-// ==================== AUTH FUNCTIONS ====================
-async function registerUser(username, email, password) {
-    console.log(`📝 Register: ${username}`);
-    
+// Încarcă toate datele
+async function getAllData() {
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
+        // Pe Cloudflare Pages: const data = await ANIME_KV.get('series', 'json');
         
-        await db.collection('users').doc(user.uid).set({
-            uid: user.uid,
-            username: username,
-            email: email,
-            role: 'user',
-            avatar: username.charAt(0).toUpperCase(),
-            created: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            status: 'active'
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch (error) {
+        console.error('Eroare la încărcarea datelor:', error);
+        return [];
+    }
+}
+
+// ====== FUNCȚII PENTRU SERII ======
+
+// Obține toate seriile
+async function getSeries() {
+    return await getAllData();
+}
+
+// Adaugă o serie nouă
+async function addSerie(serieData) {
+    const series = await getSeries();
+    
+    // Verifică dacă ID-ul există deja
+    if (series.some(s => s.id === serieData.id)) {
+        return { success: false, message: 'Există deja o serie cu acest ID!' };
+    }
+    
+    // Adaugă data creării și array gol pentru episoade
+    const newSerie = {
+        ...serieData,
+        data_creare: new Date().toISOString().split('T')[0],
+        episoade: [],
+        vizionari_totale: 0
+    };
+    
+    series.push(newSerie);
+    const saved = await saveAllData(series);
+    
+    return {
+        success: saved,
+        message: saved ? 'Serie adăugată cu succes!' : 'Eroare la salvare',
+        serie: newSerie
+    };
+}
+
+// Șterge o serie
+async function deleteSerie(serieId) {
+    if (!confirm(`Sigur vrei să ștergi această serie și toate episoadele ei?`)) {
+        return false;
+    }
+    
+    const series = await getSeries();
+    const filteredSeries = series.filter(s => s.id !== serieId);
+    
+    const saved = await saveAllData(filteredSeries);
+    
+    if (saved) {
+        alert('Serie ștearsă cu succes!');
+        location.reload();
+    }
+    
+    return saved;
+}
+
+// ====== FUNCȚII PENTRU EPISOADE ======
+
+// Adaugă un episod nou
+async function addEpisode(serieId, episodeData) {
+    const series = await getSeries();
+    const serieIndex = series.findIndex(s => s.id === serieId);
+    
+    if (serieIndex === -1) {
+        return { success: false, message: 'Serie negăsită!' };
+    }
+    
+    // Verifică dacă episodul există deja
+    if (series[serieIndex].episoade.some(ep => ep.numar === episodeData.numar)) {
+        return { success: false, message: 'Există deja un episod cu acest număr!' };
+    }
+    
+    // Adaugă data și vizionări inițiale
+    const newEpisode = {
+        ...episodeData,
+        data_adaugare: new Date().toISOString().split('T')[0],
+        vizionari: 0
+    };
+    
+    series[serieIndex].episoade.push(newEpisode);
+    
+    // Sortează episoadele după număr
+    series[serieIndex].episoade.sort((a, b) => a.numar - b.numar);
+    
+    const saved = await saveAllData(series);
+    
+    return {
+        success: saved,
+        message: saved ? 'Episod adăugat cu succes!' : 'Eroare la salvare',
+        episode: newEpisode
+    };
+}
+
+// ====== FUNCȚII PENTRU AFIȘARE ======
+
+// Încarcă ultimele episoade (cele mai recente)
+async function loadLatestEpisodes() {
+    const series = await getSeries();
+    const container = document.getElementById('latestEpisodes');
+    
+    if (!container) return;
+    
+    if (series.length === 0) {
+        container.innerHTML = '<p class="no-data">Nu există episoade încă.</p>';
+        return;
+    }
+    
+    // Colectează toate episoadele
+    let allEpisodes = [];
+    series.forEach(serie => {
+        serie.episoade.forEach(ep => {
+            allEpisodes.push({
+                ...ep,
+                serieId: serie.id,
+                serieTitlu: serie.titlu,
+                serieImagine: serie.imagine
+            });
         });
-        
-        console.log('✅ User registered:', username);
-        
-        // Auto-login
-        const loginResult = await loginUser(email, password);
-        
-        return {
-            success: true,
-            message: 'Cont creat cu succes!',
-            user: loginResult.user
-        };
-        
-    } catch (error) {
-        console.error('💥 Register error:', error);
-        
-        let message = 'Eroare la înregistrare. ';
-        if (error.code === 'auth/email-already-in-use') {
-            message = 'Email-ul este deja înregistrat!';
-        } else if (error.code === 'auth/weak-password') {
-            message = 'Parola este prea slabă! (minim 6 caractere)';
-        } else if (error.code === 'auth/invalid-email') {
-            message = 'Email invalid!';
-        }
-        
-        return {
-            success: false,
-            message: message
-        };
-    }
-}
-
-async function loginUser(email, password) {
-    console.log(`🔐 Login: ${email}`);
+    });
     
-    try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        
-        let userData;
-        if (!userDoc.exists) {
-            await db.collection('users').doc(user.uid).set({
-                uid: user.uid,
-                username: email.split('@')[0],
-                email: user.email,
-                role: 'user',
-                avatar: email.charAt(0).toUpperCase(),
-                created: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'active'
-            });
-            
-            const newDoc = await db.collection('users').doc(user.uid).get();
-            userData = newDoc.data();
-        } else {
-            userData = userDoc.data();
-            
-            await db.collection('users').doc(user.uid).update({
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-        
-        const userToSave = {
-            uid: user.uid,
-            username: userData.username,
-            email: user.email,
-            role: userData.role || 'user',
-            avatar: userData.avatar || user.email.charAt(0).toUpperCase(),
-            created: userData.created ? userData.created.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        };
-        
-        localStorage.setItem('currentUser', JSON.stringify(userToSave));
-        
-        console.log('✅ Login successful:', userData.username);
-        
-        return {
-            success: true,
-            message: 'Conectat cu succes!',
-            user: userToSave
-        };
-        
-    } catch (error) {
-        console.error('💥 Login error:', error);
-        
-        let message = 'Eroare la conectare. ';
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-            message = 'Email sau parolă incorectă!';
-        } else if (error.code === 'auth/too-many-requests') {
-            message = 'Cont blocat temporar. Încearcă mai târziu!';
-        }
-        
-        return {
-            success: false,
-            message: message
-        };
-    }
-}
-
-function logout() {
-    console.log('👋 Logging out...');
+    // Sortează după dată (cele mai noi primele)
+    allEpisodes.sort((a, b) => new Date(b.data_adaugare) - new Date(a.data_adaugare));
     
-    auth.signOut().then(() => {
-        localStorage.removeItem('currentUser');
-        window.location.href = 'index.html';
-    }).catch(error => {
-        console.error('Logout error:', error);
-        localStorage.removeItem('currentUser');
-        window.location.href = 'index.html';
+    // Afișează primele 6
+    container.innerHTML = '';
+    allEpisodes.slice(0, 6).forEach(ep => {
+        container.innerHTML += `
+            <div class="episode-card">
+                <div class="episode-thumbnail" style="background-image: url('${ep.serieImagine}')">
+                    <div class="episode-badge">Ep ${ep.numar}</div>
+                </div>
+                <div class="episode-info">
+                    <h4>${ep.serieTitlu}</h4>
+                    <h3>${ep.titlu}</h3>
+                    <div class="episode-meta">
+                        <span>👁️ ${ep.vizionari}</span>
+                        <span>📅 ${ep.data_adaugare}</span>
+                    </div>
+                    <a href="/serie.html?id=${ep.serieId}&ep=${ep.numar}" class="btn-watch">▶ Vizionează</a>
+                </div>
+            </div>
+        `;
     });
 }
 
-function isLoggedIn() {
-    return localStorage.getItem('currentUser') !== null;
-}
-
-function getCurrentUser() {
-    const user = localStorage.getItem('currentUser');
-    return user ? JSON.parse(user) : null;
-}
-
-function isAdmin() {
-    const user = getCurrentUser();
-    return user && user.role === 'admin';
-}
-
-// ==================== ANIME FUNCTIONS ====================
-async function addToWatchlist(animeId) {
-    const user = getCurrentUser();
-    if (!user) {
-        alert('Trebuie să fii logat pentru a adăuga la watchlist!');
-        return false;
+// Încarcă toate seriile
+async function loadAllSeries() {
+    const series = await getSeries();
+    const container = document.getElementById('allSeries');
+    
+    if (!container) return;
+    
+    if (series.length === 0) {
+        container.innerHTML = '<p class="no-data">Nu există serii încă.</p>';
+        return;
     }
     
-    try {
-        const watchlistItem = {
-            animeId: animeId,
-            addedAt: new Date().toISOString(),
-            lastWatched: null,
-            progress: 0
-        };
-        
-        await db.collection('users').doc(user.uid)
-            .collection('watchlist').doc(animeId).set(watchlistItem);
-        
-        console.log('✅ Added to watchlist:', animeId);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Watchlist error:', error);
-        return false;
-    }
-}
-
-async function trackEpisodeView(animeId, episodeNumber) {
-    const user = getCurrentUser();
-    if (!user) return;
-    
-    try {
-        const viewData = {
-            animeId: animeId,
-            episodeNumber: episodeNumber,
-            watchedAt: new Date().toISOString(),
-            userAgent: navigator.userAgent
-        };
-        
-        await db.collection('views').add(viewData);
-        console.log('📊 Tracked view:', animeId, episodeNumber);
-        
-    } catch (error) {
-        console.error('❌ Tracking error:', error);
-    }
-}
-
-// ==================== UI FUNCTIONS ====================
-function updateUIBasedOnLogin() {
-    const user = getCurrentUser();
-    const authNav = document.getElementById('authNav');
-    
-    if (!authNav) return;
-    
-    if (user) {
-        authNav.innerHTML = `
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-user"></i> ${user.username}
-                    <span class="badge bg-danger ms-1">${user.role}</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="profile.html">
-                        <i class="fas fa-user-circle"></i> Profil
-                    </a></li>
-                    <li><a class="dropdown-item" href="settings.html">
-                        <i class="fas fa-cog"></i> Setări
-                    </a></li>
-                    ${user.role === 'admin' ? `
-                    <li><a class="dropdown-item" href="admin.html">
-                        <i class="fas fa-shield-alt"></i> Admin
-                    </a></li>
-                    ` : ''}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a></li>
-                </ul>
-            </li>
+    container.innerHTML = '';
+    series.forEach(serie => {
+        container.innerHTML += `
+            <a href="/serie.html?id=${serie.id}" class="series-card-link">
+                <div class="series-card">
+                    <div class="series-image" style="background-image: url('${serie.imagine}')">
+                        <div class="series-overlay">
+                            <span class="episode-count">${serie.episoade.length} episoade</span>
+                        </div>
+                    </div>
+                    <div class="series-content">
+                        <h3>${serie.titlu}</h3>
+                        <p class="series-desc">${serie.descriere.substring(0, 80)}...</p>
+                        <div class="series-genres">
+                            ${serie.genuri.slice(0, 3).map(gen => `<span class="genre">${gen}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </a>
         `;
+    });
+}
+
+// ====== FUNCȚII PENTRU ADMIN ======
+
+// Funcția apelată din admin.html pentru adăugare serie
+async function addSerieFromForm() {
+    const serieData = {
+        id: document.getElementById('serieId').value.trim().toLowerCase(),
+        titlu: document.getElementById('serieTitlu').value.trim(),
+        descriere: document.getElementById('serieDesc').value.trim(),
+        genuri: document.getElementById('serieGenuri').value.split(',').map(g => g.trim()),
+        imagine: document.getElementById('serieImagine').value.trim(),
+        tara: document.getElementById('serieTara').value.trim() || 'Japonia'
+    };
+    
+    // Validare
+    if (!serieData.id || !serieData.titlu || !serieData.descriere) {
+        showStatus('serieStatus', 'Completează toate câmpurile obligatorii!', 'error');
+        return;
+    }
+    
+    const result = await addSerie(serieData);
+    
+    if (result.success) {
+        showStatus('serieStatus', '✅ Serie adăugată cu succes!', 'success');
+        // Reset form
+        document.getElementById('serieId').value = '';
+        document.getElementById('serieTitlu').value = '';
+        document.getElementById('serieDesc').value = '';
+        document.getElementById('serieGenuri').value = '';
+        document.getElementById('serieImagine').value = '';
         
-        const adminLink = document.getElementById('adminLink');
-        if (adminLink && user.role === 'admin') {
-            adminLink.style.display = 'inline-block';
-        }
-        
+        // Reîncarcă listele
+        loadSeriesForSelect();
+        loadSeriesForManagement();
+        loadAllData();
     } else {
-        authNav.innerHTML = `
-            <li class="nav-item">
-                <a class="nav-link" href="login.html">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="register.html">
-                    <i class="fas fa-user-plus"></i> Register
-                </a>
-            </li>
-        `;
+        showStatus('serieStatus', `❌ ${result.message}`, 'error');
     }
 }
 
-function requireLogin() {
-    if (!isLoggedIn()) {
-        alert('Trebuie să fii logat pentru a accesa această pagină!');
-        window.location.href = 'login.html';
-        return false;
-    }
-    return true;
-}
-
-function requireAdmin() {
-    if (!isAdmin()) {
-        alert('Acces interzis! Numai administratorii pot accesa această pagină.');
-        window.location.href = 'index.html';
-        return false;
-    }
-    return true;
-}
-
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Anime Uke System Ready!');
+// Funcția apelată din admin.html pentru adăugare episod
+async function addEpisodeFromForm() {
+    const serieId = document.getElementById('selectSerie').value;
+    const episodeData = {
+        numar: parseInt(document.getElementById('episodeNumber').value),
+        titlu: document.getElementById('episodeTitlu').value.trim(),
+        filemoon: document.getElementById('episodeFilemoon').value.trim(),
+        descriere: document.getElementById('episodeDesc').value.trim(),
+        durata: parseInt(document.getElementById('episodeDurata').value) || 24
+    };
     
-    updateUIBasedOnLogin();
+    // Validare
+    if (!serieId || !episodeData.numar || !episodeData.titlu || !episodeData.filemoon) {
+        showStatus('episodeStatus', 'Completează toate câmpurile obligatorii!', 'error');
+        return;
+    }
+    
+    const result = await addEpisode(serieId, episodeData);
+    
+    if (result.success) {
+        showStatus('episodeStatus', '✅ Episod adăugat cu succes!', 'success');
+        // Reset form
+        document.getElementById('episodeNumber').value = '';
+        document.getElementById('episodeTitlu').value = '';
+        document.getElementById('episodeFilemoon').value = '';
+        document.getElementById('episodeDesc').value = '';
+        document.getElementById('episodeDurata').value = '24';
+    } else {
+        showStatus('episodeStatus', `❌ ${result.message}`, 'error');
+    }
+}
+
+// Afișează mesaj de status
+function showStatus(elementId, message, type = 'info') {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.textContent = message;
+    element.className = `status-message status-${type}`;
+    element.style.display = 'block';
+    
+    // Ascunde mesajul după 5 secunde
+    setTimeout(() => {
+        element.style.display = 'none';
+    }, 5000);
+}
+
+// ====== DATE DE EXEMPLU PENTRU PRIMUL START ======
+
+// Funcție pentru a inițializa cu date demo
+async function initDemoData() {
+    const series = await getSeries();
+    
+    if (series.length === 0) {
+        const demoSeries = [
+            {
+                id: "one-piece",
+                titlu: "One Piece",
+                descriere: "Povestea lui Monkey D. Luffy și a echipajului său de pirați în căutarea celui mai mare comoară din lume, One Piece.",
+                genuri: ["Aventură", "Acțiune", "Shounen", "Fantastic"],
+                imagine: "https://i.imgur.com/one-piece.jpg",
+                tara: "Japonia",
+                data_creare: "2025-12-07",
+                episoade: [
+                    {
+                        numar: 1,
+                        titlu: "Eu sunt Luffy! Omul care va deveni Regele Piraților!",
+                        filemoon: "https://filemoon.to/e/qx8ixv2merzt/One_Piece_-_0001__480p_RoSub___Shinobi_ACG_.mp4",
+                        descriere: "Primul episod din One Piece",
+                        durata: 24,
+                        data_adaugare: "2025-12-07",
+                        vizionari: 91235
+                    }
+                ],
+                vizionari_totale: 91235
+            },
+            {
+                id: "look-plus-one-piece",
+                titlu: "Look Plus One Piece Special Movie",
+                descriere: "O colaborare cu One Piece pentru produsele de curățare marca Lions „Look Plus”.",
+                genuri: ["Comedie", "Shounen"],
+                imagine: "https://i.imgur.com/tKnzRWrl.png",
+                tara: "Japonia",
+                data_creare: "2025-12-07",
+                episoade: [
+                    {
+                        numar: 1,
+                        titlu: "Look Plus x One Piece",
+                        filemoon: "https://filemoon.to/e/exemplu",
+                        descriere: "Episod special de colaborare",
+                        durata: 2,
+                        data_adaugare: "2025-12-07",
+                        vizionari: 1500
+                    }
+                ],
+                vizionari_totale: 1500
+            }
+        ];
+        
+        await saveAllData(demoSeries);
+        console.log('Date demo inițializate cu succes!');
+    }
+}
+
+// Inițializează la încărcare
+document.addEventListener('DOMContentLoaded', async function() {
+    // Comentează linia de mai jos după prima rulare
+    // await initDemoData();
+    
+    // Încarcă datele pe paginile principale
+    if (document.getElementById('latestEpisodes')) {
+        loadLatestEpisodes();
+    }
+    
+    if (document.getElementById('allSeries')) {
+        loadAllSeries();
+    }
 });
 
-// ==================== EXPORT FUNCTIONS ====================
-window.registerUser = registerUser;
-window.loginUser = loginUser;
-window.logout = logout;
-window.isLoggedIn = isLoggedIn;
-window.getCurrentUser = getCurrentUser;
-window.isAdmin = isAdmin;
-window.updateUIBasedOnLogin = updateUIBasedOnLogin;
-window.requireLogin = requireLogin;
-window.requireAdmin = requireAdmin;
-window.addToWatchlist = addToWatchlist;
-window.trackEpisodeView = trackEpisodeView;
-
-console.log('✅ Anime Uke System Loaded Successfully!');
+// Expune funcțiile global pentru admin.html
+window.addSerie = addSerieFromForm;
+window.addEpisode = addEpisodeFromForm;
+window.getSeries = getSeries;
+window.deleteSerie = deleteSerie;
+window.loadSeriesForSelect = loadSeriesForSelect;
+window.loadSeriesForManagement = loadSeriesForManagement;
+window.loadAllData = loadAllData;
