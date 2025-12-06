@@ -662,4 +662,226 @@
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <button onclick="editSerie('${serie.id}')" class="btn-admin secondary" style="padding: 8px 16px;">✏️ Edit</button>
-                            <button onclick="delete
+                            <button onclick="deleteSerie('${serie.id}')" class="btn-admin secondary" style="padding: 8px 16px; background: #c62828;">🗑️ Șterge</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        function deleteSerie(serieId) {
+            if (!confirm(`Sigur vrei să ștergi această serie și toate episoadele ei?`)) {
+                return;
+            }
+            
+            localSeries = localSeries.filter(s => s.id !== serieId);
+            localStorage.setItem('anime_admin_data', JSON.stringify(localSeries));
+            
+            showStatus('serieStatus', '✅ Serie ștearsă cu succes!', 'success');
+            loadSeriesList();
+            updateSerieDropdown();
+        }
+        
+        // ====== FUNCȚII PENTRU EXPORT ======
+        function loadLocalData() {
+            const output = document.getElementById('jsonOutput');
+            output.value = JSON.stringify(localSeries, null, 2);
+        }
+        
+        function exportJSON() {
+            const dataStr = JSON.stringify(localSeries, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showStatus('exportStatus', '✅ Fișierul data.json a fost descărcat!', 'success');
+        }
+        
+        function copyToClipboard() {
+            const output = document.getElementById('jsonOutput');
+            output.select();
+            document.execCommand('copy');
+            
+            showStatus('exportStatus', '✅ JSON copiat în clipboard!', 'success');
+        }
+        
+        // ====== FUNCȚII PENTRU DEMO DATA ======
+        function addDemoData() {
+            const demoSeries = [
+                {
+                    id: "one-piece",
+                    titlu: "One Piece",
+                    descriere: "Povestea lui Monkey D. Luffy și a echipajului său de pirați în căutarea celui mai mare comoară din lume, One Piece.",
+                    genuri: ["Aventură", "Acțiune", "Shounen", "Fantastic"],
+                    imagine: "https://i.imgur.com/one-piece.jpg",
+                    tara: "Japonia",
+                    data_creare: new Date().toISOString().split('T')[0],
+                    episoade: [
+                        {
+                            numar: 1,
+                            titlu: "Eu sunt Luffy! Omul care va deveni Regele Piraților!",
+                            filemoon: "https://filemoon.to/e/qx8ixv2merzt/One_Piece_-_0001__480p_RoSub___Shinobi_ACG_.mp4",
+                            descriere: "Primul episod din One Piece",
+                            durata: 24,
+                            data_adaugare: new Date().toISOString().split('T')[0],
+                            vizionari: 91235
+                        }
+                    ],
+                    vizionari_totale: 91235
+                },
+                {
+                    id: "look-plus-one-piece",
+                    titlu: "Look Plus One Piece Special Movie",
+                    descriere: "O colaborare cu One Piece pentru produsele de curățare marca Lions „Look Plus”.",
+                    genuri: ["Comedie", "Shounen"],
+                    imagine: "https://i.imgur.com/tKnzRWrl.png",
+                    tara: "Japonia",
+                    data_creare: new Date().toISOString().split('T')[0],
+                    episoade: [
+                        {
+                            numar: 1,
+                            titlu: "Look Plus x One Piece",
+                            filemoon: "https://filemoon.to/e/example1",
+                            descriere: "Episod special de colaborare",
+                            durata: 2,
+                            data_adaugare: new Date().toISOString().split('T')[0],
+                            vizionari: 1500
+                        }
+                    ],
+                    vizionari_totale: 1500
+                },
+                {
+                    id: "demon-slayer",
+                    titlu: "Demon Slayer: Kimetsu no Yaiba",
+                    descriere: "Tanjiro Kamado devine un vânător de demoni după ce familia lui este ucisă și sora lui se transformă într-un demon.",
+                    genuri: ["Acțiune", "Fantezie", "Shounen"],
+                    imagine: "https://i.imgur.com/demon-slayer.jpg",
+                    tara: "Japonia",
+                    data_creare: new Date().toISOString().split('T')[0],
+                    episoade: [
+                        {
+                            numar: 1,
+                            titlu: "Crusher of Fate",
+                            filemoon: "https://filemoon.to/e/example2",
+                            descriere: "Primul episod din Demon Slayer",
+                            durata: 24,
+                            data_adaugare: new Date().toISOString().split('T')[0],
+                            vizionari: 75000
+                        },
+                        {
+                            numar: 2,
+                            titlu: "Trainer Sakonji Urokodaki",
+                            filemoon: "https://filemoon.to/e/example3",
+                            descriere: "Al doilea episod",
+                            durata: 24,
+                            data_adaugare: new Date().toISOString().split('T')[0],
+                            vizionari: 68000
+                        }
+                    ],
+                    vizionari_totale: 143000
+                },
+                {
+                    id: "jujutsu-kaisen",
+                    titlu: "Jujutsu Kaisen",
+                    descriere: "Yuji Itadori devine gazda unei blestemate puternice și se alătură unei organizații secrete de vrăjitori.",
+                    genuri: ["Acțiune", "Fantezie întunecată", "Shounen"],
+                    imagine: "https://i.imgur.com/jujutsu-kaisen.jpg",
+                    tara: "Japonia",
+                    data_creare: new Date().toISOString().split('T')[0],
+                    episoade: [
+                        {
+                            numar: 1,
+                            titlu: "Ryomen Sukuna",
+                            filemoon: "https://filemoon.to/e/example4",
+                            descriere: "Primul episod din Jujutsu Kaisen",
+                            durata: 24,
+                            data_adaugare: new Date().toISOString().split('T')[0],
+                            vizionari: 82000
+                        }
+                    ],
+                    vizionari_totale: 82000
+                }
+            ];
+            
+            // Adaugă seriile demo (dacă nu există deja)
+            demoSeries.forEach(demoSerie => {
+                if (!localSeries.some(s => s.id === demoSerie.id)) {
+                    localSeries.push(demoSerie);
+                }
+            });
+            
+            localStorage.setItem('anime_admin_data', JSON.stringify(localSeries));
+            
+            showStatus('demoStatus', `✅ ${demoSeries.length} serii demo adăugate!`, 'success');
+            
+            // Reîncarcă listele
+            updateSerieDropdown();
+            loadSeriesList();
+            loadLocalData();
+        }
+        
+        function clearAllData() {
+            if (!confirm('Sigur vrei să ștergi TOATE datele din browser?')) {
+                return;
+            }
+            
+            localSeries = [];
+            localStorage.removeItem('anime_admin_data');
+            
+            showStatus('demoStatus', '✅ Toate datele au fost șterse!', 'success');
+            
+            // Reîncarcă listele
+            updateSerieDropdown();
+            loadSeriesList();
+            loadLocalData();
+        }
+        
+        // ====== INITIALIZE ======
+        document.addEventListener('DOMContentLoaded', function() {
+            // Încarcă seriile pentru dropdown
+            updateSerieDropdown();
+            
+            // Încarcă datele pentru export
+            loadLocalData();
+            
+            // Încarcă lista de serii
+            loadSeriesList();
+            
+            // Preview live pentru formularul de serie
+            const formInputs = ['serieId', 'serieTitlu', 'serieDesc', 'serieImagine'];
+            formInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', updatePreview);
+                }
+            });
+            
+            // Încarcă și datele de pe GitHub (pentru comparație)
+            loadData().then(githubSeries => {
+                console.log('Date de pe GitHub:', githubSeries.length, 'serii');
+            });
+        });
+        
+        function updatePreview() {
+            const title = document.getElementById('serieTitlu').value || 'Titlu serie';
+            const desc = document.getElementById('serieDesc').value || 'Descrierea va apărea aici...';
+            const image = document.getElementById('serieImagine').value;
+            
+            document.getElementById('previewTitle').textContent = title;
+            document.getElementById('previewDesc').textContent = desc.substring(0, 100) + (desc.length > 100 ? '...' : '');
+            
+            if (image) {
+                document.getElementById('previewImage').style.backgroundImage = `url('${image}')`;
+                document.getElementById('previewImage').style.backgroundSize = 'cover';
+                document.getElementById('previewImage').style.backgroundPosition = 'center';
+            }
+        }
+    </script>
+</body>
+</html>
