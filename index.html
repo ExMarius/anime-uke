@@ -3,346 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Uke - Cel mai bun site de anime românesc</title>
-    
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
+    <title>AnimeNexus - anime și manga în limba română</title>
+    <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
-    
-    <style>
-        /* Logo și branding */
-        .logo-header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 40px 0;
-            text-align: center;
-            border-bottom: 5px solid #920d0d;
-        }
-        
-        .logo-img {
-            max-width: 300px;
-            height: auto;
-            filter: drop-shadow(0 0 20px rgba(146, 13, 13, 0.5));
-        }
-        
-        .tagline {
-            color: #fff;
-            font-size: 1.2rem;
-            margin-top: 15px;
-            opacity: 0.9;
-        }
-        
-        /* Hero Section */
-        .hero-section {
-            background: linear-gradient(rgba(109, 0, 25, 0.9), rgba(109, 0, 25, 0.7));
-            padding: 80px 0;
-            position: relative;
-            margin-top: 20px;
-            text-align: center;
-            color: white;
-        }
-        
-        /* Anime Cards */
-        .anime-card {
-            background: #1a1a2e;
-            border-radius: 15px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            height: 100%;
-            margin-bottom: 20px;
-        }
-        
-        .anime-card:hover {
-            transform: translateY(-10px);
-            border-color: #920d0d;
-            box-shadow: 0 15px 30px rgba(146, 13, 13, 0.3);
-        }
-        
-        .anime-poster {
-            width: 100%;
-            height: 280px;
-            object-fit: cover;
-        }
-        
-        .anime-status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #920d0d;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-        
-        /* Quick Stats */
-        .stat-box {
-            background: rgba(146, 13, 13, 0.1);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(146, 13, 13, 0.3);
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-        
-        .stat-box:hover {
-            background: rgba(146, 13, 13, 0.2);
-            transform: translateY(-5px);
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #920d0d;
-            display: block;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .logo-img {
-                max-width: 200px;
-            }
-            
-            .hero-section {
-                padding: 40px 0;
-            }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark-red fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <img src="https://i.imgur.com/zocDECh.png" alt="Anime Uke Logo" height="40" class="d-inline-block align-text-top me-2">
-                <strong>ANIME UKE</strong>
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="index.html">
-                            <i class="fas fa-home"></i> Acasă
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="anime/">
-                            <i class="fas fa-film"></i> Anime-uri
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="login.html">
-                            <i class="fas fa-user"></i> Cont
-                        </a>
-                    </li>
-                </ul>
-                
-                <!-- Search Bar -->
-                <form class="d-flex" role="search">
-                    <input class="form-control me-2" type="search" placeholder="Caută anime..." aria-label="Search">
-                    <button class="btn btn-outline-light" type="submit">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="logo.png" alt="AnimeNexus" class="logo">
+                <span>AnimeNexus</span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Acasă</a>
+                <a href="#serii">Serii</a>
+                <a href="#ultimele">Ultimele</a>
+                <a href="/admin.html" class="admin-link">Admin</a>
             </div>
         </div>
     </nav>
 
-    <!-- Logo Header -->
-    <div class="logo-header">
-        <div class="container">
-            <img src="https://i.imgur.com/zocDECh.png" alt="Anime Uke" class="logo-img">
-            <p class="tagline">
-                <i class="fas fa-star"></i> Cel mai bun site de anime cu subtitrări românești
-                <i class="fas fa-star"></i>
-            </p>
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Anime și Manga în Limba Română</h1>
+            <p>Mii de episoade traduse și subtitrate de comunitate</p>
+            <a href="#serii" class="btn-hero">Explorează Seriile</a>
         </div>
-    </div>
+    </section>
 
-    <!-- Hero Section -->
-    <section class="hero-section">
+    <!-- ULTIMELE EPISOADE -->
+    <section id="ultimele" class="section">
         <div class="container">
-            <h1 class="display-4 fw-bold mb-4">Bine ai venit în lumea anime-ului!</h1>
-            <p class="lead mb-4">Mii de episoade în limba română, fără reclame enervante, la un click distanță.</p>
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <a href="anime/" class="btn btn-light btn-lg px-5 me-3">
-                        <i class="fas fa-play-circle"></i> Începe să vizionezi
-                    </a>
-                    <a href="login.html" class="btn btn-outline-light btn-lg px-5">
-                        <i class="fas fa-user-plus"></i> Creează cont
-                    </a>
-                </div>
+            <h2 class="section-title">📺 Ultimele Episoade Adăugate</h2>
+            <div id="latestEpisodes" class="episodes-grid">
+                <!-- Se încarcă din JavaScript -->
+                <div class="loading">Se încarcă episoadele...</div>
             </div>
         </div>
     </section>
 
-    <!-- Quick Stats -->
-    <div class="container py-5">
-        <div class="row text-center mb-5">
-            <div class="col-md-3 col-6">
-                <div class="stat-box">
-                    <span class="stat-number">4</span>
-                    <small>Serii Anime</small>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-box">
-                    <span class="stat-number">1,963</span>
-                    <small>Episoade</small>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-box">
-                    <span class="stat-number">784</span>
-                    <small>Ore de Content</small>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-box">
-                    <span class="stat-number">300+</span>
-                    <small>Utilizatori</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Latest Anime -->
-        <h2 class="mb-4"><i class="fas fa-fire text-danger"></i> Anime-uri Populare</h2>
-        <div class="row" id="latestAnime">
-            <!-- Se încarcă din JS -->
-        </div>
-        
-        <!-- View All Button -->
-        <div class="text-center mt-5">
-            <a href="anime/" class="btn btn-outline-danger btn-lg">
-                <i class="fas fa-list"></i> Vezi toate anime-urile
-            </a>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-5 mt-5">
+    <!-- TOATE SERIILE -->
+    <section id="serii" class="section bg-dark">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <img src="https://i.imgur.com/zocDECh.png" alt="Logo" height="50" class="mb-3">
-                    <p>Anime Uke - Platforma #1 pentru anime cu subtitrări românești.</p>
-                    <p class="text-muted small">© 2025 Anime Uke. Toate drepturile rezervate.</p>
+            <h2 class="section-title">🎬 Toate Seriile Disponibile</h2>
+            <div id="allSeries" class="series-grid">
+                <!-- Se încarcă din JavaScript -->
+                <div class="loading">Se încarcă seriile...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="logo.png" alt="AnimeNexus" class="logo-small">
+                    <span>AnimeNexus</span>
                 </div>
-                <div class="col-md-4">
-                    <h5>Linkuri Rapide</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="anime/" class="text-white-50">Toate anime-urile</a></li>
-                        <li><a href="login.html" class="text-white-50">Autentificare</a></li>
-                        <li><a href="register.html" class="text-white-50">Înregistrare</a></li>
-                        <li><a href="admin.html" class="text-white-50">Admin Panel</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h5>Contact</h5>
-                    <p class="text-white-50">
-                        <i class="fas fa-envelope me-2"></i> contact@animeuke.ro
-                    </p>
-                    <div class="mt-3">
-                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
-                        <a href="#" class="text-white me-3"><i class="fab fa-discord fa-lg"></i></a>
-                        <a href="#" class="text-white"><i class="fab fa-telegram fa-lg"></i></a>
-                    </div>
-                </div>
+                <p>© 2025 AnimeNexus. Toate drepturile rezervate.</p>
+                <p class="footer-note">Site făcut cu pasiune pentru comunitatea română de anime.</p>
             </div>
         </div>
     </footer>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="script.js"></script>
-    
+    <!-- SCRIPTS -->
+    <script src="app.js"></script>
     <script>
-        // Anime-uri pentru homepage
-        const popularAnime = [
-            {
-                slug: "one-piece",
-                title: "One Piece",
-                description: "Luffy vrea să devină Regele Piraților.",
-                episodes: 1100,
-                year: 1999,
-                status: "În desfășurare",
-                poster: "https://i.imgur.com/zocDECh.png",
-                genres: ["Aventură", "Acțiune", "Comedie"]
-            },
-            {
-                slug: "naruto",
-                title: "Naruto",
-                description: "Călătoria lui Naruto pentru a deveni Hokage.",
-                episodes: 720,
-                year: 2002,
-                status: "Terminat",
-                poster: "https://i.imgur.com/naruto-poster.jpg",
-                genres: ["Acțiune", "Aventură"]
-            },
-            {
-                slug: "attack-on-titan",
-                title: "Attack on Titan",
-                description: "Lupta omenirii împotriva titanilor.",
-                episodes: 88,
-                year: 2013,
-                status: "Terminat",
-                poster: "https://i.imgur.com/aot-poster.jpg",
-                genres: ["Acțiune", "Dramă", "Fantasy"]
-            },
-            {
-                slug: "demon-slayer",
-                title: "Demon Slayer",
-                description: "Tanjiro vrea să-și salveze sora transformată în demon.",
-                episodes: 55,
-                year: 2019,
-                status: "În desfășurare",
-                poster: "https://i.imgur.com/ds-poster.jpg",
-                genres: ["Acțiune", "Fantasy"]
-            }
-        ];
-        
-        function loadPopularAnime() {
-            const container = document.getElementById('latestAnime');
-            let html = '';
-            
-            popularAnime.forEach(anime => {
-                html += `
-                <div class="col-md-3 col-sm-6">
-                    <div class="anime-card">
-                        <div class="position-relative">
-                            <img src="${anime.poster}" alt="${anime.title}" class="anime-poster">
-                            <span class="anime-status">${anime.status}</span>
-                        </div>
-                        <div class="p-3">
-                            <h5 class="mb-1">${anime.title}</h5>
-                            <p class="text-muted small mb-2">
-                                <i class="fas fa-play-circle"></i> ${anime.episodes} episoade
-                                <span class="mx-2">•</span>
-                                <i class="fas fa-calendar"></i> ${anime.year}
-                            </p>
-                            <a href="anime/${anime.slug}/" class="btn btn-sm btn-danger w-100">
-                                <i class="fas fa-eye"></i> Vezi anime
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        document.addEventListener('DOMContentLoaded', loadPopularAnime);
+        // Încarcă datele la pornire
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLatestEpisodes();
+            loadAllSeries();
+        });
     </script>
 </body>
 </html>
