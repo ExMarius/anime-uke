@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "id": "asda",
+    "titlu": "asda",
+    "descriere": "asda",
+    "genuri": [
+      "as",
+      "asa"
+    ],
+    "imagine": "https://imgur.com/zocDECh",
+    "tara": "Japonia",
+    "data_creare": "2025-12-06",
+    "episoade": [],
+    "vizionari_totale": 0
+  },
+  {
+    "id": "asdaa",
+    "titlu": "asaa",
+    "descriere": "asassa",
+    "genuri": [
+      "asas"
+    ],
+    "imagine": "https://imgur.com/zocDECh",
+    "tara": "Japonia",
+    "data_creare": "2025-12-06",
+    "episoade": [],
+    "vizionari_totale": 0
+  }
+]
