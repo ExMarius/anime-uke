@@ -3,414 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnimeUKE - Anime Românesc Subtitrat</title>
-    
-    <!-- Bootstrap 5 -->
+    <title>One Piece - AnimeUKE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Local CSS -->
-    <link rel="stylesheet" href="/assets/css/style.css">
-    
     <style>
-        :root {
-            --primary-red: #e63946;
-            --dark-bg: #0a0a0a;
-            --card-bg: #1a1a1a;
-            --text-light: #f8f9fa;
-        }
-        
         body {
-            background-color: var(--dark-bg);
-            color: var(--text-light);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-        
-        /* Navbar */
-        .navbar-brand {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #e63946, #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* Hero */
-        .hero-section {
-            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), 
-                        url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1600') no-repeat center;
-            background-size: cover;
-            border-radius: 15px;
-            padding: 60px 20px;
-            margin-bottom: 40px;
-        }
-        
-        /* Anime Cards */
-        .anime-card {
-            background: var(--card-bg);
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.3s;
-            border: 1px solid #333;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .anime-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary-red);
-        }
-        
-        .anime-poster {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
-        
-        /* Snow */
-        .snowflake {
-            position: fixed;
-            top: -10px;
+            background: #0a0a0a;
             color: white;
-            opacity: 0.8;
-            pointer-events: none;
-            z-index: 9999;
         }
-        
-        @keyframes fall {
-            to { transform: translateY(100vh); }
+        .series-header {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), 
+                        url('https://wallpapercave.com/wp/wp5063236.jpg');
+            background-size: cover;
+            padding: 40px 0;
+            margin-bottom: 30px;
         }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .anime-poster { height: 180px; }
-            .hero-section { padding: 40px 15px; }
+        .episode-card {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #e63946;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .episode-card:hover {
+            background: #2a2a2a;
+            transform: translateX(5px);
+        }
+        .episode-number {
+            font-size: 1.5rem;
+            color: #e63946;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <!-- Snow Container -->
-    <div id="snow-container"></div>
-    
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark py-3" style="background-color: rgba(10, 10, 10, 0.95);">
+    <nav class="navbar navbar-dark bg-dark py-3">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="fas fa-play-circle me-2"></i>AnimeUKE
             </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">
-                            <i class="fas fa-home me-1"></i> Acasă
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/series.html">
-                            <i class="fas fa-film me-1"></i> Serii
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="toggle-snow">
-                            <i class="fas fa-snowflake me-1"></i> Fulgi
-                        </a>
-                    </li>
-                </ul>
-                
-                <!-- Search -->
-                <div class="d-flex">
-                    <input type="text" class="form-control me-2 bg-dark text-light border-secondary" 
-                           id="search-input" placeholder="Caută anime...">
-                    <button class="btn btn-danger" onclick="searchAnime()">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
+            <div>
+                <a href="/" class="btn btn-outline-light me-2">
+                    <i class="fas fa-home me-2"></i>Acasă
+                </a>
+                <a href="/series.html" class="btn btn-outline-light">
+                    <i class="fas fa-film me-2"></i>Toate Seriile
+                </a>
             </div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <main class="container py-4">
-        <!-- Hero -->
-        <section class="hero-section text-center">
-            <h1 class="display-4 fw-bold mb-3">Anime Românesc Subtitrat</h1>
-            <p class="lead mb-4">Episoade noi, subtitrări de calitate, gratuit pentru toți fanii anime din România!</p>
-            <button class="btn btn-danger btn-lg px-4" onclick="scrollToLatest()">
-                <i class="fas fa-play-circle me-2"></i>Vezi Ultimele Episoade
-            </button>
-        </section>
-        
-        <!-- Latest Episodes -->
-        <section id="latest-episodes" class="mb-5">
-            <h2 class="mb-4">
-                <i class="fas fa-bolt text-danger me-2"></i>
-                Ultimele Episoade
-            </h2>
-            <div class="row g-3" id="latest-episodes-container">
-                <!-- Se încarcă din JS -->
-                <div class="col-12 text-center py-4">
-                    <div class="spinner-border text-danger" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Popular Series -->
-        <section id="popular-series" class="mb-5">
-            <h2 class="mb-4">
-                <i class="fas fa-fire text-danger me-2"></i>
-                Serii Populare
-            </h2>
-            <div class="row g-3" id="popular-series-container">
-                <!-- Se încarcă din JS -->
-            </div>
-        </section>
-        
-        <!-- Genres -->
-        <section id="genres" class="mb-5">
-            <h2 class="mb-4">
-                <i class="fas fa-tags text-danger me-2"></i>
-                Genuri
-            </h2>
-            <div class="d-flex flex-wrap gap-2" id="genres-container">
-                <!-- Se încarcă din JS -->
-            </div>
-        </section>
-        
-        <!-- Stats -->
-        <section class="mb-5">
-            <div class="row text-center">
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="p-3 bg-dark rounded">
-                        <h3 class="text-danger" id="total-series">0</h3>
-                        <p class="mb-0 text-muted">Serii</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="p-3 bg-dark rounded">
-                        <h3 class="text-danger" id="total-episodes">0</h3>
-                        <p class="mb-0 text-muted">Episoade</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="p-3 bg-dark rounded">
-                        <h3 class="text-danger" id="active-series">0</h3>
-                        <p class="mb-0 text-muted">În Curs</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="p-3 bg-dark rounded">
-                        <h3 class="text-danger" id="completed-series">0</h3>
-                        <p class="mb-0 text-muted">Finalizate</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-    
-    <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5 border-top border-secondary">
+
+    <!-- Series Header -->
+    <div class="series-header">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5 class="mb-3">
-                        <i class="fas fa-play-circle me-2"></i>AnimeUKE
-                    </h5>
-                    <p class="text-muted">Pentru pasionații de anime din România.</p>
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    <img src="https://cdn.myanimelist.net/images/anime/1244/138851.jpg" 
+                         class="img-fluid rounded" alt="One Piece" style="max-height: 300px;">
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0">
-                        <a href="#" class="text-light me-3"><i class="fab fa-discord"></i></a>
-                        <a href="#" class="text-light me-3"><i class="fab fa-telegram"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-youtube"></i></a>
-                    </p>
+                <div class="col-md-9">
+                    <h1 class="display-4 fw-bold">One Piece</h1>
+                    <p class="lead">Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.</p>
+                    <div class="mb-3">
+                        <span class="badge bg-danger me-2">Acțiune</span>
+                        <span class="badge bg-danger me-2">Aventură</span>
+                        <span class="badge bg-danger me-2">Comedie</span>
+                        <span class="badge bg-danger">Fantezie</span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small class="text-muted">Anul:</small>
+                            <div class="fw-bold">1999</div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Status:</small>
+                            <div class="fw-bold text-warning">În curs</div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Rating:</small>
+                            <div class="fw-bold">
+                                <i class="fas fa-star text-warning"></i> 8.8
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Episoade:</small>
+                            <div class="fw-bold" id="total-episodes-count">Se încarcă...</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <hr class="bg-secondary my-3">
-            <div class="text-center">
-                <small class="text-muted">
-                    © 2024 AnimeUKE. Acest site nu hostează fișiere video.
-                </small>
             </div>
         </div>
+    </div>
+
+    <!-- Episodes List -->
+    <div class="container py-4">
+        <h2 class="mb-4">
+            <i class="fas fa-list me-2 text-danger"></i>
+            Episoade One Piece
+        </h2>
+        
+        <div id="episodes-list" class="row">
+            <!-- Se încarcă din JS -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container text-center">
+            <small class="text-muted">© 2024 AnimeUKE. Toate drepturile rezervate.</small>
+        </div>
     </footer>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Local JS -->
-    <script src="/assets/js/app.js"></script>
-    
+
     <script>
-        // Snow Effect
-        let snowActive = localStorage.getItem('snowActive') !== 'false';
-        let snowInterval;
-        
-        function createSnowflake() {
-            const flake = document.createElement('div');
-            flake.innerHTML = '❄';
-            flake.className = 'snowflake';
-            flake.style.left = Math.random() * 100 + 'vw';
-            flake.style.fontSize = Math.random() * 15 + 10 + 'px';
-            flake.style.opacity = Math.random();
-            flake.style.animation = `fall ${Math.random() * 3 + 2}s linear infinite`;
-            
-            document.getElementById('snow-container').appendChild(flake);
-            
-            setTimeout(() => flake.remove(), 5000);
-        }
-        
-        function toggleSnow() {
-            snowActive = !snowActive;
-            localStorage.setItem('snowActive', snowActive);
-            
-            const btn = document.getElementById('toggle-snow');
-            if (snowActive) {
-                btn.innerHTML = '<i class="fas fa-snowflake me-1"></i> Oprește Fulgi';
-                snowInterval = setInterval(createSnowflake, 100);
-                document.getElementById('snow-container').style.display = 'block';
-            } else {
-                btn.innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Fulgi';
-                clearInterval(snowInterval);
-                document.getElementById('snow-container').style.display = 'none';
-            }
-        }
-        
-        // Initialize snow
-        document.getElementById('toggle-snow').addEventListener('click', toggleSnow);
-        if (snowActive) {
-            snowInterval = setInterval(createSnowflake, 100);
-        } else {
-            document.getElementById('toggle-snow').innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Fulgi';
-            document.getElementById('snow-container').style.display = 'none';
-        }
-        
-        // Search
-        function searchAnime() {
-            const query = document.getElementById('search-input').value.trim();
-            if (query) {
-                window.location.href = `/series.html?search=${encodeURIComponent(query)}`;
-            }
-        }
-        
-        // Scroll to latest
-        function scrollToLatest() {
-            document.getElementById('latest-episodes').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Load data
-        async function loadHomeData() {
+        async function loadSeriesEpisodes() {
             try {
                 // Load episodes
                 const episodesRes = await fetch('/episodes.json');
                 const episodes = await episodesRes.json();
                 
-                // Display latest episodes (last 6)
-                const latestContainer = document.getElementById('latest-episodes-container');
-                latestContainer.innerHTML = '';
+                // Filter only One Piece episodes
+                const onePieceEpisodes = episodes.filter(ep => ep.animeSlug === 'one-piece')
+                                                .sort((a, b) => b.number - a.number); // Newest first
                 
-                episodes.slice(-6).reverse().forEach(ep => {
+                // Update total episodes count
+                document.getElementById('total-episodes-count').textContent = onePieceEpisodes.length;
+                
+                // Display episodes
+                const container = document.getElementById('episodes-list');
+                container.innerHTML = '';
+                
+                onePieceEpisodes.forEach(ep => {
                     const col = document.createElement('div');
-                    col.className = 'col-md-4 col-lg-2';
+                    col.className = 'col-12 col-md-6 col-lg-4 mb-3';
                     col.innerHTML = `
-                        <div class="anime-card" onclick="window.location.href='/watch.html?anime=${ep.animeSlug}&ep=${ep.number}'">
-                            <img src="https://cdn.myanimelist.net/images/anime/1244/138851.jpg" 
-                                 class="anime-poster" alt="${ep.animeTitle}">
-                            <div class="p-3">
-                                <h6 class="fw-bold mb-1">${ep.animeTitle}</h6>
-                                <p class="mb-2"><strong>Ep ${ep.number}</strong></p>
-                                <small class="text-muted">${ep.releaseDate}</small>
-                            </div>
-                        </div>
-                    `;
-                    latestContainer.appendChild(col);
-                });
-                
-                // Load series
-                const seriesRes = await fetch('/series.json');
-                const series = await seriesRes.json();
-                
-                // Display popular series (first 4)
-                const seriesContainer = document.getElementById('popular-series-container');
-                seriesContainer.innerHTML = '';
-                
-                series.slice(0, 4).forEach(anime => {
-                    const col = document.createElement('div');
-                    col.className = 'col-md-3';
-                    col.innerHTML = `
-                        <div class="anime-card" onclick="viewSeries('${anime.slug}')">
-                            <img src="${anime.poster}" class="anime-poster" alt="${anime.title}">
-                            <div class="p-3">
-                                <h6 class="fw-bold mb-2">${anime.title}</h6>
-                                <div class="d-flex justify-content-between">
-                                    <small>${anime.year}</small>
-                                    <small><i class="fas fa-star text-warning"></i> ${anime.rating}</small>
+                        <div class="episode-card" onclick="window.location.href='/watch.html?anime=one-piece&ep=${ep.number}'">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="episode-number">Episod ${ep.number}</div>
+                                    <h6 class="fw-bold mt-2">${ep.title}</h6>
+                                    <p class="text-muted mb-1">
+                                        <small>${ep.releaseDate || 'Data necunoscută'}</small>
+                                    </p>
                                 </div>
+                                <i class="fas fa-play-circle text-danger fa-2x"></i>
                             </div>
                         </div>
                     `;
-                    seriesContainer.appendChild(col);
+                    container.appendChild(col);
                 });
                 
-                // Load genres
-                const genresRes = await fetch('/genres.json');
-                const genres = await genresRes.json();
+                // If no episodes
+                if (onePieceEpisodes.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Nu sunt episoade disponibile încă.
+                            </div>
+                        </div>
+                    `;
+                }
                 
-                const genresContainer = document.getElementById('genres-container');
-                genresContainer.innerHTML = '';
-                
-                genres.forEach(genre => {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-danger';
-                    badge.textContent = genre.name;
-                    badge.style.cursor = 'pointer';
-                    badge.onclick = () => {
-                        window.location.href = `/series.html?genre=${genre.id}`;
-                    };
-                    genresContainer.appendChild(badge);
-                });
-                
-                // Update stats
-                document.getElementById('total-series').textContent = series.length;
-                document.getElementById('total-episodes').textContent = episodes.length;
-                document.getElementById('active-series').textContent = 
-                    series.filter(s => s.status === 'ongoing').length;
-                document.getElementById('completed-series').textContent = 
-                    series.filter(s => s.status === 'completed').length;
-                    
             } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('latest-episodes-container').innerHTML = `
+                console.error('Error loading episodes:', error);
+                document.getElementById('episodes-list').innerHTML = `
                     <div class="col-12 text-center py-5">
                         <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle"></i> 
-                            Eroare la încărcarea datelor. Verifică fișierele JSON.
+                            Eroare la încărcarea episoadelor. Încearcă mai târziu.
                         </div>
                     </div>
                 `;
             }
         }
         
-        // View series
-        function viewSeries(slug) {
-            window.location.href = `/series.html?slug=${slug}`;
-        }
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', loadHomeData);
-        
-        // Enter key for search
-        document.getElementById('search-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchAnime();
-        });
+        // Load on start
+        document.addEventListener('DOMContentLoaded', loadSeriesEpisodes);
     </script>
 </body>
 </html>
