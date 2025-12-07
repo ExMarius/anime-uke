@@ -1,54 +1,335 @@
-[
-  {
-    "slug": "one-piece",
-    "title": "One Piece",
-    "description": "Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.",
-    "year": 1999,
-    "status": "ongoing",
-    "poster": "https://cdn.myanimelist.net/images/anime/1244/138851.jpg",
-    "banner": "https://wallpapercave.com/wp/wp5063236.jpg",
-    "genres": ["action", "adventure", "comedy", "fantasy"],
-    "episodes": 1100,
-    "rating": 8.8,
-    "studio": "Toei Animation"
-  },
-  {
-    "slug": "attack-on-titan",
-    "title": "Attack on Titan",
-    "description": "Omenirea trăiește în spatele unor ziduri uriașe pentru a se proteja de titani, creaturi gigantice care mănâncă oameni.",
-    "year": 2013,
-    "status": "completed",
-    "poster": "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
-    "banner": "https://wallpapercave.com/wp/wp1837535.jpg",
-    "genres": ["action", "drama", "fantasy", "mystery"],
-    "episodes": 88,
-    "rating": 9.1,
-    "studio": "Wit Studio / MAPPA"
-  },
-  {
-    "slug": "naruto-shippuden",
-    "title": "Naruto Shippuden",
-    "description": "Continuația aventurilor lui Naruto Uzumaki, mai matur și mai puternic, în căutarea prietenului său Sasuke.",
-    "year": 2007,
-    "status": "completed",
-    "poster": "https://cdn.myanimelist.net/images/anime/1565/111305.jpg",
-    "banner": "https://wallpapercave.com/wp/wp4336782.jpg",
-    "genres": ["action", "adventure", "comedy"],
-    "episodes": 500,
-    "rating": 8.3,
-    "studio": "Studio Pierrot"
-  },
-  {
-    "slug": "jujutsu-kaisen",
-    "title": "Jujutsu Kaisen",
-    "description": "Yuji Itadori devine gazda unui blestem puternic și se alătură Școlii de Vrăjitorie pentru a controla puterile sale.",
-    "year": 2020,
-    "status": "ongoing",
-    "poster": "https://cdn.myanimelist.net/images/anime/1171/109222.jpg",
-    "banner": "https://wallpapercave.com/wp/wp8542989.jpg",
-    "genres": ["action", "supernatural", "fantasy"],
-    "episodes": 47,
-    "rating": 8.6,
-    "studio": "MAPPA"
-  }
-]
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toate Seriile - AnimeNexus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .series-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+            height: 100%;
+        }
+        
+        .series-card:hover {
+            transform: scale(1.03);
+        }
+        
+        .series-poster {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .status-ongoing {
+            background: #e63946;
+            color: white;
+        }
+        
+        .status-completed {
+            background: #2a9d8f;
+            color: white;
+        }
+        
+        .filter-btn {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            margin: 2px;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn.active {
+            background: #e63946;
+            border-color: #e63946;
+        }
+        
+        .pagination .page-link {
+            background: #2d3748;
+            border-color: #4a5568;
+            color: #f8f9fa;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background: #e63946;
+            border-color: #e63946;
+        }
+    </style>
+</head>
+<body class="bg-dark text-light">
+    <!-- Navbar (similar cu index.html) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dragon me-2"></i>AnimeNexus
+            </a>
+            <a href="/" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left"></i> Acasă
+            </a>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <h1 class="mb-4"><i class="fas fa-film"></i> Toate Seriile Anime</h1>
+        
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3"><i class="fas fa-filter"></i> Filtrează</h5>
+                        
+                        <!-- Search -->
+                        <div class="mb-3">
+                            <input type="text" class="form-control bg-dark text-light border-secondary" 
+                                   id="search-series" placeholder="Caută serie...">
+                        </div>
+                        
+                        <!-- Genres -->
+                        <div class="mb-3">
+                            <h6>Genuri:</h6>
+                            <div id="genre-filters" class="d-flex flex-wrap">
+                                <!-- Se încarcă din JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <h6>Status:</h6>
+                            <div>
+                                <button class="btn filter-btn" data-filter="status" data-value="all">Toate</button>
+                                <button class="btn filter-btn" data-filter="status" data-value="ongoing">În desfășurare</button>
+                                <button class="btn filter-btn" data-filter="status" data-value="completed">Finalizate</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Sort -->
+                        <div>
+                            <h6>Sortează după:</h6>
+                            <div>
+                                <button class="btn filter-btn" data-sort="title">Titlu A-Z</button>
+                                <button class="btn filter-btn" data-sort="year">An lansare</button>
+                                <button class="btn filter-btn" data-sort="rating">Rating</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Series Grid -->
+        <div class="row g-4" id="series-grid">
+            <!-- Se încarcă din JavaScript -->
+            <div class="col-12 text-center">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- Se încarcă din JavaScript -->
+            </ul>
+        </nav>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Variabile globale
+        let allSeries = [];
+        let currentPage = 1;
+        const itemsPerPage = 12;
+        let activeFilters = {
+            genre: 'all',
+            status: 'all',
+            search: '',
+            sort: 'title'
+        };
+        
+        // Încarcă seriile
+        async function loadSeries() {
+            try {
+                const response = await fetch('/data/series.json');
+                allSeries = await response.json();
+                
+                // Aplică filtre din URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const searchQuery = urlParams.get('search');
+                if (searchQuery) {
+                    document.getElementById('search-series').value = searchQuery;
+                    activeFilters.search = searchQuery.toLowerCase();
+                }
+                
+                // Încarcă filtrele de gen
+                loadGenreFilters();
+                
+                // Afișează seriile
+                applyFilters();
+                
+                // Setup event listeners
+                setupEventListeners();
+            } catch (error) {
+                console.error('Eroare la încărcarea seriilor:', error);
+                document.getElementById('series-grid').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <h3 class="text-danger">Eroare la încărcarea datelor</h3>
+                        <p>Verifică fișierul series.json</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Încarcă filtrele de gen
+        async function loadGenreFilters() {
+            try {
+                const response = await fetch('/data/genres.json');
+                const genres = await response.json();
+                
+                const container = document.getElementById('genre-filters');
+                container.innerHTML = '';
+                
+                // Buton "Toate"
+                const allBtn = document.createElement('button');
+                allBtn.className = 'btn filter-btn active';
+                allBtn.textContent = 'Toate';
+                allBtn.setAttribute('data-filter', 'genre');
+                allBtn.setAttribute('data-value', 'all');
+                container.appendChild(allBtn);
+                
+                // Butoane pentru fiecare gen
+                genres.forEach(genre => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn filter-btn';
+                    btn.textContent = genre.name;
+                    btn.setAttribute('data-filter', 'genre');
+                    btn.setAttribute('data-value', genre.id);
+                    container.appendChild(btn);
+                });
+            } catch (error) {
+                console.error('Eroare la încărcarea genurilor:', error);
+            }
+        }
+        
+        // Aplică filtre
+        function applyFilters() {
+            let filteredSeries = [...allSeries];
+            
+            // Filtru căutare
+            if (activeFilters.search) {
+                filteredSeries = filteredSeries.filter(series =>
+                    series.title.toLowerCase().includes(activeFilters.search) ||
+                    series.description.toLowerCase().includes(activeFilters.search)
+                );
+            }
+            
+            // Filtru gen
+            if (activeFilters.genre !== 'all') {
+                filteredSeries = filteredSeries.filter(series =>
+                    series.genres.includes(activeFilters.genre)
+                );
+            }
+            
+            // Filtru status
+            if (activeFilters.status !== 'all') {
+                filteredSeries = filteredSeries.filter(series =>
+                    series.status === activeFilters.status
+                );
+            }
+            
+            // Sortare
+            filteredSeries.sort((a, b) => {
+                switch (activeFilters.sort) {
+                    case 'year':
+                        return b.year - a.year;
+                    case 'rating':
+                        return b.rating - a.rating;
+                    default: // title
+                        return a.title.localeCompare(b.title);
+                }
+            });
+            
+            // Afișează rezultatele
+            displaySeries(filteredSeries);
+        }
+        
+        // Afișează seriile
+        function displaySeries(series) {
+            const container = document.getElementById('series-grid');
+            
+            if (series.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <h3>Nu s-au găsit serii</h3>
+                        <p>Încearcă alte filtre</p>
+                    </div>
+                `;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            // Paginare
+            const totalPages = Math.ceil(series.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageSeries = series.slice(startIndex, endIndex);
+            
+            // Afișează seriile
+            container.innerHTML = '';
+            
+            pageSeries.forEach(series => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3';
+                
+                col.innerHTML = `
+                    <div class="card bg-dark border-secondary series-card" onclick="viewSeries('${series.slug}')">
+                        <div class="position-relative">
+                            <img src="${series.poster}" class="series-poster" alt="${series.title}">
+                            <span class="status-badge status-${series.status}">
+                                ${series.status === 'ongoing' ? 'În curs' : 'Finalizat'}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">${series.title}</h5>
+                            <div class="mb-2">
+                                ${series.genres.slice(0, 3).map(genre => 
+                                    `<span class="badge bg-secondary me-1">${genre}</span>`
+                                ).join('')}
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small>${series.year}</small>
+                                <small><i class="fas fa-star text-warning"></i> ${series.rating}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(col);
+            });
+            
+            // Afișează paginare
+            displayPagination(totalPages);
+        }
+        
+        // Afișează paginare
+        function displayPagination(totalPages) {
+            const container = document.getElementById('pagination');
+            container.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            // Buton precedent
+           
