@@ -1,5 +1,4 @@
-/* AnimeNexus Main CSS */
-
+/* AnimeNexus Styles */
 body {
     background-color: #0a0a0a;
     color: #f8f9fa;
@@ -25,31 +24,6 @@ body {
     height: 300px;
     object-fit: cover;
     border-bottom: 3px solid #e63946;
-}
-
-.badge-genre {
-    background: #e63946;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    margin: 2px;
-}
-
-/* Ninsoare */
-.snowflake {
-    position: fixed;
-    top: -10px;
-    color: #ffffff;
-    opacity: 0.8;
-    pointer-events: none;
-    z-index: 9999;
-    user-select: none;
-}
-
-@keyframes fall {
-    0% { transform: translateY(-10px) rotate(0deg); }
-    100% { transform: translateY(100vh) rotate(360deg); }
 }
 
 /* Responsive */
