@@ -2,7 +2,6 @@
   {"id": "action", "name": "Acțiune"},
   {"id": "adventure", "name": "Aventură"},
   {"id": "comedy", "name": "Comedie"},
-  {"id": "drama", "name": "Dramă"},
   {"id": "fantasy", "name": "Fantezie"},
-  {"id": "mystery", "name": "Mister"}
+  {"id": "drama", "name": "Dramă"}
 ]
