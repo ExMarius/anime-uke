@@ -3,507 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One Piece Ep. 1 - AnimeUKE</title>
-    
-    <!-- Bootstrap 5 -->
+    <title>Urmărește - AnimeUKE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
-        :root {
-            --primary-red: #e63946;
-            --dark-bg: #0a0a0a;
-        }
-        
-        body {
-            background: var(--dark-bg);
-            color: white;
-            padding-top: 20px;
-        }
-        
+        body { background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif; }
         .video-container {
             background: #000;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             margin-bottom: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            position: relative;
         }
-        
-        .auto-play-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 100;
-            background: rgba(0,0,0,0.7);
-            padding: 8px 12px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .auto-play-toggle {
+        .episode-list { max-height: 70vh; overflow-y: auto; }
+        .episode-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #333;
             cursor: pointer;
-            color: #fff;
-            font-size: 0.9rem;
+            transition: all 0.2s;
         }
-        
-        .auto-play-toggle.active {
-            color: #4CAF50;
-        }
-        
-        .countdown {
-            background: var(--primary-red);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
+        .episode-item:hover { background: rgba(230, 57, 70, 0.15); }
+        .episode-item.active {
+            background: rgba(230, 57, 70, 0.25);
+            border-left: 4px solid #e63946;
             font-weight: bold;
-            min-width: 60px;
-            text-align: center;
         }
-        
-        .episode-info {
-            background: rgba(26, 26, 26, 0.8);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-left: 5px solid var(--primary-red);
-        }
-        
-        .episode-title {
-            color: var(--primary-red);
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-        
-        .nav-buttons {
-            background: rgba(26, 26, 26, 0.8);
-            border-radius: 10px;
-            padding: 15px;
-        }
-        
-        .btn-nav {
-            min-width: 150px;
+        .auto-next-toggle {
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Back to Series -->
-        <div class="mb-4">
-            <a href="/one-piece.html" class="btn btn-outline-light">
-                <i class="fas fa-arrow-left me-2"></i>Înapoi la One Piece
+    <nav class="navbar navbar-dark bg-dark py-3 shadow">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-play-circle me-2"></i>AnimeUKE
             </a>
-            <a href="/" class="btn btn-outline-light ms-2">
+            <a href="/" class="btn btn-outline-light">
                 <i class="fas fa-home me-2"></i>Acasă
             </a>
         </div>
-        
-        <!-- Episode Info -->
-        <div class="episode-info">
-            <div class="episode-title" id="episode-title">Se încarcă...</div>
-            <div class="text-muted mb-2">
-                <i class="far fa-calendar-alt me-1"></i>
-                <span id="release-date">-</span>
-                <span class="mx-2">•</span>
-                <i class="fas fa-eye me-1"></i>
-                <span id="views-count">- vizionări</span>
-            </div>
-            <div id="episode-description" class="text-light"></div>
-        </div>
-        
-        <!-- Video Player with Auto-play Controls -->
-        <div class="video-container">
-            <!-- Auto-play Controls -->
-            <div class="auto-play-controls" id="auto-play-controls">
-                <span class="auto-play-toggle" id="auto-play-toggle" onclick="toggleAutoPlay()">
-                    <i class="fas fa-play-circle me-1"></i>
-                    Auto-play
-                </span>
-                <div class="countdown d-none" id="countdown">
-                    Următorul: <span id="countdown-seconds">5</span>s
-                </div>
-            </div>
-            
-            <!-- Video -->
-            <div class="ratio ratio-16x9">
-                <iframe id="video-player" 
-                        src="" 
-                        frameborder="0" 
-                        allowfullscreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
-                </iframe>
-            </div>
-        </div>
-        
-        <!-- Navigation -->
-        <div class="nav-buttons">
-            <div class="d-flex justify-content-between align-items-center">
-                <button id="prev-ep" class="btn btn-outline-light btn-nav" disabled>
-                    <i class="fas fa-chevron-left me-2"></i>Episodul Anterior
-                </button>
-                
-                <div class="text-center">
-                    <div class="fw-bold mb-1">One Piece</div>
-                    <div class="text-muted">
-                        Episod <span id="current-ep-num">-</span> din <span id="total-eps">-</span>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Player -->
+            <div class="col-lg-8 mb-4">
+                <div class="video-container">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="video-player" src="" frameborder="0" allowfullscreen allow="autoplay"></iframe>
                     </div>
                 </div>
-                
-                <button id="next-ep" class="btn btn-outline-light btn-nav" disabled>
-                    Episodul Următor<i class="fas fa-chevron-right ms-2"></i>
-                </button>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 id="episode-title" class="mb-0">Se încarcă...</h4>
+                    <div class="form-check form-switch auto-next-toggle">
+                        <input class="form-check-input" type="checkbox" id="autoNext" checked>
+                        <label class="form-check-label" for="autoNext">Auto Următor</label>
+                    </div>
+                </div>
+                <p id="episode-description" class="text-muted"></p>
+
+                <div class="d-flex gap-3 mt-4">
+                    <button id="prev-ep" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-chevron-left me-2"></i>Anterior
+                    </button>
+                    <button id="next-ep" class="btn btn-outline-light btn-lg">
+                        Următor<i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                </div>
             </div>
-            
-            <!-- Manual Skip Button -->
-            <div class="text-center mt-3">
-                <button class="btn btn-warning btn-sm" onclick="playNextEpisode()" id="skip-next-btn">
-                    <i class="fas fa-forward me-1"></i> Treci la Următorul Episod
-                </button>
+
+            <!-- Lista Episoade -->
+            <div class="col-lg-4">
+                <div class="card bg-dark border-secondary shadow">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Episoade One Piece</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="episode-list" id="episode-list">
+                            <div class="p-4 text-center"><div class="spinner-border text-danger"></div></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Global variables
-        let currentEp = parseInt(new URLSearchParams(window.location.search).get('ep')) || 1;
-        let autoPlayEnabled = localStorage.getItem('autoPlay') !== 'false'; // Default enabled
-        let countdownInterval;
-        let onePieceEpisodes = [];
-        let currentEpisodeIndex = -1;
-        
-        // Load episode data
-        async function loadEpisodeData() {
-            try {
-                const response = await fetch('/episodes.json');
-                const episodes = await response.json();
-                
-                // Filter One Piece episodes
-                onePieceEpisodes = episodes.filter(ep => ep.animeSlug === 'one-piece')
-                                          .sort((a, b) => a.number - b.number);
-                
-                // Find current episode
-                const currentEpisode = onePieceEpisodes.find(ep => ep.number === currentEp);
-                currentEpisodeIndex = onePieceEpisodes.findIndex(ep => ep.number === currentEp);
-                
-                if (currentEpisode) {
-                    // Update video player
-                    const player = document.getElementById('video-player');
-                    if (currentEpisode.sources && currentEpisode.sources[0]) {
-                        player.src = currentEpisode.sources[0];
-                    }
-                    
-                    // Update episode info
-                    document.getElementById('episode-title').textContent = 
-                        `One Piece - Episod ${currentEpisode.number}: ${currentEpisode.title || ''}`;
-                    
-                    document.getElementById('episode-description').textContent = 
-                        currentEpisode.description || 'Fără descriere disponibilă.';
-                    
-                    document.getElementById('release-date').textContent = 
-                        currentEpisode.releaseDate || 'Data necunoscută';
-                    
-                    document.getElementById('current-ep-num').textContent = currentEpisode.number;
-                    document.getElementById('total-eps').textContent = onePieceEpisodes.length;
-                    
-                    // Generate random views count
-                    const views = Math.floor(Math.random() * 50000) + 10000;
-                    document.getElementById('views-count').textContent = 
-                        views.toLocaleString() + ' vizionări';
-                    
-                    // Setup navigation buttons
-                    setupNavigation();
-                    
-                    // Update auto-play toggle state
-                    updateAutoPlayToggle();
-                    
-                    // Setup auto-play detection
-                    if (autoPlayEnabled) {
-                        setTimeout(setupAutoPlayDetection, 2000);
-                    }
-                    
-                    // Update page title
-                    document.title = `One Piece Ep. ${currentEpisode.number} - AnimeUKE`;
-                } else {
-                    // Episode not found
-                    document.getElementById('episode-title').textContent = 'Episodul nu a fost găsit!';
-                }
-                
-            } catch (error) {
-                console.error('Error loading episode:', error);
+        const urlParams = new URLSearchParams(window.location.search);
+        const animeSlug = urlParams.get('anime') || 'one-piece';
+        const currentEpNum = parseInt(urlParams.get('ep')) || 1;
+
+        let episodes = [];
+        let currentEpisode = null;
+
+        // Auto-next activat implicit
+        const autoNextEnabled = () => document.getElementById('autoNext').checked;
+
+        async function loadEpisodes() {
+            const res = await fetch('/episodes.json');
+            episodes = await res.json();
+            const onePieceEps = episodes
+                .filter(e => e.animeSlug === 'one-piece')
+                .sort((a, b) => a.number - b.number);
+
+            currentEpisode = onePieceEps.find(e => e.number === currentEpNum);
+            if (!currentEpisode) {
+                document.body.innerHTML = `<div class="container text-center mt-5"><h1>Episod negăsit</h1><a href="/" class="btn btn-danger mt-3">Înapoi acasă</a></div>`;
+                return;
             }
+
+            loadPlayer();
+            loadEpisodeList(onePieceEps);
+            setupNavigation(onePieceEps);
         }
-        
-        // Setup navigation buttons
-        function setupNavigation() {
-            const prevBtn = document.getElementById('prev-ep');
-            const nextBtn = document.getElementById('next-ep');
-            const skipBtn = document.getElementById('skip-next-btn');
-            
-            // Previous button
-            if (currentEpisodeIndex > 0) {
-                const prevEp = onePieceEpisodes[currentEpisodeIndex - 1];
-                prevBtn.disabled = false;
-                prevBtn.classList.remove('disabled');
-                prevBtn.onclick = () => {
-                    window.location.href = `/watch.html?anime=one-piece&ep=${prevEp.number}`;
-                };
-            }
-            
-            // Next button and skip button
-            if (currentEpisodeIndex < onePieceEpisodes.length - 1) {
-                const nextEp = onePieceEpisodes[currentEpisodeIndex + 1];
-                nextBtn.disabled = false;
-                nextBtn.classList.remove('disabled');
-                nextBtn.onclick = () => {
-                    window.location.href = `/watch.html?anime=one-piece&ep=${nextEp.number}`;
-                };
-                
-                skipBtn.disabled = false;
-            } else {
-                // Last episode
-                skipBtn.disabled = true;
-                skipBtn.innerHTML = '<i class="fas fa-flag-checkered me-1"></i> Ultimul Episod';
-                skipBtn.classList.add('disabled');
-            }
-        }
-        
-        // Toggle auto-play
-        function toggleAutoPlay() {
-            autoPlayEnabled = !autoPlayEnabled;
-            localStorage.setItem('autoPlay', autoPlayEnabled);
-            updateAutoPlayToggle();
-            
-            if (autoPlayEnabled) {
-                showNotification('Auto-play activat! ⏭️');
-                setupAutoPlayDetection();
-            } else {
-                showNotification('Auto-play dezactivat ⏸️', 'warning');
-                stopCountdown();
-            }
-        }
-        
-        // Update auto-play toggle UI
-        function updateAutoPlayToggle() {
-            const toggle = document.getElementById('auto-play-toggle');
-            const icon = toggle.querySelector('i');
-            
-            if (autoPlayEnabled) {
-                toggle.classList.add('active');
-                icon.className = 'fas fa-play-circle me-1';
-                toggle.innerHTML = '<i class="fas fa-play-circle me-1"></i> Auto-play ON';
-            } else {
-                toggle.classList.remove('active');
-                icon.className = 'fas fa-pause-circle me-1';
-                toggle.innerHTML = '<i class="fas fa-pause-circle me-1"></i> Auto-play OFF';
-            }
-        }
-        
-        // Setup auto-play detection
-        function setupAutoPlayDetection() {
-            if (!autoPlayEnabled) return;
-            
-            console.log('Setting up auto-play detection...');
-            
-            // Method 1: Try to detect video end via iframe
-            try {
-                const iframe = document.getElementById('video-player');
-                
-                // Check every second if we can access the video
-                const checkInterval = setInterval(() => {
+
+        function loadPlayer() {
+            document.getElementById('episode-title').textContent = 
+                `Episod ${currentEpisode.number}: ${currentEpisode.title}`;
+            document.getElementById('episode-description').textContent = 
+                currentEpisode.description || 'Fără descriere.';
+
+            const iframe = document.getElementById('video-player');
+            iframe.src = currentEpisode.sources[0];
+
+            // AUTO-NEXT: Detectăm când se termină videoclipul
+            iframe.onload = () => {
+                const checkEnd = setInterval(() => {
                     try {
-                        if (iframe.contentWindow && iframe.contentWindow.document) {
-                            const video = iframe.contentWindow.document.querySelector('video');
-                            
-                            if (video) {
-                                video.addEventListener('ended', handleVideoEnded);
-                                console.log('Video element found, added ended listener');
-                                clearInterval(checkInterval);
+                        // Filemoon expune player API în window.parent uneori
+                        const player = iframe.contentWindow;
+                        if (player && player.player) {
+                            const duration = player.player.duration();
+                            const current = player.player.currentTime();
+                            if (duration && current && duration - current < 8 && autoNextEnabled()) {
+                                clearInterval(checkEnd);
+                                goToNextEpisode();
                             }
                         }
-                    } catch (e) {
-                        // Cross-origin error
-                        console.log('Cross-origin restriction, using timer method');
-                        clearInterval(checkInterval);
-                        setupTimerMethod();
+                    } catch(e) {
+                        // Dacă nu putem accesa iframe-ul (CORS), folosim backup
                     }
-                }, 1000);
-                
-                // Timeout after 10 seconds
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    setupTimerMethod();
-                }, 10000);
-                
-            } catch (error) {
-                setupTimerMethod();
-            }
-        }
-        
-        // Timer method for cross-origin restrictions
-        function setupTimerMethod() {
-            console.log('Using timer method for auto-play');
-            
-            // Standard episode length (24 minutes)
-            const episodeLength = 24 * 60; // in seconds
-            
-            // For testing, use 60 seconds
-            const testLength = 60; // 1 minute for testing
-            
-            // Start countdown near the end
-            setTimeout(() => {
-                if (!autoPlayEnabled) return;
-                
-                startCountdown(10); // 10 second countdown
-                
-                // Auto-play after countdown
-                setTimeout(() => {
-                    if (autoPlayEnabled) {
-                        playNextEpisode();
+                }, 3000);
+
+                // Backup: dacă utilizatorul apasă pe sfârșitul videoclipului (90%+)
+                iframe.contentWindow.addEventListener('timeupdate', function checkTime() {
+                    if (iframe.contentWindow.player) {
+                        const percent = iframe.contentWindow.player.currentTime() / iframe.contentWindow.player.duration();
+                        if (percent > 0.95 && autoNextEnabled()) {
+                            iframe.contentWindow.removeEventListener('timeupdate', checkTime);
+                            setTimeout(goToNextEpisode, 1500);
+                        }
                     }
-                }, 10000);
-                
-            }, (testLength - 10) * 1000); // Start 10 seconds before end
-        }
-        
-        // Handle video ended
-        function handleVideoEnded() {
-            if (!autoPlayEnabled) return;
-            
-            console.log('Video ended detected!');
-            startCountdown(5); // 5 second countdown
-        }
-        
-        // Start countdown
-        function startCountdown(seconds) {
-            stopCountdown(); // Clear any existing countdown
-            
-            const countdownEl = document.getElementById('countdown');
-            const secondsEl = document.getElementById('countdown-seconds');
-            
-            countdownEl.classList.remove('d-none');
-            secondsEl.textContent = seconds;
-            
-            let count = seconds;
-            countdownInterval = setInterval(() => {
-                count--;
-                secondsEl.textContent = count;
-                
-                if (count <= 0) {
-                    stopCountdown();
-                    if (autoPlayEnabled) {
-                        playNextEpisode();
-                    }
+                });
+            };
+
+            // Alternativă 100% sigură: detectăm când URL-ul are ?ended=1 (Filemoon face asta uneori)
+            window.addEventListener('message', (event) => {
+                if (event.data === 'video-ended' || event.data?.type === 'ended') {
+                    if (autoNextEnabled()) goToNextEpisode();
                 }
-            }, 1000);
+            });
         }
-        
-        // Stop countdown
-        function stopCountdown() {
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
-                countdownInterval = null;
-            }
-            document.getElementById('countdown').classList.add('d-none');
+
+        function loadEpisodeList(allEps) {
+            const container = document.getElementById('episode-list');
+            container.innerHTML = '';
+
+            allEps.forEach(ep => {
+                const div = document.createElement('div');
+                div.className = `episode-item ${ep.number === currentEpNum ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Episod ${ep.number}</strong><br>
+                            <small class="text-muted">${ep.title || 'Fără titlu'}</small>
+                        </div>
+                        ${ep.number === currentEpNum ? '<i class="fas fa-play-circle text-danger"></i>' : ''}
+                    </div>
+                `;
+                div.onclick = () => {
+                    window.location.href = `/watch.html?anime=one-piece&ep=${ep.number}`;
+                };
+                container.appendChild(div);
+            });
         }
-        
-        // Play next episode
-        async function playNextEpisode() {
-            if (currentEpisodeIndex < onePieceEpisodes.length - 1) {
-                const nextEp = onePieceEpisodes[currentEpisodeIndex + 1];
-                
-                // Show notification
-                showNotification(`Treci la episodul ${nextEp.number}...`, 'info');
-                
-                // Wait 1 second then redirect
-                setTimeout(() => {
-                    window.location.href = `/watch.html?anime=one-piece&ep=${nextEp.number}`;
-                }, 1000);
+
+        function setupNavigation(allEps) {
+            const currentIndex = allEps.findIndex(e => e.number === currentEpNum);
+
+            const prevBtn = document.getElementById('prev-ep');
+            const nextBtn = document.getElementById('next-ep');
+
+            if (currentIndex <= 0) {
+                prevBtn.disabled = true;
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left me-2"></i>Primul episod';
             } else {
-                showNotification('Ai ajuns la ultimul episod! 🏁', 'warning');
-                stopCountdown();
+                prevBtn.onclick = () => {
+                    window.location.href = `/watch.html?anime=one-piece&ep=${allEps[currentIndex - 1].number}`;
+                };
+            }
+
+            if (currentIndex >= allEps.length - 1) {
+                nextBtn.disabled = true;
+                nextBtn.innerHTML = 'Ultimul episod<i class="fas fa-chevron-right ms-2"></i>';
+            } else {
+                nextBtn.onclick = () => goToNextEpisode();
             }
         }
-        
-        // Show notification
-        function showNotification(message, type = 'info') {
-            // Remove existing notification
-            const existingNotif = document.getElementById('notification');
-            if (existingNotif) existingNotif.remove();
-            
-            // Create notification
-            const notification = document.createElement('div');
-            notification.id = 'notification';
-            notification.className = `alert alert-${type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show`;
-            notification.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 1000;
-                min-width: 300px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-                animation: slideIn 0.3s ease-out;
-            `;
-            notification.innerHTML = `
-                <strong>${type === 'warning' ? '⚠️ ' : '⏭️ '}</strong>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 3000);
+
+        function goToNextEpisode() {
+            const nextEp = episodes.find(e => 
+                e.animeSlug === 'one-piece' && e.number === currentEpisode.number + 1
+            );
+            if (nextEp) {
+                window.location.href = `/watch.html?anime=one-piece&ep=${nextEp.number}`;
+            } else {
+                alert('Ai terminat toate episoadele disponibile! Felicitări! 🏴‍☠️');
+            }
         }
-        
-        // Add CSS for animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'ArrowLeft':
-                    if (!document.getElementById('prev-ep').disabled) {
-                        document.getElementById('prev-ep').click();
-                    }
-                    break;
-                case 'ArrowRight':
-                    if (!document.getElementById('next-ep').disabled) {
-                        document.getElementById('next-ep').click();
-                    }
-                    break;
-                case ' ':
-                    e.preventDefault();
-                    playNextEpisode();
-                    break;
-                case 'a':
-                case 'A':
-                    toggleAutoPlay();
-                    break;
-                case 'Escape':
-                    window.location.href = '/one-piece.html';
-                    break;
-            }
-        });
-        
-        // Load on start
-        document.addEventListener('DOMContentLoaded', loadEpisodeData);
+
+        // Pornim totul
+        loadEpisodes();
     </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 </body>
 </html>
