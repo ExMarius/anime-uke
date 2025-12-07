@@ -1,28 +1,111 @@
-[
-  {
-    "slug": "one-piece",
-    "title": "One Piece",
-    "description": "Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.",
-    "year": 1999,
-    "status": "ongoing",
-    "poster": "https://cdn.myanimelist.net/images/anime/1244/138851.jpg",
-    "banner": "https://wallpapercave.com/wp/wp5063236.jpg",
-    "genres": ["action", "adventure", "comedy", "fantasy"],
-    "episodes": 1100,
-    "rating": 8.8,
-    "studio": "Toei Animation"
-  },
-  {
-    "slug": "attack-on-titan",
-    "title": "Attack on Titan",
-    "description": "Omenirea trăiește în spatele unor ziduri uriașe pentru a se proteja de titani, creaturi gigantice care mănâncă oameni.",
-    "year": 2013,
-    "status": "completed",
-    "poster": "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
-    "banner": "https://wallpapercave.com/wp/wp1837535.jpg",
-    "genres": ["action", "drama", "fantasy", "mystery"],
-    "episodes": 88,
-    "rating": 9.1,
-    "studio": "Wit Studio / MAPPA"
-  }
-]
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serii - AnimeUKE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: white;
+        }
+        .series-card {
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s;
+            cursor: pointer;
+            height: 100%;
+        }
+        .series-card:hover {
+            transform: translateY(-5px);
+            border-color: #e63946;
+        }
+        .series-poster {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark py-3">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-play-circle me-2"></i>AnimeUKE
+            </a>
+            <a href="/" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-2"></i>Acasă
+            </a>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <h1 class="mb-4">Toate Seriile Anime</h1>
+        
+        <div class="row g-3" id="series-container">
+            <!-- Se încarcă din JS -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadSeries() {
+            try {
+                const response = await fetch('/series.json');
+                const series = await response.json();
+                
+                const container = document.getElementById('series-container');
+                container.innerHTML = '';
+                
+                series.forEach(anime => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-lg-3';
+                    col.innerHTML = `
+                        <div class="series-card border border-secondary" onclick="viewAnime('${anime.slug}')">
+                            <img src="${anime.poster}" class="series-poster" alt="${anime.title}">
+                            <div class="p-3">
+                                <h5 class="fw-bold">${anime.title}</h5>
+                                <p class="text-muted mb-2">${anime.year} • ${anime.status === 'ongoing' ? 'În curs' : 'Finalizat'}</p>
+                                <div class="mb-2">
+                                    ${anime.genres.map(g => `<span class="badge bg-secondary me-1">${g}</span>`).join('')}
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small>${anime.episodes} episoade</small>
+                                    <small><i class="fas fa-star text-warning"></i> ${anime.rating}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(col);
+                });
+                
+            } catch (error) {
+                console.error('Error loading series:', error);
+                document.getElementById('series-container').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="alert alert-danger">
+                            Eroare la încărcarea seriilor.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function viewAnime(slug) {
+            window.location.href = `/watch.html?anime=${slug}&ep=1`;
+        }
+        
+        // Load on start
+        document.addEventListener('DOMContentLoaded', loadSeries);
+    </script>
+    
+    <!-- Font Awesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>
