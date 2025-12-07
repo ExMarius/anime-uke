@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnimeNexus - Anime Românesc Subtitrat</title>
+    <title>AnimeUKE - Anime Românesc Subtitrat</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,16 +11,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- CSS Local -->
+    <!-- Local CSS -->
     <link rel="stylesheet" href="/assets/css/style.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/732/732008.png">
     
     <style>
         :root {
@@ -28,389 +20,73 @@
             --dark-bg: #0a0a0a;
             --card-bg: #1a1a1a;
             --text-light: #f8f9fa;
-            --text-gray: #adb5bd;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
         }
         
         body {
             background-color: var(--dark-bg);
             color: var(--text-light);
-            font-family: 'Poppins', sans-serif;
-            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
         }
         
         /* Navbar */
         .navbar-brand {
-            font-family: 'Montserrat', sans-serif;
             font-size: 1.8rem;
             font-weight: 700;
             background: linear-gradient(45deg, #e63946, #ff6b6b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         
-        .nav-link {
-            color: var(--text-light) !important;
-            font-weight: 500;
-            transition: color 0.3s;
-            margin: 0 8px;
-        }
-        
-        .nav-link:hover {
-            color: var(--primary-red) !important;
-        }
-        
-        /* Hero Section */
+        /* Hero */
         .hero-section {
-            background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.9)), 
-                        url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1600&q=80') no-repeat center center;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9)), 
+                        url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1600') no-repeat center;
             background-size: cover;
             border-radius: 15px;
-            padding: 80px 20px;
+            padding: 60px 20px;
             margin-bottom: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(230, 57, 70, 0.1), rgba(255, 107, 107, 0.05));
-            z-index: 1;
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .hero-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 3.5rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #fff, #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.2rem;
-            }
-        }
-        
-        .hero-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-gray);
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
         }
         
         /* Anime Cards */
         .anime-card {
-            background: linear-gradient(145deg, var(--card-bg), #2d2d2d);
-            border-radius: 15px;
+            background: var(--card-bg);
+            border-radius: 10px;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s;
             border: 1px solid #333;
             height: 100%;
-            position: relative;
+            cursor: pointer;
         }
         
         .anime-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(230, 57, 70, 0.25);
+            transform: translateY(-5px);
             border-color: var(--primary-red);
         }
         
         .anime-poster {
             width: 100%;
-            height: 280px;
+            height: 250px;
             object-fit: cover;
-            border-bottom: 3px solid var(--primary-red);
-            transition: transform 0.5s;
         }
         
-        .anime-card:hover .anime-poster {
-            transform: scale(1.05);
-        }
-        
-        .episode-badge {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: var(--primary-red);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            z-index: 2;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-        
-        .card-body {
-            padding: 20px;
-        }
-        
-        .anime-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-light);
-            line-height: 1.4;
-        }
-        
-        .anime-description {
-            color: var(--text-gray);
-            font-size: 0.9rem;
-            line-height: 1.5;
-            margin-bottom: 15px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .anime-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-        }
-        
-        .anime-rating {
-            color: #ffc107;
-            font-weight: 600;
-        }
-        
-        .anime-year {
-            color: var(--text-gray);
-            font-size: 0.9rem;
-        }
-        
-        /* Genre Badges */
-        .genre-badge {
-            background: rgba(230, 57, 70, 0.15);
-            color: #ff6b6b;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin: 2px;
-            border: 1px solid rgba(230, 57, 70, 0.3);
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .genre-badge:hover {
-            background: rgba(230, 57, 70, 0.25);
-            transform: translateY(-2px);
-        }
-        
-        /* Section Titles */
-        .section-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 30px;
-            position: relative;
-            padding-bottom: 15px;
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 4px;
-            background: linear-gradient(45deg, var(--primary-red), #ff6b6b);
-            border-radius: 2px;
-        }
-        
-        /* Search Box */
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            margin: 0 auto 40px;
-        }
-        
-        .search-input {
-            background: var(--card-bg);
-            border: 2px solid #333;
-            border-radius: 50px;
-            padding: 15px 25px 15px 50px;
-            color: var(--text-light);
-            font-size: 1rem;
-            width: 100%;
-            transition: all 0.3s;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-red);
-            box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.1);
-        }
-        
-        .search-icon {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-gray);
-        }
-        
-        /* Snow Effect */
+        /* Snow */
         .snowflake {
             position: fixed;
             top: -10px;
-            color: #ffffff;
+            color: white;
             opacity: 0.8;
             pointer-events: none;
             z-index: 9999;
-            user-select: none;
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
         }
         
         @keyframes fall {
-            0% {
-                transform: translateY(-10px) rotate(0deg);
-                opacity: 0.8;
-            }
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0;
-            }
-        }
-        
-        /* Footer */
-        .footer {
-            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-            padding: 50px 0 20px;
-            margin-top: 80px;
-            border-top: 1px solid #333;
-        }
-        
-        .footer-title {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--text-light);
-        }
-        
-        .footer-links {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .footer-links li {
-            margin-bottom: 10px;
-        }
-        
-        .footer-links a {
-            color: var(--text-gray);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-        
-        .footer-links a:hover {
-            color: var(--primary-red);
-        }
-        
-        .social-icons a {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            background: var(--card-bg);
-            border-radius: 50%;
-            text-align: center;
-            line-height: 40px;
-            margin-right: 10px;
-            color: var(--text-gray);
-            transition: all 0.3s;
-        }
-        
-        .social-icons a:hover {
-            background: var(--primary-red);
-            color: white;
-            transform: translateY(-3px);
-        }
-        
-        .copyright {
-            text-align: center;
-            padding-top: 30px;
-            margin-top: 30px;
-            border-top: 1px solid #333;
-            color: var(--text-gray);
-            font-size: 0.9rem;
-        }
-        
-        /* Loading Spinner */
-        .loading-spinner {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(230, 57, 70, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--primary-red);
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+            to { transform: translateY(100vh); }
         }
         
         /* Responsive */
         @media (max-width: 768px) {
-            .anime-poster {
-                height: 200px;
-            }
-            
-            .hero-section {
-                padding: 50px 15px;
-            }
-            
-            .section-title {
-                font-size: 1.6rem;
-            }
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary-red);
-            border-radius: 5px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #ff6b6b;
+            .anime-poster { height: 180px; }
+            .hero-section { padding: 40px 15px; }
         }
     </style>
 </head>
@@ -419,13 +95,13 @@
     <div id="snow-container"></div>
     
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark py-3 sticky-top" style="background-color: rgba(10, 10, 10, 0.95); backdrop-filter: blur(10px);">
+    <nav class="navbar navbar-expand-lg navbar-dark py-3" style="background-color: rgba(10, 10, 10, 0.95);">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-dragon me-2"></i>AnimeNexus
+                <i class="fas fa-play-circle me-2"></i>AnimeUKE
             </a>
             
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -443,18 +119,18 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="toggle-snow">
-                            <i class="fas fa-snowflake me-1"></i> Fulgi de Nea
+                            <i class="fas fa-snowflake me-1"></i> Fulgi
                         </a>
                     </li>
                 </ul>
                 
                 <!-- Search -->
                 <div class="d-flex">
-                    <div class="search-container">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="form-control search-input" id="search-input" 
-                               placeholder="Caută anime sau serie...">
-                    </div>
+                    <input type="text" class="form-control me-2 bg-dark text-light border-secondary" 
+                           id="search-input" placeholder="Caută anime...">
+                    <button class="btn btn-danger" onclick="searchAnime()">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -462,100 +138,78 @@
     
     <!-- Main Content -->
     <main class="container py-4">
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="hero-content text-center">
-                <h1 class="hero-title">Anime Românesc Subtitrat</h1>
-                <p class="hero-subtitle">
-                    Cele mai bune anime-uri subtitrate gratuit pentru comunitatea românească. 
-                    Episoade noi adăugate zilnic!
-                </p>
-                <div class="mt-4">
-                    <button class="btn btn-danger btn-lg px-4 py-3 me-3" onclick="scrollToLatest()">
-                        <i class="fas fa-play-circle me-2"></i>Vezi Ultimele Episoade
-                    </button>
-                    <a href="/series.html" class="btn btn-outline-light btn-lg px-4 py-3">
-                        <i class="fas fa-list me-2"></i>Toate Seriile
-                    </a>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Search Section -->
-        <section class="mb-5">
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" class="form-control search-input" id="main-search" 
-                       placeholder="Caută anime (ex: One Piece, Naruto, Attack on Titan)...">
-            </div>
+        <!-- Hero -->
+        <section class="hero-section text-center">
+            <h1 class="display-4 fw-bold mb-3">Anime Românesc Subtitrat</h1>
+            <p class="lead mb-4">Episoade noi, subtitrări de calitate, gratuit pentru toți fanii anime din România!</p>
+            <button class="btn btn-danger btn-lg px-4" onclick="scrollToLatest()">
+                <i class="fas fa-play-circle me-2"></i>Vezi Ultimele Episoade
+            </button>
         </section>
         
         <!-- Latest Episodes -->
-        <section id="latest-episodes" class="mb-5 pt-4">
-            <h2 class="section-title">
-                <i class="fas fa-bolt me-2"></i>Ultimele Episoade
+        <section id="latest-episodes" class="mb-5">
+            <h2 class="mb-4">
+                <i class="fas fa-bolt text-danger me-2"></i>
+                Ultimele Episoade
             </h2>
-            <div class="row g-4" id="latest-episodes-container">
-                <!-- Episodes will be loaded here -->
-                <div class="col-12 text-center py-5">
-                    <div class="loading-spinner"></div>
-                    <p class="mt-3 text-muted">Se încarcă episoadele...</p>
+            <div class="row g-3" id="latest-episodes-container">
+                <!-- Se încarcă din JS -->
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-danger" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                 </div>
             </div>
         </section>
         
         <!-- Popular Series -->
-        <section id="popular-series" class="mb-5 pt-4">
-            <h2 class="section-title">
-                <i class="fas fa-fire me-2"></i>Serii Populare
+        <section id="popular-series" class="mb-5">
+            <h2 class="mb-4">
+                <i class="fas fa-fire text-danger me-2"></i>
+                Serii Populare
             </h2>
-            <div class="row g-4" id="popular-series-container">
-                <!-- Series will be loaded here -->
-                <div class="col-12 text-center py-5">
-                    <div class="loading-spinner"></div>
-                    <p class="mt-3 text-muted">Se încarcă seriile...</p>
-                </div>
+            <div class="row g-3" id="popular-series-container">
+                <!-- Se încarcă din JS -->
             </div>
         </section>
         
         <!-- Genres -->
-        <section id="genres" class="mb-5 pt-4">
-            <h2 class="section-title">
-                <i class="fas fa-tags me-2"></i>Explorează După Gen
+        <section id="genres" class="mb-5">
+            <h2 class="mb-4">
+                <i class="fas fa-tags text-danger me-2"></i>
+                Genuri
             </h2>
-            <div class="d-flex flex-wrap justify-content-center gap-3" id="genres-container">
-                <!-- Genres will be loaded here -->
-                <div class="text-center w-100 py-3">
-                    <div class="loading-spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
-                </div>
+            <div class="d-flex flex-wrap gap-2" id="genres-container">
+                <!-- Se încarcă din JS -->
             </div>
         </section>
         
         <!-- Stats -->
-        <section class="mb-5 pt-4">
+        <section class="mb-5">
             <div class="row text-center">
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="card bg-dark border-secondary py-4">
-                        <h3 class="display-5 text-danger" id="total-series">0</h3>
-                        <p class="text-muted mb-0">Serii Anime</p>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="p-3 bg-dark rounded">
+                        <h3 class="text-danger" id="total-series">0</h3>
+                        <p class="mb-0 text-muted">Serii</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="card bg-dark border-secondary py-4">
-                        <h3 class="display-5 text-danger" id="total-episodes">0</h3>
-                        <p class="text-muted mb-0">Episoade</p>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="p-3 bg-dark rounded">
+                        <h3 class="text-danger" id="total-episodes">0</h3>
+                        <p class="mb-0 text-muted">Episoade</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="card bg-dark border-secondary py-4">
-                        <h3 class="display-5 text-danger" id="active-series">0</h3>
-                        <p class="text-muted mb-0">În Desfășurare</p>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="p-3 bg-dark rounded">
+                        <h3 class="text-danger" id="active-series">0</h3>
+                        <p class="mb-0 text-muted">În Curs</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6 mb-4">
-                    <div class="card bg-dark border-secondary py-4">
-                        <h3 class="display-5 text-danger" id="latest-added">0</h3>
-                        <p class="text-muted mb-0">Adăugate Recent</p>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="p-3 bg-dark rounded">
+                        <h3 class="text-danger" id="completed-series">0</h3>
+                        <p class="mb-0 text-muted">Finalizate</p>
                     </div>
                 </div>
             </div>
@@ -563,61 +217,28 @@
     </main>
     
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="bg-dark text-light py-4 mt-5 border-top border-secondary">
         <div class="container">
             <div class="row">
-                <div class="col-lg-4 mb-4">
-                    <h3 class="footer-title">
-                        <i class="fas fa-dragon me-2"></i>AnimeNexus
-                    </h3>
-                    <p class="text-muted">
-                        Platforma preferată pentru anime subtitrat în română. 
-                        Comunitate activă, episoade noi zilnic și cea mai bună calitate.
+                <div class="col-md-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-play-circle me-2"></i>AnimeUKE
+                    </h5>
+                    <p class="text-muted">Pentru pasionații de anime din România.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">
+                        <a href="#" class="text-light me-3"><i class="fab fa-discord"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-telegram"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-youtube"></i></a>
                     </p>
-                    <div class="social-icons mt-4">
-                        <a href="#" title="Discord"><i class="fab fa-discord"></i></a>
-                        <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" title="Telegram"><i class="fab fa-telegram"></i></a>
-                        <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
-                    </div>
-                </div>
-                
-                <div class="col-lg-2 col-6 mb-4">
-                    <h5 class="fw-bold mb-3">Navigare</h5>
-                    <ul class="footer-links">
-                        <li><a href="/">Acasă</a></li>
-                        <li><a href="/series.html">Toate Seriile</a></li>
-                        <li><a href="/series.html?status=ongoing">În Desfășurare</a></li>
-                        <li><a href="/series.html?status=completed">Finalizate</a></li>
-                    </ul>
-                </div>
-                
-                <div class="col-lg-2 col-6 mb-4">
-                    <h5 class="fw-bold mb-3">Genuri</h5>
-                    <ul class="footer-links" id="footer-genres">
-                        <!-- Will be populated by JavaScript -->
-                    </ul>
-                </div>
-                
-                <div class="col-lg-4 mb-4">
-                    <h5 class="fw-bold mb-3">Ultimele Adăugări</h5>
-                    <div id="footer-latest">
-                        <!-- Will be populated by JavaScript -->
-                        <p class="text-muted">Se încarcă...</p>
-                    </div>
                 </div>
             </div>
-            
-            <div class="copyright">
-                <p class="mb-0">
-                    © 2024 AnimeNexus. Toate drepturile rezervate. 
-                    Acest site nu hostează fișiere video, ci oferă doar link-uri către surse externe.
-                </p>
-                <p class="mb-0 mt-2">
-                    <a href="#" class="text-muted me-3">Termeni și Condiții</a> | 
-                    <a href="#" class="text-muted me-3">Politica de Confidențialitate</a> | 
-                    <a href="#" class="text-muted">DMCA</a>
-                </p>
+            <hr class="bg-secondary my-3">
+            <div class="text-center">
+                <small class="text-muted">
+                    © 2024 AnimeUKE. Acest site nu hostează fișiere video.
+                </small>
             </div>
         </div>
     </footer>
@@ -628,223 +249,167 @@
     <!-- Local JS -->
     <script src="/assets/js/app.js"></script>
     
-    <!-- Main Script -->
     <script>
         // Snow Effect
+        let snowActive = localStorage.getItem('snowActive') !== 'false';
+        let snowInterval;
+        
         function createSnowflake() {
-            const snowflake = document.createElement('div');
-            snowflake.innerHTML = '❄';
-            snowflake.classList.add('snowflake');
+            const flake = document.createElement('div');
+            flake.innerHTML = '❄';
+            flake.className = 'snowflake';
+            flake.style.left = Math.random() * 100 + 'vw';
+            flake.style.fontSize = Math.random() * 15 + 10 + 'px';
+            flake.style.opacity = Math.random();
+            flake.style.animation = `fall ${Math.random() * 3 + 2}s linear infinite`;
             
-            // Random position and size
-            snowflake.style.left = Math.random() * 100 + 'vw';
-            snowflake.style.fontSize = Math.random() * 20 + 10 + 'px';
-            snowflake.style.opacity = Math.random() * 0.7 + 0.3;
+            document.getElementById('snow-container').appendChild(flake);
             
-            // Random animation
-            const duration = Math.random() * 5 + 5;
-            snowflake.style.animation = `fall ${duration}s linear infinite`;
-            
-            // Random sway
-            snowflake.style.animation += `, sway ${Math.random() * 3 + 2}s ease-in-out infinite alternate`;
-            
-            document.getElementById('snow-container').appendChild(snowflake);
-            
-            // Remove after animation
-            setTimeout(() => {
-                if (snowflake.parentNode) {
-                    snowflake.remove();
-                }
-            }, duration * 1000);
+            setTimeout(() => flake.remove(), 5000);
         }
         
-        // Sway animation for snowflakes
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes sway {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(20px); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Toggle snow
-        let snowInterval;
-        let snowActive = localStorage.getItem('snowActive') !== 'false';
-        
         function toggleSnow() {
-            const button = document.getElementById('toggle-snow');
-            const container = document.getElementById('snow-container');
-            
             snowActive = !snowActive;
             localStorage.setItem('snowActive', snowActive);
             
+            const btn = document.getElementById('toggle-snow');
             if (snowActive) {
-                button.innerHTML = '<i class="fas fa-snowflake me-1"></i> Oprește Ninsoarea';
-                snowInterval = setInterval(createSnowflake, 80);
-                container.style.display = 'block';
+                btn.innerHTML = '<i class="fas fa-snowflake me-1"></i> Oprește Fulgi';
+                snowInterval = setInterval(createSnowflake, 100);
+                document.getElementById('snow-container').style.display = 'block';
             } else {
-                button.innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Ninsoarea';
+                btn.innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Fulgi';
                 clearInterval(snowInterval);
-                container.style.display = 'none';
+                document.getElementById('snow-container').style.display = 'none';
             }
         }
         
         // Initialize snow
         document.getElementById('toggle-snow').addEventListener('click', toggleSnow);
         if (snowActive) {
-            snowInterval = setInterval(createSnowflake, 80);
+            snowInterval = setInterval(createSnowflake, 100);
         } else {
+            document.getElementById('toggle-snow').innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Fulgi';
             document.getElementById('snow-container').style.display = 'none';
-            document.getElementById('toggle-snow').innerHTML = '<i class="fas fa-snowflake me-1"></i> Pornește Ninsoarea';
         }
         
-        // Search functionality
+        // Search
         function searchAnime() {
-            const query = document.getElementById('main-search').value.toLowerCase().trim();
+            const query = document.getElementById('search-input').value.trim();
             if (query) {
-                localStorage.setItem('searchQuery', query);
                 window.location.href = `/series.html?search=${encodeURIComponent(query)}`;
             }
         }
         
-        // Enter key for search
-        document.getElementById('main-search').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchAnime();
-        });
-        
-        document.getElementById('search-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const query = this.value.toLowerCase().trim();
-                if (query) {
-                    localStorage.setItem('searchQuery', query);
-                    window.location.href = `/series.html?search=${encodeURIComponent(query)}`;
-                }
-            }
-        });
-        
-        // Scroll to latest episodes
+        // Scroll to latest
         function scrollToLatest() {
-            document.getElementById('latest-episodes').scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-            });
+            document.getElementById('latest-episodes').scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Load stats
-        async function loadStats() {
+        // Load data
+        async function loadHomeData() {
             try {
-                const [seriesRes, episodesRes] = await Promise.all([
-                    fetch('/series.json'),
-                    fetch('/episodes.json')
-                ]);
-                
-                const series = await seriesRes.json();
+                // Load episodes
+                const episodesRes = await fetch('/episodes.json');
                 const episodes = await episodesRes.json();
+                
+                // Display latest episodes (last 6)
+                const latestContainer = document.getElementById('latest-episodes-container');
+                latestContainer.innerHTML = '';
+                
+                episodes.slice(-6).reverse().forEach(ep => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-lg-2';
+                    col.innerHTML = `
+                        <div class="anime-card" onclick="window.location.href='/watch.html?anime=${ep.animeSlug}&ep=${ep.number}'">
+                            <img src="https://cdn.myanimelist.net/images/anime/1244/138851.jpg" 
+                                 class="anime-poster" alt="${ep.animeTitle}">
+                            <div class="p-3">
+                                <h6 class="fw-bold mb-1">${ep.animeTitle}</h6>
+                                <p class="mb-2"><strong>Ep ${ep.number}</strong></p>
+                                <small class="text-muted">${ep.releaseDate}</small>
+                            </div>
+                        </div>
+                    `;
+                    latestContainer.appendChild(col);
+                });
+                
+                // Load series
+                const seriesRes = await fetch('/series.json');
+                const series = await seriesRes.json();
+                
+                // Display popular series (first 4)
+                const seriesContainer = document.getElementById('popular-series-container');
+                seriesContainer.innerHTML = '';
+                
+                series.slice(0, 4).forEach(anime => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-3';
+                    col.innerHTML = `
+                        <div class="anime-card" onclick="viewSeries('${anime.slug}')">
+                            <img src="${anime.poster}" class="anime-poster" alt="${anime.title}">
+                            <div class="p-3">
+                                <h6 class="fw-bold mb-2">${anime.title}</h6>
+                                <div class="d-flex justify-content-between">
+                                    <small>${anime.year}</small>
+                                    <small><i class="fas fa-star text-warning"></i> ${anime.rating}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    seriesContainer.appendChild(col);
+                });
+                
+                // Load genres
+                const genresRes = await fetch('/genres.json');
+                const genres = await genresRes.json();
+                
+                const genresContainer = document.getElementById('genres-container');
+                genresContainer.innerHTML = '';
+                
+                genres.forEach(genre => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-danger';
+                    badge.textContent = genre.name;
+                    badge.style.cursor = 'pointer';
+                    badge.onclick = () => {
+                        window.location.href = `/series.html?genre=${genre.id}`;
+                    };
+                    genresContainer.appendChild(badge);
+                });
                 
                 // Update stats
                 document.getElementById('total-series').textContent = series.length;
                 document.getElementById('total-episodes').textContent = episodes.length;
                 document.getElementById('active-series').textContent = 
                     series.filter(s => s.status === 'ongoing').length;
-                document.getElementById('latest-added').textContent = 
-                    episodes.slice(-24).length; // Last 24 hours estimate
+                document.getElementById('completed-series').textContent = 
+                    series.filter(s => s.status === 'completed').length;
                     
             } catch (error) {
-                console.error('Error loading stats:', error);
+                console.error('Error loading data:', error);
+                document.getElementById('latest-episodes-container').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Eroare la încărcarea datelor. Verifică fișierele JSON.
+                        </div>
+                    </div>
+                `;
             }
         }
         
-        // Load footer content
-        async function loadFooterContent() {
-            try {
-                const [seriesRes, genresRes, episodesRes] = await Promise.all([
-                    fetch('/series.json'),
-                    fetch('/genres.json'),
-                    fetch('/episodes.json')
-                ]);
-                
-                const series = await seriesRes.json();
-                const genres = await genresRes.json();
-                const episodes = await episodesRes.json();
-                
-                // Footer genres (first 6)
-                const footerGenres = document.getElementById('footer-genres');
-                genres.slice(0, 6).forEach(genre => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<a href="/series.html?genre=${genre.id}">${genre.name}</a>`;
-                    footerGenres.appendChild(li);
-                });
-                
-                // Footer latest episodes (first 3)
-                const footerLatest = document.getElementById('footer-latest');
-                footerLatest.innerHTML = '';
-                episodes.slice(-3).reverse().forEach(ep => {
-                    const div = document.createElement('div');
-                    div.className = 'mb-2';
-                    div.innerHTML = `
-                        <a href="/watch.html?anime=${ep.animeSlug}&ep=${ep.number}" 
-                           class="text-light text-decoration-none">
-                            <strong>${ep.animeTitle}</strong> - Ep. ${ep.number}
-                        </a>
-                        <br><small class="text-muted">${ep.releaseDate}</small>
-                    `;
-                    footerLatest.appendChild(div);
-                });
-                
-            } catch (error) {
-                console.error('Error loading footer content:', error);
-            }
+        // View series
+        function viewSeries(slug) {
+            window.location.href = `/series.html?slug=${slug}`;
         }
         
-        // Initialize everything when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            loadStats();
-            loadFooterContent();
-            
-            // Check for saved search
-            const savedQuery = localStorage.getItem('searchQuery');
-            if (savedQuery) {
-                document.getElementById('main-search').value = savedQuery;
-                document.getElementById('search-input').value = savedQuery;
-            }
-            
-            // Add click animation to cards
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.anime-card')) {
-                    e.target.closest('.anime-card').style.transform = 'scale(0.98)';
-                    setTimeout(() => {
-                        if (e.target.closest('.anime-card')) {
-                            e.target.closest('.anime-card').style.transform = '';
-                        }
-                    }, 150);
-                }
-            });
-        });
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadHomeData);
         
-        // Fade in animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-        
-        // Observe all anime cards
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.anime-card').forEach(card => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                observer.observe(card);
-            });
+        // Enter key for search
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchAnime();
         });
     </script>
 </body>
