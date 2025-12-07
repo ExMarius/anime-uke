@@ -1,0 +1,41 @@
+[
+  {
+    "slug": "one-piece",
+    "title": "One Piece",
+    "description": "Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.",
+    "year": 1999,
+    "status": "ongoing",
+    "poster": "https://cdn.myanimelist.net/images/anime/1244/138851.jpg",
+    "banner": "https://wallpapercave.com/wp/wp5063236.jpg",
+    "genres": ["action", "adventure", "comedy", "fantasy"],
+    "episodes": 1100,
+    "rating": 8.8,
+    "studio": "Toei Animation"
+  },
+  {
+    "slug": "attack-on-titan",
+    "title": "Attack on Titan",
+    "description": "Omenirea trăiește în spatele unor ziduri uriașe pentru a se proteja de titani, creaturi gigantice care mănâncă oameni.",
+    "year": 2013,
+    "status": "completed",
+    "poster": "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
+    "banner": "https://wallpapercave.com/wp/wp1837535.jpg",
+    "genres": ["action", "drama", "fantasy", "mystery"],
+    "episodes": 88,
+    "rating": 9.1,
+    "studio": "Wit Studio / MAPPA"
+  },
+  {
+    "slug": "naruto-shippuden",
+    "title": "Naruto Shippuden",
+    "description": "Continuația aventurilor lui Naruto Uzumaki, mai matur și mai puternic, în căutarea prietenului său Sasuke.",
+    "year": 2007,
+    "status": "completed",
+    "poster": "https://cdn.myanimelist.net/images/anime/1565/111305.jpg",
+    "banner": "https://wallpapercave.com/wp/wp4336782.jpg",
+    "genres": ["action", "adventure", "comedy"],
+    "episodes": 500,
+    "rating": 8.3,
+    "studio": "Studio Pierrot"
+  }
+]
