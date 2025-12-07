@@ -1,34 +1,30 @@
-/* AnimeNexus Styles */
+/* AnimeUKE Styles */
 body {
     background-color: #0a0a0a;
     color: #f8f9fa;
     font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-.anime-card {
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid #333;
-    cursor: pointer;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
 }
 
-.anime-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(230, 57, 70, 0.2);
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
 }
 
-.anime-poster {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    border-bottom: 3px solid #e63946;
+::-webkit-scrollbar-thumb {
+    background: #e63946;
+    border-radius: 4px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .anime-poster {
-        height: 200px;
-    }
+/* Loading animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
 }
