@@ -1,118 +1,85 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white font-sans">
 
-// --- Pages ---
-import HomePage from "./pages/HomePage";
-import WatchPage from "./pages/WatchPage";
-import SeriesPage from "./pages/SeriesPage";
-import ProfilePage from "./pages/ProfilePage";
+    <!-- Navigation -->
+    <nav class="bg-gray-800 p-4 flex justify-between items-center">
+        <div class="text-xl font-bold">AnimeZone</div>
+        <div class="flex gap-6">
+            <a href="#home" class="hover:text-yellow-400">Home</a>
+            <a href="#profile" class="hover:text-yellow-400">Profile</a>
+        </div>
+    </nav>
 
-export default function App() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-900 text-white">
-        <nav className="p-4 bg-gray-800 flex gap-6 text-lg">
-          <Link to="/">Home</Link>
-          <Link to="/profile">Profil</Link>
-        </nav>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/watch/:episodeId" element={<WatchPage />} />
-          <Route path="/series/:seriesId" element={<SeriesPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
+    <!-- Home Page -->
+    <section id="home" class="p-6">
+        <div class="h-60 bg-gray-700 rounded-2xl flex items-center justify-center text-3xl font-bold">Banner Promo / Slider Anime</div>
 
-// --- Example Home Page ---
-export function HomePage() {
-  return (
-    <div className="p-6 space-y-6">
-      <div className="h-52 bg-gray-700 rounded-2xl flex items-center justify-center text-2xl">
-        Banner Promo / Slider Anime
-      </div>
+        <div class="flex gap-4 mt-6">
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Latest Episodes</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Trending</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">News</button>
+        </div>
 
-      <div className="flex gap-4 text-lg">
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Latest Episodes</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Trending</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">News</button>
-      </div>
+        <div class="grid grid-cols-3 gap-4 mt-6">
+            <div class="aspect-video bg-gray-700 rounded-xl flex items-center justify-center font-bold text-xl">EP1</div>
+            <div class="aspect-video bg-gray-700 rounded-xl flex items-center justify-center font-bold text-xl">EP2</div>
+            <div class="aspect-video bg-gray-700 rounded-xl flex items-center justify-center font-bold text-xl">EP3</div>
+        </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="aspect-video bg-gray-700 rounded-xl flex items-center justify-center">EP1</div>
-        <div className="aspect-video bg-gray-700 rounded-xl flex items-center justify-center">EP2</div>
-        <div className="aspect-video bg-gray-700 rounded-xl flex items-center justify-center">EP3</div>
-      </div>
+        <div class="flex gap-4 mt-6">
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Seasonal Chart</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Top 10</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Schedule</button>
+        </div>
+    </section>
 
-      <div className="flex gap-4 text-lg">
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Seasonal Chart</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Top 10</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Schedule</button>
-      </div>
-    </div>
-  );
-}
+    <!-- Watch Page -->
+    <section id="watch" class="p-6">
+        <div class="w-full h-96 bg-black rounded-2xl flex items-center justify-center text-xl font-bold">VIDEO PLAYER</div>
+        <div class="flex gap-4 mt-4">
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Sources</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Quality</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Subtitles</button>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Episode Info + Download</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4 h-40">Comments Section</div>
+    </section>
 
-// --- Example Watch Page ---
-export function WatchPage() {
-  return (
-    <div className="p-6 space-y-6">
-      <div className="w-full h-96 bg-black rounded-2xl flex items-center justify-center text-xl">
-        VIDEO PLAYER
-      </div>
+    <!-- Series Page -->
+    <section id="series" class="p-6">
+        <div class="h-52 bg-gray-700 rounded-2xl"></div>
+        <div class="flex gap-4 mt-4">
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Watch</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Add to List</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Rate</button>
+            <button class="bg-gray-800 px-4 py-2 rounded-xl hover:bg-gray-700">Share</button>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Synopsis + Info</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Episodes List</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Characters + Voice Actors</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Recommendations</div>
+    </section>
 
-      <div className="flex gap-4 text-lg">
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Sources</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Quality</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Subtitles</button>
-      </div>
+    <!-- User Profile -->
+    <section id="profile" class="p-6">
+        <div class="bg-gray-800 p-6 rounded-xl text-xl">Avatar + Username + Stats</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Activity Feed</div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">
+            <h2 class="text-lg mb-2">Currently Watching:</h2>
+            <ul class="list-disc list-inside">
+                <li>One Piece</li>
+                <li>Jujutsu Kaisen S2</li>
+            </ul>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl mt-4">Achievements & Badges</div>
+    </section>
 
-      <div className="bg-gray-800 p-4 rounded-xl">Episode Info + Download</div>
-      <div className="bg-gray-800 p-4 rounded-xl h-40">Comments Section</div>
-    </div>
-  );
-}
-
-// --- Example Series Page ---
-export function SeriesPage() {
-  return (
-    <div className="p-6 space-y-6">
-      <div className="h-52 bg-gray-700 rounded-2xl"></div>
-
-      <div className="flex gap-4 text-lg">
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Watch</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Add to List</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Rate</button>
-        <button className="bg-gray-800 px-4 py-2 rounded-xl">Share</button>
-      </div>
-
-      <div className="bg-gray-800 p-4 rounded-xl">Synopsis + Info</div>
-      <div className="bg-gray-800 p-4 rounded-xl">Episodes List</div>
-      <div className="bg-gray-800 p-4 rounded-xl">Characters + Voice Actors</div>
-      <div className="bg-gray-800 p-4 rounded-xl">Recommendations</div>
-    </div>
-  );
-}
-
-// --- Example Profile Page ---
-export function ProfilePage() {
-  return (
-    <div className="p-6 space-y-6">
-      <div className="bg-gray-800 p-6 rounded-xl text-xl">Avatar + Username + Stats</div>
-
-      <div className="bg-gray-800 p-4 rounded-xl">Activity Feed</div>
-
-      <div className="bg-gray-800 p-4 rounded-xl">
-        <h2 className="text-lg mb-2">Currently Watching:</h2>
-        <ul>
-          <li>• One Piece</li>
-          <li>• Jujutsu Kaisen S2</li>
-        </ul>
-      </div>
-
-      <div className="bg-gray-800 p-4 rounded-xl">Achievements & Badges</div>
-    </div>
-  );
-}
+</body>
+</html>
