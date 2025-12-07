@@ -1,37 +1,558 @@
-import React from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "./styles.css";
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8">
+    <!-- Eliminat origin-trial meta tag -->
+    <meta property="fb:app_id" content="1766957186895414">
+    
+    <!-- Eliminat Content-Security-Policy comentat -->
 
-export default function Home() {
-  return (
-    <>
-      <nav className="navbar navbar-dark">
-        <div className="container">
-          <span className="nav-brand-title">Anime-Uke</span>
-        </div>
-      </nav>
+    <title>One Piece RoSub Ep. 1 anime | One Piece Ep. 1 în română - AnimeNexus</title>
 
-      <main className="container mt-5">
-        <h1 className="section-title mb-4">Anime disponibile</h1>
+    <meta property="og:description" content="Vizionează One Piece Episodul 1 în română subtitrat">
+    <meta property="og:url" content="https://anime-nexus.ro">
+    <meta property="og:title" content="One Piece RoSub Ep. 1 anime | One Piece Ep. 1 în română - AnimeNexus">
+    <meta property="og:image" content="/media/logo/logo-nexus.webp">
 
-        <div className="row g-4">
-          <div className="col-md-3">
-            <div className="anime-card">
-              <img
-                src="https://i.imgur.com/mK6wQ0B.jpeg"
-                alt="One Piece cover"
-                className="img-fluid mb-3"
-              />
-              <h4 className="text-center">One Piece</h4>
-              <a href="/anime/one-piece" className="btn btn-red w-100 mt-2">
-                Vezi episoade
-              </a>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Vizionează One Piece Episodul 1 în română subtitrat - Eu sunt Luffy! Omul care va deveni Regele Piraților!">
+    <meta name="keywords" content="one piece ro sub, one piece, rosub, anime, manga, romana, subtitrare, one piece in romana">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="8D8zFR975ZjTW2E7cKQuQA4W6acI11kXE8yqDZmEH58">
+
+    <link rel="icon" type="image/png" href="/media/logo/logo-nexus.webp">
+    <link href="https://anime-nexus.ro/feed.rss" rel="alternate" type="application/rss+xml" title="AnimeNexus - anime şi manga">
+
+    <!-- CSS-uri externe -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.12/dist/css/bootstrap-select.min.css">
+    <link rel="stylesheet" href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.0-alpha18/css/tempusdominus-bootstrap-4.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.9.0/css/bootstrap-slider.min.css">
+    
+    <!-- CSS local -->
+    <link rel="stylesheet" href="/css/style.css?v=2.3.0">
+
+    <!-- Eliminat recaptcha script problematic -->
+
+    <!-- JavaScript-uri externe -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.12/dist/js/bootstrap-select.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.9.0/bootstrap-slider.min.js"></script>
+    
+    <script>
+        cookieDomain = '.anime-nexus.ro';
+    </script>
+    
+    <!-- JavaScript local -->
+    <script src="/js/full/cookies.js?v=2.3.0"></script>
+    
+    <style>
+        /* Stiluri păstrate din original */
+        .main-body {
+            background-color: #101010;
+            color: #CCC;
+        }
+        
+        h1, h2, h3 {
+            color: #a59b9b;
+        }
+        
+        a, .btn-link {
+            color: #920d0d;
+        }
+        
+        a:hover {
+            color: #AAA;
+        }
+        
+        .box-content:not(.featured), .box-content-no-side-padding:not(.featured) {
+            border: 1px solid #333;
+            background: rgba(61,0,10,1);
+            background: linear-gradient(45deg, rgba(61,0,10,1) 0%, rgba(19,19,19,1) 100%);
+        }
+        
+        .news-container {
+            background: linear-gradient(45deg, rgba(146,13,13,1) 0%, rgba(143,2,34,1) 44%, rgba(109,0,25,1) 100%);
+        }
+        
+        /* Stiluri pentru ninsoare */
+        .snow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1000;
+        }
+        
+        .snowflake {
+            position: absolute;
+            top: -10px;
+            color: white;
+            font-size: 10px;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+        
+        .control-button {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1100;
+        }
+        
+        .control-button:hover {
+            background-color: #ff8533;
+        }
+        
+        /* Stiluri responsive */
+        @media (max-width: 768px) {
+            .navbar-brand img {
+                max-height: 40px;
+            }
+            
+            .banner-container img {
+                width: 100%;
+                height: auto;
+            }
+            
+            .source_container iframe {
+                width: 100%;
+                height: 300px;
+            }
+        }
+    </style>
+
+    <!-- Eliminat comentariile condiționale pentru IE -->
+
+    <!-- Fonturi Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+</head>
+<body class="main-body container-fluid no-padding">
+    <div class="row no-side-margin">
+        <div class="col-12 no-side-padding">
+            <!-- Navbar -->
+            <nav class="navbar navbar-expand-lg navbar-dark">
+                <a class="navbar-brand no-padding" href="/">
+                    <img class="top-image brand-image" alt="AnimeNexus - anime şi manga în limba română" src="/media/logo/sarbatori.png">
+                </a>
+                
+                <div class="text-center d-lg-none">
+                    <a class="navbar-toggler mx-1 text-center d-inline-flex" href="#login-square" title="Cont">
+                        <span class="fa fa-user fa-fw"></span> <span class="small-font align-self-center">ExMarius</span>
+                    </a>
+                    <a class="navbar-toggler mx-1 text-center d-inline-block" href="#search-series" title="Caută serie">
+                        <span class="fa fa-search fa-fw"></span>
+                    </a>
+                    <button class="navbar-toggler mx-1 text-center d-inline-block" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="fa fa-bars fa-fw"></span>
+                    </button>
+                </div>
+                
+                <div class="collapse navbar-collapse navbar-content text-center" id="navbarText">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item"><a class="nav-link" href="/nexus/portal-serii/anime">Anime</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/nexus/portal-serii/manga">Manga</a></li>
+                        <li class="nav-item dropdown">
+                            <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Extra</a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/nexus/portal-serii/ova-movie">OVA / Filme</a>
+                                <a class="dropdown-item" href="/nexus/portal-serii/live-action">Live Action</a>
+                                <a class="dropdown-item" href="/nexus/portal-serii/light-novel">Light Novel</a>
+                                <a class="dropdown-item" href="/nexus/portal-serii/webtoon">Webtoon</a>
+                            </div>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="/nexus/contact">Contact</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="teamMembers" data-toggle="modal" data-target="#teamList">Echipa</a></li>
+                    </ul>
+                    
+                    <ul class="navbar-nav justify-content-center">
+                        <li class="nav-item"><a class="nav-link mx-3" href="/nexus/dmca">DMCA</a></li>
+                        <li class="mt-1"><a class="btn btn-primary margin-top10" href="/nexus/doneaza" style="margin-right: 20px;">Fă o donaţie</a></li>
+                    </ul>
+                </div>
+                
+                <div class="navbar-nav d-flex justify-content-end">
+                    <!-- Social media icons -->
+                    <a class="navbar-brand no-padding d-none d-md-block" href="https://www.youtube.com/@AnimeNexus-AN">
+                        <img src="/media/social/youtube_50.png" style="width: 35px; height: 35px;" alt="YouTube">
+                    </a>
+                    <a class="navbar-brand no-padding d-none d-md-block" href="https://discord.gg/NFxGw2YQky">
+                        <img src="/media/social/discord_50.png" style="width: 35px; height: 35px;" alt="Discord">
+                    </a>
+                    <a class="navbar-brand no-padding d-none d-md-block" href="https://www.facebook.com/profile.php?id=61567570019308">
+                        <img src="/media/social/facebook_40.png" style="width: 35px; height: 35px;" alt="Facebook">
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Banner -->
+            <div class="banner-container">
+                <div class="w-100 text-center">
+                    <a href="/nexus/anime/bleach"><img src="/media/banner-sarbatori.png" alt="Banner Sărbători"></a>
+                </div>
             </div>
-          </div>
         </div>
-      </main>
+    </div>
 
-      <footer className="text-center py-3">Anime-Uke © 2025 | Toate drepturile rezervate.</footer>
-    </>
-  );
-}
+    <!-- Ninsoare cu buton -->
+    <div class="snow-container" id="snowContainer"></div>
+    <button class="control-button" id="toggleSnow">Oprește ninsoarea</button>
+
+    <div class="row no-side-margin">
+        <div class="col-12 col-lg-10 no-padding">
+            <div class="row no-side-margin">
+                <div class="col-12 col-lg-9">
+                    <!-- Conținut episod -->
+                    <div class="row box">
+                        <div class="col-12 box-content">
+                            <div class="row no-side-margin">
+                                <div class="col-12 col-lg-12 episode-news-container">
+                                    <div class="row">
+                                        <div class="col-12 news-title center">
+                                            <h1>One Piece Ep. 1</h1>
+                                        </div>
+                                    </div>
+                                    <hr class="hr-black">
+                                    <div class="row no-side-margin margin-top">
+                                        <div class="col-12 no-side-padding center">
+                                            <div class="bold margin-bottom">One Piece Ep. 1 rosub</div>
+                                            <div class="margin-bottom"><em>Eu sunt Luffy! Omul care va deveni Regele Piraților!</em></div>
+                                            <div class="row">
+                                                <div class="col-12 col-lg-4 left">
+                                                    <div>Vizionări: <strong>91241</strong></div>
+                                                </div>
+                                                <div class="col-12 col-lg-4 center">
+                                                    <div>Episod tradus de <a href="https://shinobifansub.com" target="_blank" rel="nofollow">Shinobi Fansub</a></div>
+                                                </div>
+                                                <div class="col-12 col-lg-4 right">
+                                                    <div>Luni, 17 iulie 2017, 00:25</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Player video -->
+                    <div class="row box px-md-1 px-1">
+                        <div class="col-12 box-content">
+                            <div class="row margin-top">
+                                <div class="col-12 center">
+                                    <ul class="nav nav-pills nav-fill margin-bottom" role="tablist">
+                                        <li class="nav-item embed-tab">
+                                            <a href="#source0" class="nav-link embed-tabs btn btn-outline-main active" data-id="0" data-name="DoodStream" data-toggle="tab">
+                                                <span class="fa fa-film"></span> DoodStream
+                                            </a>
+                                        </li>
+                                        <li class="nav-item embed-tab">
+                                            <a href="#source2" class="nav-link embed-tabs btn btn-outline-main" data-id="2" data-name="FileMoon" data-toggle="tab">
+                                                <span class="fa fa-film"></span> FileMoon
+                                            </a>
+                                        </li>
+                                        <li class="nav-item embed-tab">
+                                            <a href="#source3" class="nav-link embed-tabs btn btn-outline-main" data-id="3" data-name="Voe" data-toggle="tab">
+                                                <span class="fa fa-film"></span> Voe
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 text-center no-side-padding">
+                                    <div class="tab-content margin-bottom margin-top source_container">
+                                        <div class="tab-pane active embed-responsive iframe_source pointer" id="source-base">
+                                            <img src="/media/ep_bg.png" class="w-100" alt="Click pentru a viziona episodul" onclick="loadFirstVideo()">
+                                        </div>
+                                        <div class="tab-pane embed-responsive embed-responsive-16by9 iframe_source" id="source0">
+                                            <iframe width="600" height="480" data-src="https://doodstream.com/e/example1" scrolling="no" frameborder="0" allowfullscreen></iframe>
+                                        </div>
+                                        <div class="tab-pane embed-responsive embed-responsive-16by9 iframe_source" id="source2">
+                                            <iframe data-src="https://filemoon.to/e/example2" frameborder="0" scrolling="no" width="640" height="360" allowfullscreen></iframe>
+                                        </div>
+                                        <div class="tab-pane embed-responsive embed-responsive-16by9 iframe_source" id="source3">
+                                            <iframe data-src="https://voe.sx/e/example3" width="560" height="315" allowfullscreen allowtransparency allow="autoplay" scrolling="no" frameborder="0"></iframe>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row my-3">
+                                <div class="col-12 col-md-4 left-center-desktop">
+                                    <button data-toggle="modal" data-target="#episodeReport" id="report-episode" class="btn btn-danger mb-2">
+                                        <span class="fa fa-exclamation-triangle"></span> Raportează problemă
+                                    </button>
+                                </div>
+                                <div class="col-12 col-md-4 center">
+                                    <a class="btn btn-light mt-2" role="button" href="/nexus/anime/one-piece">
+                                        <span class="fa fa-list"></span> Alte episoade
+                                    </a>
+                                </div>
+                                <div class="col-12 col-md-4 right-center-desktop">
+                                    <a class="btn btn-light mt-2" role="button" href="/nexus/anime/one-piece/2">
+                                        <span class="fa fa-chevron-circle-right"></span> Episodul următor
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comentarii (simplificat) -->
+                    <div class="row box">
+                        <div class="col-12 box-content">
+                            <div class="comments-container">
+                                <div class="text-center mb-2">
+                                    <button id="thank-episode" class="btn btn-primary">
+                                        <span class="fa fa-heart"></span> Mulţumeşte pentru episod
+                                    </button>
+                                </div>
+                                
+                                <div class="container-fluid comment-box margin-bottom text-center no-side-padding">
+                                    <h3><span class="fa fa-comments"></span> Lasă un comentariu!</h3>
+                                    <textarea class="form-control mb-2" id="comment-box-text" rows="4" maxlength="1000" placeholder="Comentariu..."></textarea>
+                                    <button class="btn btn-light mb-2" id="comment-box-submit">
+                                        <span class="fa fa-comment"></span> Comentează!
+                                    </button>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <button class="btn btn-primary btn-lg btn-block py-3" id="show-comments">Arată comentarii</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-12 col-lg-3 order-md-first">
+                    <!-- Login box -->
+                    <div class="row box" id="login-square">
+                        <div class="col-12 box-content text-center">
+                            <div class="margin-bottom">Bun venit, <strong>ExMarius</strong></div>
+                            <div class="margin-top-tiny margin-bottom">Rang: Sannin</div>
+                            <div class="my-2"><a href="/nexus/bingo">Fă misiunile zilnice de AnimeBingo!</a></div>
+                            <a href="/nexus/log_out" class="btn btn-light"><span class="fa fa-sign-out"></span> Ieşi din cont</a>
+                        </div>
+                    </div>
+
+                    <!-- Căutare serie -->
+                    <div class="row box">
+                        <div class="col-12 box-content text-center">
+                            <div class="box-title">Caută serie</div>
+                            <select class="form-control mb-2 search-series selectpicker" data-live-search="true" title="Nume...">
+                                <option value="one-piece">One Piece</option>
+                                <option value="naruto">Naruto</option>
+                                <option value="bleach">Bleach</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Anunțuri -->
+                    <div class="row box">
+                        <div class="col-12 box-content text-center">
+                            <div class="box-title">Anunțuri</div>
+                            <div><a href="/nexus/stire/40784">Anime Nexus așa cum e azi</a></div>
+                        </div>
+                    </div>
+
+                    <!-- Cele mai recente -->
+                    <div class="row box">
+                        <div class="col-12 box-content text-center">
+                            <div class="box-title">Cele mai recente</div>
+                            <div><a href="/nexus/manga/vinland-saga-manga/154">Vinland Saga Manga Nr. 154</a></div>
+                            <div><a href="/nexus/anime/spy-x-family-3/7">Spy x Family 3 Ep. 7</a></div>
+                            <div><a href="/nexus/anime/boku-no-hero-academia-8/10">Boku no Hero Academia 8 Ep. 10</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale -->
+    <div class="modal fade" id="episodeReport" tabindex="-1">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Raportează episodul</h4>
+                    <button type="button" class="close" data-dismiss="modal">×</button>
+                </div>
+                <div class="modal-body center">
+                    <p>Folosește această funcție doar dacă niciuna dintre surse nu funcționează.</p>
+                    <textarea class="form-control mb-2" placeholder="Descrie problema..."></textarea>
+                    <button class="btn btn-primary mt-2">Trimite raport</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="teamList" tabindex="-1">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Echipa AnimeNexus</h4>
+                    <button type="button" class="close" data-dismiss="modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Mulțumim echipei noastre de voluntari!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripturi finale -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.21.0/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.0-alpha18/js/tempusdominus-bootstrap-4.min.js"></script>
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+    <!-- Scripturi locale -->
+    <script src="/js/full/episode_change_iframe.js?v=2.3.0"></script>
+    
+    <script>
+        // Script pentru ninsoare (modificat pentru Cloudflare)
+        document.addEventListener('DOMContentLoaded', function() {
+            const snowContainer = document.getElementById('snowContainer');
+            const toggleButton = document.getElementById('toggleSnow');
+            let snowflakeInterval;
+            let snowActive = true;
+
+            // Verificare localStorage cu try-catch
+            try {
+                if (localStorage.getItem("snowActive") === "false") {
+                    snowActive = false;
+                }
+            } catch(e) {
+                console.log("LocalStorage not available");
+            }
+
+            const createSnowflake = () => {
+                const snowflake = document.createElement("div");
+                snowflake.textContent = "❄";
+                snowflake.className = "snowflake";
+                snowflake.style.left = Math.random() * window.innerWidth + "px";
+                snowflake.style.fontSize = Math.random() * 25 + 10 + "px";
+                snowflake.style.animationDuration = Math.random() * 3 + 2 + "s";
+                snowflake.style.opacity = Math.random();
+                snowContainer.appendChild(snowflake);
+
+                setTimeout(() => {
+                    snowflake.remove();
+                }, 5000);
+            };
+
+            const startSnow = () => {
+                if (!snowActive) return;
+                snowflakeInterval = setInterval(createSnowflake, 200);
+            };
+
+            const stopSnow = () => {
+                clearInterval(snowflakeInterval);
+            };
+
+            const updateButtonState = () => {
+                toggleButton.textContent = snowActive ? "Oprește ninsoarea" : "Pornește ninsoarea";
+            };
+
+            toggleButton.addEventListener("click", () => {
+                snowActive = !snowActive;
+                if (snowActive) {
+                    startSnow();
+                } else {
+                    stopSnow();
+                }
+                try {
+                    localStorage.setItem("snowActive", snowActive);
+                } catch(e) {
+                    console.log("Cannot save to localStorage");
+                }
+                updateButtonState();
+            });
+
+            // Inițializare
+            if (snowActive) {
+                startSnow();
+            }
+            updateButtonState();
+
+            // Script pentru player video
+            function loadFirstVideo() {
+                const firstIframe = document.querySelector('#source0 iframe');
+                if (firstIframe && firstIframe.dataset.src) {
+                    firstIframe.src = firstIframe.dataset.src;
+                    document.querySelector('#source-base').classList.remove('active');
+                    document.querySelector('#source0').classList.add('active');
+                }
+            }
+
+            // Schimbare tab-uri video
+            document.querySelectorAll('.embed-tabs').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetId = this.getAttribute('href');
+                    const iframe = document.querySelector(`${targetId} iframe`);
+                    if (iframe && iframe.dataset.src && !iframe.src) {
+                        iframe.src = iframe.dataset.src;
+                    }
+                });
+            });
+
+            // Script simplu pentru comentarii
+            document.getElementById('show-comments').addEventListener('click', function() {
+                this.textContent = "Comentariile vor fi disponibile în versiunea completă";
+                this.disabled = true;
+            });
+
+            document.getElementById('comment-box-submit').addEventListener('click', function() {
+                alert("Funcționalitatea de comentarii este disponibilă în versiunea completă a site-ului");
+            });
+
+            document.getElementById('thank-episode').addEventListener('click', function() {
+                this.innerHTML = '<span class="fa fa-heart"></span> Mulțumit!';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-success');
+            });
+        });
+
+        // Lazy load images
+        function lazyLoadImages() {
+            const images = document.querySelectorAll('img[data-src]');
+            images.forEach(img => {
+                img.src = img.dataset.src;
+            });
+        }
+        
+        window.addEventListener('load', lazyLoadImages);
+    </script>
+
+    <!-- Google Analytics (opțional, păstrat din original) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1DRXD06X2W"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-1DRXD06X2W');
+    </script>
+</body>
+</html>
