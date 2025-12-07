@@ -1,22 +1,20 @@
-// AnimeNexus App - Basic loading
-console.log('AnimeNexus loaded');
+// AnimeUKE App
+console.log('AnimeUKE loaded successfully!');
 
-async function loadHomeData() {
+// Utility function for loading JSON
+async function loadJSON(url) {
     try {
-        const response = await fetch('/episodes.json');
-        const episodes = await response.json();
-        console.log('Loaded episodes:', episodes.length);
-        
-        // Aici va fi logica pentru afișarea episoadelor
-        // Moment doar logăm
-        return episodes;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
     } catch (error) {
-        console.error('Error loading data:', error);
+        console.error(`Error loading ${url}:`, error);
+        return null;
     }
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded');
-    loadHomeData();
-});
+// Export for use in other files
+window.AnimeUKE = {
+    loadJSON,
+    version: '1.0.0'
+};
