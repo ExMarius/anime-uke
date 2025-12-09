@@ -3,189 +3,514 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One Piece - AnimeUKE</title>
+    <title>AnimeUKE - Anime Gratis în Română</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #e63946;
+            --primary-dark: #c1121f;
+            --dark: #0a0a0a;
+            --dark-light: #1a1a1a;
+            --dark-lighter: #2d2d2d;
+            --text: #ffffff;
+            --text-muted: #adb5bd;
+            --border: #333333;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
         body {
-            background: #0a0a0a;
+            background-color: var(--dark);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+        
+        /* NAVBAR */
+        .navbar {
+            background: rgba(10, 10, 10, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 0;
+        }
+        
+        .navbar-brand {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary) !important;
+        }
+        
+        .navbar-brand span {
             color: white;
         }
-        .series-header {
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), 
-                        url('https://wallpapercave.com/wp/wp5063236.jpg');
-            background-size: cover;
-            padding: 40px 0;
-            margin-bottom: 30px;
-        }
-        .episode-card {
-            background: #1a1a1a;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 4px solid #e63946;
-            cursor: pointer;
+        
+        .nav-link {
+            color: var(--text-muted) !important;
+            font-weight: 500;
+            padding: 8px 15px !important;
+            border-radius: 5px;
             transition: all 0.3s;
         }
-        .episode-card:hover {
-            background: #2a2a2a;
-            transform: translateX(5px);
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--text) !important;
+            background: rgba(230, 57, 70, 0.1);
         }
-        .episode-number {
-            font-size: 1.5rem;
-            color: #e63946;
-            font-weight: bold;
+        
+        /* HERO */
+        .hero {
+            padding: 150px 0 80px;
+            background: linear-gradient(135deg, rgba(10,10,10,0.9), rgba(26,26,26,0.9));
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(230, 57, 70, 0.3);
+        }
+        
+        /* ANIME CARDS */
+        .anime-card {
+            background: var(--dark-light);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .anime-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(230, 57, 70, 0.15);
+        }
+        
+        .anime-card-img {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .anime-card:hover .anime-card-img {
+            transform: scale(1.05);
+        }
+        
+        .anime-card-badge {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 2;
+        }
+        
+        .anime-card-content {
+            padding: 15px;
+        }
+        
+        .anime-card-content h5 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .anime-card-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .anime-card-episodes {
+            background: var(--dark-lighter);
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        
+        /* SECTIONS */
+        .section {
+            padding: 60px 0;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--primary);
+        }
+        
+        /* FOOTER */
+        .footer {
+            background: var(--dark-light);
+            padding: 50px 0 30px;
+            margin-top: 80px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 10px;
+            transition: color 0.3s;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary);
+        }
+        
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+            
+            .anime-card-img {
+                height: 200px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-dark bg-dark py-3">
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-play-circle me-2"></i>AnimeUKE
+                <i class="fas fa-play-circle"></i> Anime<span>UKE</span>
             </a>
-            <div>
-                <a href="/" class="btn btn-outline-light me-2">
-                    <i class="fas fa-home me-2"></i>Acasă
-                </a>
-                <a href="/series.html" class="btn btn-outline-light">
-                    <i class="fas fa-film me-2"></i>Toate Seriile
-                </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="fas fa-bars text-white"></i>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="/"><i class="fas fa-home me-2"></i>Acasă</a></li>
+                    <li class="nav-item"><a class="nav-link" href="series.html"><i class="fas fa-film me-2"></i>Serii Anime</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#popular"><i class="fas fa-fire me-2"></i>Populare</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#genres"><i class="fas fa-tags me-2"></i>Genuri</a></li>
+                </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Series Header -->
-    <div class="series-header">
+    <!-- HERO SECTION -->
+    <section class="hero">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-md-3 text-center">
+                <div class="col-lg-6">
+                    <h1 class="hero-title">Urmărește <span class="text-danger">Anime Gratis</span> în Română</h1>
+                    <p class="hero-subtitle">One Piece, Fairy Tail, Naruto și sute de alte anime-uri cu subtitrare în limba română. Calitate HD, fără reclame enervante.</p>
+                    <a href="series.html" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play me-2"></i>Începe să Vizionezi
+                    </a>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
                     <img src="https://cdn.myanimelist.net/images/anime/1244/138851.jpg" 
-                         class="img-fluid rounded" alt="One Piece" style="max-height: 300px;">
+                         class="img-fluid rounded-3 shadow-lg" 
+                         alt="One Piece"
+                         style="border: 3px solid #e63946;">
                 </div>
-                <div class="col-md-9">
-                    <h1 class="display-4 fw-bold">One Piece</h1>
-                    <p class="lead">Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.</p>
-                    <div class="mb-3">
-                        <span class="badge bg-danger me-2">Acțiune</span>
-                        <span class="badge bg-danger me-2">Aventură</span>
-                        <span class="badge bg-danger me-2">Comedie</span>
-                        <span class="badge bg-danger">Fantezie</span>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-3">
-                            <small class="text-muted">Anul:</small>
-                            <div class="fw-bold">1999</div>
-                        </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Status:</small>
-                            <div class="fw-bold text-warning">În curs</div>
-                        </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Rating:</small>
-                            <div class="fw-bold">
-                                <i class="fas fa-star text-warning"></i> 8.8
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Episoade:</small>
-                            <div class="fw-bold" id="total-episodes-count">Se încarcă...</div>
-                        </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- POPULAR ANIME -->
+    <section class="section" id="popular">
+        <div class="container">
+            <h2 class="section-title">🎬 Anime Populare</h2>
+            <div class="row" id="popular-anime">
+                <!-- Se încarcă din JS -->
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-danger" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Episodes List -->
-    <div class="container py-4">
-        <h2 class="mb-4">
-            <i class="fas fa-list me-2 text-danger"></i>
-            Episoade One Piece
-        </h2>
-        
-        <div id="episodes-list" class="row">
-            <!-- Se încarcă din JS -->
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border text-danger" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+    <!-- GENRES -->
+    <section class="section bg-dark-light" id="genres">
+        <div class="container">
+            <h2 class="section-title">🏷️ Genuri Anime</h2>
+            <div class="row" id="genres-list">
+                <!-- Se încarcă din JS -->
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
-        <div class="container text-center">
-            <small class="text-muted">© 2024 AnimeUKE. Toate drepturile rezervate.</small>
+    <!-- RECENT EPISODES -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">🆕 Episoade Recente</h2>
+            <div class="row" id="recent-episodes">
+                <!-- Se încarcă din JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h4><i class="fas fa-play-circle text-danger"></i> AnimeUKE</h4>
+                    <p class="text-muted mt-3">Cel mai bun site pentru anime în română. Episoade noi adăugate zilnic.</p>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5 class="mb-3">Navigare</h5>
+                    <a href="/" class="footer-link">Acasă</a>
+                    <a href="series.html" class="footer-link">Serii Anime</a>
+                    <a href="#popular" class="footer-link">Populare</a>
+                    <a href="#genres" class="footer-link">Genuri</a>
+                </div>
+                
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5 class="mb-3">Genuri</h5>
+                    <a href="#" class="footer-link">Acțiune</a>
+                    <a href="#" class="footer-link">Aventură</a>
+                    <a href="#" class="footer-link">Fantezie</a>
+                    <a href="#" class="footer-link">Comedie</a>
+                </div>
+                
+                <div class="col-lg-4 col-md-4 mb-4">
+                    <h5 class="mb-3">Abonează-te</h5>
+                    <p class="text-muted mb-3">Primește notificări pentru episoade noi.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control bg-dark border-secondary" placeholder="Email-ul tău">
+                        <button class="btn btn-danger" type="button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="border-secondary my-4">
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">
+                        © 2024 AnimeUKE. Toate drepturile rezervate.
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="#" class="text-muted me-3"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="text-muted me-3"><i class="fab fa-discord"></i></a>
+                    <a href="#" class="text-muted"><i class="fab fa-telegram"></i></a>
+                </div>
+            </div>
         </div>
     </footer>
 
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        async function loadSeriesEpisodes() {
+        // Funcții utilitare
+        async function loadJSON(url) {
             try {
-                // Load episodes
-                const episodesRes = await fetch('/episodes.json');
-                const episodes = await episodesRes.json();
-                
-                // Filter only One Piece episodes
-                const onePieceEpisodes = episodes.filter(ep => ep.animeSlug === 'one-piece')
-                                                .sort((a, b) => b.number - a.number); // Newest first
-                
-                // Update total episodes count
-                document.getElementById('total-episodes-count').textContent = onePieceEpisodes.length;
-                
-                // Display episodes
-                const container = document.getElementById('episodes-list');
-                container.innerHTML = '';
-                
-                onePieceEpisodes.forEach(ep => {
-                    const col = document.createElement('div');
-                    col.className = 'col-12 col-md-6 col-lg-4 mb-3';
-                    col.innerHTML = `
-                        <div class="episode-card" onclick="window.location.href='/watch.html?anime=one-piece&ep=${ep.number}'">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="episode-number">Episod ${ep.number}</div>
-                                    <h6 class="fw-bold mt-2">${ep.title}</h6>
-                                    <p class="text-muted mb-1">
-                                        <small>${ep.releaseDate || 'Data necunoscută'}</small>
-                                    </p>
-                                </div>
-                                <i class="fas fa-play-circle text-danger fa-2x"></i>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(col);
-                });
-                
-                // If no episodes
-                if (onePieceEpisodes.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-12 text-center py-5">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Nu sunt episoade disponibile încă.
-                            </div>
-                        </div>
-                    `;
-                }
-                
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
             } catch (error) {
-                console.error('Error loading episodes:', error);
-                document.getElementById('episodes-list').innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <div class="alert alert-danger">
-                            Eroare la încărcarea episoadelor. Încearcă mai târziu.
-                        </div>
-                    </div>
-                `;
+                console.error(`Error loading ${url}:`, error);
+                return null;
             }
         }
         
-        // Load on start
-        document.addEventListener('DOMContentLoaded', loadSeriesEpisodes);
+        // Încarcă datele pe homepage
+        async function loadHomepage() {
+            try {
+                const [series, episodes, genres] = await Promise.all([
+                    loadJSON('data/series.json'),
+                    loadJSON('data/episodes.json'),
+                    loadJSON('data/genres.json')
+                ]);
+
+                // Afișează anime populare
+                displayPopularAnime(series.slice(0, 8));
+                
+                // Afișează genuri
+                displayGenres(genres);
+                
+                // Afișează episoade recente
+                displayRecentEpisodes(episodes.slice(-6).reverse());
+
+            } catch (error) {
+                console.error('Eroare la încărcarea homepage:', error);
+            }
+        }
+
+        function displayPopularAnime(series) {
+            const container = document.getElementById('popular-anime');
+            if (!series || series.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">Nu sunt serii disponibile momentan.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = series.map(anime => `
+                <div class="col-6 col-md-4 col-lg-3 mb-4">
+                    <div class="anime-card" onclick="viewAnime('${anime.slug}')">
+                        <div class="position-relative">
+                            <img src="${anime.poster}" alt="${anime.title}" class="anime-card-img">
+                            <div class="anime-card-badge">⭐ ${anime.rating}</div>
+                        </div>
+                        <div class="anime-card-content">
+                            <h5>${anime.title}</h5>
+                            <div class="anime-card-meta">
+                                <span>${anime.year}</span>
+                                <span class="anime-card-episodes">${anime.episodes} EP</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayGenres(genres) {
+            const container = document.getElementById('genres-list');
+            if (!genres || genres.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">Nu sunt genuri disponibile.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = genres.map(genre => `
+                <div class="col-6 col-md-4 col-lg-3 mb-3">
+                    <a href="series.html?genre=${genre.id}" class="btn btn-outline-light w-100 py-3">
+                        <i class="fas ${getGenreIcon(genre.id)} me-2"></i>${genre.name}
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        function displayRecentEpisodes(episodes) {
+            const container = document.getElementById('recent-episodes');
+            if (!episodes || episodes.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">Nu sunt episoade recente.</p></div>';
+                return;
+            }
+            
+            container.innerHTML = episodes.map(ep => `
+                <div class="col-6 col-md-4 col-lg-2 mb-4">
+                    <div class="anime-card" onclick="watchEpisode('${ep.animeSlug}', ${ep.number})">
+                        <img src="https://cdn.myanimelist.net/images/anime/1244/138851.jpg" alt="${ep.title}" class="anime-card-img">
+                        <div class="anime-card-content">
+                            <small class="text-muted d-block mb-1">${ep.animeTitle}</small>
+                            <h6 class="mb-0">Ep ${ep.number}</h6>
+                            <p class="text-muted small mt-1">${ep.title.substring(0, 30)}...</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getGenreIcon(genreId) {
+            const icons = {
+                'action': 'fa-fist-raised',
+                'adventure': 'fa-mountain',
+                'comedy': 'fa-laugh',
+                'fantasy': 'fa-dragon',
+                'drama': 'fa-theater-masks',
+                'romance': 'fa-heart',
+                'sci-fi': 'fa-rocket',
+                'horror': 'fa-ghost'
+            };
+            return icons[genreId] || 'fa-film';
+        }
+
+        function viewAnime(slug) {
+            window.location.href = `anime.html?slug=${slug}`;
+        }
+
+        function watchEpisode(animeSlug, episodeNumber) {
+            window.location.href = `watch.html?anime=${animeSlug}&ep=${episodeNumber}`;
+        }
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(10, 10, 10, 0.98)';
+                navbar.style.boxShadow = '0 5px 20px rgba(0,0,0,0.3)';
+            } else {
+                navbar.style.background = 'rgba(10, 10, 10, 0.95)';
+                navbar.style.boxShadow = 'none';
+            }
+        });
+
+        // Încarcă la pornire
+        document.addEventListener('DOMContentLoaded', loadHomepage);
+        
+        console.log('AnimeUKE loaded successfully! 🎬');
     </script>
 </body>
 </html>
