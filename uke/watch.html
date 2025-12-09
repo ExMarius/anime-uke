@@ -3,53 +3,42 @@
 // =====================================
 
 document.addEventListener('keydown', (e) => {
-    console.log('Key pressed:', e.code); // Pentru debug
+    console.log('DEBUG Key:', e.code, e.key, e.keyCode);
     
-    switch(e.code) {
-        // PLAY/PAUSE
-        case 'MediaPlayPause':
-        case 'KeyK':  // Alternativă: tasta K
-            togglePlayPause();
-            break;
-            
-        // NEXT EPISOD (Next Track)
-        case 'MediaTrackNext':
-        case 'KeyL':  // Alternativă: tasta L
-            goToNextEpisode();
-            break;
-            
-        // PREVIOUS EPISOD (Previous Track)
-        case 'MediaTrackPrevious':
-        case 'KeyJ':  // Alternativă: tasta J
-            goToPreviousEpisode();
-            break;
-            
-        // VOLUME UP
-        case 'VolumeUp':
-            changeVolume(0.1); // +10%
-            break;
-            
-        // VOLUME DOWN
-        case 'VolumeDown':
-            changeVolume(-0.1); // -10%
-            break;
-            
-        // FULLSCREEN (tasta F)
-        case 'KeyF':
-            toggleFullscreen();
-            break;
-            
-        // SALT ÎNAPOI 10 secunde (tasta ←)
-        case 'ArrowLeft':
-            if (e.shiftKey) seek(-60); // Shift+← = -60 sec
-            else seek(-10);             // ← = -10 sec
-            break;
-            
-        // SALT ÎNAINTE 10 secunde (tasta →)
-        case 'ArrowRight':
-            if (e.shiftKey) seek(60);  // Shift+→ = +60 sec
-            else seek(10);              // → = +10 sec
-            break;
+    // PLAY/PAUSE - Space, K, MediaPlayPause
+    if (e.code === 'Space' || e.code === 'KeyK' || e.code === 'MediaPlayPause' || e.keyCode === 179) {
+        e.preventDefault();
+        togglePlayPause();
+        return;
+    }
+    
+    // NEXT EPISODE - N, L, ArrowRight, MediaTrackNext
+    if (e.code === 'KeyN' || e.code === 'KeyL' || e.code === 'ArrowRight' || 
+        e.code === 'MediaTrackNext' || e.keyCode === 176) {
+        e.preventDefault();
+        goToNextEpisode();
+        return;
+    }
+    
+    // PREVIOUS EPISODE - P, J, ArrowLeft, MediaTrackPrevious  
+    if (e.code === 'KeyP' || e.code === 'KeyJ' || e.code === 'ArrowLeft' || 
+        e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
+        e.preventDefault();
+        goToPreviousEpisode();
+        return;
+    }
+    
+    // VOLUME UP/DOWN
+    if (e.code === 'ArrowUp' || e.code === 'VolumeUp') {
+        e.preventDefault();
+        changeVolume(0.1);
+        return;
+    }
+    
+    if (e.code === 'ArrowDown' || e.code === 'VolumeDown') {
+        e.preventDefault();
+        changeVolume(-0.1);
+        return;
     }
 });
 
