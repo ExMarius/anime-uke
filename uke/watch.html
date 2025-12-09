@@ -1,217 +1,766 @@
-// =====================================
-// CONTROLE BUTOANE MULTIMEDIA TASTATURĂ
-// =====================================
-
-document.addEventListener('keydown', (e) => {
-    console.log('DEBUG Key:', e.code, e.key, e.keyCode);
-    
-    // PLAY/PAUSE - Space, K, MediaPlayPause
-    if (e.code === 'Space' || e.code === 'KeyK' || e.code === 'MediaPlayPause' || e.keyCode === 179) {
-        e.preventDefault();
-        togglePlayPause();
-        return;
-    }
-    
-    // NEXT EPISODE - N, L, ArrowRight, MediaTrackNext
-    if (e.code === 'KeyN' || e.code === 'KeyL' || e.code === 'ArrowRight' || 
-        e.code === 'MediaTrackNext' || e.keyCode === 176) {
-        e.preventDefault();
-        goToNextEpisode();
-        return;
-    }
-    
-    // PREVIOUS EPISODE - P, J, ArrowLeft, MediaTrackPrevious  
-    if (e.code === 'KeyP' || e.code === 'KeyJ' || e.code === 'ArrowLeft' || 
-        e.code === 'MediaTrackPrevious' || e.keyCode === 177) {
-        e.preventDefault();
-        goToPreviousEpisode();
-        return;
-    }
-    
-    // VOLUME UP/DOWN
-    if (e.code === 'ArrowUp' || e.code === 'VolumeUp') {
-        e.preventDefault();
-        changeVolume(0.1);
-        return;
-    }
-    
-    if (e.code === 'ArrowDown' || e.code === 'VolumeDown') {
-        e.preventDefault();
-        changeVolume(-0.1);
-        return;
-    }
-});
-
-// =====================================
-// FUNCȚIILE DE CONTROL
-// =====================================
-
-// 1. PLAY/PAUSE
-function togglePlayPause() {
-    const iframe = document.getElementById('video-player');
-    try {
-        const player = iframe.contentWindow.player;
-        if (player) {
-            if (player.paused()) {
-                player.play();
-                showNotification('▶️ Play');
-            } else {
-                player.pause();
-                showNotification('⏸️ Pause');
-            }
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urmărește - AnimeUKE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #e63946;
+            --dark: #0a0a0a;
+            --dark-light: #1a1a1a;
+            --gray: #333333;
         }
-    } catch(e) {
-        // Fallback pentru CORS
-        showNotification('⏯️ Play/Pause (CORS limit)');
-    }
-}
-
-// 2. EPISOD ANTERIOR
-function goToPreviousEpisode() {
-    const prevEp = episodes.find(e => 
-        e.animeSlug === 'one-piece' && e.number === currentEpisode.number - 1
-    );
-    if (prevEp) {
-        showNotification('⏮️ Mergi la episodul anterior');
-        setTimeout(() => {
-            window.location.href = `/watch.html?anime=one-piece&ep=${prevEp.number}`;
-        }, 300);
-    } else {
-        showNotification('❌ Ești la primul episod');
-    }
-}
-
-// 3. SCHIMBARE VOLUM
-function changeVolume(delta) {
-    const iframe = document.getElementById('video-player');
-    try {
-        const player = iframe.contentWindow.player;
-        if (player) {
-            const currentVol = player.volume();
-            const newVol = Math.max(0, Math.min(1, currentVol + delta));
-            player.volume(newVol);
-            showNotification(`🔊 Volum: ${Math.round(newVol * 100)}%`);
+        
+        body {
+            background: var(--dark);
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow-x: hidden;
         }
-    } catch(e) {
-        showNotification(`🔊 ${delta > 0 ? 'Volum +' : 'Volum -'}`);
-    }
-}
-
-// 4. SALT ÎN TIMP
-function seek(seconds) {
-    const iframe = document.getElementById('video-player');
-    try {
-        const player = iframe.contentWindow.player;
-        if (player) {
-            const currentTime = player.currentTime();
-            player.currentTime(currentTime + seconds);
-            showNotification(`${seconds > 0 ? '⏩' : '⏪'} ${Math.abs(seconds)} sec`);
+        
+        /* NAVBAR */
+        .navbar {
+            background: var(--dark-light) !important;
+            border-bottom: 1px solid var(--gray);
         }
-    } catch(e) {
-        showNotification(`${seconds > 0 ? 'Înainte' : 'Înapoi'} ${Math.abs(seconds)} sec`);
-    }
-}
-
-// 5. FULLSCREEN
-function toggleFullscreen() {
-    const iframe = document.getElementById('video-player');
-    if (document.fullscreenElement) {
-        document.exitFullscreen();
-        showNotification('⏏️ Ieși din fullscreen');
-    } else {
-        iframe.requestFullscreen().catch(console.error);
-        showNotification('🔲 Fullscreen');
-    }
-}
-
-// 6. NOTIFICARE PE ECRAN (temporară)
-function showNotification(message) {
-    // Elimină notificarea veche dacă există
-    const oldNotif = document.getElementById('keyboard-notification');
-    if (oldNotif) oldNotif.remove();
-    
-    // Creează notificare nouă
-    const notification = document.createElement('div');
-    notification.id = 'keyboard-notification';
-    notification.style.cssText = `
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: rgba(230, 57, 70, 0.9);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-weight: bold;
-        z-index: 10000;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        animation: fadeInOut 2s ease;
-    `;
-    notification.textContent = message;
-    
-    // Adaugă stil pentru animație
-    const style = document.createElement('style');
-    style.textContent = `
+        
+        .navbar-brand {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary) !important;
+        }
+        
+        .navbar-brand span {
+            color: white;
+        }
+        
+        /* PLAYER CONTAINER */
+        .player-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            margin-bottom: 25px;
+        }
+        
+        /* EPISODE LIST */
+        .episode-list {
+            max-height: 70vh;
+            overflow-y: auto;
+            background: var(--dark-light);
+            border-radius: 8px;
+        }
+        
+        .episode-item {
+            padding: 15px;
+            border-bottom: 1px solid var(--gray);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .episode-item:hover {
+            background: rgba(230, 57, 70, 0.15);
+        }
+        
+        .episode-item.active {
+            background: rgba(230, 57, 70, 0.25);
+            border-left: 4px solid var(--primary);
+            font-weight: bold;
+        }
+        
+        /* CONTROLS */
+        .controls-container {
+            background: var(--dark-light);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        /* NOTIFICATION */
+        .keyboard-notification {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: rgba(230, 57, 70, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            animation: fadeInOut 2s ease;
+        }
+        
         @keyframes fadeInOut {
             0% { opacity: 0; transform: translateY(-20px); }
             10% { opacity: 1; transform: translateY(0); }
             90% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-20px); }
         }
-    `;
-    document.head.appendChild(style);
-    
-    document.body.appendChild(notification);
-    
-    // Elimină automat după 2 secunde
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 2000);
-}
-
-// =====================================
-// ADAUGĂ ACEST STIL ÎN <head>
-// =====================================
-const style = document.createElement('style');
-style.textContent = `
-    /* Stil pentru notificări */
-    #keyboard-notification {
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 14px;
-    }
-    
-    /* Indicator pentru controls activ */
-    .controls-active {
-        outline: 2px solid #e63946 !important;
-        outline-offset: 2px;
-    }
-`;
-document.head.appendChild(style);
-
-// Afișează ajutor la apăsarea tastei H
-document.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyH' && e.ctrlKey) {
-        alert(`🎮 CONTROLE TASTATURĂ ANIMEUKE:
         
-⌨️ BUTOANE MULTIMEDIA:
-• Play/Pause = PLAY/PAUSE
-• Next Track = Episod următor
-• Previous Track = Episod anterior
-• Volume Up/Down = Volum
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        /* AUTO-SKIP TOGGLE */
+        .auto-skip-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .auto-skip-toggle input[type="checkbox"] {
+            display: none;
+        }
+        
+        .auto-skip-toggle .toggle-slider {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            background: #444;
+            border-radius: 34px;
+            vertical-align: middle;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        
+        .auto-skip-toggle input:checked + .toggle-slider {
+            background: var(--primary);
+        }
+        
+        .auto-skip-toggle .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .auto-skip-toggle input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-play-circle"></i> Anime<span>UKE</span>
+            </a>
+            <a href="/" class="btn btn-outline-light">
+                <i class="fas fa-home me-2"></i>Acasă
+            </a>
+        </div>
+    </nav>
 
-⌨️ TASTE STANDARD:
-• K = Play/Pause
-• J = Episod anterior
-• L = Episod următor
-• ←/→ = Salt 10 secunde
-• Shift+←/→ = Salt 60 secunde
-• F = Fullscreen
-• M = Mute
-• 0-9 = Salt la procent (ex: 5 = 50%)
+    <!-- MAIN CONTENT -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- PLAYER -->
+            <div class="col-lg-8 mb-4">
+                <div class="player-container">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="video-player" 
+                                src="" 
+                                frameborder="0" 
+                                allowfullscreen 
+                                allow="autoplay; encrypted-media"
+                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
+                        </iframe>
+                    </div>
+                </div>
 
-• Ctrl+H = Acest ajutor`);
-    }
-});
+                <!-- EPISODE INFO -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 id="episode-title" class="mb-0">
+                        <i class="fas fa-play-circle text-danger me-2"></i>
+                        Se încarcă...
+                    </h4>
+                    
+                    <div class="auto-skip-toggle">
+                        <label class="d-flex align-items-center">
+                            <span class="me-2">Auto Skip</span>
+                            <input type="checkbox" id="autoSkip" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <p id="episode-description" class="text-muted"></p>
 
-console.log('🎮 Controale tastatură activate!');
+                <!-- CONTROLS -->
+                <div class="controls-container">
+                    <div class="row text-center">
+                        <div class="col">
+                            <button class="control-btn" onclick="goToPreviousEpisode()" title="Episod Anterior (←)">
+                                <i class="fas fa-step-backward"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Anterior (←)</p>
+                        </div>
+                        
+                        <div class="col">
+                            <button class="control-btn" onclick="togglePlayPause()" title="Play/Pause (Space/K)">
+                                <i class="fas fa-play" id="play-pause-icon"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Play/Pause (Space/K)</p>
+                        </div>
+                        
+                        <div class="col">
+                            <button class="control-btn" onclick="goToNextEpisode()" title="Episod Următor (→)">
+                                <i class="fas fa-step-forward"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Următor (→)</p>
+                        </div>
+                        
+                        <div class="col">
+                            <button class="control-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Fullscreen (F)</p>
+                        </div>
+                        
+                        <div class="col">
+                            <button class="control-btn" onclick="skipForward()" title="Salt 10s (→)">
+                                <i class="fas fa-forward"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Salt +10s (→)</p>
+                        </div>
+                        
+                        <div class="col">
+                            <button class="control-btn" onclick="skipBackward()" title="Salt -10s (←)">
+                                <i class="fas fa-backward"></i>
+                            </button>
+                            <p class="mt-2 mb-0 small">Salt -10s (←)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NAVIGATION BUTTONS -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button id="prev-ep-btn" class="btn btn-outline-light btn-lg px-4">
+                        <i class="fas fa-chevron-left me-2"></i>Episod Anterior
+                    </button>
+                    
+                    <button id="next-ep-btn" class="btn btn-outline-light btn-lg px-4">
+                        Episod Următor<i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- EPISODE LIST -->
+            <div class="col-lg-4">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            <span id="series-title">Episoade</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="episode-list" id="episode-list">
+                            <div class="p-4 text-center">
+                                <div class="spinner-border text-danger"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- KEYBOARD SHORTCUTS -->
+                <div class="card bg-dark border-secondary mt-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-keyboard me-2"></i>
+                            Controale Tastatură
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row small">
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">Space/K</span> Play/Pause
+                            </div>
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">←</span> Episod Anterior
+                            </div>
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">→</span> Episod Următor
+                            </div>
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">F</span> Fullscreen
+                            </div>
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">M</span> Mute
+                            </div>
+                            <div class="col-6 mb-2">
+                                <span class="badge bg-secondary me-2">0-9</span> Salt la %
+                            </div>
+                            <div class="col-12 mt-2 text-muted">
+                                <small>Butoanele multimedia de pe tastatură funcționează!</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================
+        // VARIABILE GLOBALE
+        // ============================
+        const urlParams = new URLSearchParams(window.location.search);
+        const animeSlug = urlParams.get('anime') || 'one-piece';
+        const currentEpNum = parseInt(urlParams.get('ep')) || 1;
+        
+        let episodes = [];
+        let currentEpisode = null;
+        let allEpisodes = [];
+        let autoSkipEnabled = true;
+        let isPlaying = false;
+
+        // ============================
+        // FUNCȚII PRINCIPALE
+        // ============================
+        
+        // Încarcă episoadele
+        async function loadEpisodes() {
+            try {
+                const res = await fetch('data/episodes.json');
+                episodes = await res.json();
+                
+                // Filtrează episoadele pentru anime-ul curent
+                allEpisodes = episodes
+                    .filter(e => e.animeSlug === animeSlug)
+                    .sort((a, b) => a.number - b.number);
+                
+                currentEpisode = allEpisodes.find(e => e.number === currentEpNum);
+                
+                if (!currentEpisode) {
+                    showError('Episodul nu a fost găsit!');
+                    return;
+                }
+                
+                loadPlayer();
+                loadEpisodeList();
+                setupNavigation();
+                updateSeriesTitle();
+                
+            } catch (error) {
+                console.error('Error loading episodes:', error);
+                showError('Eroare la încărcarea episoadelor.');
+            }
+        }
+        
+        // Încarcă player-ul
+        function loadPlayer() {
+            document.getElementById('episode-title').textContent = 
+                `Episod ${currentEpisode.number}: ${currentEpisode.title}`;
+            
+            document.getElementById('episode-description').textContent = 
+                currentEpisode.description || 'Fără descriere.';
+            
+            const iframe = document.getElementById('video-player');
+            iframe.src = currentEpisode.sources[0];
+            
+            // Setează auto-skip din localStorage
+            const savedAutoSkip = localStorage.getItem('animeuke_autoskip');
+            if (savedAutoSkip !== null) {
+                autoSkipEnabled = savedAutoSkip === 'true';
+                document.getElementById('autoSkip').checked = autoSkipEnabled;
+            }
+            
+            // Monitorizează sfârșitul episodului pentru auto-skip
+            setupAutoSkipMonitor();
+        }
+        
+        // Încarcă lista de episoade
+        function loadEpisodeList() {
+            const container = document.getElementById('episode-list');
+            container.innerHTML = '';
+            
+            allEpisodes.forEach(ep => {
+                const div = document.createElement('div');
+                div.className = `episode-item ${ep.number === currentEpNum ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Episod ${ep.number}</strong><br>
+                            <small class="text-muted">${ep.title || 'Fără titlu'}</small>
+                        </div>
+                        ${ep.number === currentEpNum ? '<i class="fas fa-play-circle text-danger"></i>' : ''}
+                    </div>
+                `;
+                div.onclick = () => {
+                    window.location.href = `watch.html?anime=${animeSlug}&ep=${ep.number}`;
+                };
+                container.appendChild(div);
+            });
+        }
+        
+        // Setează navigația
+        function setupNavigation() {
+            const currentIndex = allEpisodes.findIndex(e => e.number === currentEpNum);
+            
+            const prevBtn = document.getElementById('prev-ep-btn');
+            const nextBtn = document.getElementById('next-ep-btn');
+            
+            // Butonul "Anterior"
+            if (currentIndex <= 0) {
+                prevBtn.disabled = true;
+                prevBtn.classList.add('disabled');
+                prevBtn.innerHTML = '<i class="fas fa-chevron-left me-2"></i>Primul episod';
+            } else {
+                prevBtn.onclick = () => {
+                    window.location.href = `watch.html?anime=${animeSlug}&ep=${allEpisodes[currentIndex - 1].number}`;
+                };
+            }
+            
+            // Butonul "Următor"
+            if (currentIndex >= allEpisodes.length - 1) {
+                nextBtn.disabled = true;
+                nextBtn.classList.add('disabled');
+                nextBtn.innerHTML = 'Ultimul episod<i class="fas fa-chevron-right ms-2"></i>';
+            } else {
+                nextBtn.onclick = () => goToNextEpisode();
+            }
+        }
+        
+        // Actualizează titlul seriei
+        function updateSeriesTitle() {
+            const seriesTitle = document.getElementById('series-title');
+            if (currentEpisode && currentEpisode.animeTitle) {
+                seriesTitle.textContent = `Episoade ${currentEpisode.animeTitle}`;
+            }
+        }
+        
+        // ============================
+        // FUNCȚII AUTO-SKIP
+        // ============================
+        
+        function setupAutoSkipMonitor() {
+            const iframe = document.getElementById('video-player');
+            
+            // Verifică periodic dacă videoclipul s-a terminat
+            const checkInterval = setInterval(() => {
+                if (!autoSkipEnabled) return;
+                
+                try {
+                    // Încearcă să detectezi sfârșitul prin diverse metode
+                    detectVideoEnd(iframe);
+                } catch (e) {
+                    // Ignoră erorile CORS
+                }
+            }, 3000); // Verifică la fiecare 3 secunde
+            
+            // Ascultă mesaje de la iframe (unele players trimit mesaje când se termină)
+            window.addEventListener('message', (event) => {
+                if (autoSkipEnabled && (event.data === 'video-ended' || event.data?.type === 'ended')) {
+                    goToNextEpisode();
+                }
+            });
+        }
+        
+        function detectVideoEnd(iframe) {
+            // Metoda 1: Încearcă să accesezi API-ul player-ului
+            try {
+                const player = iframe.contentWindow?.player;
+                if (player) {
+                    const duration = player.duration();
+                    const current = player.currentTime();
+                    if (duration && current && (duration - current) < 10) { // Ultimele 10 secunde
+                        goToNextEpisode();
+                    }
+                }
+            } catch (e) {}
+            
+            // Metoda 2: Verifică URL-ul (unele players adaugă parametri când se termină)
+            const currentSrc = iframe.src;
+            if (currentSrc.includes('ended=1') || currentSrc.includes('finish=1')) {
+                goToNextEpisode();
+            }
+        }
+        
+        // ============================
+        // FUNCȚII NAVIGAȚIE
+        // ============================
+        
+        function goToNextEpisode() {
+            const nextEp = episodes.find(e => 
+                e.animeSlug === animeSlug && e.number === currentEpisode.number + 1
+            );
+            
+            if (nextEp) {
+                showNotification('⏭️ Mergi la episodul următor...');
+                setTimeout(() => {
+                    window.location.href = `watch.html?anime=${animeSlug}&ep=${nextEp.number}`;
+                }, 500);
+            } else {
+                showNotification('🎉 Ai terminat toate episoadele disponibile!');
+            }
+        }
+        
+        function goToPreviousEpisode() {
+            const prevEp = episodes.find(e => 
+                e.animeSlug === animeSlug && e.number === currentEpisode.number - 1
+            );
+            
+            if (prevEp) {
+                showNotification('⏮️ Mergi la episodul anterior...');
+                setTimeout(() => {
+                    window.location.href = `watch.html?anime=${animeSlug}&ep=${prevEp.number}`;
+                }, 500);
+            } else {
+                showNotification('❌ Ești la primul episod');
+            }
+        }
+        
+        // ============================
+        // FUNCȚII CONTROL PLAYER
+        // ============================
+        
+        function togglePlayPause() {
+            const iframe = document.getElementById('video-player');
+            const icon = document.getElementById('play-pause-icon');
+            
+            try {
+                const player = iframe.contentWindow?.player;
+                if (player) {
+                    if (player.paused()) {
+                        player.play();
+                        icon.className = 'fas fa-pause';
+                        isPlaying = true;
+                        showNotification('▶️ Play');
+                    } else {
+                        player.pause();
+                        icon.className = 'fas fa-play';
+                        isPlaying = false;
+                        showNotification('⏸️ Pause');
+                    }
+                }
+            } catch (e) {
+                // Fallback pentru CORS
+                icon.className = isPlaying ? 'fas fa-play' : 'fas fa-pause';
+                isPlaying = !isPlaying;
+                showNotification(isPlaying ? '▶️ Play' : '⏸️ Pause');
+            }
+        }
+        
+        function skipForward(seconds = 10) {
+            const iframe = document.getElementById('video-player');
+            try {
+                const player = iframe.contentWindow?.player;
+                if (player) {
+                    player.currentTime(player.currentTime() + seconds);
+                }
+            } catch (e) {}
+            showNotification(`⏩ Salt +${seconds}s`);
+        }
+        
+        function skipBackward(seconds = 10) {
+            const iframe = document.getElementById('video-player');
+            try {
+                const player = iframe.contentWindow?.player;
+                if (player) {
+                    player.currentTime(player.currentTime() - seconds);
+                }
+            } catch (e) {}
+            showNotification(`⏪ Salt -${seconds}s`);
+        }
+        
+        function toggleFullscreen() {
+            const iframe = document.getElementById('video-player');
+            if (!document.fullscreenElement) {
+                iframe.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+                showNotification('🔲 Fullscreen');
+            } else {
+                document.exitFullscreen();
+                showNotification('⏏️ Ieși din Fullscreen');
+            }
+        }
+        
+        // ============================
+        // FUNCȚII UTILITARE
+        // ============================
+        
+        function showNotification(message) {
+            // Elimină notificarea veche
+            const oldNotif = document.getElementById('keyboard-notification');
+            if (oldNotif) oldNotif.remove();
+            
+            // Creează notificare nouă
+            const notification = document.createElement('div');
+            notification.id = 'keyboard-notification';
+            notification.className = 'keyboard-notification';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Elimină automat după 2 secunde
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 2000);
+        }
+        
+        function showError(message) {
+            document.body.innerHTML = `
+                <div class="container text-center py-5">
+                    <h1 class="text-danger">${message}</h1>
+                    <a href="/" class="btn btn-danger mt-3">
+                        <i class="fas fa-home me-2"></i>Înapoi acasă
+                    </a>
+                </div>
+            `;
+        }
+        
+        // ============================
+        // CONTROALE TASTATURĂ
+        // ============================
+        
+        document.addEventListener('keydown', (e) => {
+            // Previne acțiunile implicite pentru tastele noastre
+            if ([
+                'Space', 'KeyK', 'KeyL', 'KeyJ', 
+                'ArrowLeft', 'ArrowRight', 'KeyF',
+                'KeyM', 'Digit0', 'Digit1', 'Digit2',
+                'Digit3', 'Digit4', 'Digit5', 'Digit6',
+                'Digit7', 'Digit8', 'Digit9'
+            ].includes(e.code)) {
+                e.preventDefault();
+            }
+            
+            // Mapare taste
+            switch(e.code) {
+                // PLAY/PAUSE
+                case 'Space':
+                case 'KeyK':
+                case 'MediaPlayPause':
+                    togglePlayPause();
+                    break;
+                
+                // NEXT EPISODE
+                case 'ArrowRight':
+                case 'KeyL':
+                case 'MediaTrackNext':
+                    if (e.shiftKey) skipForward(60);
+                    else goToNextEpisode();
+                    break;
+                
+                // PREVIOUS EPISODE
+                case 'ArrowLeft':
+                case 'KeyJ':
+                case 'MediaTrackPrevious':
+                    if (e.shiftKey) skipBackward(60);
+                    else goToPreviousEpisode();
+                    break;
+                
+                // SKIP FORWARD/BACKWARD
+                case 'Period': // . pentru înainte
+                    skipForward(10);
+                    break;
+                case 'Comma': // , pentru înapoi
+                    skipBackward(10);
+                    break;
+                
+                // FULLSCREEN
+                case 'KeyF':
+                    toggleFullscreen();
+                    break;
+                
+                // MUTE
+                case 'KeyM':
+                    showNotification('🔇 Mute (soon)');
+                    break;
+                
+                // JUMP TO PERCENTAGE (0-9)
+                case 'Digit0':
+                case 'Digit1':
+                case 'Digit2':
+                case 'Digit3':
+                case 'Digit4':
+                case 'Digit5':
+                case 'Digit6':
+                case 'Digit7':
+                case 'Digit8':
+                case 'Digit9':
+                    const percent = parseInt(e.key) * 10;
+                    showNotification(`⏭️ Salt la ${percent}% (soon)`);
+                    break;
+                
+                // VOLUME UP/DOWN (butoane multimedia)
+                case 'VolumeUp':
+                case 'ArrowUp':
+                    showNotification('🔊 Volum +');
+                    break;
+                
+                case 'VolumeDown':
+                case 'ArrowDown':
+                    showNotification('🔈 Volum -');
+                    break;
+            }
+            
+            // DEBUG: Afișează codul tastei în consolă
+            console.log('Key pressed:', e.code, e.key);
+        });
+        
+        // ============================
+        // EVENT LISTENERS
+        // ============================
+        
+        // Auto-skip toggle
+        document.getElementById('autoSkip').addEventListener('change', function() {
+            autoSkipEnabled = this.checked;
+            localStorage.setItem('animeuke_autoskip', autoSkipEnabled);
+            showNotification(autoSkipEnabled ? '✅ Auto Skip Activ' : '❌ Auto Skip Dezactivat');
+        });
+        
+        // ============================
+        // PORNIRE
+        // ============================
+        
+        // Pornim totul
+        loadEpisodes();
+        
+        // Informații de debug
+        console.log('🎮 AnimeUKE Player loaded with keyboard controls!');
+        console.log('Controls: Space/K=Play/Pause, ←/→=Navigation, F=Fullscreen');
+    </script>
+</body>
+</html>
