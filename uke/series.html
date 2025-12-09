@@ -3,37 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serii - AnimeUKE</title>
+    <title>Serii Anime - AnimeUKE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #e63946;
+            --dark: #0a0a0a;
+            --dark-light: #1a1a1a;
+            --text: #ffffff;
+            --text-muted: #adb5bd;
+        }
+        
         body {
-            background: #0a0a0a;
+            background: var(--dark);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .navbar {
+            background: rgba(10, 10, 10, 0.98) !important;
+        }
+        
+        .navbar-brand {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary) !important;
+        }
+        
+        .navbar-brand span {
             color: white;
         }
+        
         .series-card {
-            background: #1a1a1a;
+            background: var(--dark-light);
             border-radius: 10px;
             overflow: hidden;
-            transition: transform 0.3s;
+            transition: all 0.3s;
             cursor: pointer;
             height: 100%;
+            border: 1px solid transparent;
         }
+        
         .series-card:hover {
             transform: translateY(-5px);
-            border-color: #e63946;
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(230, 57, 70, 0.15);
         }
+        
         .series-poster {
             width: 100%;
             height: 250px;
             object-fit: cover;
         }
+        
+        .series-badge {
+            background: var(--primary);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .search-box {
+            background: var(--dark-light);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .genre-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .genre-btn {
+            background: #333;
+            color: var(--text);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .genre-btn:hover, .genre-btn.active {
+            background: var(--primary);
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark py-3">
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-play-circle me-2"></i>AnimeUKE
+                <i class="fas fa-play-circle"></i> Anime<span>UKE</span>
             </a>
             <a href="/" class="btn btn-outline-light">
                 <i class="fas fa-arrow-left me-2"></i>Acasă
@@ -41,65 +110,201 @@
         </div>
     </nav>
     
+    <!-- SEARCH & FILTER -->
     <div class="container mt-4">
-        <h1 class="mb-4">Toate Seriile Anime</h1>
+        <div class="search-box">
+            <h4 class="mb-3">
+                <i class="fas fa-search me-2 text-primary"></i>
+                Caută Serii Anime
+            </h4>
+            <input type="text" 
+                   class="form-control bg-dark text-white border-secondary" 
+                   id="search-input" 
+                   placeholder="Scrie numele unui anime...">
+            
+            <div class="genre-filter" id="genre-filter">
+                <!-- Genurile se vor încărca din JS -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- SERIES LIST -->
+    <div class="container mt-4">
+        <h1 class="mb-4">
+            <i class="fas fa-film me-2 text-primary"></i>
+            Toate Seriile Anime
+        </h1>
         
         <div class="row g-3" id="series-container">
-            <!-- Se încarcă din JS -->
             <div class="col-12 text-center py-5">
-                <div class="spinner-border text-danger" role="status">
+                <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script>
+        let allSeries = [];
+        let currentGenre = 'all';
+        
         async function loadSeries() {
             try {
-                const response = await fetch('/series.json');
-                const series = await response.json();
+                const response = await fetch('data/series.json');
+                allSeries = await response.json();
                 
-                const container = document.getElementById('series-container');
-                container.innerHTML = '';
+                // Încarcă genurile pentru filtrare
+                loadGenres();
                 
-                series.forEach(anime => {
-                    const col = document.createElement('div');
-                    col.className = 'col-md-4 col-lg-3';
-                    col.innerHTML = `
-                        <div class="series-card border border-secondary" onclick="viewAnime('${anime.slug}')">
-                            <img src="${anime.poster}" class="series-poster" alt="${anime.title}">
-                            <div class="p-3">
-                                <h5 class="fw-bold">${anime.title}</h5>
-                                <p class="text-muted mb-2">${anime.year} • ${anime.status === 'ongoing' ? 'În curs' : 'Finalizat'}</p>
-                                <div class="mb-2">
-                                    ${anime.genres.map(g => `<span class="badge bg-secondary me-1">${g}</span>`).join('')}
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <small>${anime.episodes} episoade</small>
-                                    <small><i class="fas fa-star text-warning"></i> ${anime.rating}</small>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(col);
-                });
+                // Afișează toate seriile
+                displaySeries(allSeries);
                 
             } catch (error) {
                 console.error('Error loading series:', error);
                 document.getElementById('series-container').innerHTML = `
                     <div class="col-12 text-center py-5">
                         <div class="alert alert-danger">
-                            Eroare la încărcarea seriilor.
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Eroare la încărcarea seriilor. Încearcă mai târziu.
                         </div>
                     </div>
                 `;
             }
         }
         
-        function viewAnime(slug) {
-            window.location.href = `/watch.html?anime=${slug}&ep=1`;
+        async function loadGenres() {
+            try {
+                const response = await fetch('data/genres.json');
+                const genres = await response.json();
+                
+                const container = document.getElementById('genre-filter');
+                container.innerHTML = '';
+                
+                // Buton "Toate"
+                const allBtn = document.createElement('button');
+                allBtn.className = 'genre-btn active';
+                allBtn.textContent = 'Toate';
+                allBtn.onclick = () => filterByGenre('all');
+                container.appendChild(allBtn);
+                
+                // Butoane pentru fiecare gen
+                genres.forEach(genre => {
+                    const btn = document.createElement('button');
+                    btn.className = 'genre-btn';
+                    btn.textContent = genre.name;
+                    btn.onclick = () => filterByGenre(genre.id);
+                    container.appendChild(btn);
+                });
+                
+            } catch (error) {
+                console.error('Error loading genres:', error);
+            }
         }
+        
+        function displaySeries(series) {
+            const container = document.getElementById('series-container');
+            
+            if (series.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Nu s-au găsit serii care să corespundă criteriilor.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            series.forEach(anime => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3';
+                col.innerHTML = `
+                    <div class="series-card" onclick="viewAnime('${anime.slug}')">
+                        <img src="${anime.poster}" class="series-poster" alt="${anime.title}">
+                        <div class="p-3">
+                            <h5 class="fw-bold mb-2">${anime.title}</h5>
+                            <p class="text-muted mb-2 small">
+                                ${anime.year} • 
+                                ${anime.status === 'ongoing' ? 'În curs' : 'Finalizat'}
+                            </p>
+                            <div class="mb-2">
+                                ${anime.genres.slice(0, 2).map(g => 
+                                    `<span class="badge bg-secondary me-1 small">${g}</span>`
+                                ).join('')}
+                                ${anime.genres.length > 2 ? '...' : ''}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small>${anime.episodes} episoade</small>
+                                <span class="series-badge">
+                                    <i class="fas fa-star me-1"></i>${anime.rating}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        }
+        
+        function filterByGenre(genreId) {
+            currentGenre = genreId;
+            
+            // Update active button
+            document.querySelectorAll('.genre-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter series
+            let filteredSeries = allSeries;
+            if (genreId !== 'all') {
+                filteredSeries = allSeries.filter(anime => 
+                    anime.genres.some(g => g.toLowerCase().includes(genreId))
+                );
+            }
+            
+            // Apply search filter if any
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (searchTerm) {
+                filteredSeries = filteredSeries.filter(anime => 
+                    anime.title.toLowerCase().includes(searchTerm) ||
+                    anime.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            displaySeries(filteredSeries);
+        }
+        
+        function viewAnime(slug) {
+            window.location.href = `anime.html?slug=${slug}`;
+        }
+        
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            let filteredSeries = allSeries;
+            
+            // Apply genre filter first
+            if (currentGenre !== 'all') {
+                filteredSeries = filteredSeries.filter(anime => 
+                    anime.genres.some(g => g.toLowerCase().includes(currentGenre))
+                );
+            }
+            
+            // Then apply search filter
+            if (searchTerm) {
+                filteredSeries = filteredSeries.filter(anime => 
+                    anime.title.toLowerCase().includes(searchTerm) ||
+                    anime.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            displaySeries(filteredSeries);
+        });
         
         // Load on start
         document.addEventListener('DOMContentLoaded', loadSeries);
