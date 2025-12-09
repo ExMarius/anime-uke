@@ -1,0 +1,10 @@
+[
+  {"id": "action", "name": "Acțiune"},
+  {"id": "adventure", "name": "Aventură"},
+  {"id": "comedy", "name": "Comedie"},
+  {"id": "fantasy", "name": "Fantezie"},
+  {"id": "drama", "name": "Dramă"},
+  {"id": "romance", "name": "Romance"},
+  {"id": "sci-fi", "name": "Sci-Fi"},
+  {"id": "horror", "name": "Horror"}
+]
