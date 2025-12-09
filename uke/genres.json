@@ -1,7 +1,0 @@
-[
-  {"id": "action", "name": "Acțiune"},
-  {"id": "adventure", "name": "Aventură"},
-  {"id": "comedy", "name": "Comedie"},
-  {"id": "fantasy", "name": "Fantezie"},
-  {"id": "drama", "name": "Dramă"}
-]
