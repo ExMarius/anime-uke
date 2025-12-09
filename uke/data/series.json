@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "one-piece",
+    "title": "One Piece",
+    "year": 1999,
+    "status": "ongoing",
+    "genres": ["Acțiune", "Aventură", "Comedie", "Fantezie"],
+    "episodes": 1092,
+    "rating": 8.8,
+    "poster": "https://cdn.myanimelist.net/images/anime/1244/138851.jpg",
+    "description": "Luffy și echipajul său de pirați caută comoara legendara One Piece pentru a deveni Regele Piraților.",
+    "banner": "https://wallpapercave.com/wp/wp5063236.jpg"
+  },
+  {
+    "slug": "fairy-tail",
+    "title": "Fairy Tail",
+    "year": 2009,
+    "status": "completed",
+    "genres": ["Acțiune", "Aventură", "Fantezie", "Comedie"],
+    "episodes": 328,
+    "rating": 8.0,
+    "poster": "https://cdn.myanimelist.net/images/anime/5/18179.jpg",
+    "description": "O tânără vrăjitoare numită Lucy se alătură unei gildei de vrăjitori celebri și cunoscuți pentru acțiunile lor distructive.",
+    "banner": "https://wallpapercave.com/wp/wp1917154.jpg"
+  }
+]
