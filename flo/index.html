@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <title>Numără flotări</title>
+  <style>
+    body { text-align: center; background: #111; color: #fff; }
+    video, canvas { width: 480px; }
+    h1 { font-family: sans-serif; }
+  </style>
+</head>
+<body>
+
+<h1>Flotări: <span id="count">0</span></h1>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script src="script.js"></script>
+</body>
+</html>
