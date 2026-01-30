@@ -1,10 +1,11 @@
 const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const counterEl = document.getElementById("count");
+const counter = document.getElementById("count");
 
 let count = 0;
-let down = false;
+let state = "UP";
+let angleHistory = [];
+
+const MAX_HISTORY = 5;
 
 function angle(a, b, c) {
   const ab = { x: a.x - b.x, y: a.y - b.y };
@@ -12,46 +13,56 @@ function angle(a, b, c) {
   const dot = ab.x * cb.x + ab.y * cb.y;
   const magAB = Math.hypot(ab.x, ab.y);
   const magCB = Math.hypot(cb.x, cb.y);
-  return Math.acos(dot / (magAB * magCB)) * (180 / Math.PI);
+  return Math.acos(dot / (magAB * magCB)) * 180 / Math.PI;
 }
 
-const pose = new Pose({
-  locateFile: file =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-});
+function smooth(val) {
+  angleHistory.push(val);
+  if (angleHistory.length > MAX_HISTORY) angleHistory.shift();
+  return angleHistory.reduce((a,b)=>a+b,0) / angleHistory.length;
+}
 
-pose.setOptions({
-  modelComplexity: 0,
-  smoothLandmarks: true
-});
+async function setupCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+  return new Promise(res => video.onloadedmetadata = res);
+}
 
-pose.onResults(results => {
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+async function main() {
+  await setupCamera();
 
-  if (!results.poseLandmarks) return;
+  const detector = await poseDetection.createDetector(
+    poseDetection.SupportedModels.MoveNet,
+    {
+      modelType: poseDetection.movenet.modelType.THUNDER
+    }
+  );
 
-  const shoulder = results.poseLandmarks[12];
-  const elbow = results.poseLandmarks[14];
-  const wrist = results.poseLandmarks[16];
+  async function detect() {
+    const poses = await detector.estimatePoses(video);
+    if (poses.length) {
+      const kp = poses[0].keypoints;
 
-  const elbowAngle = angle(shoulder, elbow, wrist);
+      const rShoulder = kp.find(p=>p.name==="right_shoulder");
+      const rElbow    = kp.find(p=>p.name==="right_elbow");
+      const rWrist    = kp.find(p=>p.name==="right_wrist");
 
-  if (elbowAngle < 90) down = true;
-  if (elbowAngle > 160 && down) {
-    count++;
-    counterEl.textContent = count;
-    down = false;
+      if (rShoulder && rElbow && rWrist) {
+        let a = angle(rShoulder, rElbow, rWrist);
+        a = smooth(a);
+
+        if (a < 90 && state === "UP") state = "DOWN";
+        if (a > 165 && state === "DOWN") {
+          count++;
+          counter.textContent = count;
+          state = "UP";
+        }
+      }
+    }
+    requestAnimationFrame(detect);
   }
-});
 
-const camera = new Camera(video, {
-  onFrame: async () => {
-    await pose.send({ image: video });
-  },
-  width: 640,
-  height: 480
-});
+  detect();
+}
 
-camera.start();
+main();
