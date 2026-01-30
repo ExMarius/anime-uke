@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<title>Flotări AI</title>
+<title>Fitness AI</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
@@ -29,11 +29,20 @@ video {
   top: 20px;
   left: 20px;
   color: white;
-  font-size: 2rem;
   font-family: sans-serif;
-  background: rgba(0,0,0,0.5);
-  padding: 10px 20px;
-  border-radius: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 15px 20px;
+  border-radius: 12px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px;
+  width: 100%;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -41,7 +50,12 @@ video {
 <body>
 
 <video id="video" autoplay playsinline></video>
-<div id="ui">Flotări: <span id="count">0</span></div>
+
+<div id="ui">
+  <div>Exercițiu: <b id="exercise">Flotări</b></div>
+  <div>Repetări: <b id="count">0</b></div>
+  <button id="toggle">Schimbă exercițiul</button>
+</div>
 
 <script src="script.js"></script>
 </body>
