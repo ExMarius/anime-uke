@@ -3,9 +3,7 @@ const counter = document.getElementById("count");
 
 let count = 0;
 let state = "UP";
-let angleHistory = [];
-
-const MAX_HISTORY = 5;
+let lastRepTime = 0;
 
 function angle(a, b, c) {
   const ab = { x: a.x - b.x, y: a.y - b.y };
@@ -16,14 +14,14 @@ function angle(a, b, c) {
   return Math.acos(dot / (magAB * magCB)) * 180 / Math.PI;
 }
 
-function smooth(val) {
-  angleHistory.push(val);
-  if (angleHistory.length > MAX_HISTORY) angleHistory.shift();
-  return angleHistory.reduce((a,b)=>a+b,0) / angleHistory.length;
+function isBodyHorizontal(shoulder, hip) {
+  return Math.abs(shoulder.y - hip.y) < 40;
 }
 
 async function setupCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" }
+  });
   video.srcObject = stream;
   return new Promise(res => video.onloadedmetadata = res);
 }
@@ -33,32 +31,50 @@ async function main() {
 
   const detector = await poseDetection.createDetector(
     poseDetection.SupportedModels.MoveNet,
-    {
-      modelType: poseDetection.movenet.modelType.THUNDER
-    }
+    { modelType: poseDetection.movenet.modelType.THUNDER }
   );
 
   async function detect() {
     const poses = await detector.estimatePoses(video);
-    if (poses.length) {
-      const kp = poses[0].keypoints;
-
-      const rShoulder = kp.find(p=>p.name==="right_shoulder");
-      const rElbow    = kp.find(p=>p.name==="right_elbow");
-      const rWrist    = kp.find(p=>p.name==="right_wrist");
-
-      if (rShoulder && rElbow && rWrist) {
-        let a = angle(rShoulder, rElbow, rWrist);
-        a = smooth(a);
-
-        if (a < 90 && state === "UP") state = "DOWN";
-        if (a > 165 && state === "DOWN") {
-          count++;
-          counter.textContent = count;
-          state = "UP";
-        }
-      }
+    if (!poses.length) {
+      requestAnimationFrame(detect);
+      return;
     }
+
+    const kp = poses[0].keypoints;
+    const s = n => kp.find(p => p.name === n && p.score > 0.5);
+
+    const shoulder = s("right_shoulder");
+    const elbow = s("right_elbow");
+    const wrist = s("right_wrist");
+    const hip = s("right_hip");
+
+    if (!shoulder || !elbow || !wrist || !hip) {
+      requestAnimationFrame(detect);
+      return;
+    }
+
+    // ❗ validare poziție flotare
+    if (!isBodyHorizontal(shoulder, hip)) {
+      state = "UP";
+      requestAnimationFrame(detect);
+      return;
+    }
+
+    const a = angle(shoulder, elbow, wrist);
+    const now = Date.now();
+
+    if (a < 85 && state === "UP") {
+      state = "DOWN";
+    }
+
+    if (a > 165 && state === "DOWN" && now - lastRepTime > 600) {
+      count++;
+      counter.textContent = count;
+      state = "UP";
+      lastRepTime = now;
+    }
+
     requestAnimationFrame(detect);
   }
 
