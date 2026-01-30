@@ -1,10 +1,22 @@
 const video = document.getElementById("video");
-const counter = document.getElementById("count");
+const countEl = document.getElementById("count");
+const exerciseEl = document.getElementById("exercise");
+const toggleBtn = document.getElementById("toggle");
 
 let count = 0;
 let state = "UP";
+let exercise = "pushup"; // pushup | squat
 let lastRepTime = 0;
 
+const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+// praguri REALISTE
+const CONFIG = {
+  pushup: { DOWN: 100, UP: 155 },
+  squat: { DOWN: 110, UP: 165 }
+};
+
+// ───────── UTILS ─────────
 function angle(a, b, c) {
   const ab = { x: a.x - b.x, y: a.y - b.y };
   const cb = { x: c.x - b.x, y: c.y - b.y };
@@ -14,18 +26,31 @@ function angle(a, b, c) {
   return Math.acos(dot / (magAB * magCB)) * 180 / Math.PI;
 }
 
-function isBodyHorizontal(shoulder, hip) {
-  return Math.abs(shoulder.y - hip.y) < 40;
+function valid(p) {
+  return p && p.score > 0.5;
 }
 
+function isPlank(shoulder, hip, ankle) {
+  return (
+    Math.abs(shoulder.y - hip.y) < 50 &&
+    Math.abs(hip.y - ankle.y) < 50
+  );
+}
+
+// ───────── CAMERA ─────────
 async function setupCamera() {
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "user" }
+    video: {
+      facingMode: isMobile ? "environment" : "user",
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
   });
   video.srcObject = stream;
-  return new Promise(res => video.onloadedmetadata = res);
+  return new Promise(r => video.onloadedmetadata = r);
 }
 
+// ───────── MAIN ─────────
 async function main() {
   await setupCamera();
 
@@ -36,43 +61,65 @@ async function main() {
 
   async function detect() {
     const poses = await detector.estimatePoses(video);
-    if (!poses.length) {
-      requestAnimationFrame(detect);
-      return;
-    }
+    if (!poses.length) return requestAnimationFrame(detect);
 
     const kp = poses[0].keypoints;
-    const s = n => kp.find(p => p.name === n && p.score > 0.5);
+    const g = name => kp.find(p => p.name === name && valid(p));
 
-    const shoulder = s("right_shoulder");
-    const elbow = s("right_elbow");
-    const wrist = s("right_wrist");
-    const hip = s("right_hip");
+    const rs = g("right_shoulder");
+    const re = g("right_elbow");
+    const rw = g("right_wrist");
+    const rh = g("right_hip");
+    const rk = g("right_knee");
+    const ra = g("right_ankle");
 
-    if (!shoulder || !elbow || !wrist || !hip) {
-      requestAnimationFrame(detect);
-      return;
-    }
-
-    // ❗ validare poziție flotare
-    if (!isBodyHorizontal(shoulder, hip)) {
-      state = "UP";
-      requestAnimationFrame(detect);
-      return;
-    }
-
-    const a = angle(shoulder, elbow, wrist);
     const now = Date.now();
 
-    if (a < 85 && state === "UP") {
-      state = "DOWN";
+    // ───── FLO T Ă R I ─────
+    if (exercise === "pushup" && rs && re && rw && rh && ra) {
+
+      if (!isPlank(rs, rh, ra)) {
+        state = "UP";
+        return requestAnimationFrame(detect);
+      }
+
+      const elbowA = angle(rs, re, rw);
+
+      if (elbowA < CONFIG.pushup.DOWN && state === "UP") {
+        state = "DOWN";
+      }
+
+      if (
+        elbowA > CONFIG.pushup.UP &&
+        state === "DOWN" &&
+        now - lastRepTime > 600
+      ) {
+        count++;
+        countEl.textContent = count;
+        state = "UP";
+        lastRepTime = now;
+      }
     }
 
-    if (a > 165 && state === "DOWN" && now - lastRepTime > 600) {
-      count++;
-      counter.textContent = count;
-      state = "UP";
-      lastRepTime = now;
+    // ───── G E N U F L E X I U N I ─────
+    if (exercise === "squat" && rh && rk && ra) {
+
+      const kneeA = angle(rh, rk, ra);
+
+      if (kneeA < CONFIG.squat.DOWN && state === "UP") {
+        state = "DOWN";
+      }
+
+      if (
+        kneeA > CONFIG.squat.UP &&
+        state === "DOWN" &&
+        now - lastRepTime > 600
+      ) {
+        count++;
+        countEl.textContent = count;
+        state = "UP";
+        lastRepTime = now;
+      }
     }
 
     requestAnimationFrame(detect);
@@ -80,5 +127,13 @@ async function main() {
 
   detect();
 }
+
+toggleBtn.onclick = () => {
+  exercise = exercise === "pushup" ? "squat" : "pushup";
+  exerciseEl.textContent = exercise === "pushup" ? "Flotări" : "Genuflexiuni";
+  count = 0;
+  countEl.textContent = 0;
+  state = "UP";
+};
 
 main();
