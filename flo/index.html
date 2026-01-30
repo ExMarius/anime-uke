@@ -1,15 +1,47 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8">
-  <title>Flotări precise</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+<meta charset="UTF-8">
+<title>Flotări AI</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: black;
+}
+
+video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+
+#ui {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-size: 2rem;
+  font-family: sans-serif;
+  background: rgba(0,0,0,0.5);
+  padding: 10px 20px;
+  border-radius: 10px;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Flotări: <span id="count">0</span></h1>
 <video id="video" autoplay playsinline></video>
+<div id="ui">Flotări: <span id="count">0</span></div>
 
 <script src="script.js"></script>
 </body>
