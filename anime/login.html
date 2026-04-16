@@ -9,21 +9,16 @@
 <body>
     <div class="container">
         <header>
-            <div class="logo">
-                <h1>⚡ Anime-Uke</h1>
-            </div>
-            <nav>
-                <a href="/">Acasă</a>
-            </nav>
+            <div class="logo"><h1>⚡ Anime-Uke</h1></div>
+            <nav><a href="/">Acasă</a></nav>
+            <div id="authButtons"></div>
         </header>
-
         <main class="auth-main">
             <div class="auth-container">
                 <div class="auth-tabs">
                     <button id="loginTab" class="active">Logare</button>
                     <button id="registerTab">Înregistrare</button>
                 </div>
-
                 <div id="loginForm" class="auth-form active">
                     <h3>Bun venit înapoi!</h3>
                     <input type="email" id="loginEmail" placeholder="Email" required>
@@ -31,7 +26,6 @@
                     <button id="doLogin" class="btn-submit">Loghează-te</button>
                     <div id="loginError" class="error-message"></div>
                 </div>
-
                 <div id="registerForm" class="auth-form">
                     <h3>Creează cont nou</h3>
                     <input type="text" id="regUsername" placeholder="Username" required>
@@ -43,16 +37,55 @@
             </div>
         </main>
     </div>
-
     <script>
-        // Tab switching
+        // --- Înregistrare ---
+        document.getElementById('doRegister').addEventListener('click', async () => {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const errorDiv = document.getElementById('registerError');
+            
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('Cont creat! Te poți loga.');
+                document.getElementById('loginTab').click();
+            } else {
+                errorDiv.innerText = data.error || 'Eroare la înregistrare';
+            }
+        });
+
+        // --- Autentificare ---
+        document.getElementById('doLogin').addEventListener('click', async () => {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                localStorage.setItem('sessionId', data.sessionId);
+                window.location.href = '/';
+            } else {
+                errorDiv.innerText = data.error || 'Email sau parolă greșită';
+            }
+        });
+
+        // --- Tabs (păstrează funcționalitatea) ---
         document.getElementById('loginTab').addEventListener('click', () => {
             document.getElementById('loginTab').classList.add('active');
             document.getElementById('registerTab').classList.remove('active');
             document.getElementById('loginForm').classList.add('active');
             document.getElementById('registerForm').classList.remove('active');
         });
-        
         document.getElementById('registerTab').addEventListener('click', () => {
             document.getElementById('registerTab').classList.add('active');
             document.getElementById('loginTab').classList.remove('active');
@@ -60,61 +93,17 @@
             document.getElementById('loginForm').classList.remove('active');
         });
 
-        // Register
-        document.getElementById('doRegister').addEventListener('click', async () => {
-            const username = document.getElementById('regUsername').value;
-            const email = document.getElementById('regEmail').value;
-            const password = document.getElementById('regPassword').value;
-            
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                alert('Cont creat cu succes! Te poți loga.');
-                document.getElementById('loginTab').click();
-            } else {
-                document.getElementById('registerError').innerText = data.error;
-            }
-        });
-
-        // Login
-        document.getElementById('doLogin').addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                localStorage.setItem('sessionId', data.sessionId);
-                window.location.href = '/';
-            } else {
-                document.getElementById('loginError').innerText = data.error;
-            }
-        });
-
-        // Dacă ești deja logat, mergi acasă
-        async function checkAuth() {
+        // --- Verifică dacă e deja logat ---
+        (async () => {
             const sessionId = localStorage.getItem('sessionId');
             if (sessionId) {
                 const response = await fetch('/api/verify', {
                     headers: { 'Authorization': `Bearer ${sessionId}` }
                 });
                 const data = await response.json();
-                if (data.authenticated) {
-                    window.location.href = '/';
-                }
+                if (data.authenticated) window.location.href = '/';
             }
-        }
-        checkAuth();
+        })();
     </script>
 </body>
 </html>
