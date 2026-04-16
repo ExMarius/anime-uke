@@ -1,0 +1,367 @@
+/* Anime Uke - Main Styles */
+:root {
+    --primary: #dc3545;
+    --primary-dark: #a71d2a;
+    --primary-light: #ff6b6b;
+    --dark: #0a0a0a;
+    --darker: #050505;
+    --gray: #1a1a1a;
+    --gray-light: #2c2c2c;
+    --text: #e0e0e0;
+    --text-muted: #888;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--dark);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Scrollbar personalizată */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--darker) !important;
+    border-bottom: 1px solid var(--gray-light);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary) !important;
+}
+
+/* Carduri */
+.card {
+    background-color: var(--gray);
+    border: 1px solid var(--gray-light);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: var(--primary);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Butoane */
+.btn {
+    border-radius: 8px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-danger {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-danger:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+/* Formulare */
+.form-control, .form-select {
+    background-color: var(--gray-light);
+    border: 1px solid #444;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--gray-light);
+    border-color: var(--primary);
+    color: var(--text);
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+/* Progress bar */
+.progress {
+    background-color: var(--gray-light);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+}
+
+/* Tabele și liste */
+.list-group-item {
+    background-color: var(--gray);
+    border-color: var(--gray-light);
+    color: var(--text);
+}
+
+/* Paginare */
+.pagination .page-link {
+    background-color: var(--gray);
+    border-color: var(--gray-light);
+    color: var(--text);
+}
+
+.pagination .page-link:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination .active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Badge-uri */
+.badge {
+    padding: 0.35rem 0.65rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.badge-primary {
+    background-color: var(--primary);
+}
+
+/* Alerts */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #ff6b6b;
+    border-left: 4px solid var(--primary);
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: #6bff8b;
+    border-left: 4px solid #28a745;
+}
+
+/* Modal */
+.modal-content {
+    background-color: var(--gray);
+    border: 1px solid var(--gray-light);
+    border-radius: 12px;
+}
+
+.modal-header {
+    border-bottom-color: var(--gray-light);
+}
+
+.modal-footer {
+    border-top-color: var(--gray-light);
+}
+
+/* Dropdown */
+.dropdown-menu {
+    background-color: var(--gray);
+    border-color: var(--gray-light);
+}
+
+.dropdown-item {
+    color: var(--text);
+}
+
+.dropdown-item:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* Tabs */
+.nav-tabs {
+    border-bottom-color: var(--gray-light);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-muted);
+    border: none;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--primary);
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Tooltip */
+.tooltip-inner {
+    background-color: var(--primary);
+    max-width: 200px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Loading spinner */
+.spinner-border {
+    color: var(--primary);
+}
+
+/* Helper classes */
+.text-primary-custom {
+    color: var(--primary);
+}
+
+.bg-primary-custom {
+    background-color: var(--primary);
+}
+
+.border-primary-custom {
+    border-color: var(--primary);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Grid pentru anime cards */
+.anime-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.anime-card {
+    background-color: var(--gray);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.anime-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.anime-card img {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+}
+
+.anime-card-body {
+    padding: 0.75rem;
+}
+
+.anime-card-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.anime-card-type {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
