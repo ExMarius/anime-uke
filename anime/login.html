@@ -11,7 +11,6 @@
         <header>
             <div class="logo"><h1>⚡ Anime-Uke</h1></div>
             <nav><a href="/">Acasă</a></nav>
-            <div id="authButtons"></div>
         </header>
         <main class="auth-main">
             <div class="auth-container">
@@ -19,91 +18,110 @@
                     <button id="loginTab" class="active">Logare</button>
                     <button id="registerTab">Înregistrare</button>
                 </div>
+                
                 <div id="loginForm" class="auth-form active">
                     <h3>Bun venit înapoi!</h3>
-                    <input type="email" id="loginEmail" placeholder="Email" required>
-                    <input type="password" id="loginPassword" placeholder="Parolă" required>
-                    <button id="doLogin" class="btn-submit">Loghează-te</button>
-                    <div id="loginError" class="error-message"></div>
+                    <input type="email" id="loginEmail" placeholder="Email">
+                    <input type="password" id="loginPassword" placeholder="Parolă">
+                    <button id="doLoginBtn">Loghează-te</button>
+                    <div id="loginMsg" style="color:red; margin-top:10px;"></div>
                 </div>
+
                 <div id="registerForm" class="auth-form">
                     <h3>Creează cont nou</h3>
-                    <input type="text" id="regUsername" placeholder="Username" required>
-                    <input type="email" id="regEmail" placeholder="Email" required>
-                    <input type="password" id="regPassword" placeholder="Parolă" required>
-                    <button id="doRegister" class="btn-submit">Înregistrează-te</button>
-                    <div id="registerError" class="error-message"></div>
+                    <input type="text" id="regUsername" placeholder="Username">
+                    <input type="email" id="regEmail" placeholder="Email">
+                    <input type="password" id="regPassword" placeholder="Parolă">
+                    <button id="doRegisterBtn">Înregistrează-te</button>
+                    <div id="regMsg" style="color:red; margin-top:10px;"></div>
                 </div>
             </div>
         </main>
     </div>
+
     <script>
-        // --- Înregistrare ---
-        document.getElementById('doRegister').addEventListener('click', async () => {
+        // Switch between login and register forms
+        document.getElementById('loginTab').onclick = function() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('registerTab').classList.remove('active');
+        };
+        
+        document.getElementById('registerTab').onclick = function() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('registerTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        };
+        
+        // Start with register form hidden
+        document.getElementById('registerForm').style.display = 'none';
+        
+        // REGISTER
+        document.getElementById('doRegisterBtn').onclick = async function() {
             const username = document.getElementById('regUsername').value;
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
-            const errorDiv = document.getElementById('registerError');
+            const msgDiv = document.getElementById('regMsg');
             
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('Cont creat! Te poți loga.');
-                document.getElementById('loginTab').click();
-            } else {
-                errorDiv.innerText = data.error || 'Eroare la înregistrare';
-            }
-        });
-
-        // --- Autentificare ---
-        document.getElementById('doLogin').addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const errorDiv = document.getElementById('loginError');
+            msgDiv.innerText = 'Se înregistrează...';
             
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await response.json();
-            if (data.success) {
-                localStorage.setItem('sessionId', data.sessionId);
-                window.location.href = '/';
-            } else {
-                errorDiv.innerText = data.error || 'Email sau parolă greșită';
-            }
-        });
-
-        // --- Tabs (păstrează funcționalitatea) ---
-        document.getElementById('loginTab').addEventListener('click', () => {
-            document.getElementById('loginTab').classList.add('active');
-            document.getElementById('registerTab').classList.remove('active');
-            document.getElementById('loginForm').classList.add('active');
-            document.getElementById('registerForm').classList.remove('active');
-        });
-        document.getElementById('registerTab').addEventListener('click', () => {
-            document.getElementById('registerTab').classList.add('active');
-            document.getElementById('loginTab').classList.remove('active');
-            document.getElementById('registerForm').classList.add('active');
-            document.getElementById('loginForm').classList.remove('active');
-        });
-
-        // --- Verifică dacă e deja logat ---
-        (async () => {
-            const sessionId = localStorage.getItem('sessionId');
-            if (sessionId) {
-                const response = await fetch('/api/verify', {
-                    headers: { 'Authorization': `Bearer ${sessionId}` }
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
                 });
                 const data = await response.json();
-                if (data.authenticated) window.location.href = '/';
+                
+                if (data.success) {
+                    msgDiv.style.color = 'green';
+                    msgDiv.innerText = 'Cont creat! Te poți loga.';
+                    // Switch to login form
+                    document.getElementById('loginTab').click();
+                    // Clear register form
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regEmail').value = '';
+                    document.getElementById('regPassword').value = '';
+                } else {
+                    msgDiv.style.color = 'red';
+                    msgDiv.innerText = data.error || 'Eroare la înregistrare';
+                }
+            } catch(err) {
+                msgDiv.style.color = 'red';
+                msgDiv.innerText = 'Eroare: ' + err.message;
             }
-        })();
+        };
+        
+        // LOGIN
+        document.getElementById('doLoginBtn').onclick = async function() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const msgDiv = document.getElementById('loginMsg');
+            
+            msgDiv.innerText = 'Se autentifică...';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('sessionId', data.sessionId);
+                    window.location.href = '/';
+                } else {
+                    msgDiv.style.color = 'red';
+                    msgDiv.innerText = data.error || 'Email sau parolă greșită';
+                }
+            } catch(err) {
+                msgDiv.style.color = 'red';
+                msgDiv.innerText = 'Eroare: ' + err.message;
+            }
+        };
     </script>
 </body>
 </html>
