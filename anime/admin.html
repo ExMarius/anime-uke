@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panou Admin - Anime Uke</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .nav-tabs .nav-link {
+            color: #dc3545;
+            border: none;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #dc3545;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        .server-input-group {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #333;
+        }
+        .remove-server {
+            cursor: pointer;
+            color: #dc3545;
+            transition: all 0.2s;
+        }
+        .remove-server:hover {
+            color: #ff6b6b;
+            transform: scale(1.1);
+        }
+        .add-server-btn {
+            background: #2c2c2c;
+            border: 1px dashed #dc3545;
+            color: #dc3545;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .add-server-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+        .episode-item {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .server-badge {
+            background: #2c2c2c;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body class="bg-dark text-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-danger" href="/">Anime Uke</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Acasă</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/anime">Anime</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/profile">Profil</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/admin">Admin</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="logoutBtn">Ieșire</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Verificare rol admin -->
+        <div id="adminCheck" class="alert alert-danger d-none">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Nu ai permisiunea de a accesa această pagină. Această zonă este doar pentru administratori.
+        </div>
+
+        <div id="adminContent" class="d-none">
+            <ul class="nav nav-tabs mb-4" id="adminTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#addSeries">
+                        <i class="fas fa-plus-circle me-2"></i>Adaugă Serie
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#addEpisode">
+                        <i class="fas fa-video me-2"></i>Adaugă Episod
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#manageSeries">
+                        <i class="fas fa-list me-2"></i>Gestionare Serii
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#manageEpisodes">
+                        <i class="fas fa-tasks me-2"></i>Gestionare Episoade
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- TAB 1: Adaugă Serie -->
+                <div class="tab-pane fade show active" id="addSeries">
+                    <div class="card bg-black border-secondary">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="fas fa-plus-circle me-2"></i>Adaugă serie nouă</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="addSeriesForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Nume serie *</label>
+                                    <input type="text" class="form-control bg-secondary text-light border-secondary" id="seriesName" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">URL slug (link prietenos)</label>
+                                    <input type="text" class="form-control bg-secondary text-light border-secondary" id="seriesSlug" placeholder="ex: naruto-shippuden">
+                                    <small class="text-muted">Dacă lași gol, se generează automat din nume</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Descriere</label>
+                                    <textarea class="form-control bg-secondary text-light border-secondary" id="seriesDescription" rows="4"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Imagine URL (opțional)</label>
+                                    <input type="url" class="form-control bg-secondary text-light border-secondary" id="seriesImage" placeholder="https://...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Vârstă minimă</label>
+                                    <select class="form-select bg-secondary text-light border-secondary" id="seriesMinAge">
+                                        <option value="0">Toate vârstele</option>
+                                        <option value="7">7+</option>
+                                        <option value="13" selected>13+</option>
+                                        <option value="16">16+</option>
+                                        <option value="18">18+</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tip</label>
+                                    <select class="form-select bg-secondary text-light border-secondary" id="seriesType">
+                                        <option value="anime">Anime</option>
+                                        <option value="manga">Manga</option>
+                                        <option value="movie">Film</option>
+                                        <option value="ova">OVA</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-danger w-100">
+                                    <i class="fas fa-save me-2"></i>Salvează seria
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Adaugă Episod cu Servere Multiple -->
+                <div class="tab-pane fade" id="addEpisode">
+                    <div class="card bg-black border-secondary">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="fas fa-video me-2"></i>Adaugă episod nou</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="addEpisodeForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Serie *</label>
+                                    <select class="form-select bg-secondary text-light border-secondary" id="episodeSeries" required>
+                                        <option value="">Selectează o serie...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Număr episod *</label>
+                                    <input type="number" class="form-control bg-secondary text-light border-secondary" id="episodeNumber" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Titlu episod</label>
+                                    <input type="text" class="form-control bg-secondary text-light border-secondary" id="episodeTitle">
+                                </div>
+                                
+                                <label class="form-label mb-2">Link-uri servere *</label>
+                                <div id="serversContainer">
+                                    <div class="server-input-group">
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <select class="form-select bg-secondary text-light border-secondary server-name">
+                                                    <option value="DoodStream">DoodStream</option>
+                                                    <option value="Voe">Voe</option>
+                                                    <option value="MP4Upload">MP4Upload</option>
+                                                    <option value="StreamTape">StreamTape</option>
+                                                    <option value="VidSrc">VidSrc</option>
+                                                    <option value="FileMoon">FileMoon</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-7">
+                                                <input type="url" class="form-control bg-secondary text-light border-secondary server-url" placeholder="Link embed (ex: https://dood.li/e/abc123)">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <i class="fas fa-trash-alt remove-server text-danger fs-5"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="add-server-btn mb-3" id="addServerBtn">
+                                    <i class="fas fa-plus-circle me-2"></i>Adaugă un alt server
+                                </div>
+                                
+                                <button type="submit" class="btn btn-danger w-100">
+                                    <i class="fas fa-save me-2"></i>Salvează episodul
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Gestionare Serii -->
+                <div class="tab-pane fade" id="manageSeries">
+                    <div class="card bg-black border-secondary">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="fas fa-list me-2"></i>Toate seriile</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="seriesList">
+                                <div class="text-center py-3">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Se încarcă...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Gestionare Episoade -->
+                <div class="tab-pane fade" id="manageEpisodes">
+                    <div class="card bg-black border-secondary">
+                        <div class="card-header bg-danger text-white">
+                            <h5><i class="fas fa-tasks me-2"></i>Toate episoadele</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Filtrează după serie</label>
+                                <select class="form-select bg-secondary text-light border-secondary" id="filterSeries">
+                                    <option value="">Toate seriile</option>
+                                </select>
+                            </div>
+                            <div id="episodesList">
+                                <div class="text-center py-3">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Se încarcă...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-black text-center text-muted py-4 mt-5 border-top border-secondary">
+        <p>&copy; 2024 Anime Uke - Anime subtitrat în română</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let currentUser = null;
+        let serverCounter = 1;
+        
+        // Verifică autentificarea și rolul de admin
+        (async () => {
+            currentUser = await checkAuth();
+            if (!currentUser) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Verifică dacă e admin
+            const isAdmin = await checkAdmin();
+            if (!isAdmin) {
+                document.getElementById('adminCheck').classList.remove('d-none');
+                document.getElementById('adminContent').classList.add('d-none');
+                return;
+            }
+            
+            document.getElementById('adminContent').classList.remove('d-none');
+            await loadSeriesForSelect();
+            await loadAllSeriesForManage();
+            await loadAllEpisodes();
+        })();
+        
+        // Încarcă seriile pentru dropdown
+        async function loadSeriesForSelect() {
+            try {
+                const response = await fetch('/api/series');
+                const series = await response.json();
+                
+                const select = document.getElementById('episodeSeries');
+                const filterSelect = document.getElementById('filterSeries');
+                
+                select.innerHTML = '<option value="">Selectează o serie...</option>';
+                filterSelect.innerHTML = '<option value="">Toate seriile</option>';
+                
+                series.forEach(s => {
+                    select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                    filterSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Eroare la încărcarea seriilor:', error);
+            }
+        }
+        
+        // Adaugă câmp pentru server nou
+        document.getElementById('addServerBtn').addEventListener('click', () => {
+            const container = document.getElementById('serversContainer');
+            const newServer = document.createElement('div');
+            newServer.className = 'server-input-group';
+            newServer.innerHTML = `
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <select class="form-select bg-secondary text-light border-secondary server-name">
+                            <option value="DoodStream">DoodStream</option>
+                            <option value="Voe">Voe</option>
+                            <option value="MP4Upload">MP4Upload</option>
+                            <option value="StreamTape">StreamTape</option>
+                            <option value="VidSrc">VidSrc</option>
+                            <option value="FileMoon">FileMoon</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <input type="url" class="form-control bg-secondary text-light border-secondary server-url" placeholder="Link embed">
+                    </div>
+                    <div class="col-md-1">
+                        <i class="fas fa-trash-alt remove-server text-danger fs-5"></i>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newServer);
+            attachRemoveEvent(newServer);
+        });
+        
+        function attachRemoveEvent(container) {
+            const removeBtn = container.querySelector('.remove-server');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => container.remove());
+            }
+        }
+        
+        document.querySelectorAll('.remove-server').forEach(btn => {
+            btn.addEventListener('click', () => btn.closest('.server-input-group').remove());
+        });
+        
+        // Adaugă serie
+        document.getElementById('addSeriesForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                name: document.getElementById('seriesName').value,
+                slug: document.getElementById('seriesSlug').value || null,
+                description: document.getElementById('seriesDescription').value,
+                image_url: document.getElementById('seriesImage').value || null,
+                min_age: parseInt(document.getElementById('seriesMinAge').value),
+                type: document.getElementById('seriesType').value
+            };
+            
+            const response = await fetch('/api/admin/series', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Seria a fost adăugată cu succes!');
+                document.getElementById('addSeriesForm').reset();
+                await loadSeriesForSelect();
+                await loadAllSeriesForManage();
+            } else {
+                alert('❌ Eroare: ' + result.message);
+            }
+        });
+        
+        // Adaugă episod cu servere multiple
+        document.getElementById('addEpisodeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const servers = {};
+            document.querySelectorAll('.server-input-group').forEach(group => {
+                const name = group.querySelector('.server-name').value;
+                const url = group.querySelector('.server-url').value;
+                if (url) {
+                    servers[name] = url;
+                }
+            });
+            
+            if (Object.keys(servers).length === 0) {
+                alert('Trebuie să adaugi cel puțin un server!');
+                return;
+            }
+            
+            const data = {
+                series_id: parseInt(document.getElementById('episodeSeries').value),
+                episode_number: parseInt(document.getElementById('episodeNumber').value),
+                title: document.getElementById('episodeTitle').value || null,
+                servers: servers
+            };
+            
+            const response = await fetch('/api/admin/episode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Episodul a fost adăugat cu succes!');
+                document.getElementById('addEpisodeForm').reset();
+                document.getElementById('serversContainer').innerHTML = `
+                    <div class="server-input-group">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <select class="form-select bg-secondary text-light border-secondary server-name">
+                                    <option value="DoodStream">DoodStream</option>
+                                    <option value="Voe">Voe</option>
+                                    <option value="MP4Upload">MP4Upload</option>
+                                    <option value="StreamTape">StreamTape</option>
+                                    <option value="VidSrc">VidSrc</option>
+                                    <option value="FileMoon">FileMoon</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <input type="url" class="form-control bg-secondary text-light border-secondary server-url" placeholder="Link embed">
+                            </div>
+                            <div class="col-md-1">
+                                <i class="fas fa-trash-alt remove-server text-danger fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                await loadAllEpisodes();
+            } else {
+                alert('❌ Eroare: ' + result.message);
+            }
+        });
+        
+        // Încarcă toate seriile pentru gestionare
+        async function loadAllSeriesForManage() {
+            try {
+                const response = await fetch('/api/series');
+                const series = await response.json();
+                const container = document.getElementById('seriesList');
+                
+                if (series.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted py-3">Nu există serii încă.</div>';
+                    return;
+                }
+                
+                container.innerHTML = series.map(s => `
+                    <div class="episode-item">
+                        <div>
+                            <strong>${s.name}</strong>
+                            <span class="server-badge">${s.type || 'anime'}</span>
+                            <div class="small text-muted">${s.slug}</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSeries(${s.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Eroare la încărcarea seriilor:', error);
+            }
+        }
+        
+        // Încarcă toate episoadele
+        async function loadAllEpisodes() {
+            try {
+                const response = await fetch('/api/episodes/all');
+                const episodes = await response.json();
+                const container = document.getElementById('episodesList');
+                
+                if (episodes.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted py-3">Nu există episoade încă.</div>';
+                    return;
+                }
+                
+                container.innerHTML = episodes.map(ep => `
+                    <div class="episode-item">
+                        <div>
+                            <strong>${ep.series_name}</strong> - Episodul ${ep.episode_number}
+                            <div class="small text-muted">${ep.title || 'Fără titlu'}</div>
+                            <div class="small">
+                                ${Object.keys(ep.servers || {}).map(s => `<span class="server-badge">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="deleteEpisode(${ep.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Eroare la încărcarea episoadelor:', error);
+            }
+        }
+        
+        // Șterge serie
+        window.deleteSeries = async (id) => {
+            if (!confirm('Sigur vrei să ștergi această serie? Toate episoadele asociate vor fi șterse!')) return;
+            
+            const response = await fetch(`/api/admin/series/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Seria a fost ștearsă!');
+                await loadAllSeriesForManage();
+                await loadAllEpisodes();
+                await loadSeriesForSelect();
+            } else {
+                alert('❌ Eroare: ' + result.message);
+            }
+        };
+        
+        // Șterge episod
+        window.deleteEpisode = async (id) => {
+            if (!confirm('Sigur vrei să ștergi acest episod?')) return;
+            
+            const response = await fetch(`/api/admin/episode/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Episodul a fost șters!');
+                await loadAllEpisodes();
+            } else {
+                alert('❌ Eroare: ' + result.message);
+            }
+        };
+        
+        // Filtrare episoade
+        document.getElementById('filterSeries').addEventListener('change', async () => {
+            const seriesId = document.getElementById('filterSeries').value;
+            if (seriesId) {
+                const response = await fetch(`/api/episodes/series/${seriesId}`);
+                const episodes = await response.json();
+                const container = document.getElementById('episodesList');
+                container.innerHTML = episodes.map(ep => `
+                    <div class="episode-item">
+                        <div>
+                            <strong>${ep.series_name}</strong> - Episodul ${ep.episode_number}
+                            <div class="small text-muted">${ep.title || 'Fără titlu'}</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-danger" onclick="deleteEpisode(${ep.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                await loadAllEpisodes();
+            }
+        });
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await logout();
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
