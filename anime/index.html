@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Uke</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0a0a0a; color: #e0e0e0; }
+        .navbar { background: #000 !important; border-bottom: 1px solid #dc3545; }
+        .anime-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .anime-card:hover { transform: translateY(-5px); }
+        .anime-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+        .anime-card-body { padding: 12px; }
+        .anime-card-title { font-weight: bold; margin-bottom: 5px; }
+        .btn-danger { background: #dc3545; border: none; }
+        .btn-danger:hover { background: #b02a37; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a class="navbar-brand text-danger fw-bold fs-3" href="/">Anime Uke</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="text-danger mb-4">Toate seriile</h2>
+        <div class="row" id="seriesList">
+            <!-- Animele sunt adăugate manual aici -->
+        </div>
+    </div>
+
+    <footer class="text-center text-muted py-4 mt-5">
+        <p>&copy; 2024 Anime Uke</p>
+    </footer>
+
+    <script>
+        // Lista manuală cu anime
+        const series = [
+            { name: "Naruto", slug: "naruto", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Naruto" },
+            { name: "One Piece", slug: "one-piece", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=One+Piece" },
+            { name: "Bleach", slug: "bleach", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Bleach" },
+            { name: "Attack on Titan", slug: "aot", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=AOT" },
+            { name: "Demon Slayer", slug: "demon-slayer", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Demon+Slayer" },
+            { name: "Jujutsu Kaisen", slug: "jujutsu", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Jujutsu" }
+        ];
+        
+        const container = document.getElementById('seriesList');
+        container.innerHTML = series.map(s => `
+            <div class="col-md-2 col-sm-3 col-6 mb-4">
+                <div class="anime-card" onclick="location.href='/watch.html?series=${s.slug}'">
+                    <img src="${s.image}" alt="${s.name}">
+                    <div class="anime-card-body">
+                        <div class="anime-card-title">${s.name}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    </script>
+</body>
+</html>
