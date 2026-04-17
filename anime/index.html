@@ -3,67 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Uke</title>
+    <title>Anime Uke - Anime subtitrat în română</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0a0a0a; color: #e0e0e0; }
-        .navbar { background: #000 !important; border-bottom: 1px solid #dc3545; }
+        body { background: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: #000 !important; border-bottom: 2px solid #dc3545; padding: 15px 0; }
+        .navbar-brand { font-size: 1.8rem; font-weight: bold; letter-spacing: 2px; }
+        .nav-link { color: #e0e0e0 !important; transition: color 0.2s; }
+        .nav-link:hover { color: #dc3545 !important; }
         .anime-card {
             background: #1a1a1a;
             border-radius: 12px;
             overflow: hidden;
-            transition: transform 0.2s;
+            transition: transform 0.3s, box-shadow 0.3s;
             cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .anime-card:hover { transform: translateY(-5px); }
+        .anime-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 20px rgba(220,53,69,0.2);
+        }
         .anime-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
-        .anime-card-body { padding: 12px; }
-        .anime-card-title { font-weight: bold; margin-bottom: 5px; }
-        .btn-danger { background: #dc3545; border: none; }
-        .btn-danger:hover { background: #b02a37; }
+        .anime-card-body { padding: 12px; text-align: center; }
+        .anime-card-title { font-weight: bold; margin-bottom: 5px; color: #fff; }
+        .btn-danger { background: #dc3545; border: none; transition: all 0.2s; }
+        .btn-danger:hover { background: #b02a37; transform: scale(1.02); }
+        .btn-outline-danger { border-color: #dc3545; color: #dc3545; }
+        .btn-outline-danger:hover { background: #dc3545; color: white; }
+        footer { border-top: 1px solid #2c2c2c; margin-top: 50px; }
+        .hero {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .hero h1 { color: #dc3545; font-size: 2.5rem; margin-bottom: 15px; }
+        .hero p { color: #aaa; font-size: 1.1rem; }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand text-danger fw-bold fs-3" href="/">Anime Uke</a>
+            <a class="navbar-brand text-danger" href="/">Anime Uke</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="/">Acasă</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/anime">Anime</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/profile.html" id="profileLink" style="display: none;">Profil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin.html" id="adminLink" style="display: none;">Admin</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/login.html" id="authLink"><i class="fas fa-sign-in-alt me-1"></i> Login</a></li>
+                </ul>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <h2 class="text-danger mb-4">Toate seriile</h2>
+    <div class="container">
+        <div class="hero">
+            <h1><i class="fas fa-tv me-2"></i>Anime Uke</h1>
+            <p>Anime subtitrat în limba română, complet gratuit</p>
+            <p class="small text-muted">Episoade noi în fiecare zi</p>
+        </div>
+
+        <h2 class="text-danger mb-4"><i class="fas fa-fire me-2"></i>Toate seriile</h2>
         <div class="row" id="seriesList">
-            <!-- Animele sunt adăugate manual aici -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-danger" role="status"></div>
+                <p class="mt-2">Se încarcă...</p>
+            </div>
         </div>
     </div>
 
-    <footer class="text-center text-muted py-4 mt-5">
-        <p>&copy; 2024 Anime Uke</p>
+    <footer class="text-center text-muted py-4">
+        <div class="container">
+            <p>&copy; 2024 Anime Uke - Toate drepturile rezervate</p>
+            <p class="small">Animele sunt proprietatea respectivilor creatori</p>
+        </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
     <script>
-        // Lista manuală cu anime
-        const series = [
-            { name: "Naruto", slug: "naruto", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Naruto" },
-            { name: "One Piece", slug: "one-piece", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=One+Piece" },
-            { name: "Bleach", slug: "bleach", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Bleach" },
-            { name: "Attack on Titan", slug: "aot", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=AOT" },
-            { name: "Demon Slayer", slug: "demon-slayer", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Demon+Slayer" },
-            { name: "Jujutsu Kaisen", slug: "jujutsu", image: "https://placehold.co/200x280/1a1a1a/dc3545?text=Jujutsu" }
-        ];
-        
-        const container = document.getElementById('seriesList');
-        container.innerHTML = series.map(s => `
-            <div class="col-md-2 col-sm-3 col-6 mb-4">
-                <div class="anime-card" onclick="location.href='/watch.html?series=${s.slug}'">
-                    <img src="${s.image}" alt="${s.name}">
-                    <div class="anime-card-body">
-                        <div class="anime-card-title">${s.name}</div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        // Inițializare
+        updateNavbar();
+        loadAllSeries();
     </script>
 </body>
 </html>
