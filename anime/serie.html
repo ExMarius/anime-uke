@@ -1,0 +1,8 @@
+const params=new URLSearchParams(location.search);
+const slug=params.get('slug');
+fetch(`/api/series/${slug}`).then(res=>res.json()).then(data=>{
+    document.getElementById('series-info').innerHTML=`<h1>${data.series.name}</h1><p>${data.series.description}</p>`;
+    const episodesDiv=document.getElementById('episodes-list');
+    episodesDiv.innerHTML=data.episodes.map(ep=>`<div><button class="episode-btn" data-id="${ep.id}">Episodul ${ep.episode_number}: ${ep.title||''}</button></div>`).join('');
+    document.querySelectorAll('.episode-btn').forEach(btn=>btn.addEventListener('click',()=>location.href=`/player.html?episode_id=${btn.dataset.id}`));
+});
