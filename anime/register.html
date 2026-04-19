@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Înregistrare - AnimeUke</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-96 border border-orange-500">
+        <h2 class="text-2xl font-bold mb-6 text-center text-orange-500">Cont Nou AnimeUke</h2>
+        <form id="regForm" class="space-y-4">
+            <div>
+                <label class="block text-sm">Username</label>
+                <input type="text" id="user" class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-orange-500 outline-none" required>
+            </div>
+            <div>
+                <label class="block text-sm">Parolă</label>
+                <input type="password" id="pass" class="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:border-orange-500 outline-none" required>
+            </div>
+            <button type="submit" class="w-full bg-orange-600 py-2 rounded font-bold hover:bg-orange-700 transition">Creează Cont</button>
+        </form>
+        <p id="msg" class="mt-4 text-center text-sm"></p>
+    </div>
+
+    <script>
+        document.getElementById('regForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('msg');
+            msg.innerText = "Se procesează...";
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                body: JSON.stringify({
+                    username: document.getElementById('user').value,
+                    password: document.getElementById('pass').value
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                msg.className = "mt-4 text-center text-green-400";
+                msg.innerText = "Succes! Te poți loga.";
+                setTimeout(() => window.location.href = "/", 2000);
+            } else {
+                msg.className = "mt-4 text-center text-red-400";
+                msg.innerText = "Eroare: " + data.error;
+            }
+        };
+    </script>
+</body>
+</html>
