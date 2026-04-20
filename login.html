@@ -1,45 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="ro">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - AnimeHub</title>
+    <link rel="stylesheet" href="/style.css">
     <style>
         body {
-            font-family: Arial;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
         }
-        .form-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            width: 300px;
-        }
-        input, button {
+        .login-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2.5rem;
             width: 100%;
-            padding: 0.5rem;
-            margin: 0.5rem 0;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
-        .error { color: red; }
+        h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #e94560;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 14px;
+        }
+        input::placeholder { color: rgba(255,255,255,0.6); }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #e94560;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background: #c73550; }
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 16px;
+            color: rgba(255,255,255,0.7);
+        }
+        .register-link a { color: #e94560; text-decoration: none; }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 12px;
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div class="form-container">
-        <h2>Autentificare</h2>
+    <div class="login-container">
+        <h2>🔐 Autentificare</h2>
+        <input type="email" id="email" placeholder="Email" autocomplete="email">
+        <input type="password" id="password" placeholder="Parolă" autocomplete="current-password">
+        <button onclick="login()">Intră în cont</button>
         <div id="error" class="error"></div>
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Parolă" required>
-        <button onclick="login()">Login</button>
-        <p>Nu ai cont? <a href="/register.html">Înregistrează-te</a></p>
+        <div class="register-link">
+            Nu ai cont? <a href="/register.html">Înregistrează-te</a>
+        </div>
+        <a href="/" class="back-link">← Înapoi la site</a>
     </div>
     
     <script>
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Completează toate câmpurile.';
+                return;
+            }
             
             try {
                 const res = await fetch('/api/auth/login', {
@@ -50,15 +107,19 @@
                 
                 const data = await res.json();
                 
-                if (res.ok) {
+                if (res.ok && data.success) {
                     window.location.href = '/';
                 } else {
-                    document.getElementById('error').textContent = data.error || 'Eroare la autentificare';
+                    errorDiv.textContent = data.error || 'Email sau parolă incorecte.';
                 }
             } catch(e) {
-                document.getElementById('error').textContent = 'Eroare de conexiune';
+                errorDiv.textContent = 'Eroare de conexiune.';
             }
         }
+        
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>
