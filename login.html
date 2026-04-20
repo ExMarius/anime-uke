@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Login - AnimeHub</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 300px;
+        }
+        input, button {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Autentificare</h2>
+        <div id="error" class="error"></div>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Parolă" required>
+        <button onclick="login()">Login</button>
+        <p>Nu ai cont? <a href="/register.html">Înregistrează-te</a></p>
+    </div>
+    
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    window.location.href = '/';
+                } else {
+                    document.getElementById('error').textContent = data.error || 'Eroare la autentificare';
+                }
+            } catch(e) {
+                document.getElementById('error').textContent = 'Eroare de conexiune';
+            }
+        }
+    </script>
+</body>
+</html>
