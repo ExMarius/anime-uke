@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vizionează episod - AnimeHub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #eee;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #e94560; }
+        .nav-links a {
+            color: #eee;
+            text-decoration: none;
+            margin-left: 1.5rem;
+        }
+        .nav-links a:hover { color: #e94560; }
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+        .video-container {
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+        .episode-info {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .episode-info h1 { color: #e94560; margin-bottom: 0.5rem; }
+        .watch-btn {
+            background: #4caf50;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .watch-btn:hover { background: #45a049; }
+        .watch-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .points-message {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .points-success { background: rgba(76,175,80,0.2); color: #4caf50; }
+        .points-error { background: rgba(244,67,54,0.2); color: #f44336; }
+        .points-already { background: rgba(255,152,0,0.2); color: #ff9800; }
+        .back-link {
+            display: inline-block;
+            margin-top: 1rem;
+            color: #e94560;
+            text-decoration: none;
+        }
+        .points-badge {
+            background: #e94560;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        .logout-btn {
+            background: #e94560;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🍥 AnimeHub</div>
+        <div class="nav-links">
+            <a href="/">Acasă</a>
+            <a href="/series.html">Toate Seriile</a>
+            <a href="/admin.html" id="adminLink" class="hidden">Admin</a>
+            <a href="/login.html" id="loginLink">Login</a>
+            <span id="userInfo" class="hidden">
+                <span id="userPoints" class="points-badge">0 pts</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </span>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="video-container">
+            <iframe id="videoFrame" src="" allowfullscreen></iframe>
+        </div>
+        
+        <div class="episode-info">
+            <h1 id="episodeTitle">Încărcare...</h1>
+            <p id="seriesName"></p>
+            <p id="episodeNumber"></p>
+            
+            <button class="watch-btn" id="watchBtn" onclick="markAsWatched()">
+                🎯 Marchează ca vizionat (+10 puncte)
+            </button>
+            <div id="watchMessage"></div>
+        </div>
+        
+        <a href="/series.html" id="backLink" class="back-link">← Înapoi la serie</a>
+    </div>
+    
+    <script>
+        let currentUser = null;
+        let episodeData = null;
+        let alreadyWatched = false;
+        
+        async function loadUser() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    document.getElementById('loginLink').classList.add('hidden');
+                    document.getElementById('userInfo').classList.remove('hidden');
+                    document.getElementById('userPoints').innerHTML = `${currentUser.points} pts`;
+                    if (currentUser.role === 'admin') {
+                        document.getElementById('adminLink').classList.remove('hidden');
+                    }
+                } else {
+                    document.getElementById('loginLink').classList.remove('hidden');
+                    document.getElementById('userInfo').classList.add('hidden');
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+        
+        async function loadEpisode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const episodeId = urlParams.get('id');
+            
+            if (!episodeId) {
+                window.location.href = '/';
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/episode/${episodeId}`);
+                const data = await res.json();
+                episodeData = data.episode;
+                
+                document.getElementById('episodeTitle').textContent = episodeData.title || `Episodul ${episodeData.episode_number}`;
+                document.getElementById('seriesName').innerHTML = `<strong>Serie:</strong> ${episodeData.series_title || 'AnimeHub'}`;
+                document.getElementById('episodeNumber').innerHTML = `<strong>Episod:</strong> ${episodeData.episode_number}`;
+                
+                // Încarcă playerul DoodStream
+                const doodstreamUrl = episodeData.doodstream_url;
+                if (doodstreamUrl) {
+                    // Transformă URL-ul DoodStream în embed
+                    let embedUrl = doodstreamUrl;
+                    if (doodstreamUrl.includes('doodstream.com/e/')) {
+                        embedUrl = doodstreamUrl;
+                    } else if (doodstreamUrl.includes('doodstream.com/')) {
+                        const code = doodstreamUrl.split('/').pop();
+                        embedUrl = `https://doodstream.com/e/${code}`;
+                    }
+                    document.getElementById('videoFrame').src = embedUrl;
+                }
+                
+                document.getElementById('backLink').href = `/series.html?id=${episodeData.series_id}`;
+                
+                // Verifică dacă utilizatorul a vizionat deja episodul
+                if (currentUser) {
+                    await checkIfWatched(episodeId);
+                }
+                
+                // Crește contorul de vizualizări
+                await fetch('/api/episodes/view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ episodeId: episodeId })
+                });
+                
+            } catch(e) {
+                console.error(e);
+                document.getElementById('episodeTitle').textContent = 'Eroare la încărcare';
+            }
+        }
+        
+        async function checkIfWatched(episodeId) {
+            try {
+                // În practică, am avea un endpoint /api/user/watched
+                // Pentru demo, presupunem că nu e vizionat
+                alreadyWatched = false;
+            } catch(e) {}
+        }
+        
+        async function markAsWatched() {
+            if (!currentUser) {
+                document.getElementById('watchMessage').innerHTML = '<div class="points-message points-error">🔐 Trebuie să fii logat pentru a primi puncte!</div>';
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 1500);
+                return;
+            }
+            
+            if (alreadyWatched) {
+                document.getElementById('watchMessage').innerHTML = '<div class="points-message points-already">✅ Ai vizionat deja acest episod! Ai primit deja punctele.</div>';
+                return;
+            }
+            
+            const btn = document.getElementById('watchBtn');
+            btn.disabled = true;
+            btn.textContent = 'Se procesează...';
+            
+            try {
+                const res = await fetch('/api/episodes/watch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ episodeId: episodeData.id })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                    alreadyWatched = true;
+                    document.getElementById('watchMessage').innerHTML = `
+                        <div class="points-message points-success">
+                            ✅ Ai primit ${data.points} puncte! Total: ${data.totalPoints} puncte.
+                        </div>
+                    `;
+                    document.getElementById('userPoints').innerHTML = `${data.totalPoints} pts`;
+                    btn.textContent = '✓ Vizionat';
+                    btn.disabled = true;
+                } else if (data.alreadyWatched) {
+                    document.getElementById('watchMessage').innerHTML = '<div class="points-message points-already">✅ Ai vizionat deja acest episod!</div>';
+                    btn.textContent = '✓ Vizionat';
+                    btn.disabled = true;
+                } else {
+                    document.getElementById('watchMessage').innerHTML = `<div class="points-message points-error">❌ ${data.error || 'Eroare'}</div>`;
+                    btn.disabled = false;
+                    btn.textContent = '🎯 Marchează ca vizionat (+10 puncte)';
+                }
+            } catch(e) {
+                document.getElementById('watchMessage').innerHTML = '<div class="points-message points-error">❌ Eroare de conexiune.</div>';
+                btn.disabled = false;
+                btn.textContent = '🎯 Marchează ca vizionat (+10 puncte)';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUser();
+            await loadEpisode();
+        });
+    </script>
+</body>
+</html>
