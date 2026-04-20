@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Înregistrare - AnimeHub</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 300px;
+        }
+        input, button {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Înregistrare</h2>
+        <div id="message"></div>
+        <input type="text" id="username" placeholder="Nume utilizator" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Parolă (min 4 caractere)" required>
+        <button onclick="register()">Înregistrează-te</button>
+        <p>Ai deja cont? <a href="/login.html">Autentifică-te</a></p>
+    </div>
+    
+    <script>
+        async function register() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    messageDiv.className = 'success';
+                    messageDiv.textContent = 'Cont creat! Te poți autentifica.';
+                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                } else {
+                    messageDiv.className = 'error';
+                    messageDiv.textContent = data.error || 'Eroare la înregistrare';
+                }
+            } catch(e) {
+                messageDiv.className = 'error';
+                messageDiv.textContent = 'Eroare de conexiune';
+            }
+        }
+    </script>
+</body>
+</html>
