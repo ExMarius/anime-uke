@@ -1,50 +1,114 @@
-// src/index.js
+// src/index.js - Router principal
 import { ChatRoom } from './chat-room.js';
+import { 
+  handleRegister, 
+  handleLogin, 
+  handleLogout, 
+  handleGetMe,
+  verifyAuth 
+} from './auth.js';
+import {
+  handleGetSeries,
+  handleGetSeriesById,
+  handleGetEpisodes,
+  handleGetEpisode,
+  handleMarkWatched,
+  handleAddView
+} from './episodes.js';
+import {
+  handleAddSeries,
+  handleAddEpisode,
+  handleDeleteEpisode
+} from './admin.js';
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    
-    // Rutele pentru API-urile existente
-    if (url.pathname.startsWith('/api/')) {
-      // Aici pui API-urile tale existente (auth, episodes, etc.)
-      return handleApi(request, env);
+    const path = url.pathname;
+    const method = request.method;
+
+    // ============ API AUTH ============
+    if (path === '/api/auth/register' && method === 'POST') {
+      return handleRegister(request, env);
+    }
+    if (path === '/api/auth/login' && method === 'POST') {
+      return handleLogin(request, env);
+    }
+    if (path === '/api/auth/logout' && method === 'POST') {
+      return handleLogout();
+    }
+    if (path === '/api/auth/me' && method === 'GET') {
+      return handleGetMe(request, env);
     }
 
-    // Rută pentru WebSocket chat
-    if (url.pathname === '/ws') {
-      // Verifică dacă utilizatorul este autentificat (folosește JWT)
-      const cookie = request.headers.get('Cookie') || '';
-      const tokenMatch = cookie.match(/auth_token=([^;]+)/);
-      
-      if (!tokenMatch) {
+    // ============ API SERIES ============
+    if (path === '/api/series' && method === 'GET') {
+      return handleGetSeries(env);
+    }
+    if (path.match(/^\/api\/series\/[^\/]+$/) && method === 'GET') {
+      return handleGetSeriesById(request, env);
+    }
+
+    // ============ API EPISODES ============
+    if (path === '/api/episodes' && method === 'GET') {
+      return handleGetEpisodes(request, env);
+    }
+    if (path.match(/^\/api\/episode\/[^\/]+$/) && method === 'GET') {
+      return handleGetEpisode(request, env);
+    }
+    if (path === '/api/episodes/watch' && method === 'POST') {
+      return handleMarkWatched(request, env);
+    }
+    if (path === '/api/episodes/view' && method === 'POST') {
+      return handleAddView(request, env);
+    }
+
+    // ============ API ADMIN (protejate) ============
+    if (path === '/api/admin/series' && method === 'POST') {
+      const user = await verifyAuth(request, env);
+      if (!user || user.role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Neautorizat' }), { status: 403 });
+      }
+      return handleAddSeries(request, env);
+    }
+    if (path === '/api/admin/episodes' && method === 'POST') {
+      const user = await verifyAuth(request, env);
+      if (!user || user.role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Neautorizat' }), { status: 403 });
+      }
+      return handleAddEpisode(request, env);
+    }
+    if (path === '/api/admin/episodes' && method === 'DELETE') {
+      const user = await verifyAuth(request, env);
+      if (!user || user.role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Neautorizat' }), { status: 403 });
+      }
+      return handleDeleteEpisode(request, env);
+    }
+
+    // ============ WEBSOCKET CHAT ============
+    if (path === '/ws') {
+      const user = await verifyAuth(request, env);
+      if (!user) {
         return new Response('Neautorizat', { status: 401 });
       }
-
-      // Extrage roomId din URL (ex: /ws?room=general)
-      const roomId = url.searchParams.get('room') || 'general';
       
-      // Creează sau obține instanța Durable Object pentru camera respectivă
+      const roomId = url.searchParams.get('room') || 'general';
       const id = env.CHAT_ROOM.idFromName(roomId);
       const chatRoom = env.CHAT_ROOM.get(id);
       
-      // Adaugă username și userId la URL pentru Durable Object
-      // (le-ai extras din JWT în realitate)
-      const username = url.searchParams.get('username') || 'Anonim';
-      const userId = crypto.randomUUID();
-      
       const newUrl = new URL(request.url);
-      newUrl.searchParams.set('username', username);
-      newUrl.searchParams.set('userId', userId);
+      newUrl.searchParams.set('username', user.username);
+      newUrl.searchParams.set('userId', user.id);
       
-      const upgradedRequest = new Request(newUrl, request);
-      return chatRoom.fetch(upgradedRequest);
+      return chatRoom.fetch(new Request(newUrl, request));
     }
 
-    // Pentru fișiere statice, returnează din Pages
-    return env.ASSETS.fetch(request);
+    // ============ PAGINI STATICE ============
+    // Pentru pagini HTML, servește din folderul public/
+    // Dacă e deploy pe Pages, ASSETS face asta automat
+    return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Pagina nu există', { status: 404 });
   }
 };
 
-// Configurarea Durable Object în wrangler.toml
 export { ChatRoom };
