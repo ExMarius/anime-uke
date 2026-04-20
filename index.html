@@ -276,4 +276,177 @@
         // Încarcă datele utilizatorului
         async function loadUser() {
             try {
-                const res = await fetch('/api/auth/
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    document.getElementById('loginLink').classList.add('hidden');
+                    document.getElementById('userInfo').classList.remove('hidden');
+                    document.getElementById('userPoints').innerHTML = `${currentUser.points} pts`;
+                    if (currentUser.role === 'admin') {
+                        document.getElementById('adminLink').classList.remove('hidden');
+                    }
+                } else {
+                    document.getElementById('loginLink').classList.remove('hidden');
+                    document.getElementById('userInfo').classList.add('hidden');
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        // Logout
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+        
+        // Încarcă ultimele episoade
+        async function loadLatestEpisodes() {
+            try {
+                const res = await fetch('/api/episodes');
+                const data = await res.json();
+                const container = document.getElementById('latestEpisodes');
+                if (data.episodes && data.episodes.length) {
+                    container.innerHTML = data.episodes.slice(0, 6).map(ep => `
+                        <div class="series-card" onclick="location.href='/episode.html?id=${ep.id}'">
+                            <div style="background: #0f3460; height: 150px; display: flex; align-items: center; justify-content: center; font-size: 48px;">🎬</div>
+                            <h3>${ep.title || `Episodul ${ep.episode_number}`}</h3>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Niciun episod disponibil momentan.</p>';
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        // Încarcă seriile
+        async function loadSeries() {
+            try {
+                const res = await fetch('/api/series');
+                const data = await res.json();
+                const container = document.getElementById('seriesList');
+                if (data.series && data.series.length) {
+                    container.innerHTML = data.series.slice(0, 6).map(series => `
+                        <div class="series-card" onclick="location.href='/series.html?id=${series.id}'">
+                            <div style="background: #0f3460; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 48px;">📺</div>
+                            <h3>${series.title}</h3>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        // ============ CHAT LIVE ============
+        let chatConnected = false;
+        
+        async function connectToChat() {
+            if (!currentUser) return;
+            
+            const wsUrl = new URL('/ws', window.location.origin);
+            wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsUrl.searchParams.set('room', 'general');
+            
+            chatSocket = new WebSocket(wsUrl);
+            
+            chatSocket.onopen = () => {
+                chatConnected = true;
+                document.getElementById('chatInput').disabled = false;
+                document.getElementById('chatSendBtn').disabled = false;
+            };
+            
+            chatSocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleChatMessage(data);
+            };
+            
+            chatSocket.onclose = () => {
+                chatConnected = false;
+                document.getElementById('chatInput').disabled = true;
+                document.getElementById('chatSendBtn').disabled = true;
+                setTimeout(connectToChat, 5000);
+            };
+        }
+        
+        function handleChatMessage(data) {
+            const messagesContainer = document.getElementById('chatMessages');
+            
+            switch (data.type) {
+                case 'history':
+                    messagesContainer.innerHTML = '';
+                    data.messages.forEach(msg => {
+                        addChatMessage(msg.username, msg.message, msg.username === currentUser?.username);
+                    });
+                    break;
+                case 'message':
+                    addChatMessage(data.username, data.message, data.username === currentUser?.username);
+                    break;
+                case 'system':
+                    const sysMsg = document.createElement('div');
+                    sysMsg.className = 'system-message';
+                    sysMsg.textContent = data.message;
+                    messagesContainer.appendChild(sysMsg);
+                    break;
+                case 'users':
+                    document.getElementById('onlineCount').textContent = data.users.length;
+                    document.getElementById('usersList').innerHTML = data.users.map(u => 
+                        `<span class="user-online">${u.username}</span>`
+                    ).join('');
+                    break;
+            }
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function addChatMessage(username, message, isOwn) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+            if (!isOwn) {
+                const nameSpan = document.createElement('div');
+                nameSpan.className = 'username';
+                nameSpan.textContent = username;
+                msgDiv.appendChild(nameSpan);
+            }
+            const textSpan = document.createElement('div');
+            textSpan.textContent = message;
+            msgDiv.appendChild(textSpan);
+            messagesContainer.appendChild(msgDiv);
+        }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({ type: 'message', message: message }));
+                input.value = '';
+            }
+        }
+        
+        // Inițializare
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUser();
+            loadLatestEpisodes();
+            loadSeries();
+            
+            // Chat toggle
+            const chatModal = document.getElementById('chatModal');
+            const chatToggleBtn = document.getElementById('chatToggleBtn');
+            const chatCloseBtn = document.getElementById('chatCloseBtn');
+            
+            chatToggleBtn.onclick = () => {
+                chatModal.classList.toggle('active');
+                if (!chatConnected && currentUser) {
+                    connectToChat();
+                }
+            };
+            chatCloseBtn.onclick = () => chatModal.classList.remove('active');
+            
+            document.getElementById('chatSendBtn').onclick = sendChatMessage;
+            document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            });
+            
+            // Reîncarcă userul periodic
+            setInterval(loadUser, 30000);
+        });
+    </script>
+</body>
+</html>
