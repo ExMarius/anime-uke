@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AnimeHub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 1rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .hidden { display: none; }
+        button, input {
+            padding: 0.5rem;
+            margin: 0.5rem;
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🍥 AnimeHub</div>
+        <div class="nav-links" id="navLinks">
+            <a href="/">Acasă</a>
+            <a href="/login.html" id="loginLink">Login</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div id="guestContent">
+            <h1>Bine ai venit!</h1>
+            <p><a href="/login.html">Autentifică-te</a> sau <a href="/register.html">creează-ți cont</a></p>
+        </div>
+        
+        <div id="userContent" class="hidden">
+            <h2>Bun venit, <span id="username"></span>!</h2>
+            <p>Ai <span id="points"></span> puncte</p>
+            <p>Rol: <span id="role"></span></p>
+            <button onclick="logout()">Delogare</button>
+        </div>
+    </div>
+    
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('guestContent').classList.add('hidden');
+                    document.getElementById('userContent').classList.remove('hidden');
+                    document.getElementById('username').textContent = data.user.username;
+                    document.getElementById('points').textContent = data.user.points;
+                    document.getElementById('role').textContent = data.user.role;
+                    document.getElementById('loginLink').textContent = 'Cont';
+                }
+            } catch(e) { console.log('Neautorizat'); }
+        }
+        
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+        
+        checkAuth();
+    </script>
+</body>
+</html>
