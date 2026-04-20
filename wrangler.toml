@@ -2,13 +2,13 @@ name = "anime-platform"
 main = "src/index.js"
 compatibility_date = "2024-12-18"
 
-# D1 pentru datele existente
+# D1 Database
 [[d1_databases]]
 binding = "DB"
-database_name = "anime-users-db"
-database_id = "ID-UL-TĂU-D1"
+database_name = "anime-db"
+database_id = "ID-UL-TĂU-D1-DIN-DASHBOARD"
 
-# Durable Object pentru chat
+# Durable Object pentru Chat
 [[durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
@@ -17,12 +17,14 @@ class_name = "ChatRoom"
 tag = "v1"
 new_classes = ["ChatRoom"]
 
-# Pentru fișiere statice (Pages)
+# Environment variables (setează JWT_SECRET în dashboard)
 [env.production]
+vars = { JWT_SECRET = "schimba-asta-cu-un-secret-random" }
+
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "anime-users-db"
-database_id = "ID-UL-TĂU-D1"
+database_name = "anime-db"
+database_id = "ID-UL-TĂU-D1-DIN-DASHBOARD"
 
 [env.production.durable_objects.bindings]
 name = "CHAT_ROOM"
