@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register • AnimeSphere</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center">
+  <div class="max-w-md w-full bg-[#111] p-8 rounded-3xl border border-cyan-500 shadow-2xl">
+    <div class="text-center mb-8">
+      <span class="text-5xl neon">🎌</span>
+      <h1 class="text-4xl font-bold mt-2">AnimeSphere</h1>
+      <p class="text-cyan-400">Creează cont nou</p>
+    </div>
+
+    <form id="register-form" class="space-y-6">
+      <div>
+        <label class="block text-sm mb-1">Username</label>
+        <input id="username" type="text" required
+          class="w-full bg-[#222] border border-cyan-500 focus:border-cyan-400 rounded-2xl px-5 py-4 text-white outline-none">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Email</label>
+        <input id="email" type="email" required
+          class="w-full bg-[#222] border border-cyan-500 focus:border-cyan-400 rounded-2xl px-5 py-4 text-white outline-none">
+      </div>
+      <div>
+        <label class="block text-sm mb-1">Parolă</label>
+        <input id="password" type="password" required
+          class="w-full bg-[#222] border border-cyan-500 focus:border-cyan-400 rounded-2xl px-5 py-4 text-white outline-none">
+      </div>
+
+      <button type="submit"
+        class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xl py-4 rounded-2xl transition">
+        Creează cont
+      </button>
+    </form>
+
+    <p class="text-center mt-6 text-gray-400">
+      Ai deja cont? 
+      <a href="login.html" class="text-cyan-400 hover:underline">Login aici</a>
+    </p>
+  </div>
+
+  <script>
+    initTailwind();
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        alert('Cont creat cu succes!');
+        location.href = '/index.html';
+      } else {
+        alert(data.error || 'Eroare la înregistrare');
+      }
+    });
+  </script>
+</body>
+</html>
