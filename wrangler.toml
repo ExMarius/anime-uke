@@ -1,18 +1,16 @@
 name = "anime-platform"
 compatibility_date = "2025-04-01"
-pages_build_output = "."
 
 # D1
 [[d1_databases]]
 binding = "DB"
 database_name = "anime-db"
-# database_id = "..." (se completează după wrangler d1 create)
+# database_id = "..."   ← completează după wrangler d1 create
 
 # Durable Object
 [[durable_objects.bindings]]
 name = "CHAT"
 class_name = "ChatDO"
 
-# Variabile de mediu (secret)
 [vars]
-JWT_SECRET = "schimba-cu-un-secret-lung-si-aleator-256-bit"
+JWT_SECRET = "schimba-cu-un-secret-lung-si-aleator-256-bit-2026"
