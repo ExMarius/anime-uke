@@ -1,0 +1,3 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+body { background: #0a0a0a; color: #fff; }
+.neon { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
