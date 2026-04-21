@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Episod • AnimeSphere</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen">
+  <nav class="bg-black border-b border-cyan-500 p-4 flex justify-between">
+    <a href="index.html" class="flex items-center gap-3 text-2xl font-bold neon">🎌 AnimeSphere</a>
+    <div id="nav-user"></div>
+  </nav>
+
+  <div class="max-w-5xl mx-auto p-6">
+    <div id="episode-info" class="mb-6"></div>
+    <iframe id="player" class="w-full aspect-video bg-black rounded-3xl" frameborder="0" allowfullscreen></iframe>
+
+    <div class="mt-8 flex justify-between items-center">
+      <button onclick="markAsWatched()" 
+        class="bg-green-500 hover:bg-green-400 px-8 py-4 rounded-2xl font-bold text-xl">
+        ✅ Am văzut ( +10 puncte )
+      </button>
+      <button onclick="history.back()" class="text-cyan-400 text-xl">← Înapoi</button>
+    </div>
+  </div>
+
+  <script>
+    initTailwind();
+    let currentEpisodeId = null;
+
+    async function loadEpisode() {
+      const urlParams = new URLSearchParams(location.search);
+      currentEpisodeId = urlParams.get('id');
+      if (!currentEpisodeId) return;
+
+      // Pentru simplitate luăm toate episoadele și găsim pe cel curent (în producție poți face API dedicat)
+      const allEp = await apiCall('/episodes?series_id=1'); // ajustează dacă ai mai multe serii
+      const ep = allEp.find(e => e.id == currentEpisodeId);
+      if (!ep) return;
+
+      document.getElementById('episode-info').innerHTML = `
+        <h1 class="text-3xl font-bold">${ep.title}</h1>
+      `;
+      document.getElementById('player').src = ep.doodstream_embed;
+    }
+
+    async function markAsWatched() {
+      if (!currentEpisodeId) return alert('Eroare');
+      const data = await apiCall('/watch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ episode_id: currentEpisodeId })
+      });
+      if (data.success) {
+        alert(`+10 puncte! Totalul tău a crescut!`);
+      }
+    }
+
+    window.onload = loadEpisode;
+  </script>
+</body>
+</html>
