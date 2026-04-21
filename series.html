@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serii • AnimeSphere</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
+</head>
+<body class="bg-[#0a0a0a] text-white min-h-screen">
+  <nav class="bg-black border-b border-cyan-500 p-4 flex justify-between">
+    <a href="index.html" class="flex items-center gap-3 text-2xl font-bold neon">🎌 AnimeSphere</a>
+    <div id="nav-user" class="flex gap-4"></div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-4xl font-bold mb-6" id="series-title"></h1>
+    <div id="episodes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+
+  <script>
+    initTailwind();
+    async function loadSeries() {
+      const urlParams = new URLSearchParams(location.search);
+      const seriesId = urlParams.get('id');
+      if (!seriesId) return location.href = 'index.html';
+
+      const series = await apiCall('/series'); // simplificat, ia toate și filtrează
+      const current = series.find(s => s.id == seriesId);
+      if (current) document.getElementById('series-title').innerHTML = current.title;
+
+      const episodes = await apiCall(`/episodes?series_id=${seriesId}`);
+      const container = document.getElementById('episodes-list');
+      container.innerHTML = episodes.map(ep => `
+        <a href="episode.html?id=${ep.id}" class="block bg-[#111] rounded-3xl p-4 hover:scale-105 transition">
+          <div class="text-cyan-400 text-sm">Episodul ${ep.episode_number}</div>
+          <h3 class="text-xl font-bold">${ep.title}</h3>
+        </a>
+      `).join('');
+    }
+    window.onload = () => { loadSeries(); };
+  </script>
+</body>
+</html>
