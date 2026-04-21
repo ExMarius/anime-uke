@@ -9,102 +9,150 @@
   <script src="app.js"></script>
 </head>
 <body class="bg-[#0a0a0a] text-white min-h-screen">
-  <nav class="bg-black border-b border-cyan-500 p-4 flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <span class="text-3xl neon">🎌</span>
-      <h1 class="text-3xl font-bold">AnimeSphere</h1>
-    </div>
+  <!-- NAV -->
+  <nav class="bg-black border-b border-cyan-500 p-4 flex justify-between items-center sticky top-0 z-50">
+    <a href="index.html" class="flex items-center gap-3">
+      <span class="text-4xl neon">🎌</span>
+      <h1 class="text-3xl font-bold tracking-tighter">AnimeSphere</h1>
+    </a>
+    
     <div id="nav-user" class="flex items-center gap-4"></div>
   </nav>
 
   <div class="max-w-7xl mx-auto p-6">
-    <h2 class="text-4xl font-bold mb-8">Seriile tale anime</h2>
-    <div id="series-grid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6"></div>
+    <div class="flex justify-between items-baseline mb-8">
+      <h2 class="text-5xl font-bold">Seriile tale anime</h2>
+      <div class="text-cyan-400 text-lg flex items-center gap-2">
+        <span id="points-display" class="bg-[#111] px-5 py-2 rounded-3xl font-mono"></span>
+      </div>
+    </div>
+
+    <!-- Grid serii -->
+    <div id="series-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
   </div>
 
+  <!-- BUTON CHAT -->
   <button onclick="toggleChat()" 
-    class="fixed bottom-8 right-8 bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-2xl shadow-cyan-500/50">
-    💬 Chat Live
+    class="fixed bottom-8 right-8 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-bold px-7 py-4 rounded-3xl flex items-center gap-3 shadow-2xl shadow-cyan-500/50 text-xl z-50">
+    <span class="text-2xl">💬</span>
+    <span>Chat Live</span>
   </button>
 
-  <!-- Chat Sidebar -->
-  <div id="chat-sidebar" class="hidden fixed bottom-8 right-8 w-96 h-[500px] bg-[#111] border border-cyan-500 rounded-2xl shadow-2xl flex flex-col">
-    <div class="p-4 border-b flex justify-between">
-      <span class="font-bold">Chat Global</span>
-      <button onclick="toggleChat()" class="text-cyan-400">✕</button>
+  <!-- CHAT SIDEBAR -->
+  <div id="chat-sidebar" class="hidden fixed bottom-8 right-8 w-96 h-[560px] bg-[#111] border-2 border-cyan-500 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div class="p-4 border-b border-cyan-500 flex justify-between items-center bg-[#1a1a1a]">
+      <span class="font-bold text-lg">💬 Chat Global</span>
+      <button onclick="toggleChat()" class="text-cyan-400 hover:text-white text-2xl leading-none">✕</button>
     </div>
-    <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
-    <div class="p-4 border-t flex gap-2">
-      <input id="chat-input" type="text" placeholder="Scrie un mesaj..." 
-        class="flex-1 bg-[#222] text-white px-4 py-2 rounded-xl focus:outline-none">
-      <button onclick="sendChatMessage()" class="bg-cyan-500 px-6 rounded-xl font-bold">Trimite</button>
+    
+    <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4 text-sm"></div>
+    
+    <div class="p-4 border-t border-cyan-500 bg-[#1a1a1a]">
+      <div class="flex gap-2">
+        <input id="chat-input" 
+          class="flex-1 bg-[#222] border border-cyan-500 focus:border-cyan-400 rounded-3xl px-5 py-3 text-white outline-none"
+          placeholder="Scrie un mesaj..." 
+          onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()" 
+          class="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-8 rounded-3xl">Trimite</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // ... (codul complet pentru încărcare serii, autentificare, etc. - inclus mai jos)
     initTailwind();
+
+    let ws = null;
+    let currentUser = { username: "Guest", points: 0, is_admin: false };
+
+    function updateNav() {
+      const token = getToken();
+      const nav = document.getElementById('nav-user');
+      
+      if (token) {
+        // Luăm datele din localStorage (setate la login)
+        currentUser.username = localStorage.getItem('username') || 'User';
+        currentUser.points = parseInt(localStorage.getItem('points')) || 0;
+        currentUser.is_admin = localStorage.getItem('is_admin') === 'true';
+
+        nav.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="text-cyan-400">👋 ${currentUser.username}</span>
+            <span class="bg-[#222] text-cyan-400 px-4 py-1 rounded-3xl text-sm font-mono">${currentUser.points} pts</span>
+            ${currentUser.is_admin ? `<a href="admin.html" class="bg-orange-500 hover:bg-orange-400 px-5 py-2 rounded-3xl text-sm">Admin</a>` : ''}
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-400 px-5 py-2 rounded-3xl text-sm">Logout</button>
+          </div>
+        `;
+        document.getElementById('points-display').innerHTML = `⭐ ${currentUser.points} puncte`;
+      } else {
+        nav.innerHTML = `<a href="login.html" class="bg-cyan-500 hover:bg-cyan-400 text-black px-8 py-3 rounded-3xl font-bold">Login / Register</a>`;
+      }
+    }
+
     async function loadSeries() {
       const series = await apiCall('/series');
+      if (!series || !Array.isArray(series)) return;
+
       const grid = document.getElementById('series-grid');
       grid.innerHTML = series.map(s => `
-        <a href="series.html?id=${s.id}" class="block bg-[#111] rounded-3xl overflow-hidden hover:scale-105 transition">
-          <img src="${s.poster_url}" class="w-full h-64 object-cover">
-          <div class="p-4">
-            <h3 class="text-xl font-bold">${s.title}</h3>
-            <p class="text-gray-400 text-sm">${s.description}</p>
+        <a href="series.html?id=${s.id}" class="group bg-[#111] rounded-3xl overflow-hidden hover:scale-105 transition-all duration-300">
+          <img src="${s.poster_url}" alt="${s.title}" class="w-full h-64 object-cover">
+          <div class="p-5">
+            <h3 class="text-2xl font-bold group-hover:text-cyan-400">${s.title}</h3>
+            <p class="text-gray-400 text-sm line-clamp-2 mt-2">${s.description || ''}</p>
           </div>
         </a>
       `).join('');
     }
 
-    // Verificare login
-    window.onload = () => {
-      const t = getToken();
-      const nav = document.getElementById('nav-user');
-      if (t) {
-        // simplificat - în producție apelezi /me sau decodezi JWT
-        nav.innerHTML = `
-          <span class="text-cyan-400">👋 Bun venit!</span>
-          <a href="admin.html" class="bg-orange-500 px-4 py-2 rounded-2xl text-sm">Admin</a>
-          <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded-2xl text-sm">Logout</button>
-        `;
-        loadSeries();
-      } else {
-        nav.innerHTML = `<a href="login.html" class="bg-cyan-500 px-6 py-2 rounded-2xl">Login / Register</a>`;
-      }
-    };
-
-    // Chat
-    let ws;
+    // === CHAT ===
     function toggleChat() {
       const sidebar = document.getElementById('chat-sidebar');
       sidebar.classList.toggle('hidden');
-      if (!ws && !sidebar.classList.contains('hidden')) connectWebSocket();
+      if (!sidebar.classList.contains('hidden') && !ws) connectWebSocket();
     }
 
     function connectWebSocket() {
       ws = new WebSocket(`wss://${location.host}/chat`);
+      
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
         const container = document.getElementById('chat-messages');
+        
         if (data.type === "message") {
-          container.innerHTML += `<div><span class="text-cyan-400">${data.username}:</span> ${data.message}</div>`;
-          container.scrollTop = container.scrollHeight;
+          container.innerHTML += `
+            <div class="flex gap-2">
+              <span class="text-cyan-400 font-bold">${data.username}:</span>
+              <span>${data.message}</span>
+            </div>`;
         } else if (data.type === "history") {
-          container.innerHTML = data.messages.map(m => 
-            `<div><span class="text-cyan-400">${m.username}:</span> ${m.message}</div>`
-          ).join('');
+          container.innerHTML = data.messages.map(m => `
+            <div class="flex gap-2">
+              <span class="text-cyan-400 font-bold">${m.username}:</span>
+              <span>${m.message}</span>
+            </div>`).join('');
         }
+        container.scrollTop = container.scrollHeight;
       };
     }
 
     function sendChatMessage() {
       const input = document.getElementById('chat-input');
-      if (!ws || !input.value) return;
-      ws.send(JSON.stringify({ type: "chat", username: currentUser || "User", message: input.value }));
+      if (!ws || !input.value.trim()) return;
+      
+      ws.send(JSON.stringify({
+        type: "chat",
+        username: currentUser.username,
+        message: input.value.trim()
+      }));
       input.value = '';
     }
+
+    // === INIT ===
+    window.onload = () => {
+      updateNav();
+      loadSeries();
+    };
   </script>
 </body>
 </html>
