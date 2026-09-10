@@ -19,8 +19,9 @@ async function guard() {
   if (!me) { location.replace('/login?next=/admin'); return false; }
   if (!me.is_admin) {
     document.querySelector('main').innerHTML =
-      '<div class="empty"><h2 class="page-title">403</h2><p>Nu ai acces la panoul de administrare.</p>' +
-      '<p><a class="btn btn--accent" href="/">Înapoi la serii</a></p></div>';
+      '<div class="empty"><div class="empty__icon">🔒</div><h2 class="section__title section__title--plain" style="justify-content:center">403 — Acces interzis</h2>' +
+      '<p class="hint">Nu ai acces la panoul de administrare.</p>' +
+      '<p style="margin-top:1.2rem"><a class="btn btn--accent" href="/">Înapoi la serii</a></p></div>';
     return false;
   }
   document.getElementById('admin-who').textContent = `Logat ca ${me.username}`;

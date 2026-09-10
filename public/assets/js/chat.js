@@ -39,7 +39,7 @@ export async function initChat() {
   fab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
 }
 
-function openChat() {
+export function openChat() {
   const modal = document.getElementById('chat-modal');
   if (!modal) return;
   modal.dataset.open = 'true';
@@ -48,7 +48,7 @@ function openChat() {
   if (!ws || ws.readyState === WebSocket.CLOSED) connect();
 }
 
-function closeChat() {
+export function closeChat() {
   const modal = document.getElementById('chat-modal');
   if (modal) modal.dataset.open = 'false';
   isOpen = false;

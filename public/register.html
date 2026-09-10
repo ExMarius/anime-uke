@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="robots" content="noindex,nofollow">
-  <title>Cont nou • AnimeSphere</title>
+  <title>Cont nou • anime-uke</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
+  <div class="auth-wrap">
   <div class="auth-card">
     <div class="auth-logo">
-      <div style="font-size:2.6rem">🎌</div>
-      <h1>Anime<span style="color:var(--accent)">Sphere</span></h1>
+      <div class="auth-logo__mark">鬼</div>
+      <h1>anime<span>-uke</span></h1>
       <p>Creează cont nou</p>
     </div>
 
@@ -22,7 +23,7 @@
         <label for="username">Username</label>
         <input class="input" id="username" name="username" type="text" autocomplete="username"
                minlength="3" maxlength="20" pattern="[A-Za-z0-9_.\-]{3,20}" required>
-        <p class="page-sub" style="margin:.3rem 0 0; font-size:.78rem">3–20 caractere: litere, cifre, <code>.</code> <code>-</code> <code>_</code></p>
+        <p class="hint">3–20 caractere: litere, cifre, <code>.</code> <code>-</code> <code>_</code></p>
       </div>
       <div class="field">
         <label for="email">Email</label>
@@ -32,13 +33,15 @@
         <label for="password">Parolă</label>
         <input class="input" id="password" name="password" type="password"
                autocomplete="new-password" minlength="4" maxlength="128" required>
-        <p class="page-sub" style="margin:.3rem 0 0; font-size:.78rem">Minim 4 caractere</p>
+        <p class="hint">Minim 4 caractere</p>
       </div>
       <button class="btn btn--accent btn--block" id="submit-btn" type="submit">Creează cont</button>
     </form>
 
     <p class="auth-alt">Ai deja cont? <a href="/login">Login</a></p>
-    <p class="page-sub" style="text-align:center; margin-top:.8rem"><a href="/">← Înapoi la serii</a></p>
+    <p class="auth-back"><a href="/" class="crumb">← Înapoi la serii</a></p>
+  </div>
+
   </div>
 
   <!-- Script extern, nu inline: CSP-ul e `script-src 'self'` fara 'unsafe-inline' -->

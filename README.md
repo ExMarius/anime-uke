@@ -1,4 +1,4 @@
-# 🎌 AnimeSphere
+# 🎌 anime-uke
 
 Site de anime cu conturi, puncte pentru episoade vizionate, panou admin și chat live.
 

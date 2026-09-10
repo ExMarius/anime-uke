@@ -63,6 +63,7 @@ async function load() {
   const titleEl = document.getElementById('episode-title');
   const metaEl = document.getElementById('episode-meta');
   const crumb = document.getElementById('breadcrumb');
+  const numEl = document.getElementById('episode-num');
   const iframe = document.getElementById('player');
   const loading = document.getElementById('player-loading');
 
@@ -73,6 +74,7 @@ async function load() {
   if (!res.ok) {
     titleEl.textContent = 'Episod indisponibil';
     metaEl.textContent = '';
+    document.getElementById('episode-num').textContent = '✕';
     loading.textContent = res.status === 404 ? 'Episodul nu există.' : 'Nu am putut încărca episodul.';
     loading.classList.remove('loading');
     loading.classList.add('empty');
@@ -85,16 +87,13 @@ async function load() {
 
   const label = `Episodul ${ep.episode_number}${ep.title ? ` — ${ep.title}` : ''}`;
   titleEl.textContent = label;
-  document.title = `${ep.series_title || 'Serie'} · ${label} • AnimeSphere`;
+  document.title = `${ep.series_title || 'Serie'} · ${label} • anime-uke`;
 
-  metaEl.textContent = `${ep.series_title || ''} · 👁 ${ep.views ?? 0} vizionări`;
+  metaEl.textContent = `${ep.series_title || ''} · 👁 ${Number(ep.views ?? 0).toLocaleString('ro-RO')} vizionări`;
 
-  crumb.innerHTML = '';
-  const back = document.createElement('a');
-  back.className = 'nav__link nav__link--accent';
-  back.href = `/series?id=${encodeURIComponent(ep.series_id)}`;
-  back.textContent = `← ${ep.series_title || 'Înapoi la serie'}`;
-  crumb.appendChild(back);
+  crumb.href = `/series?id=${encodeURIComponent(ep.series_id)}`;
+  crumb.textContent = `← ${ep.series_title || 'Înapoi la serie'}`;
+  if (numEl) numEl.textContent = ep.episode_number;
 
   // Playerul se incarca doar dupa ce avem URL-ul validat pe server.
   const url = safeUrl(ep.doodstream_url, '');

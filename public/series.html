@@ -4,29 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="robots" content="index,follow">
-  <title>Serie • AnimeSphere</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <meta name="theme-color" content="#0c0709">
+  <title>Serie • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
 
   <main class="container">
-    <p class="page-sub"><a href="/" class="nav__link nav__link--accent">← Toate seriile</a></p>
+    <a href="/" class="crumb">← Toate seriile</a>
 
-    <header class="page-head" id="series-head">
-      <div>
-        <h1 class="page-title" id="series-title">Se încarcă…</h1>
-        <p class="page-sub" id="series-meta"></p>
-      </div>
+    <header class="hero" id="series-hero" style="padding-top:1rem">
+      <div id="series-badges" style="display:flex;gap:.45rem;flex-wrap:wrap"></div>
+      <h1 class="hero__title" id="series-title" style="font-size:clamp(1.9rem,5vw,3rem)">Se încarcă…</h1>
+      <p class="hero__sub" id="series-desc"></p>
     </header>
 
-    <p class="page-sub" id="series-desc"></p>
-
-    <h2 class="section-title" id="episodes-heading">Episoade</h2>
-    <section id="episodes-grid" class="grid grid--ep" aria-live="polite">
-      <div class="loading"><div class="spinner"></div>Se încarcă episoadele…</div>
+    <section class="section">
+      <div class="section__head">
+        <h2 class="section__title">Episoade</h2>
+        <span class="section__count" id="episodes-count"></span>
+      </div>
+      <div id="episodes-grid" class="grid grid--ep" aria-live="polite"></div>
     </section>
   </main>
 

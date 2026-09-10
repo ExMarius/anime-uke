@@ -4,21 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0709">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Episod • AnimeSphere</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <title>Episod • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
 
-  <main class="container-narrow">
-    <p class="page-sub" id="breadcrumb"><a href="/" class="nav__link nav__link--accent">← Toate seriile</a></p>
+  <main class="container-narrow" style="padding-bottom:3rem">
+    <a href="/" class="crumb" id="breadcrumb">← Toate seriile</a>
 
-    <header class="page-head">
-      <div>
-        <h1 class="page-title" id="episode-title">Se încarcă…</h1>
-        <p class="page-sub" id="episode-meta"></p>
+    <header class="ep-hero">
+      <div class="ep-hero__num" id="episode-num">—</div>
+      <div style="flex:1;min-width:200px">
+        <h1 class="section__title section__title--plain" id="episode-title" style="font-size:1.5rem">Se încarcă…</h1>
+        <p class="card__meta" id="episode-meta"></p>
       </div>
     </header>
 
@@ -26,9 +28,7 @@
       <div class="loading" id="player-loading"><div class="spinner"></div>Se încarcă playerul…</div>
       <!--
         sandbox: izoleaza embed-ul DoodStream. Fara el, un embed compromis
-        ar putea naviga intreaga pagina (top-level navigation).
-        referrerpolicy: nu trimite URL-ul nostru catre terti.
-        allowfullscreen: cerut explicit, ca sa mearga full-screen.
+        ar putea naviga intreaga pagina. referrerpolicy: nu trimite URL-ul nostru.
       -->
       <iframe
         id="player"
@@ -40,12 +40,11 @@
         hidden></iframe>
     </div>
 
-    <div class="actions" style="margin-top:1.2rem; justify-content:space-between;">
-      <button class="btn btn--ok" id="watch-btn" type="button">✅ Marchează ca vizionat (+10 puncte)</button>
+    <div class="ep-actions">
+      <button class="btn btn--ok btn--lg" id="watch-btn" type="button">✅ Marchează ca vizionat (+10 puncte)</button>
       <button class="btn btn--ghost" id="back-btn" type="button">← Înapoi</button>
     </div>
-
-    <p class="page-sub" id="watch-note" style="margin-top:.7rem"></p>
+    <p class="hint" id="watch-note"></p>
   </main>
 
   <script type="module" src="/assets/js/page-episode.js"></script>

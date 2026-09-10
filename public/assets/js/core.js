@@ -127,13 +127,24 @@ export async function renderNav(active = '') {
   if (!nav) return null;
 
   const user = await getSession();
+  nav.innerHTML = '';
 
-  nav.innerHTML = `
-    <a class="nav__brand" href="/">🎌 Anime<span>Sphere</span></a>
-    <div class="nav__links" id="nav-links"></div>
-  `;
+  const brand = document.createElement('a');
+  brand.className = 'nav__brand';
+  brand.href = '/';
+  const mark = document.createElement('span');
+  mark.className = 'nav__brand__mark';
+  mark.textContent = '鬼';
+  const btext = document.createElement('span');
+  btext.className = 'nav__brand__text';
+  btext.textContent = 'anime-uke';
+  brand.append(mark, btext);
+  nav.appendChild(brand);
 
-  const links = document.getElementById('nav-links');
+  const links = document.createElement('div');
+  links.className = 'nav__links';
+  nav.appendChild(links);
+
   const add = (href, label, opts = {}) => {
     const a = document.createElement('a');
     a.className = `nav__link${opts.accent ? ' nav__link--accent' : ''}${active === href ? ' is-active' : ''}`;
@@ -148,15 +159,25 @@ export async function renderNav(active = '') {
   if (user) {
     const points = document.createElement('span');
     points.className = 'nav__points';
-    points.textContent = `⭐ ${user.points} puncte`;
+    points.textContent = `★ ${user.points}`;
+    points.title = `${user.points} puncte`;
     links.appendChild(points);
 
     if (user.is_admin) add('/admin', 'Admin', { accent: true });
 
+    const chip = document.createElement('span');
+    chip.className = 'nav__user';
+    const hi = document.createElement('span');
+    hi.textContent = 'Salut,';
+    const name = document.createElement('b');
+    name.textContent = user.username;
+    chip.append(hi, name);
+    links.appendChild(chip);
+
     const logoutBtn = document.createElement('button');
     logoutBtn.className = 'btn btn--ghost btn--sm';
     logoutBtn.type = 'button';
-    logoutBtn.textContent = `Ieșire (${user.username})`;
+    logoutBtn.textContent = 'Ieșire';
     logoutBtn.addEventListener('click', logout);
     links.appendChild(logoutBtn);
   } else {
