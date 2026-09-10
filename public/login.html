@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Login • AnimeSphere</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div style="font-size:2.6rem">🎌</div>
+      <h1>Anime<span style="color:var(--accent)">Sphere</span></h1>
+      <p>Intră în cont</p>
+    </div>
+
+    <form id="auth-form" novalidate>
+      <div class="field">
+        <label for="identifier">Email sau username</label>
+        <input class="input" id="identifier" name="identifier" type="text" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Parolă</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn--accent btn--block" id="submit-btn" type="submit">Login</button>
+    </form>
+
+    <p class="auth-alt">Nu ai cont? <a href="/register">Creează unul</a></p>
+    <p class="page-sub" style="text-align:center; margin-top:.8rem"><a href="/">← Înapoi la serii</a></p>
+  </div>
+
+  <!-- Script extern, nu inline: CSP-ul e `script-src 'self'` fara 'unsafe-inline' -->
+  <script type="module" src="/assets/js/page-login.js"></script>
+</body>
+</html>

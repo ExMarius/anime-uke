@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AnimeSphere — vezi anime online gratuit, cu puncte pentru fiecare episod urmărit.">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:title" content="AnimeSphere">
+  <meta property="og:description" content="Seriile tale anime preferate, cu puncte pentru fiecare episod urmărit.">
+  <meta property="og:type" content="website">
+  <title>AnimeSphere — Serii anime</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container">
+    <header class="page-head">
+      <div>
+        <h1 class="page-title">Seriile tale anime</h1>
+        <p class="page-sub" id="series-count">Se încarcă…</p>
+      </div>
+    </header>
+
+    <section id="series-grid" class="grid" aria-live="polite">
+      <div class="loading"><div class="spinner"></div>Se încarcă seriile…</div>
+    </section>
+  </main>
+
+  <!-- CHAT: buton flotant + modal -->
+  <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live">
+    💬 <span class="chat-fab__label">Chat live</span>
+  </button>
+
+  <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live">
+    <div class="chat-box">
+      <div class="chat-head">
+        <span class="chat-head__title">💬 Chat global</span>
+        <span class="chat-head__count" id="chat-online-count">0 online</span>
+        <span class="chat-head__count" id="chat-badge" style="color:var(--text-dim)"></span>
+        <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
+      </div>
+      <div class="chat-online" id="chat-online">Se conectează…</div>
+      <div class="chat-body" id="chat-body"></div>
+      <form class="chat-form" id="chat-form">
+        <label class="sr-only" for="chat-input">Mesaj</label>
+        <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie un mesaj…" autocomplete="off">
+        <button class="btn btn--accent" type="submit">Trimite</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/assets/js/page-index.js"></script>
+</body>
+</html>

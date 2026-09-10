@@ -1,0 +1,5 @@
+# Copiaza in .dev.vars (care e in .gitignore) si editeaza valoarea.
+# Pentru productie NU folosi fisierul asta, ci:
+#   npx wrangler pages secret put JWT_SECRET
+# Genereaza o valoare aleatoare cu:  openssl rand -hex 32
+JWT_SECRET=schimba-cu-o-valoare-aleatoare-lunga

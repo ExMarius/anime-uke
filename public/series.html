@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="index,follow">
+  <title>Serie • AnimeSphere</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container">
+    <p class="page-sub"><a href="/" class="nav__link nav__link--accent">← Toate seriile</a></p>
+
+    <header class="page-head" id="series-head">
+      <div>
+        <h1 class="page-title" id="series-title">Se încarcă…</h1>
+        <p class="page-sub" id="series-meta"></p>
+      </div>
+    </header>
+
+    <p class="page-sub" id="series-desc"></p>
+
+    <h2 class="section-title" id="episodes-heading">Episoade</h2>
+    <section id="episodes-grid" class="grid grid--ep" aria-live="polite">
+      <div class="loading"><div class="spinner"></div>Se încarcă episoadele…</div>
+    </section>
+  </main>
+
+  <script type="module" src="/assets/js/page-series.js"></script>
+</body>
+</html>

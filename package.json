@@ -1,0 +1,22 @@
+{
+  "name": "animesphere",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site de anime pe Cloudflare Pages + D1 + Durable Objects, buget zero",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "seed": "node tests/seed.mjs",
+    "test": "node tests/e2e.mjs",
+    "deploy": "wrangler pages deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.131.0",
+    "ws": "^8.18.0"
+  }
+}

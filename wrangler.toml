@@ -1,16 +1,43 @@
 name = "anime-platform"
-compatibility_date = "2025-04-01"
+compatibility_date = "2026-09-01"
+pages_build_output_dir = "public"
 
-# D1
+# ---------------------------------------------------------------------
+# D1 — database_id se completeaza dupa `wrangler d1 create anime-db`
+# ---------------------------------------------------------------------
 [[d1_databases]]
 binding = "DB"
 database_name = "anime-db"
-# database_id = "..."   ← completează după wrangler d1 create
+database_id = "__INLOCUIESTE_DUPA_CREARE__"
+migrations_dir = "migrations"
 
-# Durable Object
+# ---------------------------------------------------------------------
+# Durable Objects
+#   ChatDO       -> chat live + buffer mesaje (flush in loturi catre D1)
+#   RateLimitDO  -> rate limiting doar pe rute sensibile (login/register/
+#                   watch/admin). NU pe GET-uri publice: fiecare verificare
+#                   costa 1 request DO, iar free tier = 100k/zi.
+#   StatsDO      -> buffer pentru contorul de vizualizari (o scriere D1
+#                   la ~20 views, nu la fiecare view)
+# ---------------------------------------------------------------------
 [[durable_objects.bindings]]
 name = "CHAT"
 class_name = "ChatDO"
 
-[vars]
-JWT_SECRET = "schimba-cu-un-secret-lung-si-aleator-256-bit-2026"
+[[durable_objects.bindings]]
+name = "RATE_LIMIT"
+class_name = "RateLimitDO"
+
+[[durable_objects.bindings]]
+name = "STATS"
+class_name = "StatsDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatDO", "RateLimitDO", "StatsDO"]
+
+# ---------------------------------------------------------------------
+# JWT_SECRET NU se pune aici (a fost cauza bresei din v1: repo public =
+# secret public = oricine putea falsifica un token de admin).
+# Se seteaza cu:  wrangler pages secret put JWT_SECRET
+# ---------------------------------------------------------------------

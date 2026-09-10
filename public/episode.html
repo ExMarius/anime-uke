@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Episod • AnimeSphere</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container-narrow">
+    <p class="page-sub" id="breadcrumb"><a href="/" class="nav__link nav__link--accent">← Toate seriile</a></p>
+
+    <header class="page-head">
+      <div>
+        <h1 class="page-title" id="episode-title">Se încarcă…</h1>
+        <p class="page-sub" id="episode-meta"></p>
+      </div>
+    </header>
+
+    <div class="player" id="player-wrap">
+      <div class="loading" id="player-loading"><div class="spinner"></div>Se încarcă playerul…</div>
+      <!--
+        sandbox: izoleaza embed-ul DoodStream. Fara el, un embed compromis
+        ar putea naviga intreaga pagina (top-level navigation).
+        referrerpolicy: nu trimite URL-ul nostru catre terti.
+        allowfullscreen: cerut explicit, ca sa mearga full-screen.
+      -->
+      <iframe
+        id="player"
+        title="Player video"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowfullscreen
+        hidden></iframe>
+    </div>
+
+    <div class="actions" style="margin-top:1.2rem; justify-content:space-between;">
+      <button class="btn btn--ok" id="watch-btn" type="button">✅ Marchează ca vizionat (+10 puncte)</button>
+      <button class="btn btn--ghost" id="back-btn" type="button">← Înapoi</button>
+    </div>
+
+    <p class="page-sub" id="watch-note" style="margin-top:.7rem"></p>
+  </main>
+
+  <script type="module" src="/assets/js/page-episode.js"></script>
+</body>
+</html>

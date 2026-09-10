@@ -1,0 +1,22 @@
+# Dependinte
+node_modules/
+
+# Stare locala wrangler (D1 local, DO local, cache)
+.wrangler/
+
+# SECRETE — niciodata in repo
+.dev.vars
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+
+# Sistem / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Raport intern de review (nu e parte din livrabil)
+REVIEW.md

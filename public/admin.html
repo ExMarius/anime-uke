@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin • AnimeSphere</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container">
+    <header class="page-head">
+      <div>
+        <h1 class="page-title">Panou Admin</h1>
+        <p class="page-sub" id="admin-who"></p>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="Secțiuni admin">
+      <button class="tab" role="tab" id="tab-stats"    aria-controls="panel-stats"    aria-selected="true"  type="button">📊 Statistici</button>
+      <button class="tab" role="tab" id="tab-series"   aria-controls="panel-series"   aria-selected="false" type="button">🎬 Serii</button>
+      <button class="tab" role="tab" id="tab-episodes" aria-controls="panel-episodes" aria-selected="false" type="button">📺 Episoade</button>
+      <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
+      <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
+    </div>
+
+    <!-- ============ STATISTICI ============ -->
+    <section class="panel" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
+      <div class="stats" id="stats-cards">
+        <div class="loading"><div class="spinner"></div>Se încarcă…</div>
+      </div>
+
+      <h2 class="section-title">Cele mai vizionate episoade</h2>
+      <div class="box table-wrap"><table id="top-episodes"><tbody></tbody></table></div>
+
+      <h2 class="section-title">Cei mai noi utilizatori</h2>
+      <div class="box table-wrap"><table id="latest-users"><tbody></tbody></table></div>
+    </section>
+
+    <!-- ============ SERII ============ -->
+    <section class="panel" id="panel-series" role="tabpanel" aria-labelledby="tab-series" hidden>
+      <div class="box">
+        <h2 class="section-title" style="margin-top:0">Adaugă serie nouă</h2>
+        <form id="series-form">
+          <div class="field">
+            <label for="s-title">Titlu *</label>
+            <input class="input" id="s-title" name="title" type="text" maxlength="200" required>
+          </div>
+          <div class="field">
+            <label for="s-desc">Descriere</label>
+            <textarea class="textarea" id="s-desc" name="description" maxlength="2000"></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="s-cover">URL imagine copertă</label>
+              <input class="input" id="s-cover" name="cover_image" type="url" maxlength="500" placeholder="https://…">
+            </div>
+            <div class="field">
+              <label for="s-genre">Gen</label>
+              <input class="input" id="s-genre" name="genre" type="text" maxlength="100" placeholder="Acțiune, Aventură">
+            </div>
+            <div class="field">
+              <label for="s-year">An</label>
+              <input class="input" id="s-year" name="year" type="number" min="1900" max="2100" placeholder="2026">
+            </div>
+            <div class="field">
+              <label for="s-status">Status</label>
+              <select class="select" id="s-status" name="status">
+                <option value="ongoing">În difuzare</option>
+                <option value="completed">Finalizat</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn--accent" id="series-submit" type="submit">Adaugă seria</button>
+        </form>
+      </div>
+
+      <h2 class="section-title">Serii existente</h2>
+      <div class="box table-wrap">
+        <table id="series-table">
+          <thead><tr><th>ID</th><th>Titlu</th><th>Gen</th><th>An</th><th>Status</th><th>Episoade</th><th>Adăugat de</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ EPISOADE ============ -->
+    <section class="panel" id="panel-episodes" role="tabpanel" aria-labelledby="tab-episodes" hidden>
+      <div class="box">
+        <h2 class="section-title" style="margin-top:0">Adaugă episod nou</h2>
+        <form id="episode-form">
+          <div class="row">
+            <div class="field">
+              <label for="e-series">Serie *</label>
+              <select class="select" id="e-series" name="series_id" required></select>
+            </div>
+            <div class="field">
+              <label for="e-number">Număr episod *</label>
+              <input class="input" id="e-number" name="episode_number" type="number" min="1" max="10000" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="e-title">Titlu episod</label>
+            <input class="input" id="e-title" name="title" type="text" maxlength="200" placeholder="Opțional">
+          </div>
+          <div class="field">
+            <label for="e-url">URL DoodStream *</label>
+            <input class="input" id="e-url" name="doodstream_url" type="url" required placeholder="https://doodstream.com/e/abc123">
+            <p class="page-sub" style="margin:.3rem 0 0; font-size:.78rem">Acceptă <code>/e/</code> sau <code>/d/</code> — se normalizează automat la formatul embed-abil.</p>
+          </div>
+          <button class="btn btn--accent" id="episode-submit" type="submit">Adaugă episodul</button>
+        </form>
+      </div>
+
+      <h2 class="section-title">Episoade existente</h2>
+      <div class="box table-wrap">
+        <table id="episodes-table">
+          <thead><tr><th>ID</th><th>Serie</th><th>Ep.</th><th>Titlu</th><th>Vizionări</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ UTILIZATORI ============ -->
+    <section class="panel" id="panel-users" role="tabpanel" aria-labelledby="tab-users" hidden>
+      <p class="page-sub">Nu îți poți modifica propriul cont. Ultimul administrator nu poate fi demodat, banat sau șters.</p>
+      <div class="box table-wrap">
+        <table id="users-table">
+          <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Puncte</th><th>Rol</th><th>Status</th><th>Acțiuni</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ JURNAL ============ -->
+    <section class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+      <div class="box table-wrap">
+        <table id="log-table">
+          <thead><tr><th>Data</th><th>Admin</th><th>Acțiune</th><th>Țintă</th><th>Detalii</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/assets/js/page-admin.js"></script>
+</body>
+</html>
