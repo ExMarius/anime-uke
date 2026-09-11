@@ -11,17 +11,27 @@ export const MAX_PER_PAGE = 60;
 export const DEFAULT_PER_PAGE = 24;
 
 /**
+ * Episoadele au propria limita: un card de episod e mult mai mic decat un
+ * card de serie, deci incap mai multe pe ecran, dar 2000 dintr-oodata (cat
+ * cerea vechiul LIMIT) inseamna ~1100 de randuri citite la fiecare vizita a
+ * unei serii lungi. La 1000 DAU asta ar manca singur cateva procente bune
+ * din cota gratuita de 5M randuri/zi.
+ */
+export const MAX_EPISODES_PER_PAGE = 200;
+export const DEFAULT_EPISODES_PER_PAGE = 100;
+
+/**
  * Extrage page/per_page din URL, cu limite sanatoase.
  * Valorile absurde (page=999999, per_page=100000) sunt taiate aici, nu in
  * interogare — altfel un client obraznic ar putea cere un offset urias.
  */
-export function parsePaging(url, defaultPerPage = DEFAULT_PER_PAGE) {
+export function parsePaging(url, defaultPerPage = DEFAULT_PER_PAGE, maxPerPage = MAX_PER_PAGE) {
   const rawPage = Number(url.searchParams.get('page') || 1);
   const page = Number.isInteger(rawPage) && rawPage > 0 ? Math.min(rawPage, 10000) : 1;
 
   const rawPer = Number(url.searchParams.get('per_page') || defaultPerPage);
   const perPage = Number.isInteger(rawPer) && rawPer > 0
-    ? Math.min(rawPer, MAX_PER_PAGE)
+    ? Math.min(rawPer, maxPerPage)
     : defaultPerPage;
 
   return { page, perPage, offset: (page - 1) * perPage };

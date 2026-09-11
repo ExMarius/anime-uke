@@ -241,6 +241,50 @@ console.log('\n=== DOM: /admin/serie/<id> (episoade + surse + bulk) ===');
   await p.teardown();
 }
 
+console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ===');
+// Creeaza o serie de 150 de episoade ca sa treaca de pragul de 100/page.
+// Fara paginare, pagina asta ar citi toate episoadele la fiecare vizita.
+{
+  const created = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ title: 'Serie lunga DOM', status: 'ongoing' }),
+  })).json();
+  const sid = created?.id;
+  check('Seria lunga de test a fost creata', Number.isInteger(sid), JSON.stringify(created).slice(0, 120));
+
+  await fetch(`${BASE}/api/admin/episodes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({
+      series_id: sid,
+      episodes: Array.from({ length: 150 }, (_, i) => ({ episode_number: i + 1, title: `Ep ${i + 1}`, sources: [] })),
+    }),
+  });
+
+  const p = await mountPage({ htmlFile: 'public/series.html', url: `/series?id=${sid}`, module: 'page-series.js' });
+  const loaded = await until(() => p.$$('#episodes-grid > *').length > 0);
+  check('Episoadele se randeaza', loaded, `n=${p.$$('#episodes-grid > *').length}`);
+  check('Se randeaza exact o pagina, nu toate 150', p.$$('#episodes-grid > *').length === 100, `n=${p.$$('#episodes-grid > *').length}`);
+  check('Numaratoarea arata totalul real, nu pagina curenta', /150/.test(p.text('#episodes-count') || ''), p.text('#episodes-count'));
+  check('Selectorul de intervale e vizibil la o serie lunga', p.$('#ep-ranges')?.hidden === false, `hidden=${p.$('#ep-ranges')?.hidden}`);
+  check('Selectorul are doua intervale + sageti', p.$$('#ep-ranges button').length === 4, `butoane=${p.$$('#ep-ranges button').length}`);
+  check('Primul interval e etichetat corect', /1–100/.test(p.$('#ep-ranges')?.textContent || ''), p.$('#ep-ranges')?.textContent?.slice(0, 80));
+  check('Sageata spre pagina anterioara e dezactivata pe pagina 1', p.$$('#ep-ranges button')[0]?.disabled === true, 'ar trebui dezactivata');
+
+  // click pe intervalul al doilea
+  const second = p.$$('#ep-ranges button').find((b) => /101–150/.test(b.textContent));
+  check('Exista butonul pentru intervalul 101–150', !!second, p.$('#ep-ranges')?.textContent?.slice(0, 100));
+  second?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const switched = await until(() => p.$$('#episodes-grid > *').length === 50);
+  check('La click se incarca doar intervalul ales', switched, `n=${p.$$('#episodes-grid > *').length}`);
+  check('Intervalul ales e marcat ca pagina curenta', p.$('#ep-ranges [aria-current="page"]')?.textContent?.includes('101') === true, p.$('#ep-ranges [aria-current="page"]')?.textContent);
+  check('Nicio eroare de runtime pe pagina seriei', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+
+  await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
+}
+
 console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
 {
   const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });

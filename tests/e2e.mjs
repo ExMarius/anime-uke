@@ -471,6 +471,58 @@ console.log('\n=== 5c. SCALARE: paginare, cautare, contoare, editare, postare in
   check('Audit: edit_series / edit_episode / bulk_create_episodes consemnate', ['edit_series', 'edit_episode', 'bulk_create_episodes'].every((a) => acts.includes(a)), acts.slice(0, 12).join(','));
 }
 
+console.log('\n=== 5d. PAGINAREA EPISOADELOR PE PAGINA UNEI SERII ===');
+// O serie lunga e cazul care sparge cota D1: vechiul LIMIT 2000 citea toate
+// episoadele la fiecare vizita, deci ~1100 de randuri pentru One Piece.
+{
+  const j = globalThis.admin;
+  const tmp = await req(j, 'POST', '/api/admin/series', { title: 'Serie lunga de test', status: 'ongoing' });
+  const sid = tmp.data?.id;
+  check('Serie lunga creata pentru testul de paginare', Number.isInteger(sid), JSON.stringify(tmp.data).slice(0, 100));
+
+  // 150 de episoade, fara surse — ne intereseaza doar numarul de randuri
+  const bulk = await req(j, 'POST', '/api/admin/episodes', {
+    series_id: sid,
+    episodes: Array.from({ length: 150 }, (_, i) => ({ episode_number: i + 1, title: `Ep ${i + 1}`, sources: [] })),
+  });
+  check('150 de episoade create intr-un singur apel', bulk.status === 201 && bulk.data?.created === 150, `created=${bulk.data?.created}`);
+
+  const p1 = await req(j, 'GET', `/api/series/${sid}`);
+  check('Prima pagina returneaza 100 de episoade, nu toate 150', p1.data?.episodes?.length === 100, `n=${p1.data?.episodes?.length}`);
+  check('Semnaleaza ca mai exista o pagina', p1.data?.has_more === true && p1.data?.pages === 2, JSON.stringify({ has_more: p1.data?.has_more, pages: p1.data?.pages }));
+  check('episode_count vine din coloana denormalizata', p1.data?.episode_count === 150, `episode_count=${p1.data?.episode_count}`);
+  check('Prima pagina incepe cu episodul 1', p1.data?.episodes?.[0]?.episode_number === 1, `primul=${p1.data?.episodes?.[0]?.episode_number}`);
+
+  const p2 = await req(j, 'GET', `/api/series/${sid}?page=2`);
+  check('Pagina 2 returneaza restul de 50', p2.data?.episodes?.length === 50, `n=${p2.data?.episodes?.length}`);
+  check('Pagina 2 incepe exact de unde s-a oprit pagina 1', p2.data?.episodes?.[0]?.episode_number === 101, `primul=${p2.data?.episodes?.[0]?.episode_number}`);
+  check('Pagina 2 nu mai anunta pagini urmatoare', p2.data?.has_more === false, `has_more=${p2.data?.has_more}`);
+
+  const ids1 = new Set((p1.data?.episodes || []).map((e) => e.id));
+  check('Cele doua pagini nu se suprapun', !(p2.data?.episodes || []).some((e) => ids1.has(e.id)), 'suprapunere detectata');
+
+  const huge = await req(j, 'GET', `/api/series/${sid}?per_page=99999`);
+  check('per_page exagerat e limitat la 200', huge.data?.per_page === 200, `per_page=${huge.data?.per_page}`);
+  const beyond = await req(j, 'GET', `/api/series/${sid}?page=999`);
+  check('Pagina dincolo de sfarsit intoarce lista goala, nu eroare', beyond.status === 200 && beyond.data?.episodes?.length === 0, `status=${beyond.status} n=${beyond.data?.episodes?.length}`);
+  const neg = await req(j, 'GET', `/api/series/${sid}?page=-3`);
+  check('page negativ cade pe pagina 1', neg.data?.page === 1, `page=${neg.data?.page}`);
+
+  // o serie scurta nu trebuie sa aiba deloc selector de intervale
+  const short = await req(j, 'POST', '/api/admin/series', { title: 'Serie scurta de test', status: 'completed' });
+  await req(j, 'POST', '/api/admin/episodes', { series_id: short.data?.id, episodes: [{ episode_number: 1, sources: [] }] });
+  const shortRes = await req(j, 'GET', `/api/series/${short.data?.id}`);
+  check('O serie cu un episod are o singura pagina', shortRes.data?.pages === 1 && shortRes.data?.has_more === false, JSON.stringify({ pages: shortRes.data?.pages, has_more: shortRes.data?.has_more }));
+
+  const ghost = await req(j, 'GET', '/api/series/999999');
+  check('Seria inexistenta → 404', ghost.status === 404, `status=${ghost.status}`);
+
+  await req(j, 'DELETE', `/api/admin/series?id=${sid}`);
+  await req(j, 'DELETE', `/api/admin/series?id=${short.data?.id}`);
+  const counters = await req(j, 'GET', '/api/series?per_page=50');
+  check('Contoarele raman corecte dupa curatarea seriilor de test', counters.data?.total_episodes === 3, `total_episodes=${counters.data?.total_episodes}`);
+}
+
 console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
 {
   // Site-ul e privat, deci listele se citesc cu o sesiune valida.

@@ -795,3 +795,6 @@ a.quick__item:hover {
 .select--sm { padding: .38rem .7rem; font-size: .8rem; width: auto; }
 
 .bulk-report__warn { color: var(--warn); font-size: .8rem; }
+
+/* --- selectorul de intervale de episoade (1–100, 101–200, …) --- */
+.rangebar { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }

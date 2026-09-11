@@ -72,11 +72,125 @@ function skeletonEp(n = 6) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Episoadele vin paginate: o serie lunga (One Piece are peste 1100) ar
+// insemna mii de randuri citite din D1 la fiecare vizita. Selectorul de
+// intervale de mai jos e construit din `episode_count`, care e stocat pe
+// randul seriei — deci nu costa niciun COUNT suplimentar.
+// ---------------------------------------------------------------------
+let seriesId = null;
+let epPage = 1;
+let epPages = 1;
+let epPerPage = 100;
+let epTotal = 0;
+
+/** Intervalul de episoade pe care il acopera o pagina: „101–200”. */
+function rangeLabel(page, perPage, total) {
+  const from = (page - 1) * perPage + 1;
+  const to = Math.min(page * perPage, total);
+  return `${from}–${to}`;
+}
+
+/**
+ * Deseneaza selectorul. Sub un numar mic de pagini foloseste butoane (mai
+ * putine clicuri); peste, un <select>, ca sa nu umplem ecranul cu 100 de
+ * butoane la o serie foarte lunga.
+ */
+function renderRanges() {
+  const bar = document.getElementById('ep-ranges');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  if (epPages <= 1) { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  const mkBtn = (label, page, { current = false, disabled = false } = {}) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn btn--sm ${current ? 'btn--accent' : 'btn--ghost'}`;
+    b.textContent = label;
+    b.disabled = disabled;
+    if (!current && !disabled) b.addEventListener('click', () => loadEpisodes(page));
+    if (current) b.setAttribute('aria-current', 'page');
+    return b;
+  };
+
+  bar.appendChild(mkBtn('←', epPage - 1, { disabled: epPage <= 1 }));
+
+  if (epPages <= 10) {
+    for (let p = 1; p <= epPages; p++) {
+      bar.appendChild(mkBtn(rangeLabel(p, epPerPage, epTotal), p, { current: p === epPage }));
+    }
+  } else {
+    const sel = document.createElement('select');
+    sel.className = 'select select--sm';
+    sel.setAttribute('aria-label', 'Interval de episoade');
+    for (let p = 1; p <= epPages; p++) {
+      const o = document.createElement('option');
+      o.value = String(p);
+      o.textContent = `Episoade ${rangeLabel(p, epPerPage, epTotal)}`;
+      sel.appendChild(o);
+    }
+    sel.value = String(epPage);
+    sel.addEventListener('change', () => loadEpisodes(Number(sel.value)));
+    bar.appendChild(sel);
+  }
+
+  bar.appendChild(mkBtn('→', epPage + 1, { disabled: epPage >= epPages }));
+}
+
+function renderEpisodes(episodes) {
+  const grid = document.getElementById('episodes-grid');
+  grid.innerHTML = '';
+
+  if (!episodes.length) {
+    const el = document.createElement('div');
+    el.className = 'empty';
+    el.style.gridColumn = '1 / -1';
+    el.innerHTML = '<div class="empty__icon">📺</div>';
+    const t = document.createElement('div');
+    t.textContent = epTotal ? 'Niciun episod în intervalul ăsta.' : 'Încă nu au fost adăugate episoade.';
+    el.appendChild(t);
+    grid.appendChild(el);
+    return;
+  }
+  for (const ep of episodes) grid.appendChild(episodeCard(ep));
+}
+
+function showGridError(message) {
+  const grid = document.getElementById('episodes-grid');
+  grid.innerHTML = '';
+  const el = document.createElement('div');
+  el.className = 'empty';
+  el.style.gridColumn = '1 / -1';
+  el.textContent = message;
+  grid.appendChild(el);
+}
+
+/** Incarca doar episoadele unei pagini — capul seriei ramane pe ecran. */
+async function loadEpisodes(page) {
+  if (page < 1 || page > epPages) return;
+  epPage = page;
+  renderRanges();
+  skeletonEp(6);
+
+  const res = await api(`/series/${encodeURIComponent(seriesId)}?page=${page}&per_page=${epPerPage}`);
+  if (!res.ok) {
+    showGridError(res.status === 404 ? 'Seria nu există.' : 'Nu am putut încărca episoadele.');
+    return;
+  }
+  epTotal = res.data.episode_count ?? epTotal;
+  epPages = res.data.pages ?? epPages;
+  renderRanges();
+  renderEpisodes(res.data.episodes || []);
+}
+
 async function load() {
   const id = getParam('id');
   const grid = document.getElementById('episodes-grid');
 
   if (!id) { location.replace('/'); return; }
+  seriesId = id;
 
   skeletonEp(6);
   const res = await api(`/series/${encodeURIComponent(id)}`);
@@ -95,23 +209,16 @@ async function load() {
 
   setHead(res.data.series);
 
-  const episodes = res.data.episodes || [];
-  document.getElementById('episodes-count').textContent =
-    episodes.length ? `${episodes.length} ${episodes.length === 1 ? 'episod' : 'episoade'}` : '';
+  epPerPage = res.data.per_page || 100;
+  epTotal = res.data.episode_count || 0;
+  epPages = res.data.pages || 1;
+  epPage = res.data.page || 1;
 
-  grid.innerHTML = '';
-  if (!episodes.length) {
-    const el = document.createElement('div');
-    el.className = 'empty';
-    el.style.gridColumn = '1 / -1';
-    el.innerHTML = '<div class="empty__icon">📺</div>';
-    const t = document.createElement('div');
-    t.textContent = 'Încă nu au fost adăugate episoade.';
-    el.appendChild(t);
-    grid.appendChild(el);
-    return;
-  }
-  for (const ep of episodes) grid.appendChild(episodeCard(ep));
+  document.getElementById('episodes-count').textContent =
+    epTotal ? `${epTotal} ${epTotal === 1 ? 'episod' : 'episoade'}` : '';
+
+  renderRanges();
+  renderEpisodes(res.data.episodes || []);
 }
 
 // ---------------------------------------------------------------------

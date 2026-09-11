@@ -30,6 +30,12 @@
         <h2 class="section__title">Episoade</h2>
         <span class="section__count" id="episodes-count"></span>
       </div>
+      <!--
+        Selector de intervale (1–100, 101–200, …). Apare doar cand seria are
+        mai multe episoade decat incap pe o pagina. Fara el, o serie lunga ar
+        cere toate episoadele la fiecare vizita.
+      -->
+      <div class="rangebar" id="ep-ranges" hidden></div>
       <div id="episodes-grid" class="grid grid--ep" aria-live="polite"></div>
     </section>
   </main>
