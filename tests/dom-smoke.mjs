@@ -352,7 +352,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   const sid = created?.series?.id ?? created?.id;
   await fetch(`${BASE}/api/admin/episodes`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
-    body: JSON.stringify({ series_id: sid, episodes: [{ episode_number: 1, title: 'Unu', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] }] }),
+    body: JSON.stringify({ series_id: sid, episodes: [{ episode_number: 1, title: 'Unu', subtitle_url: '/assets/subs/demo-ro.vtt', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] }] }),
   });
   const detail = await (await fetch(`${BASE}/api/series/${sid}`, { headers: { Cookie: COOKIE } })).json();
   const epId = detail?.episodes?.[0]?.id;
@@ -378,6 +378,10 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // O sursa unica nu are ce alege: bara de taburi trebuie ascunsa, nu goala.
   const nSurse = p.$$('#source-list .sources__btn, #source-list button').length;
   check('Sursele se randeaza sau bara e ascunsa curat', nSurse > 0 || p.$('#source-tabs')?.hidden === true, `butoane=${nSurse} barHidden=${p.$('#source-tabs')?.hidden}`);
+
+  // Subtitrarea din episod trebuie sa ajunga ca <track> in <video>.
+  const trackOk = await until(() => p.$('#player-video track')?.getAttribute('srclang') === 'ro');
+  check('Subtitrarea se ataseaza ca <track srclang="ro">', trackOk, `track=${p.$('#player-video track')?.outerHTML?.slice(0, 90)}`);
   await p.teardown();
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }

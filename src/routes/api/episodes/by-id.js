@@ -28,7 +28,7 @@ export async function onRequestGet(context) {
     const epRes = await env.DB
       .prepare(
         `SELECT
-           e.id, e.series_id, e.episode_number, e.title, e.views, e.created_at,
+           e.id, e.series_id, e.episode_number, e.title, e.subtitle_url, e.views, e.created_at,
            s.title AS series_title, s.cover_image AS series_cover, s.status AS series_status
          FROM episodes e
          JOIN anime_series s ON s.id = e.series_id
@@ -79,6 +79,7 @@ export async function onRequestGet(context) {
         series_status: epRes.series_status,
         episode_number: epRes.episode_number,
         title: epRes.title,
+        subtitle_url: epRes.subtitle_url || '',
         views: epRes.views,
         created_at: epRes.created_at,
       },

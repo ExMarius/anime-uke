@@ -128,10 +128,11 @@ export function validateEpisodePatch(input, existing) {
     series_id: existing.series_id,
     episode_number: existing.episode_number,
     title: existing.title,
+    subtitle_url: existing.subtitle_url ?? '',
     sources: [], // sursele se gestioneaza separat, prin /api/admin/episode-sources
   };
   const provided = [];
-  for (const f of ['series_id', 'episode_number', 'title']) {
+  for (const f of ['series_id', 'episode_number', 'title', 'subtitle_url']) {
     if (input[f] !== undefined) { merged[f] = input[f]; provided.push(f); }
   }
   if (!provided.length) return { ok: true, value: {}, provided: [] };
@@ -174,12 +175,30 @@ export function validateEpisode(input) {
   const sources = validateSourceList(sourcesInput);
   if (!sources.ok) return sources;
 
+  // Subtitrarea e optionala: un fisier WebVTT. Acceptam o cale din acelasi
+  // origin (/…) sau un URL https. Track-urile din <video> cer CORS pentru
+  // domenii externe, deci same-origin e varianta care merge intotdeauna.
+  let subtitleUrl = '';
+  const rawSub = input.subtitle_url === undefined || input.subtitle_url === null
+    ? '' : String(input.subtitle_url).trim();
+  if (rawSub) {
+    if (rawSub.startsWith('/')) {
+      subtitleUrl = rawSub;
+    } else {
+      let u;
+      try { u = new URL(rawSub); } catch { return { ok: false, error: 'URL de subtitrare invalid' }; }
+      if (u.protocol !== 'https:') return { ok: false, error: 'Subtitrarea trebuie sa fie un URL https sau o cale din site (/…)' };
+      subtitleUrl = u.href;
+    }
+  }
+
   return {
     ok: true,
     value: {
       series_id: seriesId,
       episode_number: episodeNumber,
       title,
+      subtitle_url: subtitleUrl,
       sources: sources.value,
     },
   };

@@ -120,7 +120,7 @@ export async function onRequestGet(context) {
   try {
     const res = await env.DB
       .prepare(
-        `SELECT e.id, e.series_id, e.episode_number, e.title, e.views, e.created_at,
+        `SELECT e.id, e.series_id, e.episode_number, e.title, e.subtitle_url, e.views, e.created_at,
                 s.title AS series_title
          FROM episodes e JOIN anime_series s ON s.id = e.series_id
          ${whereSql}
@@ -192,9 +192,9 @@ async function createOne(context, admin, body) {
 
   const stmts = [
     env.DB.prepare(
-      `INSERT INTO episodes (series_id, episode_number, title, created_by)
-       VALUES (?, ?, ?, ?)`
-    ).bind(v.value.series_id, v.value.episode_number, v.value.title, admin.id),
+      `INSERT INTO episodes (series_id, episode_number, title, subtitle_url, created_by)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(v.value.series_id, v.value.episode_number, v.value.title, v.value.subtitle_url || '', admin.id),
     ...sourceInserts(env, v.value.series_id, v.value.episode_number, v.value.sources),
     bumpEpisodeCount(env, v.value.series_id, 1),
     ...counterStmts(env, { episodes: 1 }),
@@ -290,8 +290,8 @@ async function createBulk(context, admin, body) {
     for (const ep of chunk) {
       stmts.push(
         env.DB.prepare(
-          `INSERT INTO episodes (series_id, episode_number, title, created_by) VALUES (?, ?, ?, ?)`
-        ).bind(seriesId.value, ep.episode_number, ep.title, admin.id),
+          `INSERT INTO episodes (series_id, episode_number, title, subtitle_url, created_by) VALUES (?, ?, ?, ?, ?)`
+        ).bind(seriesId.value, ep.episode_number, ep.title, ep.subtitle_url || '', admin.id),
         ...sourceInserts(env, seriesId.value, ep.episode_number, ep.sources)
       );
     }

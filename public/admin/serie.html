@@ -97,6 +97,11 @@
           </div>
         </div>
         <div class="field">
+          <label for="e-subtitle">Subtitrare (.vtt)</label>
+          <input class="input" id="e-subtitle" name="subtitle_url" type="text" placeholder="Opțional: /assets/subs/… .vtt sau https://…">
+          <p class="hint">Fișier WebVTT în română. Cale din site sau URL https cu CORS.</p>
+        </div>
+        <div class="field">
           <label>Surse video</label>
           <p class="hint">
             DoodStream acceptă <code>/d/</code> sau <code>/e/</code> — se normalizează automat.
@@ -213,6 +218,11 @@ placeholder="1 | Romance Dawn | https://doodstream.com/e/abc123
             <label for="ee-title">Titlu</label>
             <input class="input" id="ee-title" name="title" type="text" maxlength="200">
           </div>
+        </div>
+        <div class="field">
+          <label for="ee-subtitle">Subtitrare (.vtt)</label>
+          <input class="input" id="ee-subtitle" name="subtitle_url" type="text" placeholder="Opțional">
+          <p class="hint">Fișier WebVTT în română, încărcat în site sau găzduit cu CORS.</p>
         </div>
         <div class="actions">
           <button class="btn btn--accent" id="ep-edit-save" type="submit">Salvează</button>

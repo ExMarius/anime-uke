@@ -940,6 +940,41 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
   }
 }
 
+console.log('\n=== 13b. SUBTITRARI WEBVTT IN ROMANA ===');
+// Subtitrarea e un camp optional pe episod: cale din site sau https.
+// Playerul o ataseca ca <track srclang="ro">; aici verificam doar contractul
+// API si validarea, partea de DOM e in dom-smoke.
+{
+  const j = globalThis.admin;
+  const created = await req(j, 'POST', '/api/admin/episodes', {
+    series_id: globalThis.seriesId,
+    episodes: [{
+      episode_number: 901, title: 'Cu subtitrare',
+      subtitle_url: '/assets/subs/demo-ro.vtt',
+      sources: [{ label: 'S', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }],
+    }],
+  });
+  // Raspunsul de bulk nu intoarce id-urile, deci cautam episodul dupa numar.
+  const list = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+  const newId = (list.data?.episodes || []).find((e) => e.episode_number === 901)?.id;
+  check('Episodul cu subtitrare se posteaza', Number.isInteger(newId), JSON.stringify(created.data)?.slice(0, 120));
+
+  const got = await req(j, 'GET', `/api/episodes/${newId}`);
+  check('API-ul returneaza subtitle_url', got.data?.episode?.subtitle_url === '/assets/subs/demo-ro.vtt', JSON.stringify(got.data?.episode?.subtitle_url));
+
+  const badHttp = await req(j, 'PATCH', '/api/admin/episodes', { id: newId, subtitle_url: 'http://insecure.example/x.vtt' });
+  check('Subtitrare http:// (nesigura) → 400', badHttp.status === 400, `status=${badHttp.status}`);
+  const badJs = await req(j, 'PATCH', '/api/admin/episodes', { id: newId, subtitle_url: 'javascript:alert(1)' });
+  check('Subtitrare javascript: → 400', badJs.status === 400, `status=${badJs.status}`);
+
+  const https = await req(j, 'PATCH', '/api/admin/episodes', { id: newId, subtitle_url: 'https://cdn.example.com/ro.vtt' });
+  check('Subtitrare https valida se salveaza', https.status === 200, `status=${https.status}`);
+  const cleared = await req(j, 'PATCH', '/api/admin/episodes', { id: newId, subtitle_url: '' });
+  check('Subtitrarea se poate goli', cleared.status === 200, `status=${cleared.status}`);
+
+  await req(j, 'DELETE', `/api/admin/episodes?id=${newId}`);
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));

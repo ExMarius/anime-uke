@@ -296,6 +296,7 @@ document.getElementById('episode-form')?.addEventListener('submit', async (e) =>
       body: {
         series_id: seriesId,
         episode_number: Number(f.episode_number.value),
+        subtitle_url: (f.subtitle_url?.value || '').trim(),
         title: f.title.value.trim(),
         sources,
       },
@@ -316,6 +317,7 @@ function openEpisodeEdit(ep) {
   const f = document.getElementById('episode-edit-form');
   f.episode_number.value = ep.episode_number;
   f.title.value = ep.title || '';
+  if (f.subtitle_url) f.subtitle_url.value = ep.subtitle_url || '';
   document.getElementById('ep-edit-title').textContent = `Editează episodul ${ep.episode_number}`;
   toggle('ep-edit-panel', true);
   f.title.focus();
@@ -331,7 +333,7 @@ document.getElementById('episode-edit-form')?.addEventListener('submit', async (
   await withBusy(btn, async () => {
     const res = await api('/admin/episodes', {
       method: 'PATCH',
-      body: { id: currentEditEp.id, episode_number: Number(f.episode_number.value), title: f.title.value.trim() },
+      body: { id: currentEditEp.id, episode_number: Number(f.episode_number.value), title: f.title.value.trim(), subtitle_url: (f.subtitle_url?.value || '').trim() },
     });
     if (!res.ok) { toast(res.data?.error || 'Nu am putut salva', 'err', 5000); return; }
     toast('Episod salvat', 'ok');

@@ -16,6 +16,7 @@ let episodeId = null;
 let heartbeatTimer = null;
 let activityTimer = null;
 let pendingSeconds = 0;
+let currentSubtitle = '';
 
 function fmtTime(total) {
   const m = Math.floor(total / 60);
@@ -200,6 +201,21 @@ function selectSource(index) {
     showLoading();
     video.src = safeUrl(src.url, '');
     video.hidden = false;
+
+    // Subtitrarea in romana: un fisier WebVTT atasat ca <track>. Il punem
+    // de fiecare data cand porneste o sursa file, ca sa nu ramana un track
+    // de la episodul anterior.
+    video.querySelectorAll('track').forEach((tr) => tr.remove());
+    const sub = safeUrl(currentSubtitle, '');
+    if (sub && sub !== '#') {
+      const track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.label = 'Română';
+      track.srclang = 'ro';
+      track.default = true;
+      track.src = sub;
+      video.appendChild(track);
+    }
     // `loadeddata` e mai de incredere decat `load` la elemente media.
     video.addEventListener('loadeddata', () => clearLoading(), { once: true });
     video.addEventListener('error', () => {
@@ -339,6 +355,7 @@ async function load() {
   }
 
   const ep = res.data.episode;
+  currentSubtitle = ep.subtitle_url || '';
 
   const label = `Episodul ${ep.episode_number}${ep.title ? ` — ${ep.title}` : ''}`;
   titleEl.textContent = label;
