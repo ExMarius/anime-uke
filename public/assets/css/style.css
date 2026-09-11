@@ -674,13 +674,12 @@ a.quick__item:hover {
   display: grid; place-content: center; gap: .4rem;
   padding: 1rem; text-align: center;
 }
-.ext-source {
-  position: absolute; inset: 0; z-index: 2;
-  display: grid; place-content: center; justify-items: center; gap: .9rem;
-  padding: 1.5rem; text-align: center;
+.ext-inline {
+  display: inline-block; margin-top: .55rem;
+  font-size: .82rem; color: var(--dim); text-decoration: none;
+  border-bottom: 1px dashed currentColor;
 }
-.ext-source__icon { font-size: 2.8rem; opacity: .7; }
-.ext-source__text { color: var(--dim); margin: 0; font-size: .9rem; }
+.ext-inline:hover { color: var(--accent); }
 
 /* --- editorul de surse (admin) --- */
 .src-builder { display: flex; flex-direction: column; gap: .5rem; }

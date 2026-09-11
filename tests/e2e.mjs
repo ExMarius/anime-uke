@@ -616,6 +616,22 @@ console.log('\n=== 8. PUNCTE DOAR DUPA 15 MIN DE VIZIONARE ===');
   check('secunde negative → 400', badSec.status === 400, `status=${badSec.status}`);
 }
 
+console.log('\n=== 8a. PLAYERUL NU MAI TRIMITE UTILIZATORUL IN AFARA SITE-ULUI ===');
+// Cerinta: vizionezi in playerul din pagina. Cutia care spunea „se deschide
+// intr-o pagina externa" prelua tot playerul, deci nu mai exista deloc.
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const page = await raw(j, `/episode?id=${globalThis.epId}`);
+  const html = page.text;
+
+  check('Mesajul „se deschide intr-o pagina externa" a disparut', !html.includes('se deschide într-o pagină externă'), 'inca prezent in HTML');
+  check('Cutia care prelua playerul (player-ext) a fost scoasa', !html.includes('player-ext'));
+  check('Redarea inline ramane: <video> + iframe', html.includes('id="player-video"') && html.includes('id="player"'));
+  check('Bara de progres spre 15 minute e prezenta', html.includes('id="watch-progress"'));
+  check('Butonul manual de marcare ca vazut a disparut', !html.includes('watch-btn'));
+}
+
 console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
 {
   const j = globalThis.admin;

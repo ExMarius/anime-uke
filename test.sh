@@ -37,13 +37,27 @@ grep -q "Ready on" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG
 RC=0
 echo
 echo "════════ e2e (API) ════════"
-node tests/e2e.mjs | tail -6
-[ "${PIPESTATUS[0]}" -eq 0 ] || RC=1
+# Logul complet ramane pe disc: un crash la mijlocul suitei ar fi altfel
+# invizibil, pentru ca tail arata doar ultimele randuri.
+node tests/e2e.mjs > /tmp/e2e.log 2>&1
+E2E_RC=$?
+tail -8 /tmp/e2e.log
+if [ $E2E_RC -ne 0 ]; then
+  echo "!! e2e s-a oprit cu codul $E2E_RC — ultimele erori:"
+  grep -nE "Error|error:|at .*\.mjs|Cannot|is not" /tmp/e2e.log | tail -12
+fi
+[ "$E2E_RC" -eq 0 ] || RC=1
 
 echo
 echo "════════ dom-smoke (pagini in jsdom) ════════"
-node tests/dom-smoke.mjs | tail -6
-[ "${PIPESTATUS[0]}" -eq 0 ] || RC=1
+node tests/dom-smoke.mjs > /tmp/dom.log 2>&1
+DOM_RC=$?
+tail -8 /tmp/dom.log
+if [ $DOM_RC -ne 0 ]; then
+  echo "!! dom-smoke s-a oprit cu codul $DOM_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/dom.log | tail -12
+fi
+[ "$DOM_RC" -eq 0 ] || RC=1
 
 echo
 [ "$RC" -eq 0 ] && echo "✅ Ambele suite au trecut" || echo "❌ Exista esecuri"

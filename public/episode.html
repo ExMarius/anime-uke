@@ -57,13 +57,10 @@
         preload="metadata"
         referrerpolicy="strict-origin-when-cross-origin"
         hidden></video>
-      <!-- Sursa de tip „link extern": nu o inglobam, doar o trimitem mai departe. -->
-      <div class="ext-source" id="player-ext" hidden>
-        <div class="ext-source__icon">🔗</div>
-        <p class="ext-source__text" id="ext-text">Sursa asta se deschide într-o pagină externă.</p>
-        <a class="btn btn--accent" id="ext-link" href="#" target="_blank" rel="noopener noreferrer nofollow">Deschide sursa</a>
-      </div>
     </div>
+    <!-- Alternativa discreta pentru o sursa de tip link. Sta SUB player si nu
+         inlocuieste niciodata zona de redare: playerul ramane mereu acolo. -->
+    <a class="ext-inline" id="ext-link" href="#" target="_blank" rel="noopener noreferrer nofollow" hidden>Deschide „<span id="ext-label"></span>" într-o filă nouă</a>
 
     <!--
       Punctele si marcajul „vizionat" nu mai vin dintr-un buton apasat de

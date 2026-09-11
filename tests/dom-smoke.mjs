@@ -162,9 +162,14 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   const loaded = await until(() => p.$$('#series-grid .card, #series-grid .poster-card').length > 0 || p.text('#series-count')?.includes('afișate'));
   check('Grila de serii se populeaza din API', loaded, `count=${p.text('#series-count')} html=${p.$('#series-grid')?.innerHTML.slice(0, 120)}`);
   check('Numaratoarea reflecta pagina incarcata, nu tot catalogul', /\d+ afișate|0 rezultate/.test(p.text('#series-count') || ''), p.text('#series-count'));
-  // La 1000+ serii totalul e formatat ro-RO („1.002"), deci acceptam si
-  // separatorii de mii — important e sa NU fie numarul de carduri randate.
-  check('Statistica din hero vine din meta, nu din pagina curenta', /^[\d.\s]+$/.test(p.text('#stat-series') || '') && p.text('#stat-series') !== String(p.$$('#series-grid .card, #series-grid .poster-card').length), `stat-series=${p.text('#stat-series')}`);
+  // Hero-ul trebuie sa arate TOTALUL din site_meta, nu ce incap pe pagina.
+  // La 1000+ serii numarul e formatat ro-RO („1.002"), deci comparam cu
+  // totalul din API trecut prin acelasi format.
+  {
+    const m = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
+    const asteptat = Number(m.total).toLocaleString('ro-RO');
+    check('Statistica din hero vine din meta, nu din pagina curenta', p.text('#stat-series') === asteptat, `stat-series=${p.text('#stat-series')} asteptat=${asteptat}`);
+  }
   const sel = p.$('#sort-select');
   check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 4, `optiuni=${sel?.options.length}`);
   // Vizibilitatea butonului trebuie sa fie congruenta cu has_more de pe

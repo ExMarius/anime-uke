@@ -111,7 +111,7 @@ function memoryKey() {
 function hideAllPlayers() {
   const iframe = document.getElementById('player');
   const video = document.getElementById('player-video');
-  const ext = document.getElementById('player-ext');
+  const extLink = document.getElementById('ext-link');
 
   // Golim sursa veche inainte de a ascunde: un <video> lasat cu src
   // continua sa descarce date in fundal si sa tina un tab de retea ocupat.
@@ -122,7 +122,7 @@ function hideAllPlayers() {
 
   if (iframe) iframe.hidden = true;
   if (video) video.hidden = true;
-  if (ext) ext.hidden = true;
+  if (extLink) extLink.hidden = true;
 }
 
 function showLoading(text) {
@@ -162,7 +162,7 @@ function selectSource(index) {
 
   const iframe = document.getElementById('player');
   const video = document.getElementById('player-video');
-  const ext = document.getElementById('player-ext');
+  const extLink = document.getElementById('ext-link');
 
   if (src.kind === 'file') {
     showLoading();
@@ -177,12 +177,38 @@ function selectSource(index) {
     setTimeout(clearLoading, 6000);
 
   } else if (src.kind === 'link') {
-    clearLoading();
-    document.getElementById('ext-text').textContent =
-      `„${src.label}" se deschide într-o pagină externă.`;
-    const a = document.getElementById('ext-link');
-    a.href = safeUrl(src.url, '#');
-    ext.hidden = false;
+    // Si un link extern se reda in pagina, nu mai trimite utilizatorul afara:
+    // fisierele media merg direct in <video>, restul in iframe. Randul discret
+    // de sub player ramane doar ca alternativa, nu ca inlocuitor.
+    const url = safeUrl(src.url, '');
+    if (!url || url === '#') { showLoading('Sursa nu e disponibilă.'); return; }
+    extLink.href = url;
+    extLink.hidden = false;
+    const lbl = document.getElementById('ext-label');
+    if (lbl) lbl.textContent = src.label || 'sursa';
+
+    if (/\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(url)) {
+      showLoading();
+      video.src = url;
+      video.hidden = false;
+      video.addEventListener('loadeddata', () => clearLoading(), { once: true });
+      video.addEventListener('error', () => {
+        clearLoading();
+        showLoading('Fișierul nu se poate reda aici. Folosește linkul de sub player.');
+      }, { once: true });
+      setTimeout(clearLoading, 6000);
+    } else {
+      showLoading();
+      iframe.src = url;
+      iframe.hidden = false;
+      iframe.addEventListener('load', () => clearLoading(), { once: true });
+      setTimeout(() => {
+        if (document.getElementById('player-loading')) {
+          clearLoading();
+          showLoading('Sursa nu răspunde. Folosește linkul de sub player sau altă sursă.');
+        }
+      }, 8000);
+    }
 
   } else {
     const url = safeUrl(src.url, '');
