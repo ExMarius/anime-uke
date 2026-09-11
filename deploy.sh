@@ -99,7 +99,14 @@ ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
 
 # ---------------------------------------------------------------------
 step "5/5  JWT_SECRET"
-if printf '%s' "$(openssl rand -hex 32)" | $WRANGLER pages secret put JWT_SECRET --project-name="$PROJECT" >/tmp/sec.txt 2>&1; then
+# Il generam DOAR la primul deploy. Inainte regeneram la fiecare publicare,
+# ceea ce invalida toate sesiunile: orice deploy scotea toti utilizatorii
+# afara. Acum ca exista conturi reale, asta ar fi fost deranjant saptamanal.
+# Valoarea unui secret Pages nu poate fi citita (doar scrisa), dar
+# `secret list` ii arata numele — suficient ca sa stim daca exista deja.
+if $WRANGLER pages secret list --project-name="$PROJECT" 2>/dev/null | grep -q 'JWT_SECRET'; then
+  ok "secretul exista deja — il pastrez, sesiunile raman valide"
+elif printf '%s' "$(openssl rand -hex 32)" | $WRANGLER pages secret put JWT_SECRET --project-name="$PROJECT" >/tmp/sec.txt 2>&1; then
   ok "secret setat (valoare generata aleator, nepublicata)"
 else
   cat /tmp/sec.txt
