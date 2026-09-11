@@ -68,9 +68,23 @@ ck('cookie HttpOnly + Secure + SameSite',
 r = await req(A, 'GET', '/api/auth/me');
 ck('sesiune activa + puncte 0', r.status === 200 && r.data?.user?.points === 0, JSON.stringify(r.data).slice(0, 120));
 
+r = await req(A, 'GET', '/api/auth/register-options');
+ck('dupa bootstrap, codul de invitatie e obligatoriu', r.data?.inviteRequired === true, JSON.stringify(r.data));
+
+const noCode = await req(jar(), 'POST', '/api/auth/register', { username: `x${stamp}`, email: `x${stamp}@anime-uke.test`, password: 'test1234' });
+ck('inregistrare FARA cod e respinsa', noCode.status === 400 || noCode.status === 404, `HTTP ${noCode.status} ${noCode.data?.error}`);
+
+r = await req(A, 'POST', '/api/admin/invites', { count: 1, note: 'verificare productie' });
+ck('admin genereaza cod de invitatie', r.status === 201 && r.data?.created?.length === 1, `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 120)}`);
+const inviteCode = r.data?.created?.[0]?.code;
+ck('codul are formatul AU-XXXX-XXXX', /^AU-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/.test(inviteCode || ''), inviteCode);
+
 const B = jar();
-r = await req(B, 'POST', '/api/auth/register', { username: `user${stamp}`, email: userEmail, password: 'test1234' });
+r = await req(B, 'POST', '/api/auth/register', { username: `user${stamp}`, email: userEmail, password: 'test1234', invite_code: inviteCode });
 ck('al doilea user NU e admin', r.status === 201 && r.data?.user?.is_admin === false, `HTTP ${r.status} ${JSON.stringify(r.data?.user)}`);
+
+r = await req(jar(), 'POST', '/api/auth/register', { username: `y${stamp}`, email: `y${stamp}@anime-uke.test`, password: 'test1234', invite_code: inviteCode });
+ck('codul e de unica folosinta → 409', r.status === 409, `HTTP ${r.status} ${r.data?.error}`);
 
 // ---------------------------------------------------------------- 2. serii
 console.log('\n2. Serii + episoade (flux admin din spec):');
@@ -276,6 +290,11 @@ r = await req(A, 'DELETE', `/api/admin/series?id=${seriesId}`);
 ck('admin sterge serie (cascade la episoade)', r.status === 200, `HTTP ${r.status}`);
 r = await req(jar(), 'GET', '/api/series');
 ck('lista e goala dupa stergere', r.status === 200 && (r.data?.series || []).length === 0, `HTTP ${r.status} n=${(r.data?.series || []).length}`);
+
+r = await req(A, 'GET', '/api/admin/invites?filter=used');
+const usedRow = (r.data?.invites || []).find((i) => i.used_by);
+ck('codul folosit apare in panou cu numele utilizatorului', !!usedRow && usedRow.used_by_name === `user${stamp}`, JSON.stringify(usedRow || {}).slice(0, 140));
+ck('numaratoarele din panou sunt coerente', (r.data?.counts?.used ?? 0) >= 1, JSON.stringify(r.data?.counts));
 
 console.log(`\n=== ${pass} trecute, ${fail} esuate ===\n`);
 process.exit(fail ? 1 : 0);

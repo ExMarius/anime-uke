@@ -77,6 +77,11 @@ console.log('\n=== 1. VIZITATOR ===');
   check('GET /assets/js/core.js → 200', mod.status === 200);
 }
 
+{
+  const opts = await req(jar(), 'GET', '/api/auth/register-options');
+  check('register-options: baza goala -> fara cod (bootstrap)', opts.status === 200 && opts.data?.inviteRequired === false && opts.data?.bootstrap === true, JSON.stringify(opts.data));
+}
+
 console.log('\n=== 2. VALIDARI LA REGISTER ===');
 {
   const j = jar();
@@ -112,8 +117,53 @@ console.log('\n=== 3. PRIMUL UTILIZATOR DEVINE ADMIN (bootstrap) ===');
   const dup2 = await req(jar(), 'POST', '/api/auth/register', { username: 'altcineva', email: 'marius@test.ro', password: 'parola123' });
   check('Email duplicat → 409', dup2.status === 409, `status=${dup2.status} ${dup2.data?.error}`);
 
-  const second = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123' });
+  // --- coduri de invitatie: dupa bootstrap sunt obligatorii ---
+  const noCode = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123' });
+  check('Inregistrare fara cod dupa bootstrap -> respinsa', noCode.status === 400 || noCode.status === 404, `status=${noCode.status} ${noCode.data?.error}`);
+
+  const badCode = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123', invite_code: 'AU-ZZZZ-ZZZZ' });
+  check('Cod inexistent -> 404', badCode.status === 404, `status=${badCode.status}`);
+
+  const wrongFormat = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123', invite_code: 'nu-are-format' });
+  check('Cod cu format gresit -> 400', wrongFormat.status === 400, `status=${wrongFormat.status}`);
+
+  const gen = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 4, note: 'test e2e' });
+  check('Admin genereaza coduri -> 201', gen.status === 201 && (gen.data?.created?.length === 4), `status=${gen.status} ${JSON.stringify(gen.data).slice(0,120)}`);
+  check('Codurile au formatul AU-XXXX-XXXX', /^AU-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/.test(gen.data?.created?.[0]?.code || ''), gen.data?.created?.[0]?.code);
+  globalThis.codes = (gen.data?.created || []).map(c => c.code);
+  globalThis.codeIds = (gen.data?.created || []).map(c => c.id);
+
+  const genTooMany = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 999 });
+  check('Peste limita de coduri/cerere -> trunchiat la 25', genTooMany.status === 201 && genTooMany.data.created.length === 25, `n=${genTooMany.data?.created?.length}`);
+
+  const second = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123', invite_code: globalThis.codes[0] });
   check('Al doilea user NU e admin', second.data?.user?.is_admin === false, JSON.stringify(second.data?.user));
+
+  const reuse = await req(jar(), 'POST', '/api/auth/register', { username: 'user3', email: 'user3@test.ro', password: 'parola123', invite_code: globalThis.codes[0] });
+  check('Cod deja folosit -> 409', reuse.status === 409, `status=${reuse.status} ${reuse.data?.error}`);
+
+  const noFormat = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'revoke', id: globalThis.codeIds[1] });
+  check('Admin poate revoca un cod nefolosit', noFormat.status === 200, `status=${noFormat.status}`);
+
+  const revoked = await req(jar(), 'POST', '/api/auth/register', { username: 'user4', email: 'user4@test.ro', password: 'parola123', invite_code: globalThis.codes[1] });
+  check('Cod revocat -> 410', revoked.status === 410, `status=${revoked.status} ${revoked.data?.error}`);
+
+  const revokeUsed = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'revoke', id: globalThis.codeIds[0] });
+  check('Codul folosit nu poate fi revocat -> 409', revokeUsed.status === 409, `status=${revokeUsed.status}`);
+
+  const delUsed = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[0]}`);
+  check('Codul folosit nu poate fi sters -> 409', delUsed.status === 409, `status=${delUsed.status}`);
+
+  const list = await req(globalThis.admin, 'GET', '/api/admin/invites?filter=used');
+  // Sortarea e created_at DESC, id DESC, deci codul folosit (id mic) e la coada.
+  const usedRow = (list.data?.invites || []).find(i => i.used_by);
+  check('Lista codurilor folosite arata cine le-a folosit', list.status === 200 && usedRow?.used_by_name === 'user2' && usedRow?.status === 'used', JSON.stringify(usedRow || {}).slice(0,140));
+  check('Numaratoarele din panou sunt corecte', list.data?.counts?.used === 1 && list.data?.counts?.revoked === 1, JSON.stringify(list.data?.counts));
+  const activeList = await req(globalThis.admin, 'GET', '/api/admin/invites?filter=active');
+  check('Filtrul "active" excludee codurile folosite si revocate', activeList.status === 200 && (activeList.data?.invites || []).every(i => i.status === 'active') && activeList.data?.invites?.length === 27, `n=${activeList.data?.invites?.length}`);
+
+  const noInviteForUser = await req(jar(), 'GET', '/api/admin/invites');
+  check('Userul normal nu vede codurile', noInviteForUser.status === 403 || noInviteForUser.status === 401, `status=${noInviteForUser.status}`);
 }
 
 console.log('\n=== 4. LOGIN ===');

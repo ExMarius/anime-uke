@@ -3,6 +3,7 @@ import { signJWT } from '../../../lib/jwt.js';
 import { json, errorResponse, setAuthCookie, getClientIp, sanitizeText, isSameOrigin } from '../../../lib/http.js';
 import { validateUsername, validateEmail, validatePassword } from '../../../lib/validate.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
+import { findUsableInvite, claimInvite, assignInviteToUser, releaseInvite } from '../../../lib/invite.js';
 
 // Register: max 5 conturi/ora per IP. Previne crearea automata de conturi,
 // care altfel ar umple D1 gratuit (500 MB) si ar putea depasi cota de scrieri.
@@ -47,25 +48,57 @@ export async function onRequestPost(context) {
     return errorResponse(409, `${field} este deja folosit`);
   }
 
-  const salt = randomHex(16);
-  const hash = await hashPassword(password.value, salt);
-
-  // BOOTSTRAP: primul utilizator dintr-o baza de date goala devine admin.
-  // Fara asta nu ar exista nicio cale de a crea primul admin. Se intampla
-  // o singura data (cat timp users e gol) si e consemnat in admin_log.
+  // BOOTSTRAP: primul utilizator dintr-o baza de date goala devine admin si
+  // nu are nevoie de cod de invitatie. Fara exceptia asta nu ar exista nicio
+  // cale de a crea primul admin — cel care, la randul lui, genereaza codurile.
   const countRes = await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first();
   const isFirstUser = (countRes?.n ?? 0) === 0;
 
-  const insert = await env.DB
-    .prepare(
-      `INSERT INTO users (username, email, password_hash, password_salt, points, is_admin, is_banned)
-       VALUES (?, ?, ?, ?, 0, ?, 0)`
-    )
-    .bind(username.value, email.value, hash, salt, isFirstUser ? 1 : 0)
-    .run();
+  // --- cod de invitatie (obligatoriu dupa bootstrap) ---
+  // Verificarea si rezervarea codului au loc INAINTE de PBKDF2 (~4.45 ms CPU),
+  // ca un cod gresit sa nu arunce pe fereastra timpul de CPU al planului gratuit.
+  let invite = null;
+  if (!isFirstUser) {
+    const found = await findUsableInvite(env, body.invite_code);
+    if (!found.ok) return errorResponse(found.status, found.error);
 
-  const userId = insert.meta?.last_row_id;
-  if (!userId) return errorResponse(500, 'Nu am putut crea contul');
+    // Rezervare atomica: doi oameni care trimit acelasi cod simultan nu pot
+    // castiga amandoi (UPDATE conditionat de used_by IS NULL).
+    const claimed = await claimInvite(env, found.row.code);
+    if (!claimed) return errorResponse(409, 'Codul de invitație a fost deja folosit.');
+    invite = found.row;
+  }
+
+  const salt = randomHex(16);
+  let hash;
+  try {
+    hash = await hashPassword(password.value, salt);
+  } catch (e) {
+    if (invite) await releaseInvite(env, invite.code);
+    console.error('hashPassword esuat:', e?.message || e);
+    return errorResponse(500, 'Nu am putut crea contul');
+  }
+
+  let userId;
+  try {
+    const insert = await env.DB
+      .prepare(
+        `INSERT INTO users (username, email, password_hash, password_salt, points, is_admin, is_banned)
+         VALUES (?, ?, ?, ?, 0, ?, 0)`
+      )
+      .bind(username.value, email.value, hash, salt, isFirstUser ? 1 : 0)
+      .run();
+
+    userId = insert.meta?.last_row_id;
+    if (!userId) throw new Error('last_row_id lipsa');
+
+    if (invite) await assignInviteToUser(env, invite.code, userId);
+  } catch (e) {
+    // Eliberam rezervarea ca sa nu pierdem codul utilizatorului.
+    if (invite) await releaseInvite(env, invite.code);
+    console.error('INSERT users esuat:', e?.message || e);
+    return errorResponse(500, 'Nu am putut crea contul');
+  }
 
   if (isFirstUser) {
     await env.DB

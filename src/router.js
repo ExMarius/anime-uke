@@ -28,11 +28,13 @@ import * as registerRoute from './routes/api/auth/register.js';
 import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
 import * as meRoute from './routes/api/auth/me.js';
+import * as registerOptions from './routes/api/auth/register-options.js';
 import * as adminStats from './routes/api/admin/stats.js';
 import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
 import * as adminUsers from './routes/api/admin/users.js';
 import * as adminLog from './routes/api/admin/log.js';
+import * as adminInvites from './routes/api/admin/invites.js';
 import * as chatRoute from './routes/chat.js';
 
 const ROUTES = [
@@ -46,6 +48,7 @@ const ROUTES = [
   { method: 'POST', path: '/api/auth/login', mod: loginRoute },
   { method: 'POST', path: '/api/auth/logout', mod: logoutRoute },
   { method: 'GET', path: '/api/auth/me', mod: meRoute },
+  { method: 'GET', path: '/api/auth/register-options', mod: registerOptions },
 
   // --- puncte / vizionari ---
   { method: 'POST', path: '/api/watch', mod: watchRoute },
@@ -57,6 +60,7 @@ const ROUTES = [
   { method: '*', path: '/api/admin/series', mod: adminSeries },
   { method: '*', path: '/api/admin/episodes', mod: adminEpisodes },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
+  { method: '*', path: '/api/admin/invites', mod: adminInvites },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },

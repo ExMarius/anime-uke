@@ -18,7 +18,19 @@
       <p>Creează cont nou</p>
     </div>
 
+    <div class="banner" id="bootstrap-banner" hidden>
+      <b>Ești primul utilizator.</b> Contul tău va primi automat rolul de
+      administrator și vei putea genera coduri de invitație pentru ceilalți.
+    </div>
+
     <form id="auth-form" novalidate>
+      <div class="field" id="invite-field" hidden>
+        <label for="invite_code">Cod de invitație *</label>
+        <input class="input input--code" id="invite_code" name="invite_code" type="text"
+               autocomplete="one-time-code" maxlength="16" placeholder="AU-XXXX-XXXX"
+               spellcheck="false" inputmode="latin">
+        <p class="hint" id="invite-hint">Codurile sunt generate de un administrator. Fără un cod valid nu se poate crea cont.</p>
+      </div>
       <div class="field">
         <label for="username">Username</label>
         <input class="input" id="username" name="username" type="text" autocomplete="username"

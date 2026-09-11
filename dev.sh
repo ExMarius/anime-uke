@@ -35,4 +35,11 @@ PORT="${PORT:-8788}"
 W="npx wrangler"
 [ -x ./node_modules/.bin/wrangler ] && W="./node_modules/.bin/wrangler"
 
-exec $W pages dev --port="$PORT" --ip=0.0.0.0
+# NU folosim `exec`: ar inlocui shell-ul si capcana EXIT n-ar mai rula,
+# lasand wrangler.toml pe configuratia locala (adica deploy-ul urmator
+# ar publica bindinguri DO gresite).
+set +e
+$W pages dev --port="$PORT" --ip=0.0.0.0
+RC=$?
+set -e
+exit $RC

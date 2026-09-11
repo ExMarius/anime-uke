@@ -36,6 +36,7 @@ const LOADERS = {
   series: loadSeriesTab,
   episodes: loadEpisodesTab,
   users: loadUsers,
+  invites: loadInvites,
   log: loadLog,
 };
 
@@ -449,6 +450,197 @@ function emptyRow(colspan, text) {
   tr.appendChild(td);
   return tr;
 }
+
+// ---------------------------------------------------------------------
+// CODURI DE INVITATIE
+// ---------------------------------------------------------------------
+let inviteFilter = 'all';
+
+const INVITE_STATUS = {
+  active:  { label: 'Activ',   cls: 'pill pill--ok' },
+  used:    { label: 'Folosit', cls: 'pill pill--user' },
+  revoked: { label: 'Revocat', cls: 'pill pill--banned' },
+};
+
+async function loadInvites() {
+  const res = await api(`/admin/invites?filter=${encodeURIComponent(inviteFilter)}`);
+  if (!res.ok) {
+    toast(res.data?.error || 'Nu am putut încărca codurile', 'err');
+    return;
+  }
+
+  const c = res.data.counts || {};
+  const btns = document.querySelectorAll('#invite-filters [data-filter]');
+  btns.forEach((b) => {
+    const f = b.dataset.filter;
+    const n = f === 'all' ? c.total : c[f] ?? 0;
+    b.textContent = `${b.textContent.split(' (')[0]} (${n})`;
+    const on = f === inviteFilter;
+    b.className = `btn btn--sm ${on ? 'btn--accent' : 'btn--ghost'}`;
+  });
+
+  const tbody = document.querySelector('#invites-table tbody');
+  tbody.innerHTML = '';
+
+  const rows = res.data.invites || [];
+  if (!rows.length) {
+    tbody.appendChild(emptyRow(7, inviteFilter === 'all'
+      ? 'Nu ai generat încă niciun cod. Completează formularul de mai sus.'
+      : 'Niciun cod cu acest filtru.'));
+    return;
+  }
+
+  for (const inv of rows) {
+    const tr = document.createElement('tr');
+
+    // Codul, cu buton de copiere — adminul il da mai departe pe Discord etc.
+    const tdCode = document.createElement('td');
+    const chip = document.createElement('code');
+    chip.className = 'code-chip';
+    chip.textContent = inv.code;
+    tdCode.appendChild(chip);
+    if (inv.status === 'active') {
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'btn btn--ghost btn--sm';
+      copy.textContent = 'Copiază';
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(inv.code);
+          copy.textContent = 'Copiat ✓';
+          setTimeout(() => { copy.textContent = 'Copiază'; }, 1500);
+        } catch { toast('Nu am putut copia. Selectează codul manual.', 'warn'); }
+      });
+      tdCode.appendChild(copy);
+    }
+    tr.appendChild(tdCode);
+
+    tr.appendChild(cell(inv.note || '—'));
+
+    const tdStatus = document.createElement('td');
+    const st = INVITE_STATUS[inv.status] || { label: inv.status, cls: 'pill' };
+    const pillEl = document.createElement('span');
+    pillEl.className = st.cls;
+    pillEl.textContent = st.label;
+    tdStatus.appendChild(pillEl);
+    tr.appendChild(tdStatus);
+
+    tr.appendChild(cell(inv.created_by_name || '—'));
+    tr.appendChild(cell(inv.used_by_name ? `${inv.used_by_name} (${inv.used_at})` : '—'));
+    tr.appendChild(cell(inv.created_at));
+
+    const actions = [];
+    if (inv.status === 'active') {
+      actions.push({
+        label: 'Revocă', cls: 'btn btn--ghost btn--sm',
+        onClick: () => inviteAction({ action: 'revoke', id: inv.id }, inv.code, 'revocat'),
+      });
+      actions.push({
+        label: 'Șterge', cls: 'btn btn--danger btn--sm',
+        onClick: () => deleteInvite(inv),
+      });
+    } else if (inv.status === 'revoked') {
+      actions.push({
+        label: 'Reactivează', cls: 'btn btn--ok btn--sm',
+        onClick: () => inviteAction({ action: 'unrevoke', id: inv.id }, inv.code, 'reactivat'),
+      });
+    }
+    // Codurile folosite raman in lista ca dovada de audit; nu se pot sterge.
+    tr.appendChild(actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]));
+
+    tbody.appendChild(tr);
+  }
+}
+
+async function inviteAction(body, code, verb) {
+  const res = await api('/admin/invites', { method: 'POST', body });
+  if (res.ok) {
+    toast(`Codul ${code} a fost ${verb}.`, 'ok');
+    await loadInvites();
+  } else {
+    toast(res.data?.error || `Nu am putut ${verb} codul`, 'err');
+  }
+}
+
+async function deleteInvite(inv) {
+  if (!confirm(`Ștergi definitiv codul ${inv.code}?`)) return;
+  const res = await api(`/admin/invites?id=${encodeURIComponent(inv.id)}`, { method: 'DELETE' });
+  if (res.ok) {
+    toast('Cod șters.', 'ok');
+    await loadInvites();
+  } else {
+    toast(res.data?.error || 'Nu am putut șterge codul', 'err');
+  }
+}
+
+document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const btn = document.getElementById('invite-submit');
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  await withBusy(btn, async () => {
+    const res = await api('/admin/invites', {
+      method: 'POST',
+      body: { count: Number(data.count) || 1, note: (data.note || '').trim() },
+    });
+
+    if (!res.ok) {
+      toast(res.data?.error || 'Nu am putut genera codurile', 'err');
+      return;
+    }
+
+    const created = res.data.created || [];
+    toast(`${created.length} cod${created.length === 1 ? '' : 'uri'} generat${created.length === 1 ? '' : 'e'}.`, 'ok');
+
+    // Afisam codurile proaspete ca sa poata fi copiate imediat, fara sa
+    // fie nevoie ca adminul sa le caute in tabel.
+    const box = document.getElementById('invite-result');
+    box.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'banner';
+    const head = document.createElement('b');
+    head.textContent = 'Coduri proaspăt generate — copiază-le acum:';
+    wrap.appendChild(head);
+    const list = document.createElement('div');
+    list.className = 'code-list';
+    for (const c of created) {
+      const chip = document.createElement('code');
+      chip.className = 'code-chip';
+      chip.textContent = c.code;
+      list.appendChild(chip);
+    }
+    wrap.appendChild(list);
+
+    if (created.length > 1) {
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.className = 'btn btn--ghost btn--sm';
+      all.textContent = 'Copiază-le pe toate';
+      all.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(created.map((c) => c.code).join('\n'));
+          all.textContent = 'Copiate ✓';
+          setTimeout(() => { all.textContent = 'Copiază-le pe toate'; }, 1500);
+        } catch { toast('Nu am putut copia.', 'warn'); }
+      });
+      wrap.appendChild(all);
+    }
+
+    box.appendChild(wrap);
+    form.reset();
+    document.getElementById('i-count').value = '1';
+    inviteFilter = 'all';
+    await loadInvites();
+  });
+});
+
+document.getElementById('invite-filters')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  inviteFilter = btn.dataset.filter;
+  loadInvites();
+});
 
 // ---------------------------------------------------------------------
 // INIT

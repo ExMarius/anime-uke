@@ -436,3 +436,63 @@ td strong, td b { color: var(--text); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ===================================================================
+   Coduri de invitatie (panou admin + formular de inregistrare)
+   =================================================================== */
+
+/* Banda informativa — bootstrap / coduri proaspat generate */
+.banner {
+  margin: 0 0 1.1rem;
+  padding: .85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--text);
+  font-size: .86rem;
+  line-height: 1.55;
+}
+.banner b { color: var(--text); }
+.banner > b { display: block; margin-bottom: .2rem; }
+
+/* Filtru tip segmente (Toate / Active / Folosite / Revocate) */
+.filters {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+/* Codul de invitatie, ca element monospaced usor de selectat */
+.code-chip {
+  display: inline-block;
+  padding: .2rem .5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2, #161014));
+  color: var(--accent-soft, #ff6b85);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .84rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  user-select: all;
+}
+.code-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .55rem 0;
+}
+
+/* Input-ul de cod din formularul de inregistrare */
+.input--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .filters { width: 100%; }
+  .filters .btn { flex: 1 1 auto; }
+}

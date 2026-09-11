@@ -49,6 +49,13 @@ export function initAuthForm(mode) {
         toast('Completează toate câmpurile', 'warn');
         return;
       }
+      // Verificare doar cand campul e vizibil (in modul bootstrap nu e cerut)
+      const inviteField = document.getElementById('invite-field');
+      if (inviteField && !inviteField.hidden && !String(data.invite_code || '').trim()) {
+        toast('Ai nevoie de un cod de invitație', 'warn');
+        document.getElementById('invite_code')?.focus();
+        return;
+      }
       if (String(data.password).length < 4) {
         toast('Parola trebuie să aibă minim 4 caractere', 'warn');
         return;
@@ -59,7 +66,13 @@ export function initAuthForm(mode) {
       const path = mode === 'login' ? '/auth/login' : '/auth/register';
       const body = mode === 'login'
         ? { email: data.identifier, password: data.password }
-        : { username: data.username, email: data.email, password: data.password };
+        : {
+            username: data.username,
+            email: data.email,
+            password: data.password,
+            // Codul e obligatoriu dupa bootstrap; serverul decide, nu clientul.
+            invite_code: (data.invite_code || '').trim(),
+          };
 
       const res = await api(path, { method: 'POST', body });
 
