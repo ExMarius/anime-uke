@@ -65,11 +65,24 @@
       </div>
     </div>
 
+    <!--
+      Punctele si marcajul „vizionat" nu mai vin dintr-un buton apasat de
+      utilizator: se acorda automat dupa 15 minute de vizionare reala
+      (vezi /api/progress). Bara de mai jos arata cat mai e pana la puncte,
+      ca sa nu para ca site-ul e stricat cand nu primesti nimic imediat.
+    -->
+    <div class="watch-progress" id="watch-progress" hidden>
+      <div class="watch-progress__head">
+        <span id="watch-progress-label">🍿 Se acumulează timp de vizionare</span>
+        <span class="watch-progress__time" id="watch-progress-time">0:00 / 15:00</span>
+      </div>
+      <div class="watch-progress__bar"><div class="watch-progress__fill" id="watch-progress-fill"></div></div>
+      <p class="watch-progress__note" id="watch-progress-note"></p>
+    </div>
+
     <div class="ep-actions">
-      <button class="btn btn--ok btn--lg" id="watch-btn" type="button">✅ Marchează ca vizionat (+10 puncte)</button>
       <button class="btn btn--ghost" id="back-btn" type="button">← Înapoi</button>
     </div>
-    <p class="hint" id="watch-note"></p>
   </main>
 
   <script type="module" src="/assets/js/page-episode.js"></script>

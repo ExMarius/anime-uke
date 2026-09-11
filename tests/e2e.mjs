@@ -61,8 +61,8 @@ console.log('\n=== 1. VIZITATOR ===');
   const s = await req(j, 'GET', '/api/series');
   check('Site privat: GET /api/series fara cont → 401', s.status === 401, `status=${s.status}`);
 
-  const w = await req(j, 'POST', '/api/watch', { episode_id: 1 });
-  check('POST /api/watch fara login → 401', w.status === 401, `status=${w.status}`);
+  const w = await req(j, 'POST', '/api/progress', { episode_id: 1, seconds: 30 });
+  check('POST /api/progress fara login → 401', w.status === 401, `status=${w.status}`);
 
   const a = await req(j, 'GET', '/api/admin/stats');
   check('GET /api/admin/stats fara login → 401', a.status === 401, `status=${a.status}`);
@@ -577,30 +577,43 @@ console.log('\n=== 7. CONTOR VIZUALIZARI (buffer in DO, nu direct in D1) ===');
   check('View pentru episod inexistent → 404', v3.status === 404, `status=${v3.status}`);
 }
 
-console.log('\n=== 8. PUNCTE (+10, o singura data) ===');
+console.log('\n=== 8. PUNCTE DOAR DUPA 15 MIN DE VIZIONARE ===');
+// Regula: punctele si marcajul „vizionat" nu vin dintr-un buton, ci din timp
+// real acumulat prin /api/progress. Sub prag nu se acorda nimic.
 {
   const j = jar();
   await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
 
-  const w1 = await req(j, 'POST', '/api/watch', { episode_id: globalThis.epId });
-  check('Marcheaza vizionat → +10 puncte', w1.data?.success === true && w1.data?.points === 10, JSON.stringify(w1.data));
+  const p1 = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 30 });
+  check('Heartbeat de 30s e acceptat si acumulat', p1.status === 200 && p1.data?.seconds === 30 && p1.data?.watched === false, JSON.stringify(p1.data));
+  check('Sub prag nu se acorda puncte', p1.data?.pointsAdded === 0, JSON.stringify(p1.data));
 
-  // Simulam dublu-click: doua cereri concurrente
-  const [a, b] = await Promise.all([
-    req(j, 'POST', '/api/watch', { episode_id: globalThis.epId }),
-    req(j, 'POST', '/api/watch', { episode_id: globalThis.epId }),
-  ]);
-  check('Re-marcare → alreadyWatched, 0 puncte', a.data?.alreadyWatched === true && a.data?.pointsAdded === 0, JSON.stringify(a.data));
-  check('Concurenta: ambele cereri raporteaza acelasi total (fara 20 pct)', a.data?.points === 10 && b.data?.points === 10, `${a.data?.points} / ${b.data?.points}`);
+  const big = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 99999 });
+  check('Un dump urias de secunde e limitat la 120/cerere', big.data?.seconds === 150, `seconds=${big.data?.seconds}`);
+  check('Limitarea impiedica sarirea pragului dintr-o cerere', big.data?.watched === false, JSON.stringify(big.data));
+
+  let cur = big.data?.seconds || 0;
+  let last = big;
+  while (cur < 900) {
+    last = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+    cur = last.data?.seconds ?? cur;
+  }
+  check('La 15 min acumulate se marcheaza vizionat', last.data?.watched === true, JSON.stringify(last.data));
+  check('La 15 min se acorda +10 puncte', last.data?.pointsAdded === 10 && last.data?.points === 10, JSON.stringify(last.data));
+
+  const again = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+  check('Dupa prag nu se mai acorda puncte', again.data?.pointsAdded === 0 && again.data?.points === 10, JSON.stringify(again.data));
 
   const me = await req(j, 'GET', '/api/auth/me');
   check('Punctele persista in users.points = 10', me.data?.user?.points === 10, JSON.stringify(me.data?.user));
 
   const epd = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
-  check('Episodul apare ca watched=true pentru user logat', epd.data?.watched === true);
+  check('Episodul returneaza watched=true si progresul', epd.data?.watched === true && epd.data?.progress_seconds >= 900 && epd.data?.watch_threshold === 900, JSON.stringify({ w: epd.data?.watched, s: epd.data?.progress_seconds, t: epd.data?.watch_threshold }));
 
-  const badId = await req(j, 'POST', '/api/watch', { episode_id: 'abc' });
+  const badId = await req(j, 'POST', '/api/progress', { episode_id: 'abc', seconds: 30 });
   check('episode_id invalid → 400', badId.status === 400, `status=${badId.status}`);
+  const badSec = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: -5 });
+  check('secunde negative → 400', badSec.status === 400, `status=${badSec.status}`);
 }
 
 console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
@@ -697,8 +710,8 @@ console.log('\n=== 9. PANOU ADMIN: utilizatori, ban, roluri, protectii ===');
   const bannedMe = await req(j2, 'GET', '/api/auth/me');
   check('Sesiunea unui user BANAT devine imediat invalida (verificare per-request)', bannedMe.data?.user === null, JSON.stringify(bannedMe.data));
 
-  const bannedWatch = await req(j2, 'POST', '/api/watch', { episode_id: globalThis.epId });
-  check('User banat nu poate marca episoade → 401', bannedWatch.status === 401, `status=${bannedWatch.status}`);
+  const bannedWatch = await req(j2, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 30 });
+  check('User banat nu poate raporta progres → 401', bannedWatch.status === 401, `status=${bannedWatch.status}`);
 
   const bannedLogin = await req(jar(), 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
   check('User banat nu se poate loga → 403', bannedLogin.status === 403, `status=${bannedLogin.status} ${bannedLogin.data?.error}`);

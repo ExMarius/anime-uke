@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, safeUrl } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, safeUrl, genPoster } from './core.js';
 
 // =====================================================================
 // /admin/serii — lista seriilor, cu cautare si paginare pe SERVER.
@@ -53,7 +53,7 @@ function thumb(url, title) {
     img.addEventListener('error', () => img.replaceWith(el('span', 'thumb__fallback', '鬼')), { once: true });
     box.appendChild(img);
   } else {
-    box.appendChild(el('span', 'thumb__fallback', '鬼'));
+    box.appendChild(genPoster(title));
   }
   td.appendChild(box);
   return td;

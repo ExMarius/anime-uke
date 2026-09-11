@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, genPoster } from './core.js';
 import { buildSourceRow, collectSourceRows, existingSourceRow, sourceChips, guessKind, labelFromUrl, KIND_HINTS } from './sources-ui.js';
 
 // =====================================================================
@@ -87,10 +87,10 @@ function renderSeries() {
     img.src = safeUrl(series.cover_image, '');
     img.alt = series.title;
     img.loading = 'lazy';
-    img.addEventListener('error', () => img.replaceWith(el('div', 'poster__fallback', '鬼')), { once: true });
+    img.addEventListener('error', () => img.replaceWith(genPoster(series.title)), { once: true });
     poster.appendChild(img);
   } else {
-    poster.appendChild(el('div', 'poster__fallback', '鬼'));
+    poster.appendChild(genPoster(series.title));
   }
 
   const facts = document.getElementById('ser-facts');

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -32,13 +32,11 @@ function setHead(series) {
     img.alt = series.title || 'Poster';
     img.loading = 'eager';
     img.decoding = 'async';
-    img.addEventListener('error', () => {
-      img.replaceWith(Object.assign(document.createElement('div'), { className: 'poster__fallback', textContent: '鬼' }));
-    }, { once: true });
+    img.addEventListener('error', () => img.replaceWith(genPoster(series.title)), { once: true });
     poster.appendChild(img);
     poster.hidden = false;
   } else {
-    poster.appendChild(Object.assign(document.createElement('div'), { className: 'poster__fallback', textContent: '鬼' }));
+    poster.appendChild(genPoster(series.title));
     poster.hidden = false;
   }
 

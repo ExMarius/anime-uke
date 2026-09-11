@@ -6,57 +6,85 @@ import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl } fr
 // se facea `/episodes?series_id=1` hardcodat si se cauta episodul in lista.
 // Acum avem endpoint dedicat /api/episodes/:id.
 
-const POINTS_PER_EPISODE = 10;
+// Pragul de puncte si secundele acumulate vin de pe server (/api/progress).
+// Clientul doar raporteaza timpul si deseneaza bara — decizia e pe server,
+// fiindca o regula traita doar in browser poate fi pacalita.
+let watchThreshold = 15 * 60;
+let watchSeconds = 0;
+let watchedDone = false;
+let episodeId = null;
+let heartbeatTimer = null;
 
-function getParam(name) {
-  return new URLSearchParams(location.search).get(name);
+function fmtTime(total) {
+  const m = Math.floor(total / 60);
+  const sec = Math.floor(total % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-function setWatchedState(watched) {
-  const btn = document.getElementById('watch-btn');
-  const note = document.getElementById('watch-note');
-  if (!btn) return;
-
-  if (watched) {
-    btn.disabled = true;
-    btn.textContent = '✔ Deja marcat ca vizionat';
-    note.textContent = 'Ai primit deja punctele pentru episodul ăsta.';
+function paintProgress() {
+  const box = document.getElementById('watch-progress');
+  if (!box) return;
+  box.hidden = false;
+  document.getElementById('watch-progress-fill').style.width =
+    `${Math.min(100, (watchSeconds / watchThreshold) * 100)}%`;
+  document.getElementById('watch-progress-time').textContent =
+    `${fmtTime(Math.min(watchSeconds, watchThreshold))} / ${fmtTime(watchThreshold)}`;
+  const label = document.getElementById('watch-progress-label');
+  const note = document.getElementById('watch-progress-note');
+  if (watchedDone) {
+    label.textContent = '✔ Vizionat — puncte acordate';
+    note.textContent = 'Mulțumim că te-ai uitat!';
+    box.classList.add('watch-progress--done');
   } else {
-    btn.disabled = false;
-    btn.textContent = `✅ Marchează ca vizionat (+${POINTS_PER_EPISODE} puncte)`;
-    note.textContent = '';
+    label.textContent = '🍿 Se acumulează timp de vizionare';
+    note.textContent = `Punctele și marcajul „vizionat” vin după ${Math.round(watchThreshold / 60)} de minute de vizionare reală.`;
+    box.classList.remove('watch-progress--done');
   }
 }
 
-async function markWatched() {
-  const btn = document.getElementById('watch-btn');
-  const id = getParam('id');
-
-  await withBusy(btn, async () => {
-    const res = await api('/watch', { method: 'POST', body: { episode_id: Number(id) } });
-
-    if (res.status === 401) {
-      toast('Trebuie să fii autentificat ca să primești puncte', 'warn');
-      clearSession();
-      setTimeout(() => { location.href = `/login?next=${encodeURIComponent(location.pathname + location.search)}`; }, 900);
-      return;
-    }
-    if (!res.ok) {
-      toast(res.data?.error || 'Nu am putut marca episodul', 'err');
-      return;
-    }
-
-    clearSession();            // forteaza recitirea punctelor din DB
-    await renderNav('');       // reimparte navbar-ul cu punctele noi
-
-    if (res.data.alreadyWatched) {
-      toast(res.data.message || 'Deja marcat', 'warn');
-    } else {
-      toast(`+${res.data.pointsAdded ?? POINTS_PER_EPISODE} puncte! Total: ${res.data.points}`, 'ok');
-    }
-    setWatchedState(true);
-  });
+/**
+ * Secunde „active". Pentru fisiier video citim starea reala a playerului;
+ * pentru embed-uri nu putem vedea in iframe (cross-origin), deci folosim
+ * timpul cu pagina vizibila ca aproximatie onesta. Pauza sau tab ascuns =
+// nu se acumuleaza nimic.
+ */
+function activeNow() {
+  if (document.hidden) return false;
+  const src = sources[activeSource];
+  if (!src) return false;
+  if (src.kind === 'file') {
+    const v = document.getElementById('player-video');
+    return !!v && !v.hidden && !v.paused && !v.ended;
+  }
+  return true;
 }
+
+function stopHeartbeat() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+}
+
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatTimer = setInterval(async () => {
+    if (!activeNow() || watchedDone) return;
+    const res = await api('/progress', {
+      method: 'POST',
+      body: { episode_id: episodeId, seconds: 30 },
+    });
+    if (res.status === 401) { stopHeartbeat(); return; }
+    if (!res.ok) return;
+    const wasDone = watchedDone;
+    watchSeconds = res.data.seconds ?? watchSeconds;
+    watchedDone = !!res.data.watched;
+    paintProgress();
+    if (!wasDone && watchedDone) {
+      toast(`+${res.data.pointsAdded ?? 10} puncte! Total: ${res.data.points}`, 'ok');
+      clearSession();          // forteaza recitirea punctelor in navbar
+      await renderNav('');
+    }
+  }, 30000);
+}
+
 
 // ---------------------------------------------------------------------
 // SURSE VIDEO MULTIPLE
@@ -163,8 +191,14 @@ function selectSource(index) {
     iframe.src = url;
     iframe.hidden = false;
     iframe.addEventListener('load', () => clearLoading(), { once: true });
-    // Fallback daca load nu se declanseaza (unele embed-uri blocheaza)
-    setTimeout(clearLoading, 6000);
+    // Fallback daca load nu se declanseaza (unele embed-uri blocheaza):
+    // spunem utilizatorului ce poate face, in loc sa lasam un cadru gol.
+    setTimeout(() => {
+      if (document.getElementById('player-loading')) {
+        clearLoading();
+        showLoading('Embed-ul nu raspunde. Încearcă altă sursă din lista de mai sus.');
+      }
+    }, 8000);
   }
 
   for (const btn of document.querySelectorAll('#source-list button')) {
@@ -203,7 +237,9 @@ function renderSources(list) {
   // O singura sursa: ascundem bara de taburi, nu are ce alege utilizatorul.
   bar.hidden = sources.length < 2;
 
-  // Reluam ultima sursa folosita la episodul asta, daca inca exista.
+  // Sursa implicita: ultima folosita daca mai exista, altfel prima care se
+  // reda inline (fisier, apoi embed). Un link extern NU trebuie sa fie
+  // punctul de intrare: utilizatorul a venit sa se uite, nu sa plece.
   let start = 0;
   try {
     const last = localStorage.getItem(memoryKey());
@@ -212,6 +248,11 @@ function renderSources(list) {
       if (found >= 0) start = found;
     }
   } catch { /* ignoram */ }
+  if (!sources[start] || sources[start].kind === 'link') {
+    const playable = sources.findIndex((s) => s.kind === 'file');
+    const embed = sources.findIndex((s) => s.kind === 'embed');
+    start = playable >= 0 ? playable : (embed >= 0 ? embed : 0);
+  }
 
   selectSource(start);
 }
@@ -234,7 +275,7 @@ async function load() {
     const box = showLoading(res.status === 404 ? 'Episodul nu există.' : 'Nu am putut încărca episodul.');
     box.classList.remove('loading');
     box.classList.add('empty');
-    document.getElementById('watch-btn').disabled = true;
+    stopHeartbeat();
     if (res.status === 404) toast('Episodul nu există', 'warn');
     return;
   }
@@ -254,7 +295,11 @@ async function load() {
   // Playerul se incarca doar dupa ce avem URL-urile validate pe server.
   renderSources(res.data.sources || []);
 
-  setWatchedState(!!res.data.watched);
+  watchThreshold = Number(res.data.watch_threshold) || 900;
+  watchSeconds = Number(res.data.progress_seconds) || 0;
+  watchedDone = !!res.data.watched;
+  paintProgress();
+  startHeartbeat();
 
   // Contor de vizualizari: merge in StatsDO (buffer), nu direct in D1.
   // Fara await — nu trebuie sa incetineasca afisarea paginii.
@@ -264,7 +309,6 @@ async function load() {
 await renderNav('');
 await load();
 
-document.getElementById('watch-btn')?.addEventListener('click', markWatched);
 document.getElementById('back-btn')?.addEventListener('click', () => history.back());
 
 // Avertizam la parăsirea paginii doar daca playerul e incarcat — evitam

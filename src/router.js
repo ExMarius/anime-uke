@@ -23,7 +23,7 @@ import * as seriesList from './routes/api/series.js';
 import * as seriesById from './routes/api/series/by-id.js';
 import * as episodeById from './routes/api/episodes/by-id.js';
 import * as viewRoute from './routes/api/view.js';
-import * as watchRoute from './routes/api/watch.js';
+import * as progressRoute from './routes/api/progress.js';
 import * as registerRoute from './routes/api/auth/register.js';
 import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
@@ -54,7 +54,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/auth/register-options', mod: registerOptions },
 
   // --- puncte / vizionari ---
-  { method: 'POST', path: '/api/watch', mod: watchRoute },
+  { method: 'POST', path: '/api/progress', mod: progressRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
 
   // --- profil + lista „de vizionat" ---

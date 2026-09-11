@@ -221,3 +221,29 @@ export function formatDate(value) {
   if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
   return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+/**
+ * Poster procedural, determinist din titlu: nuanta + initiale.
+ *
+ * De ce exista: la un catalog mare (1000+ serii de test) majoritatea nu au
+ * copertă. Un fallback identic pe fiecare card ar arata ca un sablon
+ * stricat; o nuanta derivata din titlu face catalogul variat si citibil,
+ * fara sa coste vreo imagine si fara vreo cerere in plus.
+ */
+export function genPoster(title) {
+  const t = String(title || '').trim();
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+
+  const el = document.createElement('div');
+  el.className = 'poster__gen';
+  el.style.background =
+    `linear-gradient(150deg, hsl(${hue} 42% 27%), hsl(${(hue + 45) % 360} 52% 13%))`;
+
+  const words = t.split(/\s+/).filter(Boolean);
+  const initials = ((words[0]?.[0] || '') + (words[1]?.[0] || '')).toUpperCase();
+  el.textContent = initials || t[0]?.toUpperCase() || '鬼';
+  el.setAttribute('aria-hidden', 'true');
+  return el;
+}

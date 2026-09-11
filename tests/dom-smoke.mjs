@@ -162,10 +162,15 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   const loaded = await until(() => p.$$('#series-grid .card, #series-grid .poster-card').length > 0 || p.text('#series-count')?.includes('afișate'));
   check('Grila de serii se populeaza din API', loaded, `count=${p.text('#series-count')} html=${p.$('#series-grid')?.innerHTML.slice(0, 120)}`);
   check('Numaratoarea reflecta pagina incarcata, nu tot catalogul', /\d+ afișate|0 rezultate/.test(p.text('#series-count') || ''), p.text('#series-count'));
-  check('Statistica din hero vine din meta, nu din pagina curenta', /^\d+$/.test(p.text('#stat-series') || ''), `stat-series=${p.text('#stat-series')}`);
+  // La 1000+ serii totalul e formatat ro-RO („1.002"), deci acceptam si
+  // separatorii de mii — important e sa NU fie numarul de carduri randate.
+  check('Statistica din hero vine din meta, nu din pagina curenta', /^[\d.\s]+$/.test(p.text('#stat-series') || '') && p.text('#stat-series') !== String(p.$$('#series-grid .card, #series-grid .poster-card').length), `stat-series=${p.text('#stat-series')}`);
   const sel = p.$('#sort-select');
   check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 4, `optiuni=${sel?.options.length}`);
-  check('Butonul „Incarca mai multe" e ascuns cand nu mai exista pagini', p.$('#load-more-wrap')?.hidden === true, `hidden=${p.$('#load-more-wrap')?.hidden}`);
+  // Vizibilitatea butonului trebuie sa fie congruenta cu has_more de pe
+  // server, indiferent daca baza are 1 serie sau 1000.
+  const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
+  check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
   check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
 
   // cautarea trebuie sa ajunga pe server, nu sa filtreze in browser

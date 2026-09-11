@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, genPoster } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -63,10 +63,10 @@ function seriesCard(s) {
     img.alt = s.title || 'Poster';
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.addEventListener('error', () => img.replaceWith(fallback()), { once: true });
+    img.addEventListener('error', () => img.replaceWith(fallback(s.title)), { once: true });
     poster.appendChild(img);
   } else {
-    poster.appendChild(fallback());
+    poster.appendChild(fallback(s.title));
   }
 
   const status = document.createElement('span');
@@ -108,12 +108,8 @@ function seriesCard(s) {
   return a;
 }
 
-function fallback() {
-  const el = document.createElement('div');
-  el.className = 'poster__fallback';
-  el.textContent = '鬼';
-  el.setAttribute('aria-hidden', 'true');
-  return el;
+function fallback(title) {
+  return genPoster(title);
 }
 
 // ---------------- render + cautare ----------------

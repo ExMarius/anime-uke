@@ -798,3 +798,25 @@ a.quick__item:hover {
 
 /* --- selectorul de intervale de episoade (1–100, 101–200, …) --- */
 .rangebar { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+
+/* --- bara de progres pana la puncte (15 min de vizionare) --- */
+.watch-progress { margin: 1.1rem 0 .4rem; padding: .8rem 1rem; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--line-soft); }
+.watch-progress__head { display: flex; justify-content: space-between; gap: .8rem;
+  font-size: .84rem; font-weight: 700; margin-bottom: .5rem; flex-wrap: wrap; }
+.watch-progress__time { font-variant-numeric: tabular-nums; color: var(--dim); }
+.watch-progress__bar { height: 7px; border-radius: 99px; background: var(--surface-3, #1c1216); overflow: hidden; }
+.watch-progress__fill { height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent)); transition: width .5s ease; }
+.watch-progress__note { margin: .5rem 0 0; font-size: .76rem; color: var(--dim-2); }
+.watch-progress--done .watch-progress__fill { background: linear-gradient(90deg, #15803d, #22c55e); }
+.watch-progress--done .watch-progress__head span:first-child { color: var(--ok); }
+
+/* --- poster procedural: fallback-ul pentru seriile fara copertă ---
+ * In loc de o glifa identica pe 1000 de carduri, fiecare serie primeste o
+ * nuanta determinista din titlu + initiala, deci un catalog mare arata
+ * variat si intentionat, nu ca un sablon stricat. */
+.poster__gen { width: 100%; height: 100%; display: grid; place-items: center;
+  font-weight: 900; font-size: 2.4rem; color: rgba(255,255,255,.92);
+  text-shadow: 0 2px 12px rgba(0,0,0,.45); letter-spacing: -.02em; }
+.thumb .poster__gen { font-size: 1rem; }
