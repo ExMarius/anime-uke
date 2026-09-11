@@ -1,0 +1,30 @@
+name = "anime-uke-do"
+main = "src/index.js"
+compatibility_date = "2026-05-01"
+
+# Worker-ul DO are nevoie de D1 ca sa poata face flush in loturi
+# (mesaje de chat la ~20 buc, contorizari de views la ~20 buc).
+[[d1_databases]]
+binding = "DB"
+database_name = "anime-db"
+database_id = "7209b0bd-227b-46d0-b376-6157b56734fa"
+migrations_dir = "../migrations"
+
+# Bindinguri proprii (necesare pentru fetch-ul de debug din index.js)
+[[durable_objects.bindings]]
+name = "CHAT"
+class_name = "ChatDO"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMIT"
+class_name = "RateLimitDO"
+
+[[durable_objects.bindings]]
+name = "STATS"
+class_name = "StatsDO"
+
+# Namespace-urile noi de Durable Objects folosesc storage SQLite
+# (singura optiune valida pentru clase create din 2025 incolo).
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatDO", "RateLimitDO", "StatsDO"]

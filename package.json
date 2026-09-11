@@ -8,12 +8,14 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "wrangler pages dev",
+    "dev": "./dev.sh",
     "migrate:local": "wrangler d1 migrations apply DB --local",
     "migrate:remote": "wrangler d1 migrations apply DB --remote",
     "seed": "node tests/seed.mjs",
     "test": "node tests/e2e.mjs",
-    "deploy": "wrangler pages deploy"
+    "deploy": "./deploy.sh",
+    "deploy:do": "cd worker-do && npx wrangler deploy",
+    "dev:pages": "npx wrangler pages dev --port=8788"
   },
   "devDependencies": {
     "wrangler": "^4.86.0",

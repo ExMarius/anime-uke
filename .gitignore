@@ -20,3 +20,5 @@ Thumbs.db
 
 # Raport intern de review (nu e parte din livrabil)
 REVIEW.md
+.wrangler.toml.prod.bak
+worker-do/.wrangler/

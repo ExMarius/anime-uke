@@ -1,32 +1,86 @@
 #!/usr/bin/env bash
-# Deploy complet AnimeSphere pe Cloudflare — proiect anime-uke, DB nou.
-# Ruleaza: bash deploy.sh
+# =====================================================================
+# deploy.sh — deploy complet anime-uke pe Cloudflare, buget 0.
+#
+# Ordine obligatorie (DO-urile trebuie sa existe INAINTE ca Pages sa
+# poata lega bindingurile cu script_name):
+#
+#   1. D1            -> creeaza baza de date daca nu exista
+#   2. Schema        -> aplica migrarile SQL pe D1 (remote)
+#   3. Worker DO     -> publica ChatDO / RateLimitDO / StatsDO
+#   4. Pages         -> publica frontendul + _worker.js (Advanced Mode)
+#   5. JWT_SECRET    -> seteaza secretul pe proiectul Pages
+#
+# Necesita:
+#   export CLOUDFLARE_API_TOKEN=...
+#   export CLOUDFLARE_ACCOUNT_ID=...
+# Permisiuni token: D1 Edit, Cloudflare Pages Edit, Workers Scripts Edit,
+#                   Account Settings Read.
+# =====================================================================
 set -euo pipefail
 
+cd "$(dirname "$0")"
+
 PROJECT="anime-uke"
+WORKER="anime-uke-do"
 DB_NAME="anime-db"
+DB_BINDING="DB"
 
-echo "==> 1/5 Verific autentificarea wrangler"
-npx wrangler whoami >/dev/null 2>&1 || npx wrangler login
+: "${CLOUDFLARE_API_TOKEN:?Lipseste CLOUDFLARE_API_TOKEN}"
+: "${CLOUDFLARE_ACCOUNT_ID:?Lipseste CLOUDFLARE_ACCOUNT_ID}"
 
-echo "==> 2/5 Creez baza de date D1"
-if grep -q '__INLOCUIESTE_DUPA_CREARE__' wrangler.toml; then
-  UUID=$(npx wrangler d1 create "$DB_NAME" --json | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);const r=Array.isArray(j)?j:j.results;console.log(r[0].uuid)})')
-  sed -i.bak "s/__INLOCUIESTE_DUPA_CREARE__/$UUID/" wrangler.toml && rm -f wrangler.toml.bak
-  echo "    database_id = $UUID"
+WRANGLER="npx wrangler"
+[ -x ./node_modules/.bin/wrangler ] && WRANGLER="./node_modules/.bin/wrangler"
+
+step() { printf '\n\033[1;35m==> %s\033[0m\n' "$1"; }
+ok()   { printf '    \033[0;32m✓\033[0m %s\n' "$1"; }
+die()  { printf '    \033[0;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
+
+# ---------------------------------------------------------------------
+step "1/5  Baza de date D1"
+DB_UUID="$(curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);if(!j.success)process.exit(2);const m=(j.result||[]).find(x=>x.name===process.argv[1]);console.log(m?m.uuid:"")})' "$DB_NAME" || true)"
+
+if [ -z "$DB_UUID" ]; then
+  $WRANGLER d1 create "$DB_NAME" >/tmp/d1out.txt 2>&1 || { cat /tmp/d1out.txt; die "nu am putut crea D1"; }
+  DB_UUID="$(grep -oE 'database_id = "[0-9a-f-]{36}"' /tmp/d1out.txt | head -1 | grep -oE '[0-9a-f-]{36}')"
+  [ -n "$DB_UUID" ] || die "nu am gasit UUID-ul bazei in iesirea wrangler"
+  ok "creata: $DB_NAME ($DB_UUID)"
 else
-  echo "    deja configurat, sar peste"
+  ok "exista deja: $DB_NAME ($DB_UUID)"
 fi
 
-echo "==> 3/5 Aplic schema pe D1 (remote)"
-npx wrangler d1 migrations apply DB --remote
+# injecteaza UUID-ul in ambele configuri
+for f in wrangler.toml wrangler.deploy.toml worker-do/wrangler.toml; do
+  sed -i "s/database_id = \"[^\"]*\"/database_id = \"$DB_UUID\"/" "$f"
+done
+ok "database_id injectat in wrangler.toml, wrangler.deploy.toml, worker-do/wrangler.toml"
 
-echo "==> 4/5 Setez JWT_SECRET (generat aleator, nu e afisat)"
-openssl rand -hex 32 | npx wrangler pages secret put JWT_SECRET --project-name="$PROJECT"
+# ---------------------------------------------------------------------
+step "2/5  Schema D1 (remote)"
+$WRANGLER d1 migrations apply "$DB_BINDING" --remote >/tmp/mig.txt 2>&1 || { cat /tmp/mig.txt; die "migrari esuate"; }
+grep -q 'No migrations to apply' /tmp/mig.txt && ok "deja aplicata" || ok "migrari aplicate"
 
-echo "==> 5/5 Deploy pe Pages"
-npx wrangler pages deploy --project-name="$PROJECT"
+# ---------------------------------------------------------------------
+step "3/5  Worker Durable Objects: $WORKER"
+( cd worker-do && $WRANGLER deploy >/tmp/wdo.txt 2>&1 ) || { cat /tmp/wdo.txt; die "deploy Worker DO esuat"; }
+ok "publicat: $(grep -oE 'https://[^ ]*workers\.dev' /tmp/wdo.txt | head -1 || echo "$WORKER")"
 
-echo
-echo "Gata. Site: https://$PROJECT.pages.dev"
-echo "Primul cont inregistrat devine automat admin."
+# ---------------------------------------------------------------------
+step "4/5  Cloudflare Pages: $PROJECT"
+$WRANGLER pages deploy --project-name="$PROJECT" --config wrangler.deploy.toml >/tmp/pages.txt 2>&1 \
+  || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
+DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
+ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
+
+# ---------------------------------------------------------------------
+step "5/5  JWT_SECRET"
+if printf '%s' "$(openssl rand -hex 32)" | $WRANGLER pages secret put JWT_SECRET --project-name="$PROJECT" >/tmp/sec.txt 2>&1; then
+  ok "secret setat (valoare generata aleator, nepublicata)"
+else
+  cat /tmp/sec.txt
+  echo "    Seteaza manual:  npx wrangler pages secret put JWT_SECRET --project-name=$PROJECT"
+fi
+
+printf '\n\033[1;32mGATA.\033[0m  Site: https://%s.pages.dev\n' "$PROJECT"
