@@ -280,6 +280,7 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Episoadele se randeaza', loaded, `n=${p.$$('#episodes-grid > *').length}`);
   check('Se randeaza exact o pagina, nu toate 150', p.$$('#episodes-grid > *').length === 100, `n=${p.$$('#episodes-grid > *').length}`);
   check('Numaratoarea arata totalul real, nu pagina curenta', /150/.test(p.text('#episodes-count') || ''), p.text('#episodes-count'));
+  check('Posterul seriei e randat (fallback cand lipseste coperta)', p.$('#series-poster')?.hidden === false && p.$$('#series-poster > *').length === 1, `hidden=${p.$('#series-poster')?.hidden} copii=${p.$$('#series-poster > *').length}`);
   check('Selectorul de intervale e vizibil la o serie lunga', p.$('#ep-ranges')?.hidden === false, `hidden=${p.$('#ep-ranges')?.hidden}`);
   check('Selectorul are doua intervale + sageti', p.$$('#ep-ranges button').length === 4, `butoane=${p.$$('#ep-ranges button').length}`);
   check('Primul interval e etichetat corect', /1–100/.test(p.$('#ep-ranges')?.textContent || ''), p.$('#ep-ranges')?.textContent?.slice(0, 80));

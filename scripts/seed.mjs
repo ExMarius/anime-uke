@@ -26,18 +26,27 @@ if (!USER || !PASS) {
   process.exit(1);
 }
 
-// Videoclipuri publice, licenta libera (Blender open movies + mostre Google).
-// Sunt fisiere .mp4 directe, deci kind='file' si chiar se redau in player —
-// mult mai util pentru testat decat un embed inventat care da eroare.
-const V = (n) => `https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/${n}.mp4`;
+// Videoclipuri publice cu licenta libera (Blender open movies si mostre
+// CC0), gazduite pe CDN-uri care permit Range requests — de asta le poate
+// reda player-ul. Sunt fisiere .mp4 directe, deci kind='file'.
+//
+// ISTORIC: bucketul Google gtv-videos-bucket a fost mult timp referinta
+// pentru videoclipuri de test, dar din 2026 raspunde cu 403. Lista de mai
+// jos a fost verificata manual cu un HEAD cu Range inainte de commit.
 const REELS = [
-  'BigBuckBunny', 'ElephantsDream', 'ForBiggerBlazes', 'ForBiggerEscapes',
-  'ForBiggerFun', 'ForBiggerJoyrides', 'ForBiggerMeltdowns', 'Sintel',
-  'TearsOfSteel', 'SubaruOutbackOnStreetAndDirt', 'VolkswagenGTIReview',
-  'WeAreGoingOnBullrun', 'WhatCarCanYouGetForAGrand',
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_2MB.mp4',
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_2MB.mp4',
+  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4',
+  'https://vjs.zencdn.net/v/oceans.mp4',
+  'https://media.w3.org/2010/05/sintel/trailer.mp4',
+  'https://media.w3.org/2010/05/bunny/trailer.mp4',
 ];
 let reel = 0;
-const nextVideo = () => V(REELS[reel++ % REELS.length]);
+const nextVideo = () => REELS[reel++ % REELS.length];
 
 // ---------------------------------------------------------------------
 // Catalogul. Episoadele sunt putine pe serie (date de test), cu exceptia

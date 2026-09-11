@@ -15,13 +15,16 @@
   <main class="container">
     <a href="/" class="crumb">← Toate seriile</a>
 
-    <header class="hero" id="series-hero" style="padding-top:1rem">
-      <div id="series-badges" style="display:flex;gap:.45rem;flex-wrap:wrap"></div>
-      <h1 class="hero__title" id="series-title" style="font-size:clamp(1.9rem,5vw,3rem)">Se încarcă…</h1>
-      <p class="hero__sub" id="series-desc"></p>
-      <div class="hero__actions" id="series-actions">
-        <button class="btn btn--ghost" id="watchlist-btn" type="button" hidden>🔖 Adaugă la „de vizionat”</button>
-        <a class="btn btn--ghost" id="profile-link" href="/profile" hidden>👤 Profilul meu</a>
+    <header class="hero ser-top" id="series-hero" style="padding-top:1rem">
+      <div class="ser-poster" id="series-poster" hidden></div>
+      <div class="ser-facts">
+        <div id="series-badges" style="display:flex;gap:.45rem;flex-wrap:wrap"></div>
+        <h1 class="hero__title" id="series-title" style="font-size:clamp(1.9rem,5vw,3rem)">Se încarcă…</h1>
+        <p class="hero__sub ser-desc" id="series-desc"></p>
+        <div class="hero__actions" id="series-actions">
+          <button class="btn btn--ghost" id="watchlist-btn" type="button" hidden>🔖 Adaugă la „de vizionat”</button>
+          <a class="btn btn--ghost" id="profile-link" href="/profile" hidden>👤 Profilul meu</a>
+        </div>
       </div>
     </header>
 

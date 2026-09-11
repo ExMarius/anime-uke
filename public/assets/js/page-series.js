@@ -22,6 +22,26 @@ function setHead(series) {
   title.textContent = series.title || 'Fără titlu';
   document.title = `${series.title || 'Serie'} • anime-uke`;
 
+  // Posterul seriei. La o imagine care nu se incarca (coperta stearsa, URL
+  // mort) cadem pe fallback-ul cu glifa, nu pe un icon de imagine rupta.
+  const poster = document.getElementById('series-poster');
+  poster.innerHTML = '';
+  if (series.cover_image) {
+    const img = document.createElement('img');
+    img.src = safeUrl(series.cover_image, '');
+    img.alt = series.title || 'Poster';
+    img.loading = 'eager';
+    img.decoding = 'async';
+    img.addEventListener('error', () => {
+      img.replaceWith(Object.assign(document.createElement('div'), { className: 'poster__fallback', textContent: '鬼' }));
+    }, { once: true });
+    poster.appendChild(img);
+    poster.hidden = false;
+  } else {
+    poster.appendChild(Object.assign(document.createElement('div'), { className: 'poster__fallback', textContent: '鬼' }));
+    poster.hidden = false;
+  }
+
   badges.innerHTML = '';
   badges.appendChild(badge(series.status === 'completed' ? '✓ Finalizat' : '● În difuzare', series.status === 'completed' ? 'pill-pos--ok' : ''));
   if (series.genre) for (const g of String(series.genre).split(',').slice(0, 3)) {
