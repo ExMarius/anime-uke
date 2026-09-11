@@ -22,3 +22,6 @@ Thumbs.db
 REVIEW.md
 .wrangler.toml.prod.bak
 worker-do/.wrangler/
+
+# Secrete locale (token GitHub / Cloudflare) — in afara repo-ului oricum
+.secrets/
