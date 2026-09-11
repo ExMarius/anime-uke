@@ -29,6 +29,30 @@ export const CHEST_TIERS = [
   { tier: 3, name: 'Cufăr de aur', seconds: 21600, points: 40, icon: '🥇' },
 ];
 
+// Cufărul secret: exista doar pe o parte din serii (hash determinist, deci
+// nu e „random" de save-scumming, ci o proprietate a seriei) si se ARATA
+// abia dupa ce ai deschis cufărul de aur — o surpriza pentru cine a stat
+// sase ore pe acelasi anime, nu un zgomot in lista de la inceput.
+export const SECRET_TIER = 4;
+const SECRET_SECONDS = 21600;
+
+function hashNum(n) {
+  let h = (n | 0) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return Math.abs(h ^ (h >>> 16));
+}
+
+/** Doar ~1 din 3 serii ascunde un cufăr secret. */
+export function seriesHasSecret(seriesId) {
+  return hashNum(seriesId) % 3 === 0;
+}
+
+/** Rasplata variaza per utilizator+serie (25–60 pct), determinist. */
+function secretPoints(userId, seriesId) {
+  return 25 + (hashNum(userId * 31 + seriesId) % 36);
+}
+
 const RATE_LIMIT = 120;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
@@ -70,15 +94,30 @@ export async function onRequestGet(context) {
   const total = await seriesWatchSeconds(env, user.id, id.value);
   const claimed = await claimedTiers(env, user.id, id.value);
 
+  const chests = CHEST_TIERS.map((t) => ({
+    ...t,
+    claimed: claimed.has(t.tier),
+    unlocked: total >= t.seconds,
+  }));
+
+  if (seriesHasSecret(id.value) && claimed.has(3)) {
+    chests.push({
+      tier: SECRET_TIER,
+      name: 'Cufăr secret',
+      icon: '🔮',
+      seconds: SECRET_SECONDS,
+      points: secretPoints(user.id, id.value),
+      secret: true,
+      claimed: claimed.has(SECRET_TIER),
+      unlocked: total >= SECRET_SECONDS,
+    });
+  }
+
   return json({
     series_id: series.id,
     series_title: series.title,
     total_seconds: total,
-    chests: CHEST_TIERS.map((t) => ({
-      ...t,
-      claimed: claimed.has(t.tier),
-      unlocked: total >= t.seconds,
-    })),
+    chests,
   });
 }
 
@@ -106,11 +145,26 @@ export async function onRequestPost(context) {
   const tierNo = validatePositiveInt(body.tier, 'Treapta cufarului');
   if (!tierNo.ok) return errorResponse(400, tierNo.error);
 
-  const tierDef = CHEST_TIERS.find((t) => t.tier === tierNo.value);
+  const isSecret = tierNo.value === SECRET_TIER;
+  const tierDef = isSecret
+    ? { tier: SECRET_TIER, name: 'Cufăr secret', seconds: SECRET_SECONDS, points: secretPoints(user.id, sid.value || 0), icon: '🔮' }
+    : CHEST_TIERS.find((t) => t.tier === tierNo.value);
   if (!tierDef) return errorResponse(400, 'Treapta nu există');
 
   const series = await env.DB.prepare('SELECT id FROM anime_series WHERE id = ?').bind(sid.value).first();
   if (!series) return errorResponse(404, 'Seria nu există');
+
+  if (isSecret) {
+    // Secretul e o proprietate a seriei si o rasplata a utilizatorului:
+    // ambele se recalculeaza aici, niciodata din ce trimite clientul.
+    if (!seriesHasSecret(sid.value)) return errorResponse(404, 'Seria asta nu ascunde un cufăr secret');
+    const gold = await env.DB
+      .prepare('SELECT 1 AS x FROM chests_claimed WHERE user_id = ? AND series_id = ? AND tier = 3')
+      .bind(user.id, sid.value)
+      .first();
+    if (!gold) return errorResponse(409, 'Cufărul secret se arată doar după cufărul de aur');
+    tierDef.points = secretPoints(user.id, sid.value);
+  }
 
   // Progresul se verifica pe server, in momentul cererii. Un client care ar
   // trimite tier=3 din consola primeste 409, nu puncte.

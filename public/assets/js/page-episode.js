@@ -14,6 +14,8 @@ let watchSeconds = 0;
 let watchedDone = false;
 let episodeId = null;
 let heartbeatTimer = null;
+let activityTimer = null;
+let pendingSeconds = 0;
 
 function fmtTime(total) {
   const m = Math.floor(total / 60);
@@ -25,15 +27,16 @@ function paintProgress() {
   const box = document.getElementById('watch-progress');
   if (!box) return;
   box.hidden = false;
+  const shown = watchSeconds + pendingSeconds;
   document.getElementById('watch-progress-fill').style.width =
-    `${Math.min(100, (watchSeconds / watchThreshold) * 100)}%`;
+    `${Math.min(100, (shown / watchThreshold) * 100)}%`;
   document.getElementById('watch-progress-time').textContent =
-    `${fmtTime(Math.min(watchSeconds, watchThreshold))} / ${fmtTime(watchThreshold)}`;
+    `${fmtTime(Math.min(shown, watchThreshold))} / ${fmtTime(watchThreshold)}`;
   const label = document.getElementById('watch-progress-label');
   const note = document.getElementById('watch-progress-note');
   if (watchedDone) {
     label.textContent = '✔ Vizionat — puncte acordate';
-    note.textContent = 'Mulțumim că te-ai uitat!';
+    note.textContent = 'Timpul continuă să se acumuleze pentru cuferele seriei.';
     box.classList.add('watch-progress--done');
   } else {
     label.textContent = '🍿 Se acumulează timp de vizionare';
@@ -61,28 +64,57 @@ function activeNow() {
 
 function stopHeartbeat() {
   if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
+  window.removeEventListener('pagehide', flushProgress);
+  document.removeEventListener('visibilitychange', flushOnHidden);
+}
+
+// Trimitem progresul la 2 minute, nu la 30 de secunde. La 1000 de utilizatori
+// activi pe zi, un heartbeat de 30s ar insemna ~240.000 de scrieri/zi in D1 —
+// peste plafonul planului gratuit (100.000). Acuratetea nu pierde: fiecare
+// secunda vizionata intra intr-un acumulator local si e trimisa in loturi.
+const HEARTBEAT_SEND_MS = 120000;
+// Trebuie sa coincida cu MAX_INCREMENT de pe server (/api/progress).
+const SEND_CAP = 120;
+
+function flushOnHidden() { if (document.hidden) flushProgress(); }
+
+/** Trimite secundele acumulate local. Nu pierdem timp niciodata: daca
+ *  cererea esueaza, secundele se intorc in acumulator. */
+async function flushProgress() {
+  if (!pendingSeconds || !episodeId) return;
+  const secs = Math.min(pendingSeconds, SEND_CAP);
+  pendingSeconds -= secs;
+
+  const res = await api('/progress', {
+    method: 'POST',
+    body: { episode_id: episodeId, seconds: secs },
+  });
+  if (res.status === 401) { stopHeartbeat(); return; }
+  if (!res.ok) { pendingSeconds += secs; return; }
+
+  const wasDone = watchedDone;
+  watchSeconds = res.data.seconds ?? watchSeconds;
+  watchedDone = !!res.data.watched;
+  paintProgress();
+  if (!wasDone && watchedDone) {
+    toast(`+${res.data.pointsAdded ?? 10} puncte! Total: ${res.data.points}`, 'ok');
+    clearSession();          // forteaza recitirea punctelor in navbar
+    await renderNav('');
+  }
 }
 
 function startHeartbeat() {
   stopHeartbeat();
-  heartbeatTimer = setInterval(async () => {
-    if (!activeNow() || watchedDone) return;
-    const res = await api('/progress', {
-      method: 'POST',
-      body: { episode_id: episodeId, seconds: 30 },
-    });
-    if (res.status === 401) { stopHeartbeat(); return; }
-    if (!res.ok) return;
-    const wasDone = watchedDone;
-    watchSeconds = res.data.seconds ?? watchSeconds;
-    watchedDone = !!res.data.watched;
-    paintProgress();
-    if (!wasDone && watchedDone) {
-      toast(`+${res.data.pointsAdded ?? 10} puncte! Total: ${res.data.points}`, 'ok');
-      clearSession();          // forteaza recitirea punctelor in navbar
-      await renderNav('');
-    }
-  }, 30000);
+  // Numaram fiecare secunda in care userul chiar se uita. Contam si DUPA
+  // pragul de 15 minute: timpul acela e cel care deblocheaza cuferele de
+  // argint si aur, deci oprirea acumularii la „vizionat" le-ar fi blocat
+  // pentru totdeauna in utilizarea reala.
+  activityTimer = setInterval(() => { if (activeNow()) pendingSeconds += 1; }, 1000);
+  heartbeatTimer = setInterval(flushProgress, HEARTBEAT_SEND_MS);
+  // La plecare din pagina trimitem ce a ramas, ca sa nu se piarda secunde.
+  window.addEventListener('pagehide', flushProgress);
+  document.addEventListener('visibilitychange', flushOnHidden);
 }
 
 

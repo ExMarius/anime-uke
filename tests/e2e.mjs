@@ -700,6 +700,31 @@ console.log('\n=== 8c. CUFAR CU COMORI (timp petrecut pe serie) ===');
   check('Cufarul deschis apare ca claimed', after.data?.chests?.[0]?.claimed === true, JSON.stringify(after.data?.chests?.[0]));
 }
 
+console.log('\n=== 8c2. CUFARUL SECRET SI CLASAMENTUL ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // Secretul e o surpriza: nu apare in lista pana nu ai deschis aurul, deci
+  // inainte de asta lista trebuie sa aiba exact 3 cufere, indiferent de serie.
+  const c = await req(j, 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
+  check('Cufarul secret nu e dezvaluit inainte de aur', c.data?.chests?.length === 3, `n=${c.data?.chests?.length}`);
+
+  const forceSecret = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 4 });
+  check('Cufarul secret nu poate fi fortat din client → 404/409', forceSecret.status === 404 || forceSecret.status === 409, `status=${forceSecret.status}`);
+
+  const lb1 = await req(j, 'GET', '/api/leaderboard');
+  check('Clasamentul raspunde cu top si viewer', Array.isArray(lb1.data?.top) && lb1.data?.viewer?.username === 'user2@test.ro' || lb1.data?.viewer?.username != null, JSON.stringify(lb1.data?.viewer));
+  check('Viewerul isi vede punctele in clasament', Number.isFinite(lb1.data?.viewer?.points), JSON.stringify(lb1.data?.viewer));
+  check('Topul e ordonat descrescator dupa puncte', (lb1.data?.top || []).every((r, i, a) => i === 0 || a[i - 1].points >= r.points), JSON.stringify((lb1.data?.top || []).map((r) => r.points)));
+
+  const lb2 = await req(j, 'GET', '/api/leaderboard');
+  check('A doua cerere serveste din cache (acelasi updated_at)', lb2.data?.updated_at === lb1.data?.updated_at, `${lb1.data?.updated_at} vs ${lb2.data?.updated_at}`);
+
+  const lbAnon = await req(jar(), 'GET', '/api/leaderboard');
+  check('Clasamentul cere autentificare → 401', lbAnon.status === 401, `status=${lbAnon.status}`);
+}
+
 console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
 {
   const j = globalThis.admin;

@@ -914,3 +914,51 @@ a.quick__item:hover {
 
 .chest__bar { width: 100%; height: 6px; margin-top: .45rem; border-radius: 99px; background: var(--surface-3, #1c1216); overflow: hidden; }
 .chest__fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), #ff5c7a); }
+
+/* =====================================================================
+   Confetti la deschiderea cuferelor + stilul cufarului secret
+   ===================================================================== */
+.chest { overflow: visible; }
+.confetti {
+  position: absolute; left: 50%; top: 38%;
+  width: 8px; height: 12px; border-radius: 2px;
+  pointer-events: none; z-index: 5;
+  animation: confetti-fly 1.35s cubic-bezier(.2,.6,.4,1) forwards;
+}
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+.chest--secret {
+  border-color: rgba(147, 51, 234, .55);
+  background:
+    radial-gradient(90% 130% at 50% 0%, rgba(147, 51, 234, .25), transparent 62%),
+    var(--surface-2, #1a1013);
+}
+.chest--secret .chest__pts { color: #c084fc; }
+.chest--secret.chest--open { animation: chest-glow-violet 1.6s ease-in-out infinite; }
+@keyframes chest-glow-violet {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+  50% { box-shadow: 0 0 22px 0 rgba(147, 51, 234, .45); }
+}
+
+/* =====================================================================
+   Clasament (profil)
+   ===================================================================== */
+.lb { list-style: none; margin: .4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+.lb__row {
+  display: grid; grid-template-columns: 2.1rem 1fr auto auto;
+  align-items: center; gap: .6rem;
+  padding: .42rem .6rem; border-radius: var(--r-md);
+  background: var(--surface-3, #1c1216);
+  font-size: .86rem;
+}
+.lb__row--me {
+  outline: 1px solid rgba(220, 20, 60, .55);
+  background: linear-gradient(90deg, rgba(220, 20, 60, .16), var(--surface-3, #1c1216));
+}
+.lb__rank { font-size: .95rem; text-align: center; }
+.lb__name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb__week { font-size: .72rem; color: var(--dim); }
+.lb__pts { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 800; }
+@media (max-width: 480px) { .lb__week { display: none; } }

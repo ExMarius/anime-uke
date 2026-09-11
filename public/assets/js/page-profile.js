@@ -305,6 +305,63 @@ async function load() {
   renderQuick();
   renderReco();
   await loadWatchlist();
+  loadLeaderboard().catch(() => { /* clasamentul e decorativ: profilul merge oricum */ });
+}
+
+// ---------------------------------------------------------------------
+// Clasament: top 20 dupa puncte + episoadele vazute in ultimele 7 zile.
+// Serverul serveste dintr-un cache de 15 minute, deci lista e „proaspata
+// destul" si ieftina oricand.
+// ---------------------------------------------------------------------
+const LB_MEDALS = ['🥇', '🥈', ''];
+
+async function loadLeaderboard() {
+  const list = document.getElementById('lb-list');
+  const note = document.getElementById('lb-note');
+  if (!list) return;
+
+  const res = await api('/leaderboard');
+  if (!res.ok) { list.closest('.box').hidden = true; return; }
+
+  const { top, viewer } = res.data;
+  list.innerHTML = '';
+
+  if (!top.length) {
+    note.textContent = 'Încă nimeni nu a strâns puncte. Fii primul!';
+    return;
+  }
+
+  for (let i = 0; i < top.length; i++) {
+    const row = top[i];
+    const li = document.createElement('li');
+    li.className = 'lb__row' + (viewer && row.username === viewer.username ? ' lb__row--me' : '');
+
+    const rank = document.createElement('span');
+    rank.className = 'lb__rank';
+    rank.textContent = LB_MEDALS[i] || `#${i + 1}`;
+    li.appendChild(rank);
+
+    const name = document.createElement('span');
+    name.className = 'lb__name';
+    name.textContent = row.username;
+    li.appendChild(name);
+
+    const week = document.createElement('span');
+    week.className = 'lb__week';
+    week.textContent = row.week ? `${row.week} ep. săptămâna asta` : '';
+    li.appendChild(week);
+
+    const pts = document.createElement('span');
+    pts.className = 'lb__pts';
+    pts.textContent = `${Number(row.points).toLocaleString('ro-RO')} pct`;
+    li.appendChild(pts);
+
+    list.appendChild(li);
+  }
+
+  note.textContent = viewer && !viewer.in_top
+    ? `Tu ai ${Number(viewer.points).toLocaleString('ro-RO')} puncte — în afara top 20. Se recalculează la 15 minute.`
+    : 'Se recalculează la 15 minute.';
 }
 
 await renderNav('');

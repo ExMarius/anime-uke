@@ -382,6 +382,16 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
+console.log('\n=== DOM: /profile (clasamentul randat) ===');
+{
+  const p = await mountPage({ htmlFile: 'public/profile.html', url: '/profile', module: 'page-profile.js' });
+  const loaded = await until(() => p.$$('#lb-list .lb__row').length > 0 || /nimeni/i.test(p.text('#lb-note') || ''));
+  check('Clasamentul se randeaza pe profil', loaded, `randuri=${p.$$('#lb-list .lb__row').length} note=${p.text('#lb-note')}`);
+  check('Fiecare rand are nume si puncte', p.$$('#lb-list .lb__row').every((r) => r.textContent.includes('pct')), p.$('#lb-list')?.textContent?.slice(0, 80));
+  check('Nicio eroare de runtime pe profil', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+}
+
 console.log('\n' + '='.repeat(56));
 if (failed) {
   console.log(`REZULTAT: ${passed} trecute, ${failed} ESUATE`);

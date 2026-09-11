@@ -296,9 +296,29 @@ function fmtWatch(sec) {
   return rm ? `${h}h ${rm}m` : `${h}h`;
 }
 
+/** O explozie mica de confetti deasupra cufarului deschis. Pur CSS/JS,
+ *  fara librarii: particulele sunt span-uri aruncate cu transform-uri
+ *  aleatoare si curatate dupa animatie. */
+function burstConfetti(host, count = 26) {
+  const colors = ['#dc143c', '#ff5c7a', '#ffd166', '#22c55e', '#4cc9f0', '#f5f5f5'];
+  for (let i = 0; i < count; i++) {
+    const bit = document.createElement('span');
+    bit.className = 'confetti';
+    bit.style.background = colors[i % colors.length];
+    bit.style.setProperty('--dx', `${Math.round((Math.random() * 2 - 1) * 150)}px`);
+    bit.style.setProperty('--dy', `${-Math.round(50 + Math.random() * 130)}px`);
+    bit.style.setProperty('--rot', `${Math.round(Math.random() * 720 - 360)}deg`);
+    bit.style.animationDelay = `${Math.round(Math.random() * 120)}ms`;
+    host.appendChild(bit);
+    setTimeout(() => bit.remove(), 1600);
+  }
+}
+
 function chestCard(ch, totalSeconds, seriesId) {
   const el = document.createElement('div');
-  el.className = 'chest' + (ch.claimed ? ' chest--claimed' : ch.unlocked ? ' chest--open' : ' chest--locked');
+  el.className = 'chest'
+    + (ch.secret ? ' chest--secret' : '')
+    + (ch.claimed ? ' chest--claimed' : ch.unlocked ? ' chest--open' : ' chest--locked');
 
   const icon = document.createElement('div');
   icon.className = 'chest__icon';
@@ -312,7 +332,9 @@ function chestCard(ch, totalSeconds, seriesId) {
 
   const pts = document.createElement('div');
   pts.className = 'chest__pts';
-  pts.textContent = ch.claimed ? `+${ch.points} primite` : `+${ch.points} puncte`;
+  pts.textContent = ch.claimed
+    ? `+${ch.points} primite`
+    : ch.secret && !ch.unlocked ? '+? puncte' : `+${ch.points} puncte`;
   el.appendChild(pts);
 
   if (ch.claimed) {
@@ -330,6 +352,7 @@ function chestCard(ch, totalSeconds, seriesId) {
       const r = await api('/chests', { method: 'POST', body: { series_id: seriesId, tier: ch.tier } });
       btn.disabled = false;
       if (!r.ok) { toast(r.data?.error || 'Nu am putut deschide cufărul', 'err'); return; }
+      burstConfetti(el, ch.secret ? 44 : 26);
       toast(`${ch.icon || '🎁'} ${ch.name} deschis: +${r.data.pointsAdded} puncte!`, 'ok');
       await Promise.all([loadChests(seriesId), renderNav('')]);
     });
