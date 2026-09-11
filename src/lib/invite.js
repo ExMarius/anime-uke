@@ -67,7 +67,7 @@ export async function findUsableInvite(env, rawCode) {
   }
 
   const row = await env.DB
-    .prepare('SELECT id, code, used_by, revoked FROM invite_codes WHERE code = ?')
+    .prepare('SELECT id, code, created_by, used_by, revoked FROM invite_codes WHERE code = ?')
     .bind(code)
     .first();
 
@@ -95,12 +95,15 @@ export async function claimInvite(env, code) {
   return (res.meta?.changes ?? 0) === 1;
 }
 
-/** Leaga codul rezervat de utilizatorul creat. */
-export async function assignInviteToUser(env, code, userId) {
-  await env.DB
-    .prepare('UPDATE invite_codes SET used_by = ? WHERE code = ?')
-    .bind(userId, code)
-    .run();
+/**
+ * Consuma definitiv codul: il STERGE din baza de date.
+ *
+ * Cerinta explicita: un cod folosit nu trebuie sa mai apara in panou.
+ * Urma de audit nu se pierde — cine l-a generat si cine l-a folosit se
+ * consemneaza in admin_log inainte de stergere (vezi register.js).
+ */
+export async function consumeInvite(env, code) {
+  await env.DB.prepare('DELETE FROM invite_codes WHERE code = ?').bind(code).run();
 }
 
 /** Elibereaza o rezervare (daca insert-ul utilizatorului a esuat). */

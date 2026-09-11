@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0709">
+  <title>Profil • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container-narrow profile" style="padding-bottom:3rem">
+    <a href="/" class="crumb">← Înapoi la serii</a>
+
+    <!-- ============ ANTET PROFIL ============ -->
+    <header class="profile-head box" id="profile-head">
+      <div class="avatar" id="p-avatar" role="img" aria-label="Avatar">
+        <span id="p-avatar-text">?</span>
+      </div>
+      <div class="profile-head__info">
+        <h1 class="profile-head__name" id="p-username">Se încarcă…</h1>
+        <div class="profile-head__badges" id="p-badges"></div>
+        <div class="xp">
+          <div class="xp__bar"><div class="xp__fill" id="p-xp-fill" style="width:0%"></div></div>
+          <p class="xp__label" id="p-xp-label">0 puncte</p>
+        </div>
+      </div>
+      <button class="btn btn--accent" id="p-edit-btn" type="button" hidden>✏️ Editează</button>
+    </header>
+
+    <div class="profile-grid">
+      <!-- ============ INFORMATII ============ -->
+      <section class="box">
+        <h2 class="box__title">Informații</h2>
+        <dl class="info-list" id="p-info"></dl>
+      </section>
+
+      <!-- ============ ACCES RAPID ============ -->
+      <section class="box">
+        <h2 class="box__title">Acces rapid</h2>
+        <div class="quick" id="p-quick"></div>
+      </section>
+    </div>
+
+    <!-- ============ FORMULAR EDITARE ============ -->
+    <section class="box" id="p-edit-panel" hidden>
+      <h2 class="box__title">Editează profilul</h2>
+      <form id="profile-form">
+        <div class="row">
+          <div class="field">
+            <label for="f-birth">Data nașterii</label>
+            <input class="input" id="f-birth" name="birth_date" type="date">
+            <p class="hint">Zodia se calculează automat.</p>
+          </div>
+          <div class="field">
+            <label for="f-gender">Gen</label>
+            <select class="select" id="f-gender" name="gender">
+              <option value="">Nespecificat</option>
+              <option value="male">Masculin</option>
+              <option value="female">Feminin</option>
+              <option value="other">Altul</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="f-country">Țară</label>
+            <input class="input" id="f-country" name="country" type="text" maxlength="60" placeholder="România">
+          </div>
+          <div class="field">
+            <label for="f-faction">Facțiune</label>
+            <input class="input" id="f-faction" name="faction" type="text" maxlength="40" placeholder="ex. Konoha">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-motto">Gând de împărtășit</label>
+          <textarea class="textarea" id="f-motto" name="motto" maxlength="200" placeholder="Niciun gând de împărtășit…"></textarea>
+          <p class="hint"><span id="f-motto-count">0</span>/200</p>
+        </div>
+        <div class="field">
+          <label for="f-mal">Link MyAnimeList</label>
+          <input class="input" id="f-mal" name="mal_url" type="url" maxlength="300" placeholder="https://myanimelist.net/profile/…">
+          <p class="hint">Doar link-uri către myanimelist.net.</p>
+        </div>
+        <div class="field">
+          <label for="f-avatar">URL avatar</label>
+          <input class="input" id="f-avatar" name="avatar_url" type="url" maxlength="500" placeholder="https://…">
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="profile-save" type="submit">Salvează</button>
+          <button class="btn btn--ghost" id="profile-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ SERII RECOMANDATE ============ -->
+    <section class="section" id="p-reco-section" hidden>
+      <div class="section__head">
+        <h2 class="section__title">Serii recomandate</h2>
+        <span class="section__count">cele mai vizionate, nevăzute de tine</span>
+      </div>
+      <div class="grid" id="p-reco"></div>
+    </section>
+
+    <!-- ============ LISTA DE VIZIONAT ============ -->
+    <section class="section" id="p-watchlist-section">
+      <div class="section__head">
+        <h2 class="section__title">Serii de vizionat</h2>
+        <span class="section__count" id="p-watchlist-count"></span>
+      </div>
+      <div class="grid" id="p-watchlist"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/assets/js/page-profile.js"></script>
+</body>
+</html>

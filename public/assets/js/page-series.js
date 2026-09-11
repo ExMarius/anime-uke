@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -114,5 +114,54 @@ async function load() {
   for (const ep of episodes) grid.appendChild(episodeCard(ep));
 }
 
+// ---------------------------------------------------------------------
+// Lista „de vizionat" — vizibila doar pentru utilizatorii logati.
+// Butonul comuta intre adaugare si scoatere, in functie de stare.
+// ---------------------------------------------------------------------
+let currentSeriesId = null;
+let inWatchlist = false;
+
+function paintWatchlistBtn() {
+  const btn = document.getElementById('watchlist-btn');
+  if (!btn) return;
+  btn.textContent = inWatchlist ? '✅ În lista „de vizionat"' : '🔖 Adaugă la „de vizionat"';
+  btn.classList.toggle('btn--ok', inWatchlist);
+  btn.classList.toggle('btn--ghost', !inWatchlist);
+}
+
+async function initWatchlist(seriesId) {
+  currentSeriesId = seriesId;
+  const btn = document.getElementById('watchlist-btn');
+  const link = document.getElementById('profile-link');
+  if (!btn) return;
+
+  const user = await getSession();
+  if (!user) return;             // vizitatorii nu au lista proprie
+
+  btn.hidden = false;
+  if (link) link.hidden = false;
+
+  const res = await api('/watchlist');
+  if (res.ok) {
+    inWatchlist = (res.data.watchlist || []).some((s) => (s.series_id ?? s.id) === seriesId);
+    paintWatchlistBtn();
+  }
+
+  btn.addEventListener('click', async () => {
+    await withBusy(btn, async () => {
+      const r = inWatchlist
+        ? await api(`/watchlist?series_id=${encodeURIComponent(currentSeriesId)}`, { method: 'DELETE' })
+        : await api('/watchlist', { method: 'POST', body: { series_id: currentSeriesId } });
+
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut actualiza lista', 'err'); return; }
+      inWatchlist = !inWatchlist;
+      paintWatchlistBtn();
+      toast(inWatchlist ? 'Serie adăugată la „de vizionat".' : 'Serie scoasă din listă.', 'ok');
+    });
+  });
+}
+
 await renderNav('');
 await load();
+const sid = Number(getParam('id'));
+if (sid) await initWatchlist(sid);

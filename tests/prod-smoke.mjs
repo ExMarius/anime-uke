@@ -51,6 +51,29 @@ async function req(j, method, path, body) {
 
 console.log(`\n=== Verificare productie: ${BASE} ===\n`);
 
+// ---------------------------------------------------------------- 0. poarta
+console.log('0. Poarta de autentificare (site privat):');
+{
+  const home = await fetch(BASE + '/', { redirect: 'manual' });
+  await home.text();
+  ck('vizitatorul pe / e trimis la /login', home.status === 302 && String(home.headers.get('location')).startsWith('/login'), `HTTP ${home.status} loc=${home.headers.get('location')}`);
+
+  for (const page of ['/series', '/episode', '/admin', '/profile']) {
+    const r = await fetch(BASE + page, { redirect: 'manual' });
+    await r.text();
+    ck(`${page} fara cont → 302`, r.status === 302, `HTTP ${r.status}`);
+  }
+  for (const page of ['/login', '/register']) {
+    const r = await fetch(BASE + page, { redirect: 'manual' });
+    await r.text();
+    ck(`${page} ramane public → 200`, r.status === 200, `HTTP ${r.status}`);
+  }
+  const api = await fetch(BASE + '/api/series');
+  await api.text();
+  ck('/api/series fara cont → 401 JSON', api.status === 401, `HTTP ${api.status}`);
+}
+
+
 // ---------------------------------------------------------------- 1. auth
 console.log('1. Autentificare:');
 const stamp = Date.now().toString(36);
@@ -84,7 +107,7 @@ r = await req(B, 'POST', '/api/auth/register', { username: `user${stamp}`, email
 ck('al doilea user NU e admin', r.status === 201 && r.data?.user?.is_admin === false, `HTTP ${r.status} ${JSON.stringify(r.data?.user)}`);
 
 r = await req(jar(), 'POST', '/api/auth/register', { username: `y${stamp}`, email: `y${stamp}@anime-uke.test`, password: 'test1234', invite_code: inviteCode });
-ck('codul e de unica folosinta → 409', r.status === 409, `HTTP ${r.status} ${r.data?.error}`);
+ck('codul e de unica folosinta: se sterge, deci a doua oara → 404', r.status === 404, `HTTP ${r.status} ${r.data?.error}`);
 
 // ---------------------------------------------------------------- 2. serii
 console.log('\n2. Serii + episoade (flux admin din spec):');
@@ -123,26 +146,26 @@ ck('URL non-DoodStream respins → 400', r.status === 400, `HTTP ${r.status}`);
 
 // ---------------------------------------------------------------- 3. publice
 console.log('\n3. Pagini publice:');
-r = await req(jar(), 'GET', '/api/series');
+r = await req(A, 'GET', '/api/series');
 const s0 = (r.data?.series || []).find((x) => x.id === seriesId);
 ck('lista serii + episode_count', r.status === 200 && s0?.episode_count === 1, `HTTP ${r.status} ${JSON.stringify(s0 || {}).slice(0, 140)}`);
 
-r = await req(jar(), 'GET', `/api/series/${seriesId}`);
+r = await req(A, 'GET', `/api/series/${seriesId}`);
 ck('detaliu serie + episoade dintr-un apel', r.status === 200 && (r.data?.episodes?.length ?? 0) === 1, `HTTP ${r.status}`);
 ck('seria nu expune hash/parola', !JSON.stringify(r.data).includes('password'), '');
 
-r = await req(jar(), 'GET', '/api/series/999999');
+r = await req(A, 'GET', '/api/series/999999');
 ck('serie inexistenta → 404', r.status === 404, `HTTP ${r.status}`);
-r = await req(jar(), 'GET', '/api/series/abc');
+r = await req(A, 'GET', '/api/series/abc');
 ck('ID non-numeric → 400', r.status === 400, `HTTP ${r.status}`);
 
 // ---------------------------------------------------------------- 4. views
 console.log('\n4. Contor vizualizari (buffer in DO):');
-r = await req(jar(), 'POST', '/api/view', { episode_id: epId });
+r = await req(B, 'POST', '/api/view', { episode_id: epId });
 ck('POST /api/view → counted', r.status === 200 && (r.data?.counted === true || r.data?.ok === true), `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 120)}`);
-r = await req(jar(), 'POST', '/api/view', { episode_id: epId });
+r = await req(B, 'POST', '/api/view', { episode_id: epId });
 ck('acelasi vizitator imediat dupa → deduplicat', r.status === 200 && r.data?.counted === false, `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 120)}`);
-r = await req(jar(), 'POST', '/api/view', { episode_id: 999999 });
+r = await req(B, 'POST', '/api/view', { episode_id: 999999 });
 ck('view pentru episod inexistent → 404', r.status === 404, `HTTP ${r.status}`);
 
 // ---------------------------------------------------------------- 5. puncte
@@ -256,6 +279,41 @@ ck('mesajul prea lung e trunchiat la 500', (s2.msg?.message?.length ?? 0) <= 500
 for (const w of [w1, w2]) { try { w.close(); } catch {} }
 await sleep(1500);
 
+
+console.log('\n7b. Profil public + lista de vizionat:');
+r = await req(A, 'PATCH', '/api/profile', {
+  birth_date: '2007-01-01', gender: 'male', country: 'Romania',
+  motto: 'Niciun gând de împărtășit…', mal_url: 'https://myanimelist.net/profile/test',
+});
+ck('PATCH /api/profile salveaza', r.status === 200 && r.data?.profile?.birth_date === '2007-01-01', `HTTP ${r.status} ${r.data?.error}`);
+ck('zodia se calculeaza (01.01 → Capricorn)', r.data?.profile?.zodiac === 'Capricorn', r.data?.profile?.zodiac);
+ck('data e formatata RO (01.01.2007)', r.data?.profile?.birth_date_ro === '01.01.2007', r.data?.profile?.birth_date_ro);
+ck('genul e tradus (Masculin)', r.data?.profile?.gender_label === 'Masculin', r.data?.profile?.gender_label);
+ck('rangul e prezent', !!r.data?.rank?.label, JSON.stringify(r.data?.rank));
+
+r = await req(A, 'PATCH', '/api/profile', { country: 'Moldova' });
+ck('patch partial nu goleste celelalte campuri',
+  r.data?.profile?.country === 'Moldova' && r.data?.profile?.birth_date === '2007-01-01',
+  JSON.stringify(r.data?.profile || {}).slice(0, 160));
+
+r = await req(A, 'PATCH', '/api/profile', { birth_date: '2099-01-01' });
+ck('data in viitor → 400', r.status === 400, `HTTP ${r.status}`);
+r = await req(A, 'PATCH', '/api/profile', { mal_url: 'https://evil.example/x' });
+ck('link non-MyAnimeList → 400', r.status === 400, `HTTP ${r.status}`);
+
+r = await req(B, 'GET', `/api/profile/${encodeURIComponent(`admin${stamp}`)}`);
+ck('profilul altui user e vizibil', r.status === 200 && r.data?.is_self === false, `HTTP ${r.status}`);
+ck('profilul nu expune email-ul', !JSON.stringify(r.data).includes(adminEmail), '');
+
+r = await req(A, 'POST', '/api/watchlist', { series_id: seriesId });
+ck('adaugare la „de vizionat" → 201', r.status === 201 && r.data?.added === true, `HTTP ${r.status}`);
+r = await req(A, 'POST', '/api/watchlist', { series_id: seriesId });
+ck('adaugare dubla e idempotenta', r.status === 200 && r.data?.alreadyInList === true, `HTTP ${r.status}`);
+r = await req(A, 'GET', '/api/profile/me');
+ck('„Serii de vizionat" apare in Acces rapid', r.data?.stats?.watchlist === 1, JSON.stringify(r.data?.stats));
+r = await req(A, 'DELETE', `/api/watchlist?series_id=${seriesId}`);
+ck('scoatere din lista', r.status === 200 && r.data?.removed === true, `HTTP ${r.status}`);
+
 // ---------------------------------------------------------------- 8. securitate
 console.log('\n8. Securitate:');
 r = await req(jar(), 'GET', '/api/admin/stats');
@@ -272,12 +330,12 @@ const evil = await fetch(BASE + '/api/auth/login', {
 ck('Origin strain → respins (CSRF)', evil.status === 403, `HTTP ${evil.status}`);
 await evil.text();
 
-const src = await fetch(BASE + '/src/worker.js');
+const src = await fetch(BASE + '/src/worker.js', { redirect: 'manual' });
 const srcType = src.headers.get('content-type') || '';
 await src.text();
-ck('codul sursa nu e servit ca JS', !srcType.includes('javascript'), `content-type=${srcType}`);
+ck('codul sursa nu e servit ca JS', !srcType.includes('javascript') && src.status !== 200, `HTTP ${src.status} content-type=${srcType}`);
 
-const idx = await fetch(BASE + '/');
+const idx = await fetch(BASE + '/login');
 ck('CSP include frame-src DoodStream', /frame-src[^;]*doodstream\.com/.test(idx.headers.get('content-security-policy') || ''), '');
 ck('X-Frame-Options DENY', (idx.headers.get('x-frame-options') || '') === 'DENY', idx.headers.get('x-frame-options') || '-');
 await idx.text();
@@ -288,13 +346,15 @@ r = await req(A, 'DELETE', `/api/admin/episodes?id=${epId}`);
 ck('admin sterge episod', r.status === 200, `HTTP ${r.status}`);
 r = await req(A, 'DELETE', `/api/admin/series?id=${seriesId}`);
 ck('admin sterge serie (cascade la episoade)', r.status === 200, `HTTP ${r.status}`);
-r = await req(jar(), 'GET', '/api/series');
+r = await req(A, 'GET', '/api/series');
 ck('lista e goala dupa stergere', r.status === 200 && (r.data?.series || []).length === 0, `HTTP ${r.status} n=${(r.data?.series || []).length}`);
 
-r = await req(A, 'GET', '/api/admin/invites?filter=used');
-const usedRow = (r.data?.invites || []).find((i) => i.used_by);
-ck('codul folosit apare in panou cu numele utilizatorului', !!usedRow && usedRow.used_by_name === `user${stamp}`, JSON.stringify(usedRow || {}).slice(0, 140));
-ck('numaratoarele din panou sunt coerente', (r.data?.counts?.used ?? 0) >= 1, JSON.stringify(r.data?.counts));
+// Codurile consumate se sterg definitiv din panou (cerinta explicita).
+r = await req(A, 'GET', '/api/admin/invites');
+ck('codul consumat a fost sters din panou', r.status === 200 && (r.data?.counts?.total ?? -1) === 0, JSON.stringify(r.data?.counts));
+r = await req(A, 'GET', '/api/admin/log');
+const logRows = r.data?.log || r.data?.entries || [];
+ck('urma codului consumat ramane in audit (invite_used)', logRows.some((l) => l.action === 'invite_used'), logRows.map((l) => l.action).join(','));
 
 console.log(`\n=== ${pass} trecute, ${fail} esuate ===\n`);
 process.exit(fail ? 1 : 0);

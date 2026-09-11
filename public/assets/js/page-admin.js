@@ -315,7 +315,7 @@ async function loadUsers() {
   const tbody = document.querySelector('#users-table tbody');
   tbody.innerHTML = '';
 
-  if (!users.length) { tbody.appendChild(emptyRow(7, 'Niciun utilizator.')); return; }
+  if (!users.length) { tbody.appendChild(emptyRow(6, 'Niciun utilizator.')); return; }
 
   for (const u of users) {
     const isSelf = u.id === currentId;
@@ -484,7 +484,7 @@ async function loadInvites() {
 
   const rows = res.data.invites || [];
   if (!rows.length) {
-    tbody.appendChild(emptyRow(7, inviteFilter === 'all'
+    tbody.appendChild(emptyRow(6, inviteFilter === 'all'
       ? 'Nu ai generat încă niciun cod. Completează formularul de mai sus.'
       : 'Niciun cod cu acest filtru.'));
     return;
@@ -526,7 +526,6 @@ async function loadInvites() {
     tr.appendChild(tdStatus);
 
     tr.appendChild(cell(inv.created_by_name || '—'));
-    tr.appendChild(cell(inv.used_by_name ? `${inv.used_by_name} (${inv.used_at})` : '—'));
     tr.appendChild(cell(inv.created_at));
 
     const actions = [];
@@ -545,7 +544,6 @@ async function loadInvites() {
         onClick: () => inviteAction({ action: 'unrevoke', id: inv.id }, inv.code, 'reactivat'),
       });
     }
-    // Codurile folosite raman in lista ca dovada de audit; nu se pot sterge.
     tr.appendChild(actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]));
 
     tbody.appendChild(tr);

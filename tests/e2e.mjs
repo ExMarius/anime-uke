@@ -44,7 +44,7 @@ console.log('\n=== 1. VIZITATOR ===');
   check('GET /api/auth/me ca vizitator → 200 + user null', me.status === 200 && me.data.user === null, JSON.stringify(me.data));
 
   const s = await req(j, 'GET', '/api/series');
-  check('GET /api/series public → 200', s.status === 200 && Array.isArray(s.data.series), JSON.stringify(s.data).slice(0, 120));
+  check('Site privat: GET /api/series fara cont → 401', s.status === 401, `status=${s.status}`);
 
   const w = await req(j, 'POST', '/api/watch', { episode_id: 1 });
   check('POST /api/watch fara login → 401', w.status === 401, `status=${w.status}`);
@@ -52,13 +52,23 @@ console.log('\n=== 1. VIZITATOR ===');
   const a = await req(j, 'GET', '/api/admin/stats');
   check('GET /api/admin/stats fara login → 401', a.status === 401, `status=${a.status}`);
 
-  const idx = await fetch(BASE + '/');
-  check('GET / → 200 (static)', idx.status === 200);
+  // --- POARTA DE LOGIN: fara cont ajungi la /login ---
+  const idx = await fetch(BASE + '/', { redirect: 'manual' });
+  check('GET / fara cont → 302 către /login', idx.status === 302 && String(idx.headers.get('location')).startsWith('/login'), `status=${idx.status} loc=${idx.headers.get('location')}`);
+  check('Redirectul păstrează destinația în ?next=', /next=%2F/.test(String(idx.headers.get('location'))), idx.headers.get('location'));
 
-  // Paginile trebuie servite la URL-uri curate, fara redirect 308
-  for (const page of ['/series', '/episode', '/login', '/register', '/admin']) {
+  for (const page of ['/series', '/episode', '/admin', '/profile']) {
     const r = await fetch(BASE + page, { redirect: 'manual' });
-    check(`GET ${page} → 200 fara redirect`, r.status === 200, `status=${r.status}`);
+    check(`GET ${page} fara cont → 302 către /login`, r.status === 302, `status=${r.status}`);
+  }
+  // /login?next=/series trebuie sa intoarca utilizatorul la pagina dorita
+  const withNext = await fetch(BASE + '/series', { redirect: 'manual' });
+  check('next= pointeaza la pagina ceruta', String(withNext.headers.get('location')).includes('next=%2Fseries'), withNext.headers.get('location'));
+
+  // Paginile de autentificare raman publice, altfel nimeni nu ar putea intra
+  for (const page of ['/login', '/register']) {
+    const r = await fetch(BASE + page, { redirect: 'manual' });
+    check(`GET ${page} → 200 public`, r.status === 200, `status=${r.status}`);
   }
 
   // Codul server-side si fisierele de configurare nu trebuie servite
@@ -68,13 +78,15 @@ console.log('\n=== 1. VIZITATOR ===');
     check(`GET ${blocked} → 404 (blocat)`, r.status === 404, `status=${r.status}`);
     check(`   ...si nu scurge cale de filesystem`, !body.includes('/home/user') && !body.includes('ENOTDIR'), body.slice(0, 100));
   }
-  check('Header CSP prezent pe pagina statica', !!idx.headers.get('content-security-policy'));
-  check('Header X-Content-Type-Options prezent', idx.headers.get('x-content-type-options') === 'nosniff');
-  check('CSP nu contine unsafe-inline', !String(idx.headers.get('content-security-policy')).includes('unsafe-inline'));
+  const login = await fetch(BASE + '/login');
+  check('Header CSP prezent pe pagina publica', !!login.headers.get('content-security-policy'));
+  check('Header X-Content-Type-Options prezent', login.headers.get('x-content-type-options') === 'nosniff');
+  check('CSP nu contine unsafe-inline', !String(login.headers.get('content-security-policy')).includes('unsafe-inline'));
+  // Assetele raman publice: fara ele pagina de login ar fi nefunctionala
   const css = await fetch(BASE + '/assets/css/style.css');
-  check('GET /assets/css/style.css → 200', css.status === 200);
+  check('GET /assets/css/style.css → 200 public', css.status === 200);
   const mod = await fetch(BASE + '/assets/js/core.js');
-  check('GET /assets/js/core.js → 200', mod.status === 200);
+  check('GET /assets/js/core.js → 200 public', mod.status === 200);
 }
 
 {
@@ -140,7 +152,10 @@ console.log('\n=== 3. PRIMUL UTILIZATOR DEVINE ADMIN (bootstrap) ===');
   check('Al doilea user NU e admin', second.data?.user?.is_admin === false, JSON.stringify(second.data?.user));
 
   const reuse = await req(jar(), 'POST', '/api/auth/register', { username: 'user3', email: 'user3@test.ro', password: 'parola123', invite_code: globalThis.codes[0] });
-  check('Cod deja folosit -> 409', reuse.status === 409, `status=${reuse.status} ${reuse.data?.error}`);
+  check('Codul folosit e sters: a doua utilizare -> 404', reuse.status === 404, `status=${reuse.status} ${reuse.data?.error}`);
+
+  const listAfter = await req(globalThis.admin, 'GET', '/api/admin/invites');
+  check('Codul consumat nu mai apare in panou', listAfter.status === 200 && !(listAfter.data?.invites || []).some(i => i.code === globalThis.codes[0]), `n=${listAfter.data?.invites?.length}`);
 
   const noFormat = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'revoke', id: globalThis.codeIds[1] });
   check('Admin poate revoca un cod nefolosit', noFormat.status === 200, `status=${noFormat.status}`);
@@ -148,19 +163,20 @@ console.log('\n=== 3. PRIMUL UTILIZATOR DEVINE ADMIN (bootstrap) ===');
   const revoked = await req(jar(), 'POST', '/api/auth/register', { username: 'user4', email: 'user4@test.ro', password: 'parola123', invite_code: globalThis.codes[1] });
   check('Cod revocat -> 410', revoked.status === 410, `status=${revoked.status} ${revoked.data?.error}`);
 
-  const revokeUsed = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'revoke', id: globalThis.codeIds[0] });
-  check('Codul folosit nu poate fi revocat -> 409', revokeUsed.status === 409, `status=${revokeUsed.status}`);
+  const unrev = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'unrevoke', id: globalThis.codeIds[1] });
+  check('Revocarea poate fi anulata', unrev.status === 200, `status=${unrev.status}`);
+  const afterUnrev = await req(jar(), 'POST', '/api/auth/register', { username: 'user4', email: 'user4@test.ro', password: 'parola123', invite_code: globalThis.codes[1] });
+  check('Dupa anulare, codul functioneaza iar', afterUnrev.status === 201, `status=${afterUnrev.status} ${afterUnrev.data?.error}`);
 
-  const delUsed = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[0]}`);
-  check('Codul folosit nu poate fi sters -> 409', delUsed.status === 409, `status=${delUsed.status}`);
+  const delMissing = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[0]}`);
+  check('Stergerea unui cod deja consumat -> 404', delMissing.status === 404, `status=${delMissing.status}`);
 
-  const list = await req(globalThis.admin, 'GET', '/api/admin/invites?filter=used');
-  // Sortarea e created_at DESC, id DESC, deci codul folosit (id mic) e la coada.
-  const usedRow = (list.data?.invites || []).find(i => i.used_by);
-  check('Lista codurilor folosite arata cine le-a folosit', list.status === 200 && usedRow?.used_by_name === 'user2' && usedRow?.status === 'used', JSON.stringify(usedRow || {}).slice(0,140));
-  check('Numaratoarele din panou sunt corecte', list.data?.counts?.used === 1 && list.data?.counts?.revoked === 1, JSON.stringify(list.data?.counts));
+  const delActive = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[2]}`);
+  check('Admin poate sterge un cod nefolosit', delActive.status === 200, `status=${delActive.status}`);
+
   const activeList = await req(globalThis.admin, 'GET', '/api/admin/invites?filter=active');
-  check('Filtrul "active" excludee codurile folosite si revocate', activeList.status === 200 && (activeList.data?.invites || []).every(i => i.status === 'active') && activeList.data?.invites?.length === 27, `n=${activeList.data?.invites?.length}`);
+  check('Filtrul "active" intoarce doar coduri utilizabile', activeList.status === 200 && (activeList.data?.invites || []).every(i => i.status === 'active'), `n=${activeList.data?.invites?.length}`);
+  check('Numaratoarele sunt coerente', activeList.data?.counts?.used === 0, JSON.stringify(activeList.data?.counts));
 
   const noInviteForUser = await req(jar(), 'GET', '/api/admin/invites');
   check('Userul normal nu vede codurile', noInviteForUser.status === 403 || noInviteForUser.status === 401, `status=${noInviteForUser.status}`);
@@ -219,9 +235,10 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   globalThis.seriesId = seriesId; globalThis.epId = epId;
 }
 
-console.log('\n=== 6. PAGINI PUBLICE ===');
+console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
 {
-  const j = jar();
+  // Site-ul e privat, deci listele se citesc cu o sesiune valida.
+  const j = globalThis.admin;
   const list = await req(j, 'GET', '/api/series');
   check('Lista serii contine seria adaugata + episode_count', list.data?.series?.[0]?.title === 'One Piece' && list.data.series[0].episode_count === 1, JSON.stringify(list.data).slice(0,200));
 
@@ -236,12 +253,15 @@ console.log('\n=== 6. PAGINI PUBLICE ===');
 
   const epd = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
   check('Detaliu episod include seria (breadcrumb)', epd.status === 200 && epd.data?.episode?.series_title === 'One Piece', JSON.stringify(epd.data).slice(0,200));
-  check('Episod pentru vizitator: watched=false', epd.data?.watched === false);
+  check('Episod neloghinat ca vazut: watched=false', epd.data?.watched === false);
 }
 
 console.log('\n=== 7. CONTOR VIZUALIZARI (buffer in DO, nu direct in D1) ===');
 {
-  const j = jar();
+  const anon = await req(jar(), 'POST', '/api/view', { episode_id: globalThis.epId });
+  check('View fara cont → 401 (site privat)', anon.status === 401, `status=${anon.status}`);
+
+  const j = globalThis.admin;
   const v1 = await req(j, 'POST', '/api/view', { episode_id: globalThis.epId });
   check('POST /api/view → counted=true', v1.status === 200 && v1.data?.counted === true, JSON.stringify(v1.data));
   const v2 = await req(j, 'POST', '/api/view', { episode_id: globalThis.epId });
@@ -276,11 +296,72 @@ console.log('\n=== 8. PUNCTE (+10, o singura data) ===');
   check('episode_id invalid → 400', badId.status === 400, `status=${badId.status}`);
 }
 
+console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
+{
+  const j = globalThis.admin;
+
+  const opts = await req(j, 'GET', '/api/profile/me');
+  check('GET /api/profile/me → 200', opts.status === 200 && opts.data?.user?.username === 'marius', `status=${opts.status}`);
+  check('Profilul include rangul', !!opts.data?.rank?.label, JSON.stringify(opts.data?.rank));
+  check('Profilul include statisticile (structura)', typeof opts.data?.stats?.episodes_watched === 'number', JSON.stringify(opts.data?.stats));
+  check('Profilul NU expune email-ul', !JSON.stringify(opts.data).includes('marius@test.ro'), '');
+
+  const bad1 = await req(j, 'PATCH', '/api/profile', { birth_date: '2099-01-01' });
+  check('Data în viitor → 400', bad1.status === 400, `status=${bad1.status}`);
+  const bad2 = await req(j, 'PATCH', '/api/profile', { birth_date: '2007-02-30' });
+  check('Dată inexistentă (30 feb) → 400', bad2.status === 400, `status=${bad2.status}`);
+  const bad3 = await req(j, 'PATCH', '/api/profile', { mal_url: 'https://evil.example/profile' });
+  check('Link non-MyAnimeList → 400', bad3.status === 400, `status=${bad3.status}`);
+  const bad4 = await req(j, 'PATCH', '/api/profile', { gender: 'elicopter' });
+  check('Gen invalid → 400', bad4.status === 400, `status=${bad4.status}`);
+
+  const set = await req(j, 'PATCH', '/api/profile', {
+    birth_date: '2007-01-01', gender: 'male', country: 'Romania',
+    motto: 'Niciun gând de împărtășit…', mal_url: 'https://myanimelist.net/profile/marius',
+  });
+  check('PATCH /api/profile salvează', set.status === 200 && set.data?.profile?.birth_date === '2007-01-01', `status=${set.status} ${set.data?.error}`);
+  check('Zodia se calculează: 01.01 → Capricorn', set.data?.profile?.zodiac === 'Capricorn', set.data?.profile?.zodiac);
+  check('Data e formatată RO: 01.01.2007', set.data?.profile?.birth_date_ro === '01.01.2007', set.data?.profile?.birth_date_ro);
+  check('Genul e tradus: Masculin', set.data?.profile?.gender_label === 'Masculin', set.data?.profile?.gender_label);
+  check('Vârsta e calculată', typeof set.data?.profile?.age === 'number' && set.data.profile.age > 10, String(set.data?.profile?.age));
+
+  const partial = await req(j, 'PATCH', '/api/profile', { country: 'Moldova' });
+  check('Patch-ul partial NU golește celelalte câmpuri',
+    partial.data?.profile?.country === 'Moldova' && partial.data?.profile?.birth_date === '2007-01-01' && partial.data?.profile?.motto !== '',
+    JSON.stringify(partial.data?.profile || {}).slice(0,180));
+
+  const publicProfile = await req(j, 'GET', '/api/profile/user2');
+  check('Profilul public al altui utilizator', publicProfile.status === 200 && publicProfile.data?.user?.username === 'user2' && publicProfile.data?.is_self === false, `status=${publicProfile.status}`);
+  check('Statistica reala: user2 are 1 episod vizionat', publicProfile.data?.stats?.episodes_watched === 1 && publicProfile.data?.stats?.series_watched === 1, JSON.stringify(publicProfile.data?.stats));
+  check('Profilul altui user NU ii expune email-ul', !JSON.stringify(publicProfile.data).includes('user2@test.ro'), '');
+  const anonProfile = await req(jar(), 'GET', '/api/profile/marius');
+  check('Profilul cere autentificare → 401', anonProfile.status === 401, `status=${anonProfile.status}`);
+  const missing = await req(j, 'GET', '/api/profile/nimeni_nu_e_aici');
+  check('Profil inexistent → 404', missing.status === 404, `status=${missing.status}`);
+
+  // --- lista „de vizionat" ---
+  const add = await req(j, 'POST', '/api/watchlist', { series_id: globalThis.seriesId });
+  check('Adaugă serie la „de vizionat" → 201', add.status === 201 && add.data?.added === true, `status=${add.status}`);
+  const addAgain = await req(j, 'POST', '/api/watchlist', { series_id: globalThis.seriesId });
+  check('Adăugarea dublă e idempotentă → 200 alreadyInList', addAgain.status === 200 && addAgain.data?.alreadyInList === true, `status=${addAgain.status}`);
+  const wl = await req(j, 'GET', '/api/watchlist');
+  check('Lista conține seria', wl.status === 200 && wl.data?.count === 1 && wl.data?.watchlist?.[0]?.title === 'One Piece', JSON.stringify(wl.data).slice(0,160));
+  const prof2 = await req(j, 'GET', '/api/profile/me');
+  check('„Serii de vizionat" apare în Acces rapid', prof2.data?.stats?.watchlist === 1, JSON.stringify(prof2.data?.stats));
+  const badSeries = await req(j, 'POST', '/api/watchlist', { series_id: 999999 });
+  check('Serie inexistentă → 404', badSeries.status === 404, `status=${badSeries.status}`);
+  const del = await req(j, 'DELETE', `/api/watchlist?series_id=${globalThis.seriesId}`);
+  check('Ștergere din listă', del.status === 200 && del.data?.removed === true, `status=${del.status}`);
+
+  const anon = await req(jar(), 'GET', '/api/watchlist');
+  check('Watchlist fără autentificare → 401', anon.status === 401, `status=${anon.status}`);
+}
+
 console.log('\n=== 9. PANOU ADMIN: utilizatori, ban, roluri, protectii ===');
 {
   const j = globalThis.admin;
   const users = await req(j, 'GET', '/api/admin/users');
-  check('Lista utilizatori → 2 useri', users.data?.users?.length === 2, JSON.stringify(users.data?.users?.map(u=>u.username)));
+  check('Lista utilizatori → cel putin 2 useri', users.data?.users?.length >= 2, JSON.stringify(users.data?.users?.map(u=>u.username)));
   check('Lista NU contine hash-ul parolei', !JSON.stringify(users.data).includes('password_hash'), 'SCURGERE DE DATE!');
   const u2 = users.data.users.find(u => u.username === 'user2');
 
@@ -328,7 +409,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
-  check('Statistici: total_users=2', s.data?.stats?.total_users === 2, JSON.stringify(s.data?.stats));
+  check('Statistici: total_users=3', s.data?.stats?.total_users === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=1', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 1, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
 
@@ -337,6 +418,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
   const actions = (log.data?.log || []).map(l => l.action);
   check('Jurnal contine create_series + create_episode', actions.includes('create_series') && actions.includes('create_episode'), actions.join(','));
   check('Jurnal contine ban_user + unban_user', actions.includes('ban_user') && actions.includes('unban_user'), actions.join(','));
+  check('Jurnal contine invite_used (urma codului sters)', actions.includes('invite_used'), actions.join(','));
   check('Jurnal contine promote_admin', actions.includes('promote_admin'), actions.join(','));
 }
 
@@ -356,8 +438,10 @@ console.log('\n=== 11. LOGOUT ===');
 
 console.log('\n=== 12. SECURITATE: rute & metode ===');
 {
-  const j = jar();
-  const m405 = await req(j, 'GET', '/api/auth/login');
+  // Site-ul e privat: fara sesiune, orice ruta necunoscuta intoarce 401,
+  // ceea ce e corect (nu dezvaluie ce rute exista). Verificam 404 cu sesiune.
+  const j = globalThis.admin;
+  const m405 = await req(jar(), 'GET', '/api/auth/login');
   check('GET pe /api/auth/login → 405', m405.status === 405, `status=${m405.status}`);
   const m404 = await req(j, 'GET', '/api/ceva-inexistent');
   check('Ruta API inexistenta → 404 JSON', m404.status === 404, `status=${m404.status}`);

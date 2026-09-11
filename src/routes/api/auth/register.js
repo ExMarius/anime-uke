@@ -3,7 +3,8 @@ import { signJWT } from '../../../lib/jwt.js';
 import { json, errorResponse, setAuthCookie, getClientIp, sanitizeText, isSameOrigin } from '../../../lib/http.js';
 import { validateUsername, validateEmail, validatePassword } from '../../../lib/validate.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
-import { findUsableInvite, claimInvite, assignInviteToUser, releaseInvite } from '../../../lib/invite.js';
+import { findUsableInvite, claimInvite, consumeInvite, releaseInvite } from '../../../lib/invite.js';
+import { logAdminAction } from '../../../lib/audit.js';
 
 // Register: max 5 conturi/ora per IP. Previne crearea automata de conturi,
 // care altfel ar umple D1 gratuit (500 MB) si ar putea depasi cota de scrieri.
@@ -92,7 +93,17 @@ export async function onRequestPost(context) {
     userId = insert.meta?.last_row_id;
     if (!userId) throw new Error('last_row_id lipsa');
 
-    if (invite) await assignInviteToUser(env, invite.code, userId);
+    if (invite) {
+      // Codul se sterge dupa folosire (cerinta), dar urma ramane in audit:
+      // cine l-a generat si cine l-a consumat.
+      await logAdminAction(
+        env,
+        { id: invite.created_by, username: '—' },
+        'invite_used', 'user', userId,
+        `Codul ${invite.code} a fost folosit de ${username.value}`
+      );
+      await consumeInvite(env, invite.code);
+    }
   } catch (e) {
     // Eliberam rezervarea ca sa nu pierdem codul utilizatorului.
     if (invite) await releaseInvite(env, invite.code);

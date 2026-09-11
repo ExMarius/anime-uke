@@ -165,12 +165,22 @@ export async function renderNav(active = '') {
 
     if (user.is_admin) add('/admin', 'Admin', { accent: true });
 
+    const me = document.createElement('a');
+    me.className = 'nav__link';
+    me.href = '/profile';
+    me.textContent = 'Profilul meu';
+    links.appendChild(me);
+
     const chip = document.createElement('span');
     chip.className = 'nav__user';
     const hi = document.createElement('span');
     hi.textContent = 'Salut,';
     const name = document.createElement('b');
-    name.textContent = user.username;
+    const nameLink = document.createElement('a');
+    nameLink.href = '/profile';
+    nameLink.textContent = user.username;
+    nameLink.title = 'Deschide profilul';
+    name.appendChild(nameLink);
     chip.append(hi, name);
     links.appendChild(chip);
 

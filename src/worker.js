@@ -1,5 +1,6 @@
 import { matchRoute } from './router.js';
 import { SECURITY_HEADERS } from './lib/http.js';
+import { getSessionUser } from './lib/session.js';
 
 // =====================================================================
 // Handlerul principal (Advanced Mode).
@@ -11,12 +12,63 @@ import { SECURITY_HEADERS } from './lib/http.js';
 
 const API_404 = { error: 'Endpoint inexistent' };
 
+// =====================================================================
+// POARTA DE AUTENTIFICARE
+//
+// Site-ul e privat: un vizitator fara cont ajunge direct la /login.
+// Publice raman doar paginile de autentificare, assetele statice si
+// endpoint-urile de auth — altfel nimeni nu s-ar putea loga.
+//
+// Cost: o citire D1 per request poarta. La 1000 de utilizatori zilnici
+// cu ~50 de request-uri fiecare inseamna ~50.000 de randuri citite/zi,
+// adica 1% din cota gratuita de 5.000.000.
+// =====================================================================
+const PUBLIC_PAGES = new Set(['/login', '/register', '/favicon.ico']);
+const PUBLIC_API = new Set([
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/register-options',
+  '/api/auth/logout',
+  '/api/auth/me',
+]);
+
+function isPublic(path) {
+  if (PUBLIC_PAGES.has(path)) return true;
+  if (PUBLIC_API.has(path)) return true;
+  if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
+  return false;
+}
+
+/** Redirectioneaza catre login pastrand destinatia, ca sa revii dupa logare. */
+function redirectToLogin(url) {
+  const next = `${url.pathname}${url.search}`;
+  const target = `/login?next=${encodeURIComponent(next)}`;
+  return new Response(null, { status: 302, headers: { Location: target, 'Cache-Control': 'no-store' } });
+}
+
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
 
   let response;
   try {
+    // Fisierele care nu trebuie servite niciodata raspund cu 404 si pentru
+    // vizitatori — un 302 catre /login ar dezvalui ca ruta exista.
+    if (BLOCKED_PATHS.includes(path) || path.startsWith('/.git') || path.startsWith('/migrations')) {
+      return applySecurityHeaders(jsonResponse({ error: 'Not found' }, 404));
+    }
+
+    if (!isPublic(path)) {
+      const session = await getSessionUser(request, env);
+      if (!session) {
+        const isApi = path === '/api' || path.startsWith('/api/') || path === '/chat';
+        response = isApi
+          ? jsonResponse({ error: 'Trebuie să fii autentificat' }, 401)
+          : redirectToLogin(url);
+        return applySecurityHeaders(response);
+      }
+    }
+
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
     } else {
@@ -72,6 +124,10 @@ function allowedMethods(path) {
 // (local, wrangler raspundea cu un 502 care includea calea absoluta pe disc).
 const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.sql'];
 
+// Clean URLs: /profile -> /profile.html. Celelalte pagini sunt deja
+// denumite identic cu ruta (index.html, login.html, admin.html etc.).
+const CLEAN_URLS = { '/profile': '/profile.html' };
+
 async function serveStatic(request, env) {
   const path = new URL(request.url).pathname;
 
@@ -83,8 +139,13 @@ async function serveStatic(request, env) {
     return jsonResponse({ error: 'Assetele statice nu sunt disponibile' }, 500);
   }
 
+  const remap = CLEAN_URLS[path];
+  const assetRequest = remap
+    ? new Request(new URL(remap, request.url), request)
+    : request;
+
   try {
-    return await env.ASSETS.fetch(request);
+    return await env.ASSETS.fetch(assetRequest);
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);

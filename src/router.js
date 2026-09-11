@@ -36,6 +36,8 @@ import * as adminUsers from './routes/api/admin/users.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as adminInvites from './routes/api/admin/invites.js';
 import * as chatRoute from './routes/chat.js';
+import * as profileRoute from './routes/api/profile.js';
+import * as watchlistRoute from './routes/api/watchlist.js';
 
 const ROUTES = [
   // --- publice ---
@@ -53,6 +55,11 @@ const ROUTES = [
   // --- puncte / vizionari ---
   { method: 'POST', path: '/api/watch', mod: watchRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
+
+  // --- profil + lista „de vizionat" ---
+  { method: 'GET', path: '/api/profile/:username', mod: profileRoute },
+  { method: 'PATCH', path: '/api/profile', mod: profileRoute },
+  { method: '*', path: '/api/watchlist', mod: watchlistRoute },
 
   // --- admin ---
   { method: 'GET', path: '/api/admin/stats', mod: adminStats },
