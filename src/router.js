@@ -32,6 +32,7 @@ import * as registerOptions from './routes/api/auth/register-options.js';
 import * as adminStats from './routes/api/admin/stats.js';
 import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
+import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as adminInvites from './routes/api/admin/invites.js';
@@ -66,6 +67,9 @@ const ROUTES = [
   { method: 'GET', path: '/api/admin/log', mod: adminLog },
   { method: '*', path: '/api/admin/series', mod: adminSeries },
   { method: '*', path: '/api/admin/episodes', mod: adminEpisodes },
+  // Sursele video ale unui episod. E ruta separat pentru ca un episod poate
+  // avea mai multe surse si ele se editeaza independent de episod.
+  { method: '*', path: '/api/admin/episode-sources', mod: adminEpisodeSources },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
   { method: '*', path: '/api/admin/invites', mod: adminInvites },
 

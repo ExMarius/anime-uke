@@ -27,7 +27,7 @@ export async function onRequestGet(context) {
     const epRes = await env.DB
       .prepare(
         `SELECT
-           e.id, e.series_id, e.episode_number, e.title, e.doodstream_url, e.views, e.created_at,
+           e.id, e.series_id, e.episode_number, e.title, e.views, e.created_at,
            s.title AS series_title, s.cover_image AS series_cover, s.status AS series_status
          FROM episodes e
          JOIN anime_series s ON s.id = e.series_id
@@ -37,6 +37,21 @@ export async function onRequestGet(context) {
       .first();
 
     if (!epRes) return errorResponse(404, 'Episodul nu există');
+
+    // Sursele active, in ordinea stabilita in panoul de admin. O singura
+    // interogare; fara JOIN pentru ca numarul de surse per episod e mic.
+    const srcRes = await env.DB
+      .prepare(
+        `SELECT id, label, kind, url
+         FROM episode_sources
+         WHERE episode_id = ? AND is_active = 1
+         ORDER BY sort_order ASC, id ASC`
+      )
+      .bind(id.value)
+      .all();
+    const sources = (srcRes.results || []).map((r) => ({
+      id: r.id, label: r.label, kind: r.kind, url: r.url,
+    }));
 
     let watched = false;
     if (user) {
@@ -56,10 +71,10 @@ export async function onRequestGet(context) {
         series_status: epRes.series_status,
         episode_number: epRes.episode_number,
         title: epRes.title,
-        doodstream_url: epRes.doodstream_url,
         views: epRes.views,
         created_at: epRes.created_at,
       },
+      sources,
       watched,
     });
   } catch (e) {

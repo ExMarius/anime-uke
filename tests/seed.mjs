@@ -67,7 +67,7 @@ for (const s of SERIES) {
   for (const [num, title, code] of episodes) {
     const ep = await req('POST', '/api/admin/episodes', {
       series_id: sid, episode_number: num, title,
-      doodstream_url: `https://doodstream.com/e/${code}`,
+      sources: [{ label: 'DoodStream', kind: 'embed', url: `https://doodstream.com/e/${code}` }],
     });
     if (ep.status !== 201) console.log(`   ❌ ${s.title} ep.${num}: ${ep.data?.error}`);
   }

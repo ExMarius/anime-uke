@@ -37,6 +37,17 @@ PORT="${PORT:-8788}"
 W="npx wrangler"
 [ -x ./node_modules/.bin/wrangler ] && W="./node_modules/.bin/wrangler"
 
+# Aplicam migrațiile inainte de pornire. Fara pasul asta, primul `dev.sh`
+# pe un workspace proaspat (sau dupa `rm -rf .wrangler/state`) ridica
+# serverul cu o baza goala si fiecare request pica cu „no such table: users".
+# E idempotent: wrangler tine evidenta migrațiilor aplicate in d1_migrations.
+if [ -z "${SKIP_MIGRATIONS:-}" ]; then
+  echo "  (aplic migrarile locale)"
+  $W d1 migrations apply DB --local >/dev/null 2>&1 || {
+    echo "  ! nu am putut aplica migrarile; pornesc oricum" >&2
+  }
+fi
+
 # NU folosim `exec`: ar inlocui shell-ul si capcana EXIT n-ar mai rula,
 # lasand wrangler.toml pe configuratia locala (adica deploy-ul urmator
 # ar publica bindinguri DO gresite).

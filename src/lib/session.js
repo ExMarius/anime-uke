@@ -38,6 +38,10 @@ export async function getSessionUser(request, env) {
     email: user.email,
     points: user.points,
     is_admin: !!user.is_admin,
+    // Necesar paginii de profil („Membru din"). Nu e informatie sensibila —
+    // e afisata public pe orice profil, spre deosebire de email, care ramane
+    // filtrat de publicUser() inainte sa ajunga la client.
+    created_at: user.created_at,
   };
 }
 

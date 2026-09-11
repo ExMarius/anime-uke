@@ -109,9 +109,17 @@
             <input class="input" id="e-title" name="title" type="text" maxlength="200" placeholder="Opțional">
           </div>
           <div class="field">
-            <label for="e-url">URL DoodStream *</label>
-            <input class="input" id="e-url" name="doodstream_url" type="url" required placeholder="https://doodstream.com/e/abc123">
-            <p class="hint">Acceptă <code>/e/</code> sau <code>/d/</code> — se normalizează automat la formatul embed-abil.</p>
+            <label>Surse video *</label>
+            <p class="hint">
+              Poți pune mai multe surse la același episod — utilizatorul le alege
+              din taburile de deasupra playerului. DoodStream acceptă <code>/e/</code>
+              sau <code>/d/</code> și se normalizează automat.
+            </p>
+            <div class="src-builder" id="e-sources"></div>
+            <div class="src-builder__tools">
+              <button class="btn btn--ghost btn--sm" id="e-add-source" type="button">＋ Adaugă o sursă</button>
+              <span class="hint" id="e-sources-count"></span>
+            </div>
           </div>
           <button class="btn btn--accent" id="episode-submit" type="submit">Adaugă episodul</button>
         </form>
@@ -120,9 +128,46 @@
       <h2 class="section__title">Episoade existente</h2>
       <div class="box table-wrap">
         <table id="episodes-table">
-          <thead><tr><th>ID</th><th>Serie</th><th>Ep.</th><th>Titlu</th><th>Vizionări</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Serie</th><th>Ep.</th><th>Titlu</th><th>Surse</th><th>Vizionări</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+
+      <!--
+        Panoul de surse pentru un episod existent. Apare sub tabel cand
+        apesi „Surse" pe un rand. Aici se adauga, se editeaza, se dezactiveaza
+        si se sterg sursele individuale, fara sa atingi episodul.
+      -->
+      <div class="box" id="sources-panel" hidden>
+        <div class="box__head">
+          <h2 class="box__title" id="sources-panel-title">Surse</h2>
+          <button class="btn btn--ghost btn--sm" id="sources-close" type="button">✕ Închide</button>
+        </div>
+        <div class="src-builder" id="sources-list"></div>
+
+        <form id="source-add-form" class="src-add">
+          <h3 class="src-add__title">Adaugă o sursă nouă</h3>
+          <div class="src-add__grid">
+            <div class="field">
+              <label for="s-label">Etichetă</label>
+              <input class="input" id="s-label" name="label" type="text" maxlength="40" placeholder="ex. DoodStream">
+            </div>
+            <div class="field">
+              <label for="s-kind">Tip</label>
+              <select class="select" id="s-kind" name="kind">
+                <option value="embed">Embed (iframe)</option>
+                <option value="file">Fișier video (.mp4/.webm)</option>
+                <option value="link">Link extern</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="s-url">URL *</label>
+            <input class="input" id="s-url" name="url" type="url" required placeholder="https://doodstream.com/e/abc123">
+            <p class="hint" id="s-kind-hint">Se deschide într-un iframe sandbox.</p>
+          </div>
+          <button class="btn btn--accent" id="source-add-submit" type="submit">＋ Adaugă sursa</button>
+        </form>
       </div>
     </section>
 

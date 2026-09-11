@@ -23,7 +23,7 @@ export async function onRequestGet(context) {
          FROM anime_series WHERE id = ?`
       ).bind(id.value),
       env.DB.prepare(
-        `SELECT id, episode_number, title, doodstream_url, views, created_at
+        `SELECT id, episode_number, title, views, created_at
          FROM episodes WHERE series_id = ? ORDER BY episode_number ASC LIMIT 2000`
       ).bind(id.value),
     ]);

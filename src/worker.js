@@ -124,10 +124,6 @@ function allowedMethods(path) {
 // (local, wrangler raspundea cu un 502 care includea calea absoluta pe disc).
 const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.sql'];
 
-// Clean URLs: /profile -> /profile.html. Celelalte pagini sunt deja
-// denumite identic cu ruta (index.html, login.html, admin.html etc.).
-const CLEAN_URLS = { '/profile': '/profile.html' };
-
 async function serveStatic(request, env) {
   const path = new URL(request.url).pathname;
 
@@ -139,13 +135,12 @@ async function serveStatic(request, env) {
     return jsonResponse({ error: 'Assetele statice nu sunt disponibile' }, 500);
   }
 
-  const remap = CLEAN_URLS[path];
-  const assetRequest = remap
-    ? new Request(new URL(remap, request.url), request)
-    : request;
-
+  // NU remapam /profile -> /profile.html. Routerul de assete Pages aplica
+  // deja „clean URLs": serveste profile.html la /profile si raspunde cu
+  // 308 catre /profile daca primeste /profile.html. O remapare in sensul
+  // asta inchidea o bucla infinita de redirecturi (ERR_TOO_MANY_REDIRECTS).
   try {
-    return await env.ASSETS.fetch(assetRequest);
+    return await env.ASSETS.fetch(request);
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);

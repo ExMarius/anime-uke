@@ -32,6 +32,21 @@ async function req(j, method, path, body) {
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text.slice(0, 120) }; }
   return { status: res.status, data, headers: res.headers };
 }
+/**
+ * Cerere pentru pagini HTML. `req()` parseaza JSON, deci nu e folositoare
+ * aici. `redirect: 'manual'` e esential: un redirect nu e un rezultat, iar
+ * fara el o bucla de redirecturi ar trece neobservata.
+ */
+async function raw(j, path) {
+  const headers = { Origin: BASE };
+  if (j?.cookie) headers.Cookie = j.cookie;
+  if (DELAY) await sleep(DELAY);
+  const res = await fetch(BASE + path, { headers, redirect: 'manual' });
+  if (j) saveCookie(j, res);
+  const text = await res.text();
+  return { status: res.status, text, location: res.headers.get('location') };
+}
+
 function check(name, cond, detail = '') {
   if (cond) { pass++; console.log(`  ✅ ${name}`); }
   else { fail++; failures.push(name + (detail ? ` — ${detail}` : '')); console.log(`  ❌ ${name}${detail ? ' — ' + detail : ''}`); }
@@ -219,20 +234,104 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('Adaugare serie → 201', r.status === 201, `status=${r.status} ${JSON.stringify(r.data).slice(0,150)}`);
   const seriesId = r.data?.id;
 
-  const badEp = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 1, title: 'Ep 1', doodstream_url: 'https://youtube.com/watch?v=x' });
-  check('URL non-DoodStream respins → 400', badEp.status === 400, `status=${badEp.status} ${badEp.data?.error}`);
+  // Campul vechi `doodstream_url` ramane acceptat ca alias: un singur URL
+  // devine o singura sursa de tip embed. Asa nu spargem clientii existenti.
+  const legacy = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 1, title: 'Ep alias', doodstream_url: 'https://doodstream.com/d/abc123' });
+  check('Alias vechi doodstream_url → o sursa embed normalizata /d/→/e/',
+    legacy.status === 201 && legacy.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/abc123' && legacy.data.episode.sources[0].kind === 'embed',
+    JSON.stringify(legacy.data).slice(0, 200));
 
-  const badEp2 = await req(j, 'POST', '/api/admin/episodes', { series_id: 9999, episode_number: 1, title: 'x', doodstream_url: 'https://doodstream.com/e/abc123' });
+  const badEp2 = await req(j, 'POST', '/api/admin/episodes', { series_id: 9999, episode_number: 2, title: 'x', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/abc123' }] });
   check('Serie inexistenta → 400', badEp2.status === 400, `status=${badEp2.status} ${badEp2.data?.error}`);
 
-  const ep = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 1, title: 'Romance Dawn', doodstream_url: 'https://doodstream.com/d/abc123' });
-  check('Adaugare episod (URL /d/ normalizat la /e/) → 201', ep.status === 201 && ep.data?.episode?.doodstream_url === 'https://doodstream.com/e/abc123', JSON.stringify(ep.data).slice(0,180));
+  // Episodul principal al suitei: trei surse de tipuri diferite.
+  const ep = await req(j, 'POST', '/api/admin/episodes', {
+    series_id: seriesId, episode_number: 2, title: 'Romance Dawn',
+    sources: [
+      { label: 'DoodStream', kind: 'embed', url: 'https://doodstream.com/d/xyz789' },
+      { label: 'MP4 direct', kind: 'file', url: 'https://cdn.example.com/ep2.mp4' },
+      { label: 'Extern', kind: 'link', url: 'https://example.com/watch/2' },
+    ],
+  });
+  check('Adaugare episod cu 3 surse → 201', ep.status === 201 && ep.data?.episode?.sources?.length === 3, JSON.stringify(ep.data).slice(0, 200));
+  check('Etichetele si ordinea sunt pastrate', ep.data?.episode?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern', JSON.stringify(ep.data?.episode?.sources));
+  check('DoodStream /d/ normalizat la /e/ chiar si in lista de surse', ep.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/xyz789', ep.data?.episode?.sources?.[0]?.url);
   const epId = ep.data?.id;
 
-  const dupEp = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 1, title: 'Duplicat', doodstream_url: 'https://doodstream.com/e/xyz789' });
+  const dupEp = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 2, title: 'Duplicat', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/q' }] });
   check('Episod duplicat (UNIQUE series+numar) → 409', dupEp.status === 409, `status=${dupEp.status} ${dupEp.data?.error}`);
 
+  const dupSrc = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 3, title: 'Surse duplicate', sources: [{ kind: 'embed', url: 'https://a.com/e/1' }, { kind: 'embed', url: 'https://a.com/e/1' }] });
+  check('Acelasi URL de doua ori in lista → 400', dupSrc.status === 400, `status=${dupSrc.status} ${dupSrc.data?.error}`);
+
+  const noSrc = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 4, title: 'Fara surse', sources: [] });
+  check('Episod fara surse e permis (se completeaza mai tarziu) → 201', noSrc.status === 201, `status=${noSrc.status} ${noSrc.data?.error}`);
+
   globalThis.seriesId = seriesId; globalThis.epId = epId;
+  globalThis.legacyEpId = legacy.data?.id;
+}
+
+console.log('\n=== 5b. SURSE VIDEO (CRUD) ===');
+{
+  const j = globalThis.admin;
+  const epId = globalThis.epId;
+
+  const meta = await req(j, 'GET', '/api/admin/episode-sources?meta=1');
+  check('Meta: tipuri de sursa disponibile', JSON.stringify(meta.data?.kinds?.map((k) => k.value)) === '["embed","file","link"]', JSON.stringify(meta.data?.kinds));
+  check('Meta: furnizori sugerati + limita', Array.isArray(meta.data?.providers) && meta.data.providers.length > 0 && meta.data.max === 12, JSON.stringify(meta.data).slice(0, 120));
+
+  const anonMeta = await req(jar(), 'GET', '/api/admin/episode-sources?meta=1');
+  check('Meta cere admin → 401 fara sesiune', anonMeta.status === 401, `status=${anonMeta.status}`);
+
+  const list = await req(j, 'GET', `/api/admin/episode-sources?episode_id=${epId}`);
+  check('Lista surse din panou (toate, inclusiv oprite)', list.status === 200 && list.data?.sources?.length === 3, `status=${list.status} ${JSON.stringify(list.data).slice(0, 150)}`);
+
+  const added = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'https://streamtape.com/e/nou' });
+  check('Adaugare sursa noua → 201', added.status === 201 && !!added.data?.id, `status=${added.status} ${added.data?.error}`);
+  check('Eticheta se deriva din domeniu cand lipseste', added.data?.source?.label === 'streamtape.com', added.data?.source?.label);
+  const srcId = added.data?.id;
+
+  const dup = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'https://streamtape.com/e/nou' });
+  check('URL duplicat la acelasi episod → 409', dup.status === 409, `status=${dup.status} ${dup.data?.error}`);
+
+  const http = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'http://nesigur.com/e/x' });
+  check('http:// respins → 400', http.status === 400, `status=${http.status} ${http.data?.error}`);
+
+  const js = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'javascript:alert(1)' });
+  check('javascript: respins (vector XSS) → 400', js.status === 400, `status=${js.status} ${js.data?.error}`);
+
+  const badFile = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'file', url: 'https://cdn.example.com/nu-e-video' });
+  check('Tip „file” cere extensie video → 400', badFile.status === 400, `status=${badFile.status} ${badFile.data?.error}`);
+
+  const badKind = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'torrent', url: 'https://x.com/a' });
+  check('Tip necunoscut → 400', badKind.status === 400, `status=${badKind.status} ${badKind.data?.error}`);
+
+  const ghost = await req(j, 'POST', '/api/admin/episode-sources', { episode_id: 999999, kind: 'embed', url: 'https://x.com/a' });
+  check('Sursa pentru episod inexistent → 404', ghost.status === 404, `status=${ghost.status}`);
+
+  // PATCH partial: doar is_active, fara sa trimitem URL-ul inapoi.
+  const off = await req(j, 'PATCH', '/api/admin/episode-sources', { id: srcId, is_active: false });
+  check('Dezactivare sursa (patch partial)', off.status === 200 && off.data?.source?.is_active === 0, `status=${off.status} ${JSON.stringify(off.data).slice(0, 150)}`);
+  check('Patchul partial nu strica URL-ul netrimis', off.data?.source?.url === 'https://streamtape.com/e/nou', off.data?.source?.url);
+
+  const noop = await req(j, 'PATCH', '/api/admin/episode-sources', { id: srcId });
+  check('Patch fara modificari → unchanged', noop.status === 200 && noop.data?.unchanged === true, JSON.stringify(noop.data).slice(0, 120));
+
+  const renamed = await req(j, 'PATCH', '/api/admin/episode-sources', { id: srcId, label: 'StreamTape RO', is_active: true });
+  check('Redenumire + reactivare', renamed.status === 200 && renamed.data?.source?.label === 'StreamTape RO' && renamed.data.source.is_active === 1, JSON.stringify(renamed.data).slice(0, 150));
+
+  const pub = await req(j, 'GET', `/api/episodes/${epId}`);
+  check('API public intoarce sursele active, in ordine', pub.data?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern,StreamTape RO', JSON.stringify(pub.data?.sources));
+  check('API public nu expune id-urile de episod inactive', pub.data.sources.every((x) => x.kind !== undefined && x.url.startsWith('https://')), JSON.stringify(pub.data?.sources).slice(0, 150));
+
+  const del = await req(j, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
+  check('Stergere sursa → 200', del.status === 200 && del.data?.success === true, `status=${del.status}`);
+  const delAgain = await req(j, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
+  check('Stergere a doua oara → 404', delAgain.status === 404, `status=${delAgain.status}`);
+
+  const log = await req(j, 'GET', '/api/admin/log?limit=40');
+  const actions = (log.data?.log || []).map((a) => a.action);
+  check('Audit: add_source / edit_source / delete_source consemnate', ['add_source', 'edit_source', 'delete_source'].every((a) => actions.includes(a)), actions.join(','));
 }
 
 console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
@@ -240,10 +339,10 @@ console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
   // Site-ul e privat, deci listele se citesc cu o sesiune valida.
   const j = globalThis.admin;
   const list = await req(j, 'GET', '/api/series');
-  check('Lista serii contine seria adaugata + episode_count', list.data?.series?.[0]?.title === 'One Piece' && list.data.series[0].episode_count === 1, JSON.stringify(list.data).slice(0,200));
+  check('Lista serii contine seria adaugata + episode_count', list.data?.series?.[0]?.title === 'One Piece' && list.data.series[0].episode_count === 3, JSON.stringify(list.data).slice(0,200));
 
   const detail = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
-  check('Detaliu serie + episoade intr-un singur apel', detail.status === 200 && detail.data?.episodes?.length === 1, JSON.stringify(detail.data).slice(0,200));
+  check('Detaliu serie + episoade intr-un singur apel', detail.status === 200 && detail.data?.episodes?.length === 3, JSON.stringify(detail.data).slice(0,200));
 
   const e404 = await req(j, 'GET', '/api/series/99999');
   check('Serie inexistenta → 404', e404.status === 404, `status=${e404.status}`);
@@ -254,6 +353,25 @@ console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
   const epd = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
   check('Detaliu episod include seria (breadcrumb)', epd.status === 200 && epd.data?.episode?.series_title === 'One Piece', JSON.stringify(epd.data).slice(0,200));
   check('Episod neloghinat ca vazut: watched=false', epd.data?.watched === false);
+
+  // --- PAGINI HTML CU SESIUNE ---
+  // Testul de mai sus acoperea doar cazul FARA cont (302 catre /login), deci
+  // o bucla de redirecturi pe pagina autentificata trecea neobservata. Asta
+  // s-a si intamplat: /profile era remapat la /profile.html, iar routerul de
+  // assete Pages trimitea 308 inapoi la /profile → ERR_TOO_MANY_REDIRECTS.
+  for (const page of ['/', '/login', '/register', '/series', '/episode', '/admin', '/profile']) {
+    const r = await raw(j, page);
+    check(`GET ${page} logat → 200 (fara redirect)`, r.status === 200, `status=${r.status} loc=${r.location}`);
+  }
+
+  const profPage = await raw(j, '/profile');
+  check('Pagina de profil serveste HTML, nu JSON', /<html/i.test(profPage.text) && /page-profile\.js/.test(profPage.text), profPage.text.slice(0, 120));
+
+  // .html direct trebuie sa faca redirect la varianta curata, dar o singura data
+  const htmlDirect = await raw(j, '/profile.html');
+  check('/profile.html → 308 catre /profile (clean URL)', htmlDirect.status === 308 && htmlDirect.location === '/profile', `status=${htmlDirect.status} loc=${htmlDirect.location}`);
+  const afterClean = await raw(j, '/profile');
+  check('Dupa redirect ajungi chiar la pagina (nu in bucla)', afterClean.status === 200, `status=${afterClean.status} loc=${afterClean.location}`);
 }
 
 console.log('\n=== 7. CONTOR VIZUALIZARI (buffer in DO, nu direct in D1) ===');
@@ -410,7 +528,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
   check('Statistici: total_users=3', s.data?.stats?.total_users === 3, JSON.stringify(s.data?.stats));
-  check('Statistici: total_series=1, total_episodes=1', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 1, JSON.stringify(s.data?.stats));
+  check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
 
   const log = await req(j, 'GET', '/api/admin/log');

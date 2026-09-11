@@ -128,30 +128,70 @@ ck('status invalid → 400', r.status === 400, `HTTP ${r.status} ${JSON.stringif
 
 r = await req(A, 'POST', '/api/admin/episodes', {
   series_id: seriesId, episode_number: 1, title: 'Journey’s End',
-  doodstream_url: 'https://doodstream.com/d/abc123',
+  sources: [
+    { label: 'DoodStream', kind: 'embed', url: 'https://doodstream.com/d/abc123' },
+    { label: 'MP4', kind: 'file', url: 'https://cdn.example.com/ep1.mp4' },
+  ],
 });
-ck('admin creeaza episod (URL /d/ normalizat la /e/) → 201', r.status === 201, `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 140)}`);
+ck('admin creeaza episod cu 2 surse → 201', r.status === 201 && r.data?.episode?.sources?.length === 2, `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 140)}`);
 const epId = r.data?.episode?.id ?? r.data?.id;
-ck('embed normalizat la /e/', String(r.data?.episode?.doodstream_url || '').includes('/e/abc123'), JSON.stringify(r.data?.episode || {}).slice(0, 140));
+ck('DoodStream /d/ normalizat la /e/', String(r.data?.episode?.sources?.[0]?.url || '').includes('/e/abc123'), JSON.stringify(r.data?.episode || {}).slice(0, 140));
 
 r = await req(A, 'POST', '/api/admin/episodes', {
-  series_id: seriesId, episode_number: 1, title: 'Duplicat', doodstream_url: 'https://doodstream.com/e/xyz',
+  series_id: seriesId, episode_number: 1, title: 'Duplicat', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/xyz' }],
 });
 ck('episod duplicat (UNIQUE serie+numar) → 409', r.status === 409, `HTTP ${r.status}`);
 
 r = await req(A, 'POST', '/api/admin/episodes', {
-  series_id: seriesId, episode_number: 2, title: 'Rau', doodstream_url: 'https://evil.example/x',
+  series_id: seriesId, episode_number: 2, title: 'Rau', sources: [{ kind: 'embed', url: 'javascript:alert(1)' }],
 });
-ck('URL non-DoodStream respins → 400', r.status === 400, `HTTP ${r.status}`);
+ck('URL javascript: respins (vector XSS) → 400', r.status === 400, `HTTP ${r.status}`);
+
+// Campul vechi ramane acceptat ca alias, ca sa nu spargem scripturile vechi.
+r = await req(A, 'POST', '/api/admin/episodes', {
+  series_id: seriesId, episode_number: 3, title: 'Alias', doodstream_url: 'https://doodstream.com/d/old1',
+});
+ck('alias vechi doodstream_url → sursa embed', r.status === 201 && r.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/old1', `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 140)}`);
+
+// ---------------------------------------------------------------- 2b. surse
+console.log('\n2b. Surse video per episod:');
+r = await req(A, 'GET', '/api/admin/episode-sources?meta=1');
+ck('meta: 3 tipuri de sursa', JSON.stringify(r.data?.kinds?.map((k) => k.value)) === '["embed","file","link"]', `HTTP ${r.status}`);
+
+r = await req(A, 'GET', `/api/admin/episode-sources?episode_id=${epId}`);
+ck('panoul vede ambele surse', r.status === 200 && r.data?.sources?.length === 2, `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 120)}`);
+
+r = await req(A, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'https://streamtape.com/e/nou' });
+ck('adaugare sursa → 201 + eticheta din domeniu', r.status === 201 && r.data?.source?.label === 'streamtape.com', `HTTP ${r.status} ${JSON.stringify(r.data).slice(0, 120)}`);
+const srcId = r.data?.id;
+
+r = await req(A, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'embed', url: 'https://streamtape.com/e/nou' });
+ck('URL duplicat la acelasi episod → 409', r.status === 409, `HTTP ${r.status}`);
+
+r = await req(A, 'POST', '/api/admin/episode-sources', { episode_id: epId, kind: 'file', url: 'https://x.com/fara-extensie' });
+ck('tip „file” cere extensie video → 400', r.status === 400, `HTTP ${r.status}`);
+
+r = await req(A, 'PATCH', '/api/admin/episode-sources', { id: srcId, is_active: false });
+ck('dezactivare prin patch partial', r.status === 200 && r.data?.source?.is_active === 0, `HTTP ${r.status}`);
+
+r = await req(A, 'GET', `/api/episodes/${epId}`);
+ck('sursa dezactivata nu apare public', r.data?.sources?.every((x) => x.label !== 'streamtape.com'), JSON.stringify(r.data?.sources));
+
+r = await req(A, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
+ck('stergere sursa → 200', r.status === 200, `HTTP ${r.status}`);
+
+r = await req(A, 'GET', '/api/admin/episode-sources?meta=1');
+const srcAnon = await req(jar(), 'GET', '/api/admin/episode-sources?meta=1');
+ck('endpoint-ul de surse cere admin → 401 anonim', srcAnon.status === 401, `HTTP ${srcAnon.status}`);
 
 // ---------------------------------------------------------------- 3. publice
 console.log('\n3. Pagini publice:');
 r = await req(A, 'GET', '/api/series');
 const s0 = (r.data?.series || []).find((x) => x.id === seriesId);
-ck('lista serii + episode_count', r.status === 200 && s0?.episode_count === 1, `HTTP ${r.status} ${JSON.stringify(s0 || {}).slice(0, 140)}`);
+ck('lista serii + episode_count', r.status === 200 && s0?.episode_count === 2, `HTTP ${r.status} ${JSON.stringify(s0 || {}).slice(0, 140)}`);
 
 r = await req(A, 'GET', `/api/series/${seriesId}`);
-ck('detaliu serie + episoade dintr-un apel', r.status === 200 && (r.data?.episodes?.length ?? 0) === 1, `HTTP ${r.status}`);
+ck('detaliu serie + episoade dintr-un apel', r.status === 200 && (r.data?.episodes?.length ?? 0) === 2, `HTTP ${r.status}`);
 ck('seria nu expune hash/parola', !JSON.stringify(r.data).includes('password'), '');
 
 r = await req(A, 'GET', '/api/series/999999');
@@ -281,6 +321,20 @@ await sleep(1500);
 
 
 console.log('\n7b. Profil public + lista de vizionat:');
+// REGRESIE: /profile era remapat la /profile.html, iar routerul de assete
+// Pages raspundea cu 308 inapoi la /profile — bucla infinita de redirecturi.
+// Verificam ca paginile autentificate chiar se servesc, nu doar ca poarta
+// de login functioneaza (testul de la sectiunea 0 acoperea doar anonimul).
+for (const page of ['/', '/series', '/episode', '/admin', '/profile']) {
+  const pg = await req(A, 'GET', page);
+  ck(`${page} logat → 200 (nu redirect)`, pg.status === 200, `HTTP ${pg.status} loc=${pg.headers.get('location')}`);
+}
+{
+  const pg = await req(A, 'GET', '/profile');
+  ck('pagina de profil e HTML cu scriptul ei', /<html/i.test(pg.data?.raw || '') && /page-profile\.js/.test(pg.data?.raw || ''), String(pg.data?.raw || '').slice(0, 80));
+  const direct = await req(A, 'GET', '/profile.html');
+  ck('/profile.html → 308 catre /profile', direct.status === 308 && direct.headers.get('location') === '/profile', `HTTP ${direct.status} loc=${direct.headers.get('location')}`);
+}
 r = await req(A, 'PATCH', '/api/profile', {
   birth_date: '2007-01-01', gender: 'male', country: 'Romania',
   motto: 'Niciun gând de împărtășit…', mal_url: 'https://myanimelist.net/profile/test',

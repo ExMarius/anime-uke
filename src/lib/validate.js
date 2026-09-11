@@ -3,6 +3,8 @@
 // In v1 nu exista NICIO validare — orice string mergea direct in DB.
 // =====================================================================
 
+import { validateSourceList } from './sources.js';
+
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -81,39 +83,6 @@ export function validateSeries(input) {
   };
 }
 
-/**
- * DoodStream: accepta atat link-ul de embed (/e/xxx) cat si pe cel de
- * download (/d/xxx) si le normalizeaza la /e/xxx, care e cel embed-abil.
- */
-export function validateDoodstreamUrl(value) {
-  const v = typeof value === 'string' ? value.trim() : '';
-  if (!v) return { ok: false, error: 'URL DoodStream obligatoriu' };
-
-  let url;
-  try {
-    url = new URL(v);
-  } catch {
-    return { ok: false, error: 'URL invalid' };
-  }
-
-  if (url.protocol !== 'https:') {
-    return { ok: false, error: 'URL-ul trebuie să fie https' };
-  }
-
-  const host = url.hostname.toLowerCase();
-  const isDood = /(^|\.)dood(stream)?\.[a-z]+$/.test(host) || /(^|\.)dood\.[a-z]{2,}$/.test(host);
-  if (!isDood) {
-    return { ok: false, error: 'Doar link-uri DoodStream sunt permise' };
-  }
-
-  const m = url.pathname.match(/^\/[ed]\/([A-Za-z0-9]+)$/);
-  if (!m) {
-    return { ok: false, error: 'Format așteptat: https://doodstream.com/e/xxxx' };
-  }
-
-  return { ok: true, value: `https://${host}/e/${m[1]}` };
-}
-
 export function validateEpisode(input) {
   const seriesId = Number(input.series_id);
   if (!Number.isInteger(seriesId) || seriesId <= 0) {
@@ -130,10 +99,27 @@ export function validateEpisode(input) {
     return { ok: false, error: 'Titlu prea lung (max 200 caractere)' };
   }
 
-  const url = validateDoodstreamUrl(input.doodstream_url);
-  if (!url.ok) return url;
+  // Sursele video stau in tabelul lor. Acceptam si vechiul camp
+  // `doodstream_url` ca alias, ca sa nu spargem clientii/testele existente:
+  // un singur URL devine o singura sursa de tip embed.
+  let sourcesInput = input.sources;
+  if (sourcesInput === undefined || sourcesInput === null) {
+    const legacy = typeof input.doodstream_url === 'string' ? input.doodstream_url.trim() : '';
+    sourcesInput = legacy ? [{ label: 'DoodStream', kind: 'embed', url: legacy }] : [];
+  }
 
-  return { ok: true, value: { series_id: seriesId, episode_number: episodeNumber, title, doodstream_url: url.value } };
+  const sources = validateSourceList(sourcesInput);
+  if (!sources.ok) return sources;
+
+  return {
+    ok: true,
+    value: {
+      series_id: seriesId,
+      episode_number: episodeNumber,
+      title,
+      sources: sources.value,
+    },
+  };
 }
 
 export function validatePositiveInt(value, name = 'ID') {

@@ -9,8 +9,16 @@ export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 zile, identic cu TTL-ul JWT
 /**
  * CSP strict FARA 'unsafe-inline': tot JS-ul e in fisiere externe,
  * deci nu e nevoie sa permitem scripturi inline (v1 avea inline peste tot).
- * frame-src include domeniile DoodStream, care se rotesc — fara ele
- * playerul se sparge.
+ *
+ * frame-src permite orice https:, nu un allowlist de domenii. Motivul e
+ * detaliat in src/lib/sources.js: furnizorii de embed pentru anime isi
+ * rotesc domeniile constant, iar un allowlist fix ar fi cerut un deploy
+ * de fiecare data cand DoodStream isi schimba TLD-ul. `https:` blocheaza
+ * in continuare javascript:, data: si blob: in iframe — adica exact
+ * vectorii prin care un URL ar putea rula cod in pagina noastra.
+ *
+ * media-src e necesar pentru sursele de tip „fisier video" (.mp4/.webm),
+ * care sunt redate cu <video src=...> in loc de iframe.
  */
 export const SECURITY_HEADERS = {
   'Content-Security-Policy': [
@@ -20,7 +28,8 @@ export const SECURITY_HEADERS = {
     "img-src 'self' https: data: blob:",
     "font-src 'self' data:",
     "connect-src 'self' wss:",
-    "frame-src 'self' https://doodstream.com https://*.doodstream.com https://dood.so https://*.dood.so https://dood.wf https://*.dood.wf https://dood.re https://*.dood.re https://dood.pm https://*.dood.pm https://doodstream.co https://*.doodstream.co",
+    "frame-src 'self' https:",
+    "media-src 'self' https: blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

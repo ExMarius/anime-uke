@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS episodes (
   series_id      INTEGER NOT NULL REFERENCES anime_series(id) ON DELETE CASCADE,
   episode_number INTEGER NOT NULL,
   title          TEXT    NOT NULL DEFAULT '',
-  doodstream_url TEXT    NOT NULL DEFAULT '',
   views          INTEGER NOT NULL DEFAULT 0,
   created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -69,6 +68,22 @@ CREATE TABLE IF NOT EXISTS episodes (
 -- Cel mai accesat query din tot site-ul: „episoadele seriei X, ordonate".
 CREATE INDEX IF NOT EXISTS idx_episodes_series
   ON episodes(series_id, episode_number);
+
+-- Surse video per episod (embed / fisier / link extern). Un episod poate
+-- avea mai multe surse; utilizatorul alege din taburile de deasupra
+-- playerului. ON DELETE CASCADE curata sursele odata cu episodul.
+CREATE TABLE IF NOT EXISTS episode_sources (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  episode_id INTEGER NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+  label      TEXT    NOT NULL DEFAULT 'Sursă',
+  kind       TEXT    NOT NULL DEFAULT 'embed' CHECK (kind IN ('embed','file','link')),
+  url        TEXT    NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active  INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_esrc_episode_url ON episode_sources(episode_id, url);
+CREATE INDEX IF NOT EXISTS idx_esrc_episode ON episode_sources(episode_id, sort_order, id);
 
 -- ---------------------------------------------------------------------
 -- 4. ISTORIC VIZIONARI + PUNCTE

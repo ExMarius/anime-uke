@@ -230,9 +230,148 @@ function populateSeriesDropdown() {
   if (current) sel.value = current;
 }
 
+// ---------------------------------------------------------------------
+// SURSE VIDEO
+//
+// Un episod poate avea mai multe surse. Doua locuri unde se gestioneaza:
+//   1. formularul de creare a episodului — o lista de randuri editabile,
+//   2. panoul de surse de sub tabelul de episoade — pentru episoade existente.
+//
+// Meta (tipuri + furnizori sugerati) vine de pe server, ca lista sa fie
+// definita intr-un singur loc si sa nu derive de validarea din surse.js.
+// ---------------------------------------------------------------------
+let sourcesMeta = { kinds: [], providers: [], max: 12 };
+
+const KIND_HINTS = {
+  embed: 'Se deschide într-un iframe sandbox.',
+  file: 'Redat cu playerul nativ al browserului (trebuie .mp4/.webm/.m3u8).',
+  link: 'Nu e înglobat — utilizatorul primește un buton care deschide pagina.',
+};
+
+async function loadSourcesMeta() {
+  const res = await api('/admin/episode-sources?meta=1');
+  if (res.ok && res.data) sourcesMeta = { max: 12, ...res.data };
+}
+
+function kindOptions(select, selected) {
+  select.innerHTML = '';
+  const kinds = sourcesMeta.kinds?.length
+    ? sourcesMeta.kinds
+    : [{ value: 'embed', label: 'Embed (iframe)' }, { value: 'file', label: 'Fișier video' }, { value: 'link', label: 'Link extern' }];
+  for (const k of kinds) {
+    const opt = document.createElement('option');
+    opt.value = k.value;
+    opt.textContent = k.label;
+    select.appendChild(opt);
+  }
+  if (selected) select.value = selected;
+}
+
+/** Un rand de sursa in formularul de creare a episodului. */
+function buildSourceRow(src = {}) {
+  const row = document.createElement('div');
+  row.className = 'src-row';
+
+  const label = document.createElement('input');
+  label.className = 'input src-row__label';
+  label.type = 'text';
+  label.maxLength = 40;
+  label.placeholder = 'Etichetă (ex. DoodStream)';
+  label.value = src.label || '';
+  label.name = 'src_label';
+
+  const kind = document.createElement('select');
+  kind.className = 'select src-row__kind';
+  kind.name = 'src_kind';
+  kindOptions(kind, src.kind || 'embed');
+
+  const url = document.createElement('input');
+  url.className = 'input src-row__url';
+  url.type = 'url';
+  url.name = 'src_url';
+  url.placeholder = src.hint || 'https://doodstream.com/e/abc123';
+  url.value = src.url || '';
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn btn--danger btn--sm src-row__del';
+  del.title = 'Scoate sursa asta';
+  del.textContent = '✕';
+  del.addEventListener('click', () => { row.remove(); syncSourceCount(); });
+
+  // Selectia unui furnizor cunoscut completeaza eticheta si tipul —
+  // scuteste adminul sa tasteze „DoodStream" de fiecare data.
+  const quick = document.createElement('select');
+  quick.className = 'select src-row__quick';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Furnizor…';
+  quick.appendChild(ph);
+  for (const prov of sourcesMeta.providers || []) {
+    const o = document.createElement('option');
+    o.value = prov.label;
+    o.dataset.hint = prov.hint || '';
+    o.textContent = prov.label;
+    quick.appendChild(o);
+  }
+  quick.addEventListener('change', () => {
+    const opt = quick.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    if (!label.value.trim()) label.value = opt.value;
+    if (opt.dataset.hint) url.placeholder = opt.dataset.hint;
+    kind.value = /MP4|\.mp4/i.test(opt.value) ? 'file' : 'embed';
+    quick.value = '';
+  });
+
+  row.append(label, kind, url, quick, del);
+  return row;
+}
+
+function syncSourceCount() {
+  const box = document.getElementById('e-sources');
+  const out = document.getElementById('e-sources-count');
+  if (!box || !out) return;
+  const n = box.querySelectorAll('.src-row').length;
+  const max = sourcesMeta.max || 12;
+  out.textContent = n ? `${n} / ${max} surse` : '';
+  document.getElementById('e-add-source').disabled = n >= max;
+}
+
+function addFormSourceRow(src) {
+  const box = document.getElementById('e-sources');
+  if (!box) return;
+  if (box.querySelectorAll('.src-row').length >= (sourcesMeta.max || 12)) {
+    toast(`Maximum ${sourcesMeta.max || 12} surse per episod`, 'warn');
+    return;
+  }
+  box.appendChild(buildSourceRow(src));
+  syncSourceCount();
+}
+
+/** Aduna sursele din formularul de creare, ignorand randurile goale. */
+function collectFormSources() {
+  const out = [];
+  for (const row of document.querySelectorAll('#e-sources .src-row')) {
+    const url = row.querySelector('[name="src_url"]').value.trim();
+    if (!url) continue; // rand lasat gol nu e eroare, doar nu il trimitem
+    out.push({
+      label: row.querySelector('[name="src_label"]').value.trim(),
+      kind: row.querySelector('[name="src_kind"]').value,
+      url,
+    });
+  }
+  return out;
+}
+
 async function loadEpisodesTab() {
   if (!seriesList.length) await loadSeriesTab();
   populateSeriesDropdown();
+  await loadSourcesMeta();
+
+  // La prima intrare pe tab, formularul de episod primeste un rand gol,
+  // ca adminul sa vada din start ca acolo se pune sursa video.
+  const builder = document.getElementById('e-sources');
+  if (builder && !builder.querySelector('.src-row')) addFormSourceRow({});
 
   const res = await api('/admin/episodes');
   if (!res.ok) { toast(res.data?.error || 'Eroare la încărcarea episoadelor', 'err'); return; }
@@ -242,19 +381,26 @@ async function loadEpisodesTab() {
   tbody.innerHTML = '';
 
   if (!episodes.length) {
-    tbody.appendChild(emptyRow(6, 'Niciun episod încă.'));
+    tbody.appendChild(emptyRow(7, 'Niciun episod încă.'));
     return;
   }
 
   for (const ep of episodes) {
+    const srcCount = (ep.sources || []).length;
     const tr = document.createElement('tr');
     tr.append(
       cell(ep.id),
       cell(ep.series_title),
       cell(ep.episode_number),
       cell(ep.title || '—'),
+      sourcesCell(ep, srcCount),
       cell(Number(ep.views || 0).toLocaleString('ro-RO')),
       actionsCell([
+        {
+          label: `Surse (${srcCount})`,
+          cls: 'btn btn--accent btn--sm',
+          onClick: () => openSourcesPanel(ep),
+        },
         { label: 'Vezi', cls: 'btn btn--ghost btn--sm', href: `/episode?id=${ep.id}` },
         {
           label: 'Șterge',
@@ -265,6 +411,30 @@ async function loadEpisodesTab() {
     );
     tbody.appendChild(tr);
   }
+}
+
+/** Celula cu sursele unui episod: etichete scurte + marcaj pentru cele oprite. */
+function sourcesCell(ep, count) {
+  const td = document.createElement('td');
+  if (!count) {
+    const warn = document.createElement('span');
+    warn.className = 'pill pill--warn';
+    warn.textContent = 'fără sursă';
+    warn.title = 'Episodul nu are nicio sursă video — playerul va fi gol.';
+    td.appendChild(warn);
+    return td;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'src-chips';
+  for (const src of ep.sources || []) {
+    const chip = document.createElement('span');
+    chip.className = `src-chip${src.is_active ? '' : ' src-chip--off'}`;
+    chip.textContent = src.label;
+    chip.title = `${src.kind} — ${src.url}${src.is_active ? '' : ' (dezactivată)'}`;
+    wrap.appendChild(chip);
+  }
+  td.appendChild(wrap);
+  return td;
 }
 
 async function deleteEpisode(id, num) {
@@ -284,6 +454,12 @@ document.getElementById('episode-form')?.addEventListener('submit', async (e) =>
 
   if (!data.series_id) { toast('Adaugă întâi o serie, apoi alege-o din listă', 'warn'); return; }
 
+  const sources = collectFormSources();
+  if (!sources.length) {
+    toast('Adaugă cel puțin o sursă video cu un URL', 'warn');
+    return;
+  }
+
   await withBusy(btn, async () => {
     const res = await api('/admin/episodes', {
       method: 'POST',
@@ -291,15 +467,183 @@ document.getElementById('episode-form')?.addEventListener('submit', async (e) =>
         series_id: Number(data.series_id),
         episode_number: Number(data.episode_number),
         title: data.title,
-        doodstream_url: data.doodstream_url,
+        sources,
       },
     });
     if (!res.ok) { toast(res.data?.error || 'Nu am putut adăuga episodul', 'err', 5000); return; }
     toast(`Episodul ${data.episode_number} a fost adăugat`, 'ok');
     form.reset();
+    // form.reset() nu atinge randurile construite dinamic, deci le curatam noi.
+    document.getElementById('e-sources').innerHTML = '';
+    addFormSourceRow({});
+    syncSourceCount();
     populateSeriesDropdown();
     loadEpisodesTab();
     loadStats();
+  });
+});
+
+// ---------------------------------------------------------------------
+// PANOUL DE SURSE (pentru episoade deja create)
+// ---------------------------------------------------------------------
+let currentSourcesEp = null;
+
+async function openSourcesPanel(ep) {
+  currentSourcesEp = ep;
+  const panel = document.getElementById('sources-panel');
+  const title = document.getElementById('sources-panel-title');
+
+  title.textContent = `Surse — ${ep.series_title} · Ep. ${ep.episode_number}${ep.title ? ` (${ep.title})` : ''}`;
+  panel.hidden = false;
+  await loadSourcesMeta();
+  await refreshSourcesList();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeSourcesPanel() {
+  currentSourcesEp = null;
+  document.getElementById('sources-panel').hidden = true;
+}
+
+async function refreshSourcesList() {
+  const box = document.getElementById('sources-list');
+  box.innerHTML = '';
+  if (!currentSourcesEp) return;
+
+  const res = await api(`/admin/episode-sources?episode_id=${currentSourcesEp.id}`);
+  if (!res.ok) {
+    box.appendChild(emptyRow(1, res.data?.error || 'Nu am putut încărca sursele'));
+    return;
+  }
+  const list = res.data.sources || [];
+
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'src-empty';
+    empty.textContent = 'Episodul ăsta nu are nicio sursă. Adaugă una mai jos.';
+    box.appendChild(empty);
+    return;
+  }
+
+  for (const src of list) box.appendChild(existingSourceRow(src));
+}
+
+/** Un rand de sursa existenta, cu editare inline si comutare activ/oprit. */
+function existingSourceRow(src) {
+  const row = document.createElement('div');
+  row.className = `src-row src-row--existing${src.is_active ? '' : ' src-row--off'}`;
+
+  const label = document.createElement('input');
+  label.className = 'input src-row__label';
+  label.type = 'text';
+  label.maxLength = 40;
+  label.value = src.label;
+
+  const kind = document.createElement('select');
+  kind.className = 'select src-row__kind';
+  kindOptions(kind, src.kind);
+
+  const url = document.createElement('input');
+  url.className = 'input src-row__url';
+  url.type = 'url';
+  url.value = src.url;
+
+  const active = document.createElement('label');
+  active.className = 'src-row__active';
+  active.title = 'Sursele oprite nu apar pe pagina episodului';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = !!src.is_active;
+  active.append(cb, document.createTextNode('activă'));
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'btn btn--accent btn--sm';
+  save.textContent = 'Salvează';
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn btn--danger btn--sm';
+  del.textContent = '✕';
+  del.title = 'Șterge sursa';
+
+  save.addEventListener('click', async () => {
+    await withBusy(save, async () => {
+      const res = await api('/admin/episode-sources', {
+        method: 'PATCH',
+        body: {
+          id: src.id,
+          label: label.value.trim(),
+          kind: kind.value,
+          url: url.value.trim(),
+          is_active: cb.checked,
+        },
+      });
+      if (!res.ok) { toast(res.data?.error || 'Nu am putut salva sursa', 'err', 5000); return; }
+      toast('Sursă salvată', 'ok');
+      await refreshSourcesList();
+      loadEpisodesTab();
+    });
+  });
+
+  // Bifa de „activă" e o modificare frecventa si ieftina: o salvam pe loc,
+  // fara sa astepte apasarea butonului Salveaza.
+  cb.addEventListener('change', async () => {
+    const res = await api('/admin/episode-sources', {
+      method: 'PATCH', body: { id: src.id, is_active: cb.checked },
+    });
+    if (!res.ok) { cb.checked = !cb.checked; toast(res.data?.error || 'Eroare', 'err'); return; }
+    row.classList.toggle('src-row--off', !cb.checked);
+    toast(cb.checked ? 'Sursă activată' : 'Sursă dezactivată', 'ok');
+    loadEpisodesTab();
+  });
+
+  del.addEventListener('click', async () => {
+    if (!confirm(`Ștergi sursa „${src.label}"?`)) return;
+    const res = await api(`/admin/episode-sources?id=${src.id}`, { method: 'DELETE' });
+    if (!res.ok) { toast(res.data?.error || 'Nu am putut șterge', 'err'); return; }
+    toast('Sursă ștearsă', 'ok');
+    await refreshSourcesList();
+    loadEpisodesTab();
+  });
+
+  row.append(label, kind, url, active, save, del);
+  return row;
+}
+
+// ---------------------------------------------------------------------
+// LEGATURILE UI-ului de surse
+// ---------------------------------------------------------------------
+document.getElementById('e-add-source')?.addEventListener('click', () => addFormSourceRow({}));
+document.getElementById('sources-close')?.addEventListener('click', closeSourcesPanel);
+
+document.getElementById('s-kind')?.addEventListener('change', (e) => {
+  const hint = document.getElementById('s-kind-hint');
+  if (hint) hint.textContent = KIND_HINTS[e.target.value] || '';
+});
+
+document.getElementById('source-add-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!currentSourcesEp) return;
+  const form = e.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
+  const btn = document.getElementById('source-add-submit');
+
+  await withBusy(btn, async () => {
+    const res = await api('/admin/episode-sources', {
+      method: 'POST',
+      body: {
+        episode_id: currentSourcesEp.id,
+        label: (data.label || '').trim(),
+        kind: data.kind,
+        url: (data.url || '').trim(),
+      },
+    });
+    if (!res.ok) { toast(res.data?.error || 'Nu am putut adăuga sursa', 'err', 5000); return; }
+    toast('Sursă adăugată', 'ok');
+    form.reset();
+    await refreshSourcesList();
+    loadEpisodesTab();
   });
 });
 
