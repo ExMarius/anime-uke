@@ -197,7 +197,7 @@ async function load({ append = false, silent = false } = {}) {
   wrap.hidden = !data.has_more;
   btn.disabled = false;
   btn.textContent = data.total != null
-    ? `Încarcă mai multe (${allSeries.length} din ${data.total})`
+    ? `Încarcă mai multe (${allSeries.length} din ${data.total}${data.total_capped ? '+' : ''})`
     : 'Încarcă mai multe';
 
   if (!append) {

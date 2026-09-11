@@ -632,6 +632,22 @@ console.log('\n=== 8a. PLAYERUL NU MAI TRIMITE UTILIZATORUL IN AFARA SITE-ULUI =
   check('Butonul manual de marcare ca vazut a disparut', !html.includes('watch-btn'));
 }
 
+console.log('\n=== 8a2. CAUTAREA NU MAI SCANEAZA TOT CATALOGUL ===');
+// Un COUNT(*) exact pe LIKE '%x%' nu poate folosi indexul si costa tot
+// tabelul. Cand rezultatele incap intr-o pagina, totalul se calculeaza din ce
+// am primit deja — zero cereri in plus, zero randuri citite in plus.
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  const r = await req(j, 'GET', '/api/series?q=zzz_inexistent&per_page=24');
+  check('Cautarea raporteaza total_capped explicit', typeof r.data?.total_capped === 'boolean', `total_capped=${r.data?.total_capped}`);
+  check('Cautare fara rezultate → total 0, neplafonat', r.data?.total === 0 && r.data?.total_capped === false, `total=${r.data?.total}`);
+
+  const r2 = await req(j, 'GET', '/api/series?q=a&per_page=24');
+  check('Cautare cu rezultate putine → total exact, neplafonat', r2.data?.total_capped === false && r2.data?.total <= 24, `total=${r2.data?.total} capped=${r2.data?.total_capped}`);
+}
+
 console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
 {
   const j = globalThis.admin;

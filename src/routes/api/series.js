@@ -22,6 +22,11 @@ import { parsePaging, parseQuery, parseSort, sortSql, sortOptions, escapeLike, r
 //   Coloana se actualizeaza doar cand un admin adauga/sterge un episod.
 // =====================================================================
 
+// Pragul pana la care numarăm rezultatele unei cautari. Un COUNT(*) exact pe
+// LIKE '%termen%' scaneaza tot catalogul (masurat: 1013 randuri la 1013 serii),
+// asa ca il limitam si raportam „500+" — vezi comentariul din onRequestGet.
+const TOTAL_CAP = 500;
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -63,17 +68,30 @@ export async function onRequestGet(context) {
     const series = hasMore ? rows.slice(0, perPage) : rows;
 
     // Totalul vine din contorul denormalizat (1 rand) cand nu se cauta.
-    // La cautare numaram doar rezultatele — mult mai putine randuri decat
-    // intreg tabelul, si utilizatorul chiar vrea sa vada „3 rezultate".
+    //
+    // La cautare, un COUNT(*) exact ar scana tot tabelul: LIKE '%termen%' nu
+    // poate folosi indexul, deci costul creste cu marimea catalogului. Masurat
+    // pe 1013 serii: 1013 randuri citite pe cautare, fata de 25 cat costa o
+    // pagina obisnuita. La 1000 de utilizatori/zi cu doua cautari fiecare, doar
+    // asta ar manca aproape jumatate din plafonul gratuit de 5M randuri/zi.
+    //
+    // De aceea: daca rezultatele incap in pagina, totalul e exact si GRATUIT
+    // (offset + ce am primit). Daca nu incap, numarăm doar pana la un prag si
+    // il raportam ca „500+" — al 501-lea rezultat nu e informatie utila pentru
+    // cine cauta, dar scanarea lui costa la fel de mult ca tot catalogul.
     let total;
-    if (q) {
+    let totalCapped = false;
+    if (!q) {
+      total = await readMeta(env, 'series_total');
+    } else if (!hasMore) {
+      total = offset + rows.length;
+    } else {
       const c = await env.DB
-        .prepare(`SELECT COUNT(*) AS n FROM anime_series s ${whereSql}`)
+        .prepare(`SELECT COUNT(*) AS n FROM (SELECT 1 FROM anime_series s ${whereSql} LIMIT ${TOTAL_CAP})`)
         .bind(...params)
         .first();
       total = c?.n ?? 0;
-    } else {
-      total = await readMeta(env, 'series_total');
+      totalCapped = total >= TOTAL_CAP;
     }
 
     return json({
@@ -82,6 +100,7 @@ export async function onRequestGet(context) {
       per_page: perPage,
       has_more: hasMore,
       total,
+      total_capped: totalCapped,
       total_episodes: await readMeta(env, 'episodes_total'),
       pages: Math.max(1, Math.ceil(total / perPage)),
       q,
