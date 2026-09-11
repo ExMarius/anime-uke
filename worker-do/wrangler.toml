@@ -2,6 +2,11 @@ name = "anime-uke-do"
 main = "src/index.js"
 compatibility_date = "2026-05-01"
 
+# Fara ruta publica workers.dev: acest Worker e apelat doar prin
+# bindingurile DO din proiectul Pages. Evita si apelul API catre
+# /workers/subdomain, care cere o permisiune suplimentara pe token.
+workers_dev = false
+
 # Worker-ul DO are nevoie de D1 ca sa poata face flush in loturi
 # (mesaje de chat la ~20 buc, contorizari de views la ~20 buc).
 [[d1_databases]]

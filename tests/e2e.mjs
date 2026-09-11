@@ -1,6 +1,14 @@
 import WS from 'ws';
 // Test end-to-end impotriva serverului local wrangler.
-const BASE = 'http://127.0.0.1:8788';
+// BASE se poate suprascrie pentru a rula suita impotriva productiei:
+//   node tests/e2e.mjs https://anime-uke.pages.dev
+const BASE = process.argv[2] || process.env.BASE_URL || 'http://127.0.0.1:8788';
+const WS_BASE = BASE.replace(/^http/, 'ws');
+// Pe productie, un burst de ~100 cereri/secunda dintr-un IP de datacenter
+// poate declansa protectia anti-bot Cloudflare (403 cu pagina HTML).
+// E2E_DELAY_MS pune o pauza intre apeluri; implicit 0 (local, rapid).
+const DELAY = Number(process.env.E2E_DELAY_MS || 0);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const failures = [];
 
@@ -16,6 +24,7 @@ async function req(j, method, path, body) {
   if (j?.cookie) headers.Cookie = j.cookie;
   if (j?.ip) { headers['CF-Connecting-IP'] = j.ip; headers['X-Forwarded-For'] = j.ip; }
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (DELAY) await sleep(DELAY);
   const res = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'manual' });
   if (j) saveCookie(j, res);
   let data = null;
@@ -315,7 +324,7 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
   const j = globalThis.admin;
   // Neauth
   try {
-    const wsBad = new WebSocket('ws://127.0.0.1:8788/chat');
+    const wsBad = new WebSocket(`${WS_BASE}/chat`);
     const res = await new Promise((resolve) => { wsBad.onopen = () => resolve('open'); wsBad.onerror = () => resolve('error'); wsBad.onclose = (e) => resolve('close:' + e.code); setTimeout(() => resolve('timeout'), 4000); });
     check('WebSocket fara autentificare e respins', res === 'error' || res.startsWith('close:'), `rezultat=${res}`);
     try { wsBad.close(); } catch {}
@@ -324,7 +333,7 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
   // Auth
   const cookie = j.cookie;
   try {
-    const ws = new WS('ws://127.0.0.1:8788/chat', { headers: { Cookie: cookie } });
+    const ws = new WS(`${WS_BASE}/chat`, { headers: { Cookie: cookie } });
     const init = await new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('timeout la init')), 6000);
       ws.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };
@@ -372,7 +381,7 @@ console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));
   const j = globalThis.admin;
-  const ws = new WS('ws://127.0.0.1:8788/chat', { headers: { Cookie: j.cookie } });
+  const ws = new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } });
   const init = await new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('timeout')), 8000);
     ws.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };

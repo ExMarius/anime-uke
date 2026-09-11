@@ -203,3 +203,79 @@ Istoricul chat-ului crește nelimitat. Rulează periodic (manual sau printr-un c
 DELETE FROM chat_messages WHERE id NOT IN
   (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 5000);
 ```
+
+## Arhitectura: de ce exista `worker-do/`
+
+Cloudflare Pages **nu poate gazdui clase Durable Object in productie**.
+Documentatia oficiala (actualizata iunie 2026) spune explicit:
+
+> "You cannot create and deploy a Durable Object within a Pages project."
+
+Advanced Mode (`public/_worker.js` cu `export { ChatDO }`) functioneaza
+**doar local**, in miniflare — de aceea `wrangler pages dev` si testele e2e
+merg, dar `wrangler pages deploy` respinge configuratia cu:
+
+```
+Configuration file for Pages projects does not support "migrations"
+Durable Objects bindings should specify a "script_name"
+```
+
+Solutia oficiala, aplicata aici:
+
+| Componenta | Unde traieste | Rol |
+|---|---|---|
+| Frontend + API | Pages `anime-uke` (`public/_worker.js`) | HTML/CSS/JS, rute REST, auth, D1 |
+| Durable Objects | Worker `anime-uke-do` (`worker-do/`) | ChatDO, RateLimitDO, StatsDO |
+
+Pages leaga DO-urile prin `script_name = "anime-uke-do"`. ChatDO face deja
+upgrade-ul WebSocket in `fetch()`, iar Pages il apeleaza cu
+`stub.fetch(request)` — patternul documentat pentru DO extern. Dupa upgrade,
+conexiunile raman atasate de DO si nu mai trec prin Pages Function.
+
+Codul DO nu a fost modificat deloc: foloseste doar `storage.getAlarm` /
+`setAlarm`, compatibile cu storage SQLite (singura optiune pentru
+namespace-uri DO noi).
+
+### Cele doua configuratii wrangler
+
+Pages citeste **doar** `wrangler.toml` din radacina si nu accepta `--config`
+cu alta cale. De aceea exista doua fisiere:
+
+- `wrangler.toml` — **productie**. Bindinguri DO cu `script_name`, fara
+  `[[migrations]]`. Este ce citeste `wrangler pages deploy`.
+- `wrangler.local.toml` — **dezvoltare**. DO inline in `_worker.js` plus
+  `[[migrations]]`, ca sa nu fie nevoie de al doilea Worker pornit local.
+
+`npm run dev` (adica `./dev.sh`) inlocuieste temporar `wrangler.toml` cu
+cel local, porneste serverul si il restaureaza la iesire.
+
+### Deploy
+
+```bash
+export CLOUDFLARE_API_TOKEN=...      # D1 Edit, Pages Edit, Workers Scripts Edit
+export CLOUDFLARE_ACCOUNT_ID=...
+npm run deploy                       # ./deploy.sh
+```
+
+`deploy.sh` ruleaza in ordinea obligatorie: D1 -> schema -> Worker DO ->
+Pages -> JWT_SECRET. DO-urile trebuie sa existe **inainte** ca Pages sa
+poata valida bindingurile cu `script_name`.
+
+Deploy-ul se face cu `--branch=main`: altfel, daca branch-ul git curent nu e
+cel de productie, Cloudflare il publica ca *preview* si
+`anime-uke.pages.dev` continua sa serveasca versiunea veche.
+
+### Testare
+
+```bash
+npm test                                          # suita e2e completa, local
+node tests/prod-smoke.mjs                         # verificare pe productie
+```
+
+`tests/e2e.mjs` nu se ruleaza pe productie: sectiunile 2-3 trag ~20 de
+`POST /api/auth/register` in cateva secunde, iar protectia anti-brute-force
+de la marginea Cloudflare blocheaza IP-ul (403 cu pagina HTML). Local, in
+miniflare, protectia nu exista. Pentru productie foloseste
+`tests/prod-smoke.mjs`, care imita un utilizator real: o singura
+inregistrare, o singura autentificare, pauze intre cereri. Acopera 57 de
+verificari, inclusiv doi clienti WebSocket simultan.

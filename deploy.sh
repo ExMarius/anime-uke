@@ -29,8 +29,9 @@ DB_BINDING="DB"
 : "${CLOUDFLARE_API_TOKEN:?Lipseste CLOUDFLARE_API_TOKEN}"
 : "${CLOUDFLARE_ACCOUNT_ID:?Lipseste CLOUDFLARE_ACCOUNT_ID}"
 
+# Cale ABSOLUTA: deploy.sh face `cd worker-do`, deci o cale relativa s-ar strica.
 WRANGLER="npx wrangler"
-[ -x ./node_modules/.bin/wrangler ] && WRANGLER="./node_modules/.bin/wrangler"
+[ -x "$PWD/node_modules/.bin/wrangler" ] && WRANGLER="$PWD/node_modules/.bin/wrangler"
 
 step() { printf '\n\033[1;35m==> %s\033[0m\n' "$1"; }
 ok()   { printf '    \033[0;32m✓\033[0m %s\n' "$1"; }
@@ -52,10 +53,10 @@ else
 fi
 
 # injecteaza UUID-ul in ambele configuri
-for f in wrangler.toml wrangler.deploy.toml worker-do/wrangler.toml; do
+for f in wrangler.toml wrangler.local.toml worker-do/wrangler.toml; do
   sed -i "s/database_id = \"[^\"]*\"/database_id = \"$DB_UUID\"/" "$f"
 done
-ok "database_id injectat in wrangler.toml, wrangler.deploy.toml, worker-do/wrangler.toml"
+ok "database_id injectat in wrangler.toml (productie), wrangler.local.toml (dev), worker-do/wrangler.toml"
 
 # ---------------------------------------------------------------------
 step "2/5  Schema D1 (remote)"
@@ -64,12 +65,23 @@ grep -q 'No migrations to apply' /tmp/mig.txt && ok "deja aplicata" || ok "migra
 
 # ---------------------------------------------------------------------
 step "3/5  Worker Durable Objects: $WORKER"
-( cd worker-do && $WRANGLER deploy >/tmp/wdo.txt 2>&1 ) || { cat /tmp/wdo.txt; die "deploy Worker DO esuat"; }
-ok "publicat: $(grep -oE 'https://[^ ]*workers\.dev' /tmp/wdo.txt | head -1 || echo "$WORKER")"
+set +e
+( cd worker-do && $WRANGLER deploy >/tmp/wdo.txt 2>&1 )
+RC=$?
+set -e
+# wrangler intoarce non-zero daca nu poate citi subdomeniul workers.dev,
+# desi uploadul a reusit. Verificam succesul real dupa "Uploaded".
+if grep -q "Uploaded $WORKER\|Current Version ID" /tmp/wdo.txt; then
+  ok "publicat: $WORKER ($(grep -oE 'Total Upload: [^ ]*' /tmp/wdo.txt | head -1))"
+elif [ "$RC" -eq 0 ]; then
+  ok "publicat: $WORKER"
+else
+  cat /tmp/wdo.txt; die "deploy Worker DO esuat"
+fi
 
 # ---------------------------------------------------------------------
 step "4/5  Cloudflare Pages: $PROJECT"
-$WRANGLER pages deploy --project-name="$PROJECT" --config wrangler.deploy.toml >/tmp/pages.txt 2>&1 \
+$WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
