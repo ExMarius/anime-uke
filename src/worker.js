@@ -36,6 +36,10 @@ function isPublic(path) {
   if (PUBLIC_PAGES.has(path)) return true;
   if (PUBLIC_API.has(path)) return true;
   if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
+  // Coperțile servite de site. Nu contin date despre utilizatori, iar a le
+  // tine în spatele porții ar însemna un dus-întors de cookie pentru fiecare
+  // imagine de pe pagina de login și din orice context fără sesiune.
+  if (path.startsWith('/covers/')) return true;
   return false;
 }
 

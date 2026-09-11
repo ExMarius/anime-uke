@@ -181,6 +181,15 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
 
 console.log('\n=== DOM: /admin/serii (lista paginata) ===');
 {
+  // Seria malițioasă și-o creează singur testul: dacă ar depinde de datele
+  // lăsate de suita e2e, ar eșea ori de câte ori baza e seed-uită curat.
+  const EVIL = '<img src=x onerror=alert(1)>';
+  const evil = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ title: EVIL, status: 'ongoing' }),
+  })).json();
+
   const p = await mountPage({ htmlFile: 'public/admin/serii.html', url: '/admin/serii', module: 'page-admin-serii.js' });
   const loaded = await until(() => p.$$('#series-table tbody tr').length > 0 || p.$('#series-table tbody .empty, #series-empty') !== null);
   check('Tabelul de serii se populeaza', loaded, `randuri=${p.$$('#series-table tbody tr').length}`);
@@ -194,8 +203,12 @@ console.log('\n=== DOM: /admin/serii (lista paginata) ===');
   const evilRow = p.$$('#series-table tbody tr').find((tr) => tr.textContent.includes('onerror=alert'));
   check('Titlul malitios e randat ca text escaped, nu ca element', !!evilRow && evilRow.querySelectorAll('img[onerror]').length === 0, evilRow ? evilRow.innerHTML.slice(0, 160) : 'randul nu a fost gasit');
   check('Niciun handler inline in tabel (CSP le-ar bloca oricum)', p.$$('#series-table tbody [onerror], #series-table tbody [onclick]').length === 0, `gasite=${p.$$('#series-table tbody [onerror], #series-table tbody [onclick]').length}`);
-  check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+
   await p.teardown();
+  await fetch(`${BASE}/api/admin/series?id=${evil?.id}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
+  const p2 = await mountPage({ htmlFile: 'public/admin/serii.html', url: '/admin/serii', module: 'page-admin-serii.js' });
+  check('Nicio eroare de runtime la incarcare', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+  await p2.teardown();
 }
 
 console.log('\n=== DOM: /admin/serie/<id> (episoade + surse + bulk) ===');

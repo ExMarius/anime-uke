@@ -66,8 +66,12 @@ export function validateSeries(input) {
   }
 
   const coverImage = typeof input.cover_image === 'string' ? input.cover_image.trim() : '';
-  if (coverImage && !/^https?:\/\/[^\s]+$/i.test(coverImage)) {
-    return { ok: false, error: 'URL imagine invalid (trebuie să înceapă cu http/https)' };
+  // Acceptam fie URL absolut http(s), fie cale same-origin („/covers/x.jpg”)
+  // pentru imaginile servite de site. `//` e respins: e URL protocol-relativ
+  // si ar permite ocolirea verificarii.
+  const sameOrigin = /^\/(?!\/)[^\s]+$/;
+  if (coverImage && !/^https?:\/\/[^\s]+$/i.test(coverImage) && !sameOrigin.test(coverImage)) {
+    return { ok: false, error: 'URL imagine invalid (trebuie să înceapă cu http/https sau cu /)' };
   }
 
   return {
