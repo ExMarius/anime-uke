@@ -47,6 +47,16 @@ async function raw(j, path) {
   return { status: res.status, text, location: res.headers.get('location') };
 }
 
+// Un reject netratat (ex. un WebSocket care pica tranzitoriu) nu trebuie sa
+// omoare suita inainte de rezumat: il transformam in esec vizibil, ca sa
+// vedem CE a cazut in loc sa primim un crash fara context.
+process.on('unhandledRejection', (e) => {
+  fail++;
+  const msg = e?.message || String(e);
+  failures.push(`unhandledRejection: ${msg}`);
+  console.log(`  ❌ unhandledRejection: ${msg}`);
+});
+
 function check(name, cond, detail = '') {
   if (cond) { pass++; console.log(`  ✅ ${name}`); }
   else { fail++; failures.push(name + (detail ? ` — ${detail}` : '')); console.log(`  ❌ ${name}${detail ? ' — ' + detail : ''}`); }
@@ -648,6 +658,48 @@ console.log('\n=== 8a2. CAUTAREA NU MAI SCANEAZA TOT CATALOGUL ===');
   check('Cautare cu rezultate putine → total exact, neplafonat', r2.data?.total_capped === false && r2.data?.total <= 24, `total=${r2.data?.total} capped=${r2.data?.total_capped}`);
 }
 
+console.log('\n=== 8c. CUFAR CU COMORI (timp petrecut pe serie) ===');
+// Cuferele se deblocheaza din secunde REALE de vizionare pe serie, deci
+// testul impinge progresul prin /api/progress, ca un utilizator adevarat.
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  const anon = await req(jar(), 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
+  check('Cuferele cer autentificare → 401', anon.status === 401, `status=${anon.status}`);
+
+  const before = await req(j, 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
+  check('Lista de cufere vine cu 3 trepte', before.data?.chests?.length === 3, `n=${before.data?.chests?.length}`);
+  check('Niciun cufar nu e deblocat sub primul prag', before.data?.chests?.every((c) => !c.unlocked || c.tier === 1) && !before.data?.chests?.[1]?.unlocked, JSON.stringify(before.data?.chests?.map((c) => c.unlocked)));
+
+  const early = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 3 });
+  check('Cufar nede blocat → 409, fara puncte', early.status === 409, `status=${early.status}`);
+
+  // user2 are deja ~1110s din sectiunea 8; urcam peste pragul de 30 min
+  for (let i = 0; i < 6; i++) await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+
+  const mid = await req(j, 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
+  check('Dupa 30 min pe serie, bronzul e deblocat', mid.data?.chests?.[0]?.unlocked === true, `total=${mid.data?.total_seconds}`);
+  check('Argintul ramane blocat la 30 min', mid.data?.chests?.[1]?.unlocked === false, `total=${mid.data?.total_seconds}`);
+
+  const meBefore = await req(j, 'GET', '/api/auth/me');
+  const open = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 1 });
+  check('Deschiderea bronzului acorda +5 puncte', open.data?.pointsAdded === 5, JSON.stringify(open.data));
+  check('Punctele cresc in cont', open.data?.points === (meBefore.data?.user?.points ?? 0) + 5, `${meBefore.data?.user?.points} → ${open.data?.points}`);
+
+  const twice = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 1 });
+  check('Al doilea clic pe acelasi cufar nu mai da puncte', twice.data?.alreadyClaimed === true && twice.data?.pointsAdded === 0, JSON.stringify(twice.data));
+  check('Totalul de puncte ramane corect dupa dubla deschidere', twice.data?.points === open.data?.points, `${open.data?.points} vs ${twice.data?.points}`);
+
+  const badTier = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 99 });
+  check('Treapta inexistenta → 400', badTier.status === 400, `status=${badTier.status}`);
+  const badSeries = await req(j, 'POST', '/api/chests', { series_id: 999999, tier: 1 });
+  check('Serie inexistenta → 404', badSeries.status === 404, `status=${badSeries.status}`);
+
+  const after = await req(j, 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
+  check('Cufarul deschis apare ca claimed', after.data?.chests?.[0]?.claimed === true, JSON.stringify(after.data?.chests?.[0]));
+}
+
 console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
 {
   const j = globalThis.admin;
@@ -868,14 +920,21 @@ console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
   await new Promise(r => setTimeout(r, 2500));
   const j = globalThis.admin;
   const ws = new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } });
-  const init = await new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('timeout')), 8000);
-    ws.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };
-    ws.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
-  });
-  check('Istoricul contine mesajul salvat anterior', JSON.stringify(init.history).includes('Salut din test!'), JSON.stringify(init.history).slice(0,200));
-  check('Istoric limitat la max 30 mesaje', init.history.length <= 30, `lungime=${init.history.length}`);
-  ws.close();
+  let init = null;
+  try {
+    init = await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), 8000);
+      ws.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };
+      ws.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
+    });
+  } catch (e) {
+    check('Conexiunea WS pentru istoric s-a stabilit', false, e.message);
+  }
+  if (init) {
+    check('Istoricul contine mesajul salvat anterior', JSON.stringify(init.history).includes('Salut din test!'), JSON.stringify(init.history).slice(0,200));
+    check('Istoric limitat la max 30 mesaje', init.history.length <= 30, `lungime=${init.history.length}`);
+    ws.close();
+  }
 }
 
 console.log('\n' + '='.repeat(56));

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam } from './core.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -332,8 +332,51 @@ async function load() {
   api('/view', { method: 'POST', body: { episode_id: Number(id) } }).catch(() => {});
 }
 
-await renderNav('');
-await load();
+/**
+ * Plasa de siguranta a paginii. Fara ea, o eroare aruncata in renderNav sau o
+ * cerere care atarna lasa pagina in starea HTML initiala: titlu „Se incarca…",
+ * bara de surse goala, spinner vesnic. Utilizatorul nu afla niciodata DE CE.
+ * Acum orice esec devine un mesaj vizibil + un buton de reincercare.
+ */
+function showBootFailure(why) {
+  const titleEl = document.getElementById('episode-title');
+  if (titleEl && /încarcă/i.test(titleEl.textContent)) titleEl.textContent = 'Nu am putut încărca episodul';
+  const box = showLoading(`${why} Verifică conexiunea și încearcă din nou.`);
+  box.classList.remove('loading');
+  box.classList.add('empty');
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'btn btn--accent';
+  retry.textContent = 'Reîncearcă';
+  retry.addEventListener('click', () => location.reload());
+  box.appendChild(retry);
+  stopHeartbeat();
+}
+
+async function boot() {
+  await renderNav('');
+  await load();
+}
+
+// Ceas de paza: daca dupa 15s pagina e tot in starea initiala, ceva a atarnat
+// (retea lenta, D1 rece, redirect blocat). Mai bine spunem decat tacem.
+let booted = false;
+const watchdog = setTimeout(() => {
+  if (booted) return;
+  const titleEl = document.getElementById('episode-title');
+  if (titleEl && /încarcă/i.test(titleEl.textContent)) {
+    showBootFailure('Încărcarea durează neobișnuit de mult.');
+  }
+}, 15000);
+
+boot()
+  .then(() => { booted = true; clearTimeout(watchdog); })
+  .catch((e) => {
+    booted = true;
+    clearTimeout(watchdog);
+    console.error('boot episode:', e);
+    showBootFailure('A apărut o eroare la încărcarea paginii.');
+  });
 
 document.getElementById('back-btn')?.addEventListener('click', () => history.back());
 

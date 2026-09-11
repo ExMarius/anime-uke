@@ -213,9 +213,83 @@ function search(q) {
   load();
 }
 
+// ---------------------------------------------------------------------
+// Banner rotativ: o recomandare comuna, schimbata o data la 3 ore.
+//
+// Fereastra de timp (bucket-ul de 3h) e aceeasi pentru toti utilizatorii,
+// deci in intervalul curent toata lumea vede aceeasi recomandare — arata a
+// editorial, nu a zar per vizita. Alegerea e determinista din bucket, deci
+// nu cerem nimic in plus de la server pentru „randomizarea" itself.
+// Inchiderea bannerului se tine minte doar pentru intervalul curent: la
+// urmatorul bucket reapare cu alt continut.
+// ---------------------------------------------------------------------
+const SPOT_WINDOW_MS = 3 * 60 * 60 * 1000;
+const SPOT_TAGS = [
+  'Recomandarea intervalului', 'De maratonat diseară', 'Ascunsă în catalog',
+  'Alegerea comunității', 'Perla neștiută', 'Revăzut și aprobat',
+];
+
+function hashStr(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return Math.abs(h);
+}
+
+async function renderSpotlight() {
+  const box = document.getElementById('spot-banner');
+  if (!box) return;
+
+  const bucket = Math.floor(Date.now() / SPOT_WINDOW_MS);
+  try { if (localStorage.getItem(`auk-spot-${bucket}`)) return; } catch { /* mod privat */ }
+
+  // Alegerea se cache-uieste pe bucket in sessionStorage: o a doua vizita in
+  // acelasi interval nu mai face cererile catre catalog.
+  const cacheKey = `auk-spot-data-${bucket}`;
+  let pick = null;
+  try { pick = JSON.parse(sessionStorage.getItem(cacheKey) || 'null'); } catch { /* ignora */ }
+
+  if (!pick) {
+    const first = await api('/series?per_page=24&page=1');
+    if (!first.ok || !first.data?.series?.length) return;
+    const pages = Math.max(1, Number(first.data.pages) || 1);
+    const page = (hashStr(`spot-page-${bucket}`) % pages) + 1;
+    const list = page === 1
+      ? first.data.series
+      : (await api(`/series?per_page=24&page=${page}`))?.data?.series || [];
+    if (!list.length) return;
+    pick = list[hashStr(`spot-item-${bucket}`) % list.length];
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
+  }
+
+  document.getElementById('spot-tag').textContent = SPOT_TAGS[hashStr(`spot-tag-${bucket}`) % SPOT_TAGS.length];
+  const a = document.getElementById('spot-title');
+  a.textContent = pick.title;
+  a.href = `/series?id=${encodeURIComponent(pick.id)}`;
+  document.getElementById('spot-sub').textContent =
+    [pick.genre, pick.year, pick.episode_count ? `${pick.episode_count} ep.` : ''].filter(Boolean).join(' · ');
+
+  const art = document.getElementById('spot-art');
+  art.innerHTML = '';
+  const cover = safeUrl(pick.cover_image, '');
+  if (cover && cover !== '#') {
+    const img = document.createElement('img');
+    img.src = cover; img.alt = ''; img.loading = 'lazy';
+    art.appendChild(img);
+  } else {
+    art.appendChild(genPoster(pick.title));
+  }
+
+  box.hidden = false;
+  document.getElementById('spot-close')?.addEventListener('click', () => {
+    box.hidden = true;
+    try { localStorage.setItem(`auk-spot-${bucket}`, '1'); } catch { /* ignora */ }
+  }, { once: true });
+}
+
 await renderNav('/');
 skeletons(10);
 await Promise.all([load(), initChat()]);
+renderSpotlight().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
 
 // Debounce: fara el, fiecare litera tastata ar insemna un LIKE pe tot
 // tabelul de serii — iar cautarea e exact operatia care nu e indexabila.

@@ -40,6 +40,22 @@
       </div>
     </header>
 
+    <!--
+      Banner rotativ: alt continut la fiecare 3 ore. Fereastra de timp e
+      aceeasi pentru toti utilizatorii, deci „recomandarea intervalului"
+      chiar e o recomandare comuna, nu un random per vizita. Inchiderea lui
+      se tine minte doar pentru intervalul curent.
+    -->
+    <section class="spot" id="spot-banner" hidden>
+      <div class="spot__art" id="spot-art" aria-hidden="true"></div>
+      <div class="spot__body">
+        <span class="spot__tag" id="spot-tag"></span>
+        <a class="spot__title" id="spot-title" href="#"></a>
+        <p class="spot__sub" id="spot-sub"></p>
+      </div>
+      <button class="spot__close" id="spot-close" type="button" aria-label="Închide bannerul">✕</button>
+    </section>
+
     <section class="section" id="serii">
       <div class="section__head">
         <h2 class="section__title">Serii disponibile</h2>

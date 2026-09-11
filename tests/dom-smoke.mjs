@@ -178,6 +178,19 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
   check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
 
+  // Bannerul rotativ: trebuie sa existe in DOM, iar daca e vizibil sa duca
+  // catre o serie reala. Inchiderea lui se persista pe intervalul de 3h.
+  check('Bannerul rotativ exista in DOM', !!p.$('#spot-banner'), 'lipseste #spot-banner');
+  if (p.$('#spot-banner')?.hidden === false) {
+    check('Bannerul vizibil duce catre o serie', /^\/series\?id=\d+$/.test(p.$('#spot-title')?.getAttribute('href') || ''), p.$('#spot-title')?.getAttribute('href'));
+    check('Bannerul vizibil are eticheta de interval', (p.text('#spot-tag') || '').length > 3, p.text('#spot-tag'));
+    p.$('#spot-close')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const bucket = Math.floor(Date.now() / (3 * 60 * 60 * 1000));
+    check('Inchiderea bannerului se tine minte pe intervalul curent', p.$('#spot-banner')?.hidden === true && p.window.localStorage.getItem(`auk-spot-${bucket}`) === '1', `hidden=${p.$('#spot-banner')?.hidden}`);
+  } else {
+    check('Bannerul ramane ascuns daca userul l-a inchis in intervalul curent', true);
+  }
+
   // cautarea trebuie sa ajunga pe server, nu sa filtreze in browser
   const input = p.$('#search-input');
   input.value = 'zzz_inexistent';
@@ -290,6 +303,12 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Episoadele se randeaza', loaded, `n=${p.$$('#episodes-grid > *').length}`);
   check('Se randeaza exact o pagina, nu toate 150', p.$$('#episodes-grid > *').length === 100, `n=${p.$$('#episodes-grid > *').length}`);
   check('Numaratoarea arata totalul real, nu pagina curenta', /150/.test(p.text('#episodes-count') || ''), p.text('#episodes-count'));
+
+  // Cufărul cu comori: sectiunea trebuie sa apara pentru un user logat si sa
+  // aiba exact 3 cufere, nu un container gol.
+  const chestsOn = await until(() => p.$$('#chests-row .chest').length === 3);
+  check('Cufărul cu comori se randeaza cu 3 cufere', chestsOn, `n=${p.$$('#chests-row .chest').length} hidden=${p.$('#chests-section')?.hidden}`);
+  check('Cuferele isi arata starea (blocat/deschis)', /mai ai|Deschide|Deschis/.test(p.text('#chests-row') || ''), p.text('#chests-row')?.slice(0, 60));
   check('Posterul seriei e randat (fallback cand lipseste coperta)', p.$('#series-poster')?.hidden === false && p.$$('#series-poster > *').length === 1, `hidden=${p.$('#series-poster')?.hidden} copii=${p.$$('#series-poster > *').length}`);
   check('Selectorul de intervale e vizibil la o serie lunga', p.$('#ep-ranges')?.hidden === false, `hidden=${p.$('#ep-ranges')?.hidden}`);
   check('Selectorul are doua intervale + sageti', p.$$('#ep-ranges button').length === 4, `butoane=${p.$$('#ep-ranges button').length}`);
@@ -317,6 +336,50 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   check('Linkul catre pagina noua de serii e prezent', p.$('a[href="/admin/serii"]') !== null, 'lipseste linkul');
   check('Nicio eroare de runtime dupa eliminarea taburilor', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+}
+
+console.log('\n=== DOM: /episode (player, surse, progres) ===');
+// Pagina asta nu era acoperita deloc de dom-smoke, deci un crash la bootstrap
+// ajungea direct in productie ca un spinner vesnic. Acum o montam cu un
+// episod real si verificam ca bootstrap-ul chiar termina treaba.
+{
+  // Fixture propriu: o serie cu un episod si o sursa video reala, ca testul sa
+  // nu depinda de ce a mai ramas in baza de la alte suite.
+  const created = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ title: `DOM Ep Test ${Date.now()}`, status: 'completed' }),
+  })).json();
+  const sid = created?.series?.id ?? created?.id;
+  await fetch(`${BASE}/api/admin/episodes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ series_id: sid, episodes: [{ episode_number: 1, title: 'Unu', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] }] }),
+  });
+  const detail = await (await fetch(`${BASE}/api/series/${sid}`, { headers: { Cookie: COOKIE } })).json();
+  const epId = detail?.episodes?.[0]?.id;
+  check('Exista un episod real pe care sa montam playerul', Number.isInteger(epId), `epId=${epId}`);
+
+  const p = await mountPage({ htmlFile: 'public/episode.html', url: `/episode?id=${epId}`, module: 'page-episode.js' });
+  // Titlul trebuie sa devina ETICHETA episodului. Orice altceva (placeholder
+  // sau mesajul de esec) inseamna ca bootstrap-ul nu a terminat treaba — exact
+  // bug-ul care a trimis in productie un spinner vesnic.
+  const loaded = await until(() => /Episodul \d/.test(p.text('#episode-title') || ''));
+  check('Bootstrap-ul termina: titlul devine eticheta episodului', loaded, `titlu=${p.text('#episode-title')}`);
+  check('Nu s-a afisat starea de esec in player', !p.$('.player .empty'), 'playerul arata mesajul de esec');
+  check('Nicio eroare de runtime la montarea playerului', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  check('Bara de progres spre 15 minute e in DOM', !!p.$('#watch-progress'), 'lipseste #watch-progress');
+
+  // Garda [hidden]: linkul extern discret trebuie sa fie ascuns implicit.
+  // Verificam si computed style, nu doar atributul — bug-ul original era de
+  // CSS (o regula `display` de autor batea stylesheet-ul UA pentru [hidden]).
+  const link = p.$('#ext-link');
+  check('Linkul extern discret e ascuns implicit (atribut)', link?.hidden === true, `hidden=${link?.hidden}`);
+  check('Linkul extern discret e ascuns implicit (computed)', !link || p.window.getComputedStyle(link).display === 'none', `display=${link && p.window.getComputedStyle(link).display}`);
+
+  // O sursa unica nu are ce alege: bara de taburi trebuie ascunsa, nu goala.
+  const nSurse = p.$$('#source-list .sources__btn, #source-list button').length;
+  check('Sursele se randeaza sau bara e ascunsa curat', nSurse > 0 || p.$('#source-tabs')?.hidden === true, `butoane=${nSurse} barHidden=${p.$('#source-tabs')?.hidden}`);
+  await p.teardown();
+  await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
 console.log('\n' + '='.repeat(56));

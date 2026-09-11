@@ -25,6 +25,11 @@ export function escapeHtml(value) {
 }
 
 /** Escape pentru inserare intr-un atribut de tip URL (previne javascript:). */
+/** Citeste un parametru de query din URL-ul paginii. */
+export function getParam(name) {
+  return new URLSearchParams(location.search).get(name);
+}
+
 export function safeUrl(value, fallback = '#') {
   const v = String(value || '').trim();
   if (!v) return fallback;

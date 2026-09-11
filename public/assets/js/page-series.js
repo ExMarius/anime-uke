@@ -1,10 +1,7 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
-function getParam(name) {
-  return new URLSearchParams(location.search).get(name);
-}
 
 function badge(text, cls = '') {
   const el = document.createElement('span');
@@ -286,7 +283,97 @@ async function initWatchlist(seriesId) {
   });
 }
 
+// ---------------------------------------------------------------------
+// Cufăr cu comori — timpul petrecut pe seria asta devine recompense.
+// Pragurile si acordarea punctelor traieste pe server (/api/chests); aici
+// doar le aratam si deschidem cuferele deblocate.
+// ---------------------------------------------------------------------
+function fmtWatch(sec) {
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm ? `${h}h ${rm}m` : `${h}h`;
+}
+
+function chestCard(ch, totalSeconds, seriesId) {
+  const el = document.createElement('div');
+  el.className = 'chest' + (ch.claimed ? ' chest--claimed' : ch.unlocked ? ' chest--open' : ' chest--locked');
+
+  const icon = document.createElement('div');
+  icon.className = 'chest__icon';
+  icon.textContent = ch.claimed ? '🎉' : ch.icon || '🎁';
+  el.appendChild(icon);
+
+  const name = document.createElement('div');
+  name.className = 'chest__name';
+  name.textContent = ch.name;
+  el.appendChild(name);
+
+  const pts = document.createElement('div');
+  pts.className = 'chest__pts';
+  pts.textContent = ch.claimed ? `+${ch.points} primite` : `+${ch.points} puncte`;
+  el.appendChild(pts);
+
+  if (ch.claimed) {
+    const done = document.createElement('div');
+    done.className = 'chest__state';
+    done.textContent = 'Deschis ✓';
+    el.appendChild(done);
+  } else if (ch.unlocked) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn--accent chest__btn';
+    btn.textContent = 'Deschide cufărul';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const r = await api('/chests', { method: 'POST', body: { series_id: seriesId, tier: ch.tier } });
+      btn.disabled = false;
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut deschide cufărul', 'err'); return; }
+      toast(`${ch.icon || '🎁'} ${ch.name} deschis: +${r.data.pointsAdded} puncte!`, 'ok');
+      await Promise.all([loadChests(seriesId), renderNav('')]);
+    });
+    el.appendChild(btn);
+  } else {
+    const bar = document.createElement('div');
+    bar.className = 'chest__bar';
+    const fill = document.createElement('div');
+    fill.className = 'chest__fill';
+    fill.style.width = `${Math.min(100, Math.round((totalSeconds / ch.seconds) * 100))}%`;
+    bar.appendChild(fill);
+    el.appendChild(bar);
+    const left = document.createElement('div');
+    left.className = 'chest__state';
+    left.textContent = `mai ai ${fmtWatch(Math.max(0, ch.seconds - totalSeconds))}`;
+    el.appendChild(left);
+  }
+  return el;
+}
+
+async function loadChests(seriesId) {
+  const section = document.getElementById('chests-section');
+  if (!section) return;
+  const res = await api(`/chests?series_id=${encodeURIComponent(seriesId)}`);
+  if (!res.ok) { section.hidden = true; return; }
+
+  const d = res.data;
+  section.hidden = false;
+  const row = document.getElementById('chests-row');
+  row.innerHTML = '';
+  for (const ch of d.chests) row.appendChild(chestCard(ch, d.total_seconds, seriesId));
+
+  const opened = d.chests.filter((c) => c.claimed).length;
+  document.getElementById('chests-count').textContent =
+    `${opened}/${d.chests.length} deschise` + (d.total_seconds ? ` · ${fmtWatch(d.total_seconds)} de vizionare` : '');
+  document.getElementById('chests-hint').textContent = d.total_seconds
+    ? 'Timpul se numără cât playerul rulează cu tabul vizibil. Cuferele se deblochează singure.'
+    : 'Pornește un episod: timpul petrecut pe seria asta deblochează cuferele, rând pe rând.';
+}
+
 await renderNav('');
 await load();
 const sid = Number(getParam('id'));
-if (sid) await initWatchlist(sid);
+if (sid) {
+  await initWatchlist(sid);
+  loadChests(sid).catch(() => { /* cuferele sunt optionale: pagina trebuie sa mearga oricum */ });
+}

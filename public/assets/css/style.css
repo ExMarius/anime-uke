@@ -3,6 +3,12 @@
    Vanilla CSS, fara framework. Dark, cu accent crimson (#DC143C).
    ===================================================================== */
 
+/* Atributul `hidden` trebuie sa castige intotdeauna. Orice regula de autor cu
+   `display` bate stylesheet-ul UA ([hidden]{display:none}), deci fara guarda
+   asta un element comutat prin .hidden ar ramane vizibil — exact bug-ul care
+   a lasat linkul extern la vedere pe pagina de episod. */
+[hidden] { display: none !important; }
+
 :root {
   --bg:        #0c0709;
   --bg-2:      #120b0e;
@@ -819,3 +825,92 @@ a.quick__item:hover {
   font-weight: 900; font-size: 2.4rem; color: rgba(255,255,255,.92);
   text-shadow: 0 2px 12px rgba(0,0,0,.45); letter-spacing: -.02em; }
 .thumb .poster__gen { font-size: 1rem; }
+
+/* =====================================================================
+   Banner rotativ (spotlight) — recomanda o serie, se schimba la 3 ore
+   ===================================================================== */
+.spot {
+  position: relative;
+  display: flex; align-items: center; gap: 1rem;
+  margin: 1rem 0 1.4rem; padding: .95rem 2.6rem .95rem .95rem;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(120% 180% at 0% 0%, rgba(220, 20, 60, .28), transparent 55%),
+    linear-gradient(120deg, var(--surface-2, #1a1013), var(--surface, #140c0f));
+  border: 1px solid var(--line);
+  overflow: hidden;
+  animation: spot-in .45s ease both;
+}
+.spot::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .06) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: spot-shimmer 5.5s linear infinite;
+}
+@keyframes spot-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes spot-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+.spot__art { flex: 0 0 auto; width: 74px; height: 74px; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+.spot__art img, .spot__art .poster__gen { width: 100%; height: 100%; object-fit: cover; display: block; }
+.spot__body { min-width: 0; }
+.spot__tag {
+  display: inline-block; margin-bottom: .3rem; padding: .18rem .55rem;
+  font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--accent); background: rgba(220, 20, 60, .14);
+  border: 1px solid rgba(220, 20, 60, .35); border-radius: 99px;
+}
+.spot__title {
+  display: block; font-size: 1.12rem; font-weight: 800; color: var(--text);
+  text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.spot__title:hover { color: var(--accent); }
+.spot__sub { margin: .18rem 0 0; font-size: .8rem; color: var(--dim); }
+.spot__close {
+  position: absolute; top: .5rem; right: .55rem;
+  width: 26px; height: 26px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--dim); cursor: pointer; font-size: .8rem;
+}
+.spot__close:hover { background: var(--surface-3, #241619); color: var(--text); }
+
+@media (max-width: 560px) {
+  .spot { gap: .8rem; padding: .8rem 2.3rem .8rem .8rem; }
+  .spot__art { width: 58px; height: 58px; }
+}
+
+/* =====================================================================
+   Cufăr cu comori — recompense pentru timpul petrecut pe o serie
+   ===================================================================== */
+.chests__hint { margin: 0 0 .8rem; font-size: .82rem; color: var(--dim); }
+.chests__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .8rem; }
+
+.chest {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: .3rem;
+  padding: 1rem .8rem .9rem; text-align: center;
+  border-radius: var(--r-lg); border: 1px solid var(--line);
+  background: var(--surface-2, #1a1013);
+}
+.chest__icon { font-size: 2rem; line-height: 1; filter: saturate(.9); }
+.chest__name { font-weight: 700; font-size: .92rem; }
+.chest__pts { font-size: .78rem; color: var(--accent); font-weight: 700; }
+.chest__state { font-size: .74rem; color: var(--dim); }
+.chest__btn { margin-top: .35rem; padding: .42rem .8rem; font-size: .8rem; }
+
+.chest--locked { opacity: .78; }
+.chest--locked .chest__icon { filter: grayscale(1) brightness(.7); }
+.chest--open {
+  border-color: rgba(220, 20, 60, .55);
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgba(220, 20, 60, .2), transparent 60%),
+    var(--surface-2, #1a1013);
+  animation: chest-glow 1.8s ease-in-out infinite;
+}
+@keyframes chest-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
+  50% { box-shadow: 0 0 18px 0 rgba(220, 20, 60, .35); }
+}
+.chest--claimed { border-color: rgba(34, 197, 94, .4); }
+.chest--claimed .chest__pts { color: var(--ok, #22c55e); }
+
+.chest__bar { width: 100%; height: 6px; margin-top: .45rem; border-radius: 99px; background: var(--surface-3, #1c1216); overflow: hidden; }
+.chest__fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), #ff5c7a); }
