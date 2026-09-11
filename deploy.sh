@@ -52,11 +52,22 @@ else
   ok "exista deja: $DB_NAME ($DB_UUID)"
 fi
 
-# injecteaza UUID-ul in ambele configuri
-for f in wrangler.toml wrangler.local.toml worker-do/wrangler.toml; do
-  sed -i "s/database_id = \"[^\"]*\"/database_id = \"$DB_UUID\"/" "$f"
+# injecteaza UUID-ul in toate configuratiile
+for f in wrangler.prod.toml wrangler.toml wrangler.local.toml worker-do/wrangler.toml; do
+  [ -f "$f" ] && sed -i "s/database_id = \"[^\"]*\"/database_id = \"$DB_UUID\"/" "$f"
 done
-ok "database_id injectat in wrangler.toml (productie), wrangler.local.toml (dev), worker-do/wrangler.toml"
+ok "database_id injectat in toate configuratiile"
+
+# `dev.sh` inlocuieste wrangler.toml cu configuratia LOCALA cat timp ruleaza
+# serverul de dezvoltare. Daca am deploya in acel moment, Pages ar primi
+# bindinguri DO fara script_name si ar respinge configul. Impunem aici
+# sablonul canonic de productie, indiferent de starea lasata de dev.sh.
+if [ -f wrangler.prod.toml ]; then
+  cp -f wrangler.prod.toml wrangler.toml
+  rm -f .wrangler.toml.prod.bak
+  ok "wrangler.toml = configuratie de productie"
+fi
+grep -q 'script_name' wrangler.toml || die "wrangler.toml nu contine script_name — configuratie de productie invalida"
 
 # ---------------------------------------------------------------------
 step "2/5  Schema D1 (remote)"

@@ -16,9 +16,12 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 restore() {
-  if [ -f wrangler.local.toml ] && [ -f .wrangler.toml.prod.bak ]; then
-    mv -f .wrangler.toml.prod.bak wrangler.toml
-    echo "  (wrangler.toml de productie restaurat)"
+  # Restauram din SABLONUL CANONIC, nu dintr-un backup facut la pornire:
+  # daca intre timp a rulat deploy.sh, backupul ar fi putut fi nevalid.
+  if [ -f wrangler.prod.toml ]; then
+    cp -f wrangler.prod.toml wrangler.toml
+    rm -f .wrangler.toml.prod.bak
+    echo "  (wrangler.toml restaurat din wrangler.prod.toml)"
   fi
 }
 trap restore EXIT INT TERM
@@ -27,7 +30,6 @@ if [ ! -f wrangler.local.toml ]; then
   echo "Lipseste wrangler.local.toml" >&2; exit 1
 fi
 
-cp wrangler.toml .wrangler.toml.prod.bak
 cp wrangler.local.toml wrangler.toml
 echo "  (folosesc configuratia locala cu DO inline)"
 
