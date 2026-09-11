@@ -728,3 +728,70 @@ a.quick__item:hover {
 .box__head .box__title { margin-bottom: .8rem; }
 
 .pill--warn { background: rgba(251,191,36,.14); color: var(--warn); border: 1px solid rgba(251,191,36,.28); }
+
+/* ================== ADMIN: SERII / EPISOADE (pagini proprii) ================== */
+
+/* .filters era deja folosit pentru filtrele de invitatii (butoane intr-un
+ * rand), deci bara de cautare+sortare are clasa ei, ca sa nu se suprascrie. */
+.filterbar { display: flex; gap: .7rem; align-items: flex-end; flex-wrap: wrap; padding: .8rem 1rem; }
+.filterbar__search { flex: 1 1 260px; min-width: 0; margin: 0; }
+.filterbar__sort { flex: 0 1 200px; margin: 0; }
+
+.pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 1.1rem 0 2rem; flex-wrap: wrap; }
+.pager__info { font-size: .82rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* miniatura din tabelul de serii — mult mai compacta decat un poster */
+.thumb { width: 34px; height: 48px; border-radius: 5px; overflow: hidden; background: var(--surface-2);
+  display: grid; place-items: center; border: 1px solid var(--line-soft); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb__fallback { font-size: .95rem; color: var(--accent-deep); }
+
+.row-link { color: var(--text); font-weight: 750; text-decoration: none; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
+.row-link:hover { color: var(--accent-hi); border-bottom-color: var(--accent); }
+.ep-num { font-variant-numeric: tabular-nums; font-weight: 850; color: var(--accent-hi); }
+
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; margin-top: 2rem; }
+.section-head .section__title { margin-bottom: .8rem; }
+
+/* --- capul paginii de detaliu a unei serii --- */
+.ser-top { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 1.1rem; align-items: start; margin-bottom: 1.6rem; }
+.ser-poster { aspect-ratio: 2/3; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2);
+  border: 1px solid var(--line-soft); box-shadow: var(--shadow); }
+.ser-poster img { width: 100%; height: 100%; object-fit: cover; }
+.ser-facts { margin: 0; }
+.ser-desc { margin: .9rem 0 0; color: var(--dim); font-size: .86rem; line-height: 1.55; }
+@media (max-width: 640px) { .ser-top { grid-template-columns: 100px minmax(0,1fr); } }
+
+/* --- postare in bloc --- */
+.input--mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; line-height: 1.6; }
+
+.bulk-report { margin-top: 1rem; border-top: 1px solid var(--line-soft); padding-top: .9rem; }
+.bulk-report__head { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; margin-bottom: .7rem; font-size: .88rem; }
+.bulk-report__ok  { color: var(--ok); font-weight: 750; }
+.bulk-report__err { color: var(--warn); font-weight: 750; }
+
+.bulk-preview { max-height: 260px; overflow-y: auto; border: 1px solid var(--line-soft);
+  border-radius: var(--r-md); background: var(--surface-2); }
+.bulk-preview__row { display: grid; grid-template-columns: 70px minmax(0,1fr) minmax(0,1.4fr);
+  gap: .6rem; padding: .4rem .7rem; border-bottom: 1px solid var(--line-soft); font-size: .8rem; align-items: baseline; }
+.bulk-preview__row:last-child { border-bottom: 0; }
+.bulk-preview__num { font-weight: 850; color: var(--accent-hi); font-variant-numeric: tabular-nums; }
+.bulk-preview__title { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-preview__src { color: var(--dim-2); font-size: .74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) {
+  .bulk-preview__row { grid-template-columns: 60px minmax(0,1fr); }
+  .bulk-preview__src { grid-column: 1 / -1; }
+}
+
+.bulk-errors { margin-top: .7rem; max-height: 180px; overflow-y: auto; }
+.bulk-errors__row { padding: .3rem .6rem; font-size: .79rem; color: var(--warn);
+  border-left: 2px solid rgba(251,191,36,.45); background: rgba(251,191,36,.06); margin-bottom: .25rem; }
+
+/* --- cautare + paginare pe pagina principala --- */
+.load-more { display: flex; justify-content: center; margin: 1.6rem 0 2.4rem; }
+
+/* --- unelte din capul sectiunii de serii (sortare + numaratoare) --- */
+.section__tools { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.select--sm { padding: .38rem .7rem; font-size: .8rem; width: auto; }
+
+.bulk-report__warn { color: var(--warn); font-size: .8rem; }

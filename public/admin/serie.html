@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Serie • Admin • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container">
+    <a href="/admin/serii" class="crumb">← Toate seriile</a>
+
+    <header class="hero" style="padding:1.4rem 0 .8rem">
+      <div style="flex:1;min-width:220px">
+        <h1 class="hero__title" id="ser-title" style="font-size:clamp(1.6rem,4vw,2.3rem)">Se încarcă…</h1>
+        <p class="hero__sub" id="ser-sub"></p>
+      </div>
+      <div class="actions">
+        <button class="btn btn--ghost" id="ser-edit" type="button">✏️ Editează seria</button>
+        <button class="btn btn--danger" id="ser-delete" type="button">🗑 Șterge</button>
+      </div>
+    </header>
+
+    <div class="ser-top">
+      <div class="ser-poster" id="ser-poster"></div>
+      <div class="ser-facts box" id="ser-facts"></div>
+    </div>
+
+    <!-- EDITAREA SERIEI -->
+    <div class="box" id="ser-edit-panel" hidden>
+      <h2 class="box__title">Editează seria</h2>
+      <form id="series-edit-form">
+        <div class="row">
+          <div class="field" style="flex:2">
+            <label for="ed-title">Titlu *</label>
+            <input class="input" id="ed-title" name="title" type="text" maxlength="200" required>
+          </div>
+          <div class="field">
+            <label for="ed-status">Status</label>
+            <select class="select" id="ed-status" name="status">
+              <option value="ongoing">În difuzare</option>
+              <option value="completed">Finalizat</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:120px">
+            <label for="ed-year">An</label>
+            <input class="input" id="ed-year" name="year" type="number" min="1900" max="2100">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="ed-genre">Genuri</label>
+            <input class="input" id="ed-genre" name="genre" type="text" maxlength="100">
+          </div>
+          <div class="field" style="flex:2">
+            <label for="ed-cover">URL copertă</label>
+            <input class="input" id="ed-cover" name="cover_image" type="url" maxlength="500">
+          </div>
+        </div>
+        <div class="field">
+          <label for="ed-desc">Descriere</label>
+          <textarea class="input" id="ed-desc" name="description" rows="3" maxlength="2000"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="ser-edit-save" type="submit">Salvează</button>
+          <button class="btn btn--ghost" id="ser-edit-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ======================= EPISOADE ======================= -->
+    <div class="section-head">
+      <h2 class="section__title" id="ep-title">Episoade</h2>
+      <div class="actions">
+        <button class="btn btn--ghost btn--sm" id="toggle-bulk" type="button">📋 Postare în bloc</button>
+        <button class="btn btn--accent btn--sm" id="toggle-ep-form" type="button">＋ Adaugă episod</button>
+      </div>
+    </div>
+
+    <!-- ADAUGARE UNICA -->
+    <div class="box" id="ep-create-panel" hidden>
+      <h2 class="box__title">Episod nou</h2>
+      <form id="episode-form">
+        <div class="row">
+          <div class="field" style="max-width:150px">
+            <label for="e-number">Număr *</label>
+            <input class="input" id="e-number" name="episode_number" type="number" min="1" max="10000" required>
+          </div>
+          <div class="field" style="flex:2">
+            <label for="e-title">Titlu</label>
+            <input class="input" id="e-title" name="title" type="text" maxlength="200" placeholder="Opțional">
+          </div>
+        </div>
+        <div class="field">
+          <label>Surse video</label>
+          <p class="hint">
+            DoodStream acceptă <code>/d/</code> sau <code>/e/</code> — se normalizează automat.
+            Tipul se deduce din URL, dar îl poți schimba manual.
+          </p>
+          <div class="src-builder" id="e-sources"></div>
+          <div class="src-builder__tools">
+            <button class="btn btn--ghost btn--sm" id="e-add-source" type="button">＋ Adaugă o sursă</button>
+            <span class="hint" id="e-sources-count"></span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="episode-submit" type="submit">Adaugă episodul</button>
+          <button class="btn btn--ghost" id="ep-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </div>
+
+    <!--
+      POSTARE IN BLOC
+      La 1000+ serii, adaugarea unui episod pe rand e principalul blocaj.
+      Aici se lipesc zeci de episoade odata. Parsarea se face in browser si
+      se arata un PREVIEW inainte de trimitere — un lot cu o greseala la
+      linia 47 nu trebuie sa ajunga pe server ca sa afli de ea.
+    -->
+    <div class="box" id="bulk-panel" hidden>
+      <h2 class="box__title">Postare în bloc</h2>
+      <p class="hint">
+        Un episod pe linie, în formatul <code>număr | titlu | url1, url2</code>.
+        Titlul e opțional — merge și <code>număr | url1, url2</code>. Liniile
+        goale și cele care încep cu <code>#</code> sunt ignorate.
+      </p>
+      <div class="field">
+        <label class="sr-only" for="bulk-text">Lista de episoade</label>
+        <textarea class="input input--mono" id="bulk-text" rows="10" spellcheck="false"
+placeholder="1 | Romance Dawn | https://doodstream.com/e/abc123
+2 | titlu optional | https://f7hyg4q.org/e/xyz, https://mp4upload.com/embed-q.html
+3 | https://doodstream.com/e/qqq"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn--ghost" id="bulk-preview" type="button">👁 Verifică lista</button>
+        <button class="btn btn--accent" id="bulk-submit" type="submit" disabled>Trimite</button>
+        <button class="btn btn--ghost" id="bulk-cancel" type="button">Renunță</button>
+      </div>
+      <div id="bulk-report" class="bulk-report" hidden></div>
+    </div>
+
+    <!-- FILTRU EPISOADE -->
+    <div class="box filterbar">
+      <div class="field filterbar__search">
+        <label class="sr-only" for="ep-q">Caută episod</label>
+        <input class="input" id="ep-q" type="search" placeholder="Caută după număr sau titlu…" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="box table-wrap">
+      <table id="episodes-table">
+        <thead>
+          <tr><th>Ep.</th><th>Titlu</th><th>Surse</th><th>Vizionări</th><th>Acțiuni</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="pager" id="ep-pager" hidden>
+      <button class="btn btn--ghost btn--sm" id="ep-prev" type="button">← Anterioare</button>
+      <span class="pager__info" id="ep-info"></span>
+      <button class="btn btn--ghost btn--sm" id="ep-next" type="button">Următoarele →</button>
+    </div>
+
+    <!-- PANOUL DE SURSE AL UNUI EPISOD -->
+    <div class="box" id="sources-panel" hidden>
+      <div class="box__head">
+        <h2 class="box__title" id="sources-panel-title">Surse</h2>
+        <button class="btn btn--ghost btn--sm" id="sources-close" type="button">✕ Închide</button>
+      </div>
+      <div class="src-builder" id="sources-list"></div>
+
+      <form id="source-add-form" class="src-add">
+        <h3 class="src-add__title">Adaugă o sursă nouă</h3>
+        <div class="src-add__grid">
+          <div class="field">
+            <label for="s-label">Etichetă</label>
+            <input class="input" id="s-label" name="label" type="text" maxlength="40" placeholder="ex. DoodStream">
+          </div>
+          <div class="field">
+            <label for="s-kind">Tip</label>
+            <select class="select" id="s-kind" name="kind">
+              <option value="embed">Embed (iframe)</option>
+              <option value="file">Fișier video (.mp4/.webm)</option>
+              <option value="link">Link extern</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="s-url">URL *</label>
+          <input class="input" id="s-url" name="url" type="url" required placeholder="https://doodstream.com/e/abc123">
+          <p class="hint" id="s-kind-hint">Se deschide într-un iframe sandbox.</p>
+        </div>
+        <button class="btn btn--accent" id="source-add-submit" type="submit">＋ Adaugă sursa</button>
+      </form>
+    </div>
+
+    <!-- EDITAREA UNUI EPISOD -->
+    <div class="box" id="ep-edit-panel" hidden>
+      <h2 class="box__title" id="ep-edit-title">Editează episodul</h2>
+      <form id="episode-edit-form">
+        <div class="row">
+          <div class="field" style="max-width:150px">
+            <label for="ee-number">Număr *</label>
+            <input class="input" id="ee-number" name="episode_number" type="number" min="1" max="10000" required>
+          </div>
+          <div class="field" style="flex:2">
+            <label for="ee-title">Titlu</label>
+            <input class="input" id="ee-title" name="title" type="text" maxlength="200">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="ep-edit-save" type="submit">Salvează</button>
+          <button class="btn btn--ghost" id="ep-edit-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module" src="/assets/js/page-admin-serie.js"></script>
+</body>
+</html>

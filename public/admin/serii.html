@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Serii • Admin • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container">
+    <a href="/admin" class="crumb">← Panou admin</a>
+    <header class="hero" style="padding:1.4rem 0 .6rem">
+      <div>
+        <h1 class="hero__title" style="font-size:clamp(1.7rem,4vw,2.4rem)">Serii</h1>
+        <p class="hero__sub" id="serii-count">Se încarcă…</p>
+      </div>
+      <button class="btn btn--accent btn--lg" id="toggle-form" type="button">＋ Adaugă serie</button>
+    </header>
+
+    <!--
+      FORMULAR DE CREARE
+      Ascuns implicit: la 1000+ serii, adminul vine aici ca sa CAUTE o serie,
+      nu ca sa adauge una. Sa-i ocupe tot ecranul cu un formular ar fi fost
+      invers fata de fluxul real.
+    -->
+    <div class="box" id="create-panel" hidden>
+      <h2 class="box__title">Serie nouă</h2>
+      <form id="series-form">
+        <div class="row">
+          <div class="field" style="flex:2">
+            <label for="s-title">Titlu *</label>
+            <input class="input" id="s-title" name="title" type="text" maxlength="200" required placeholder="ex. Frieren: Beyond Journey's End">
+          </div>
+          <div class="field">
+            <label for="s-status">Status</label>
+            <select class="select" id="s-status" name="status">
+              <option value="ongoing">În difuzare</option>
+              <option value="completed">Finalizat</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:120px">
+            <label for="s-year">An</label>
+            <input class="input" id="s-year" name="year" type="number" min="1900" max="2100" placeholder="2026">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="s-genre">Genuri</label>
+            <input class="input" id="s-genre" name="genre" type="text" maxlength="100" placeholder="Acțiune, Aventură, Fantasy">
+          </div>
+          <div class="field" style="flex:2">
+            <label for="s-cover">URL copertă</label>
+            <input class="input" id="s-cover" name="cover_image" type="url" maxlength="500" placeholder="https://…">
+          </div>
+        </div>
+        <div class="field">
+          <label for="s-desc">Descriere</label>
+          <textarea class="input" id="s-desc" name="description" rows="3" maxlength="2000" placeholder="Opțional"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="series-submit" type="submit">Adaugă seria</button>
+          <button class="btn btn--ghost" id="series-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- BARA DE FILTRARE -->
+    <div class="box filterbar">
+      <div class="field filterbar__search">
+        <label class="sr-only" for="f-q">Caută</label>
+        <input class="input" id="f-q" type="search" placeholder="Caută după titlu sau gen…" autocomplete="off">
+      </div>
+      <div class="field filterbar__sort">
+        <label class="sr-only" for="f-sort">Sortează</label>
+        <select class="select" id="f-sort"></select>
+      </div>
+    </div>
+
+    <div class="box table-wrap">
+      <table id="series-table">
+        <thead>
+          <tr><th></th><th>Titlu</th><th>Status</th><th>Gen</th><th>An</th><th>Episoade</th><th>Acțiuni</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="pager" id="pager" hidden>
+      <button class="btn btn--ghost btn--sm" id="pg-prev" type="button">← Anterioară</button>
+      <span class="pager__info" id="pg-info"></span>
+      <button class="btn btn--ghost btn--sm" id="pg-next" type="button">Următoarea →</button>
+    </div>
+  </main>
+
+  <script type="module" src="/assets/js/page-admin-serii.js"></script>
+</body>
+</html>

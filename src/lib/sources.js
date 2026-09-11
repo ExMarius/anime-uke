@@ -40,16 +40,23 @@ const VIDEO_EXT = /\.(mp4|webm|ogv|ogg|mov|m4v|m3u8)(\?.*)?$/i;
 // Sugerate in panoul de admin ca etichete rapide. Nu e o restrictie —
 // orice domeniu https trece, ca sa nu fie nevoie de deploy pentru un
 // furnizor nou.
+/**
+ * Fiecare furnizor are `kind` declarat explicit. Inainte tipul era ghicit din
+ * eticheta cu un regex /MP4/i, ceea ce clasifica gresit „Mp4Upload" (un
+ * furnizor de embed) drept fisier video — si apoi validarea cerea o extensie
+ * .mp4 pe care URL-ul de embed nu o are, deci adminul era impins sa salveze
+ * sursa ca „link extern" si episodul nu mai rula in player.
+ */
 export const KNOWN_PROVIDERS = [
-  { label: 'DoodStream', hint: 'https://doodstream.com/e/…' },
-  { label: 'VidStreaming', hint: 'https://vidstreaming.com/streaming.php?id=…' },
-  { label: 'StreamTape', hint: 'https://streamtape.com/e/…' },
-  { label: 'Mp4Upload', hint: 'https://www.mp4upload.com/embed-…html' },
-  { label: 'Filemoon', hint: 'https://filemoon.sx/e/…' },
-  { label: 'MixDrop', hint: 'https://mixdrop.co/e/…' },
-  { label: 'Upstream', hint: 'https://upstream.to/embed-…html' },
-  { label: 'YouTube', hint: 'https://www.youtube.com/embed/…' },
-  { label: 'Fișier MP4', hint: 'https://…/episod.mp4' },
+  { label: 'DoodStream',   kind: 'embed', hint: 'https://doodstream.com/e/…' },
+  { label: 'VidStreaming', kind: 'embed', hint: 'https://vidstreaming.com/streaming.php?id=…' },
+  { label: 'StreamTape',   kind: 'embed', hint: 'https://streamtape.com/e/…' },
+  { label: 'Mp4Upload',    kind: 'embed', hint: 'https://www.mp4upload.com/embed-…html' },
+  { label: 'Filemoon',     kind: 'embed', hint: 'https://filemoon.sx/e/…' },
+  { label: 'MixDrop',      kind: 'embed', hint: 'https://mixdrop.co/e/…' },
+  { label: 'Upstream',     kind: 'embed', hint: 'https://upstream.to/embed-…html' },
+  { label: 'YouTube',      kind: 'embed', hint: 'https://www.youtube.com/embed/…' },
+  { label: 'Fișier MP4',   kind: 'file',  hint: 'https://…/episod.mp4' },
 ];
 
 /**
@@ -65,15 +72,30 @@ function hostOf(raw) {
 }
 
 /**
- * DoodStream: link-ul de download (/d/xxx) nu e embed-abil; il normalizam
- * la /e/xxx. Restul furnizorilor sunt lasati asa cum i-a dat adminul.
+ * DoodStream isi roteste domeniile agresiv: langa doodstream.com / dood.so /
+ * dood.wf apar gazde complet opace, de tipul f7hyg4q.org. Daca ne luam dupa
+ * numele gazdei, un link valid pe un domeniu nou nu mai era recunoscut si
+ * ramanea ca „/d/" — adica pagina de descarcare, care NU e embed-abila.
+ *
+ * De aceea recunoastem dupa FORMA URL-ului, nu dupa gazda: `/d/<id>` sau
+ * `/e/<id>` cu un id alfanumeric. Riscul de fals pozitiv e mic, iar
+ * consecventa e benigna: un URL care oricum ar fi fost transformat in /e/.
  */
+// Id-urile reale DoodStream au ~12 caractere. Pragul de 4 lasa loc variantelor
+// mai scurte, iar ancora pe intregul pathname mentine riscul de fals pozitiv
+// aproape de zero: ar trebui ca altcineva sa serveasca fix `/d/<4+ litere>`
+// la radacina domeniului.
+const DOOD_PATH = /^\/([ed])\/([A-Za-z0-9]{4,})$/;
+
+/** Intoarce true daca URL-ul arata ca un embed DoodStream pe orice gazda. */
+export function looksLikeDoodstream(url) {
+  return DOOD_PATH.test(url.pathname);
+}
+
+/** Link-ul de download (/d/xxx) nu e embed-abil; il normalizam la /e/xxx. */
 function normalizeDoodstream(url) {
-  const host = url.hostname.toLowerCase();
-  const isDood = /(^|\.)dood(stream)?\.[a-z]+$/.test(host) || /(^|\.)dood\.[a-z]{2,}$/.test(host);
-  if (!isDood) return url;
-  const m = url.pathname.match(/^\/[ed]\/([A-Za-z0-9]+)$/);
-  if (m) url.pathname = `/e/${m[1]}`;
+  const m = url.pathname.match(DOOD_PATH);
+  if (m) url.pathname = `/e/${m[2]}`;
   return url;
 }
 
@@ -84,8 +106,8 @@ function normalizeDoodstream(url) {
 export function validateSource(input) {
   if (!input || typeof input !== 'object') return { ok: false, error: 'Sursă invalidă' };
 
-  const kind = String(input.kind || 'embed').trim().toLowerCase();
-  if (!SOURCE_KINDS.includes(kind)) {
+  let kind = String(input.kind || '').trim().toLowerCase();
+  if (kind && !SOURCE_KINDS.includes(kind)) {
     return { ok: false, error: 'Tip de sursă necunoscut (embed / file / link)' };
   }
 
@@ -112,6 +134,12 @@ export function validateSource(input) {
       error: 'Pentru tipul „fișier video” URL-ul trebuie să se termine în .mp4, .webm, .ogv sau .m3u8',
     };
   }
+
+  // Tipul nespecificat se deduce din URL: o extensie video inseamna fisier,
+  // orice altceva (inclusiv /d/xxx sau /e/xxx de la DoodStream) inseamna
+  // embed. Asta il scuteste pe admin sa aleaga manual si, mai important, il
+  // impiedica sa aleaga gresit „link extern" pentru un embed.
+  if (!kind) kind = VIDEO_EXT.test(url.pathname + url.search) ? 'file' : 'embed';
 
   url = normalizeDoodstream(url);
 

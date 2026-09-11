@@ -102,7 +102,7 @@ export async function onRequestGet(context) {
         .prepare(
           `SELECT s.id, s.title, s.cover_image, s.status, s.genre, s.year,
                   COALESCE((SELECT SUM(views) FROM episodes WHERE series_id = s.id), 0) AS total_views,
-                  (SELECT COUNT(*) FROM episodes WHERE series_id = s.id)               AS episode_count
+                  s.episode_count                                             AS episode_count
            FROM anime_series s
            WHERE s.id NOT IN (
              SELECT DISTINCT e.series_id FROM watched_history w

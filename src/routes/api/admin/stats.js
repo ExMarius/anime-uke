@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
          (SELECT COUNT(*) FROM users WHERE is_admin = 1)         AS total_admins,
          (SELECT COUNT(*) FROM users WHERE is_banned = 1)        AS total_banned,
          (SELECT COUNT(*) FROM anime_series)                     AS total_series,
-         (SELECT COUNT(*) FROM episodes)                         AS total_episodes,
+         (SELECT COALESCE(SUM(episode_count), 0) FROM anime_series) AS total_episodes,
          (SELECT COALESCE(SUM(views), 0) FROM episodes)          AS total_views,
          (SELECT COUNT(*) FROM watched_history)                  AS total_watched,
          (SELECT COUNT(*) FROM chat_messages)                    AS total_chat_messages`

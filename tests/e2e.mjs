@@ -334,6 +334,143 @@ console.log('\n=== 5b. SURSE VIDEO (CRUD) ===');
   check('Audit: add_source / edit_source / delete_source consemnate', ['add_source', 'edit_source', 'delete_source'].every((a) => actions.includes(a)), actions.join(','));
 }
 
+console.log('\n=== 5c. SCALARE: paginare, cautare, contoare, editare, postare in bloc ===');
+// Sectiunea isi creeaza propria serie si o sterge la final, ca sa nu strice
+// numarul de episoade pe care il verifica sectiunile 7 si 8.
+{
+  const j = globalThis.admin;
+
+  const tmp = await req(j, 'POST', '/api/admin/series', { title: 'Serie de test scalare', status: 'ongoing', year: 2026 });
+  check('Sectiunea de scalare isi creeaza propria serie', tmp.status === 201 && Number.isInteger(tmp.data?.id), JSON.stringify(tmp.data).slice(0, 100));
+  const sid = tmp.data?.id;
+
+  // --- paginare si cautare pe lista publica ---
+  const p1 = await req(j, 'GET', '/api/series?per_page=2&page=1');
+  check('Lista publica e paginata', p1.status === 200 && p1.data?.series?.length <= 2, `status=${p1.status} n=${p1.data?.series?.length}`);
+  check('Raspunsul include meta de paginare', p1.data?.per_page === 2 && typeof p1.data?.has_more === 'boolean' && p1.data?.page === 1, JSON.stringify({ ...p1.data, series: undefined }));
+  check('Optiunile de sortare vin de pe server', Array.isArray(p1.data?.sorts) && p1.data.sorts.length === 4, JSON.stringify(p1.data?.sorts));
+
+  if (p1.data?.has_more) {
+    const p2 = await req(j, 'GET', '/api/series?per_page=2&page=2');
+    const ids1 = (p1.data.series || []).map((x) => x.id);
+    const ids2 = (p2.data.series || []).map((x) => x.id);
+    check('Pagina 2 nu repeta elementele de pe pagina 1', !ids2.some((id) => ids1.includes(id)), `${ids1} vs ${ids2}`);
+  }
+
+  const big = await req(j, 'GET', '/api/series?per_page=99999');
+  check('per_page exagerat e limitat, nu onorat', big.data?.per_page <= 60, `per_page=${big.data?.per_page}`);
+  const negPage = await req(j, 'GET', '/api/series?page=-5');
+  check('page negativ cade pe pagina 1', negPage.data?.page === 1, `page=${negPage.data?.page}`);
+
+  const found = await req(j, 'GET', '/api/series?q=scalare');
+  check('Cautarea gaseste seria dupa titlu', found.data?.total >= 1 && found.data.series.some((x) => /scalare/i.test(x.title)), JSON.stringify(found.data?.series?.map((x) => x.title)));
+  const notFound = await req(j, 'GET', '/api/series?q=zzz_nu_exista');
+  check('Cautarea fara rezultate intoarce lista goala, nu eroare', notFound.status === 200 && notFound.data?.series?.length === 0 && notFound.data?.total === 0, `status=${notFound.status}`);
+  const escaped = await req(j, 'GET', '/api/series?q=%25');
+  check('Caracterele LIKE sunt escaped (% nu devine wildcard)', escaped.status === 200 && escaped.data?.series?.length === 0, `n=${escaped.data?.series?.length}`);
+
+  // --- sortare ---
+  const byTitle = await req(j, 'GET', '/api/series?sort=title&per_page=5');
+  check('Sortarea pe titlu e acceptata', byTitle.status === 200 && byTitle.data?.sort === 'title', `sort=${byTitle.data?.sort}`);
+  const badSort = await req(j, 'GET', '/api/series?sort=;DROP+TABLE');
+  check('Sortarea necunoscuta cade pe implicita, nu pe SQL injectat', badSort.status === 200 && badSort.data?.sort === 'latest', `sort=${badSort.data?.sort}`);
+
+  // --- editare serie (PATCH partial) ---
+  const patch = await req(j, 'PATCH', '/api/admin/series', { id: sid, year: 1999, genre: 'Shonen' });
+  check('PATCH serie salveaza campurile trimise', patch.status === 200 && patch.data?.series?.year === 1999 && patch.data.series.genre === 'Shonen', JSON.stringify(patch.data).slice(0, 150));
+  check('PATCH partial nu goleste campurile netrimise', patch.data?.series?.title === 'Serie de test scalare', `title=${patch.data?.series?.title}`);
+  const noop = await req(j, 'PATCH', '/api/admin/series', { id: sid });
+  check('PATCH fara modificari → unchanged', noop.status === 200 && noop.data?.unchanged === true, JSON.stringify(noop.data).slice(0, 100));
+  const badPatch = await req(j, 'PATCH', '/api/admin/series', { id: sid, status: 'inventat' });
+  check('PATCH cu status invalid → 400', badPatch.status === 400, `status=${badPatch.status}`);
+  const ghostPatch = await req(j, 'PATCH', '/api/admin/series', { id: 999999, year: 2000 });
+  check('PATCH pe serie inexistenta → 404', ghostPatch.status === 404, `status=${ghostPatch.status}`);
+  const detail = await req(j, 'GET', `/api/admin/series?id=${sid}`);
+  check('Detaliul de serie include total_views', detail.status === 200 && typeof detail.data?.series?.total_views === 'number', JSON.stringify(detail.data?.series).slice(0, 140));
+
+  // --- postare in bloc ---
+  const bulk = await req(j, 'POST', '/api/admin/episodes', {
+    series_id: sid,
+    episodes: [
+      { episode_number: 1, title: 'Unu', sources: [{ label: 'Dood', kind: 'embed', url: 'https://doodstream.com/d/aB3xY9zQ12' }] },
+      // domeniu rotit + link vechi: trebuie normalizat automat la /e/
+      { episode_number: 2, title: 'Doi', sources: [{ kind: 'embed', url: 'https://f7hyg4q.org/d/kM8nQ2xW47' }, { kind: 'file', url: 'https://cdn.x.com/2.mp4' }] },
+      { episode_number: 3, title: '', sources: [] },
+      { episode_number: 2, title: 'duplicat in lista', sources: [] },
+      { episode_number: 0, title: 'numar invalid', sources: [] },
+    ],
+  });
+  check('Bulk creeaza episoadele valide', bulk.status === 201 && bulk.data?.created === 3, JSON.stringify(bulk.data).slice(0, 160));
+  check('Bulk raporteaza erorile cu numarul liniei', bulk.data?.errors?.length === 2 && bulk.data.errors.every((e) => typeof e.line === 'number'), JSON.stringify(bulk.data?.errors));
+  check('Un duplicat din lista nu anuleaza tot lotul', bulk.data?.created === 3 && bulk.data?.skipped === 0, JSON.stringify({ created: bulk.data?.created, skipped: bulk.data?.skipped }));
+
+  const again = await req(j, 'POST', '/api/admin/episodes', {
+    series_id: sid,
+    episodes: [{ episode_number: 2, title: 'deja exista', sources: [] }],
+  });
+  check('Repostarea unui episod existent e sarita, nu respinsa', again.status === 200 && again.data?.created === 0 && again.data?.skipped === 1, JSON.stringify(again.data).slice(0, 140));
+
+  // --- contoare denormalizate pe seria de test ---
+  const after = await req(j, 'GET', `/api/admin/series?id=${sid}`);
+  check('episode_count se sincronizeaza dupa bulk', after.data?.series?.episode_count === 3, `episode_count=${after.data?.series?.episode_count}`);
+
+  // Episoadele NU vin in detaliul de serie: la 1000 de episoade ar insemna
+  // un raspuns urias. Se cer separat, paginat, de la /api/admin/episodes.
+  const eps = await req(j, 'GET', `/api/admin/episodes?series_id=${sid}&per_page=50`);
+  check('Lista de episoade a seriei vine paginata, cu sursele incluse', eps.status === 200 && eps.data?.episodes?.length === 3 && Array.isArray(eps.data.episodes[0]?.sources), `n=${eps.data?.episodes?.length}`);
+
+  // --- editare episod (PATCH) ---
+  const epId = eps.data?.episodes?.find((e) => e.episode_number === 3)?.id;
+  check('Episodul cautat e identificabil in lista paginata', Number.isInteger(epId), `epId=${epId}`);
+  const epPatch = await req(j, 'PATCH', '/api/admin/episodes', { id: epId, title: 'Titlu editat' });
+  check('PATCH episod schimba titlul', epPatch.status === 200 && epPatch.data?.episode?.title === 'Titlu editat', JSON.stringify(epPatch.data).slice(0, 140));
+  check('PATCH episod pastreaza numarul netrimis', epPatch.data?.episode?.episode_number === 3, `num=${epPatch.data?.episode?.episode_number}`);
+  const conflict = await req(j, 'PATCH', '/api/admin/episodes', { id: epId, episode_number: 1 });
+  check('Mutarea pe un numar deja folosit → 409', conflict.status === 409, `status=${conflict.status}`);
+  const anonPatch = await req(jar(), 'PATCH', '/api/admin/episodes', { id: epId, title: 'x' });
+  check('PATCH episod cere admin → 401', anonPatch.status === 401, `status=${anonPatch.status}`);
+
+  // --- normalizare DoodStream pe domeniu rotit ---
+  const ep2 = eps.data?.episodes?.find((e) => e.episode_number === 2);
+  check('DoodStream pe domeniu rotit e normalizat /d/ → /e/', ep2?.sources?.[0]?.url === 'https://f7hyg4q.org/e/kM8nQ2xW47', ep2?.sources?.[0]?.url);
+  check('Sursa de tip fisier ramane fisier in acelasi lot', ep2?.sources?.[1]?.kind === 'file' && ep2.sources[1].url.endsWith('2.mp4'), JSON.stringify(ep2?.sources));
+
+  // --- pagini admin cu URL propriu ---
+  const listPage = await raw(j, '/admin/serii');
+  check('GET /admin/serii logat → 200 (pagina noua de liste)', listPage.status === 200, `status=${listPage.status} loc=${listPage.location}`);
+  check('Pagina de liste isi incarca scriptul', /page-admin-serii\.js/.test(listPage.text), listPage.text.slice(0, 100));
+
+  const detailPage = await raw(j, `/admin/serie/${sid}`);
+  check('GET /admin/serie/<id> logat → 200 (ruta dinamica)', detailPage.status === 200, `status=${detailPage.status} loc=${detailPage.location}`);
+  check('Pagina de detaliu isi incarca scriptul', /page-admin-serie\.js/.test(detailPage.text), detailPage.text.slice(0, 100));
+
+  const anonList = await raw(jar(), '/admin/serii');
+  check('/admin/serii fara cont → 302 la login', anonList.status === 302 && String(anonList.location).startsWith('/login'), `status=${anonList.status}`);
+  const anonDetail = await raw(jar(), `/admin/serie/${sid}`);
+  check('/admin/serie/<id> fara cont → 302 la login', anonDetail.status === 302, `status=${anonDetail.status}`);
+  check('Redirectul pastreaza destinatia completa', String(anonDetail.location).includes(encodeURIComponent(`/admin/serie/${sid}`)), anonDetail.location);
+
+  const dash = await raw(j, '/admin');
+  check('Dashboard-ul admin nu mai are taburile mutate', !/panel-series/.test(dash.text) && !/panel-episodes/.test(dash.text), 'taburi vechi inca prezente');
+  check('Dashboard-ul admin leaga spre pagina noua', /\/admin\/serii/.test(dash.text), 'lipseste linkul');
+
+  // --- stergerea seriei scade ambele contoare ---
+  const beforeDel = await req(j, 'GET', '/api/series?per_page=50');
+  const totalBefore = beforeDel.data?.total;
+  const epsBefore = beforeDel.data?.total_episodes;
+
+  const del = await req(j, 'DELETE', `/api/admin/series?id=${sid}`);
+  check('Stergerea seriei raporteaza cate episoade a luat cu ea', del.status === 200 && del.data?.deleted_episodes === 3, JSON.stringify(del.data));
+
+  const afterDel = await req(j, 'GET', '/api/series?per_page=50');
+  check('series_total scade la stergerea unei serii', afterDel.data?.total === totalBefore - 1, `${totalBefore} → ${afterDel.data?.total}`);
+  check('episodes_total scade cu numarul de episoade al seriei', afterDel.data?.total_episodes === epsBefore - 3, `${epsBefore} → ${afterDel.data?.total_episodes}`);
+
+  const log = await req(j, 'GET', '/api/admin/log?limit=50');
+  const acts = (log.data?.log || []).map((a) => a.action);
+  check('Audit: edit_series / edit_episode / bulk_create_episodes consemnate', ['edit_series', 'edit_episode', 'bulk_create_episodes'].every((a) => acts.includes(a)), acts.slice(0, 12).join(','));
+}
+
 console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
 {
   // Site-ul e privat, deci listele se citesc cu o sesiune valida.

@@ -83,6 +83,65 @@ export function validateSeries(input) {
   };
 }
 
+const SERIES_PATCH_FIELDS = ['title', 'description', 'cover_image', 'status', 'genre', 'year'];
+
+/**
+ * Validare partiala pentru editarea unei serii.
+ *
+ * Combineaza campurile trimise cu randul existent si reuseste validateSeries()
+ * pe obiectul rezultat. Astfel regulile raman intr-un singur loc: daca maine
+ * schimbam limita de lungime a titlului, se aplica si la creare si la editare.
+ *
+ * Intoarcem doar campurile care chiar s-au schimbat, ca UPDATE-ul sa nu
+// atinga coloane identice (si sa nu apara modificari fantoma in audit).
+ */
+export function validateSeriesPatch(input, existing) {
+  if (!input || typeof input !== 'object') return { ok: false, error: 'Cerere invalidă' };
+
+  const merged = { ...existing };
+  const provided = [];
+  for (const f of SERIES_PATCH_FIELDS) {
+    if (input[f] !== undefined) { merged[f] = input[f]; provided.push(f); }
+  }
+  if (!provided.length) return { ok: true, value: {}, provided: [] };
+
+  const v = validateSeries(merged);
+  if (!v.ok) return v;
+
+  const value = {};
+  for (const f of provided) {
+    const nv = v.value[f];
+    if (nv !== existing[f]) value[f] = nv;
+  }
+  return { ok: true, value, provided };
+}
+
+/** Validare partiala pentru editarea unui episod (titlu, numar, serie). */
+export function validateEpisodePatch(input, existing) {
+  if (!input || typeof input !== 'object') return { ok: false, error: 'Cerere invalidă' };
+
+  const merged = {
+    series_id: existing.series_id,
+    episode_number: existing.episode_number,
+    title: existing.title,
+    sources: [], // sursele se gestioneaza separat, prin /api/admin/episode-sources
+  };
+  const provided = [];
+  for (const f of ['series_id', 'episode_number', 'title']) {
+    if (input[f] !== undefined) { merged[f] = input[f]; provided.push(f); }
+  }
+  if (!provided.length) return { ok: true, value: {}, provided: [] };
+
+  const v = validateEpisode(merged);
+  if (!v.ok) return v;
+
+  const value = {};
+  for (const f of provided) {
+    if (v.value[f] !== existing[f]) value[f] = v.value[f];
+  }
+  return { ok: true, value, provided };
+}
+
 export function validateEpisode(input) {
   const seriesId = Number(input.series_id);
   if (!Number.isInteger(seriesId) || seriesId <= 0) {

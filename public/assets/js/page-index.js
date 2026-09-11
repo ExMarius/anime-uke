@@ -1,9 +1,21 @@
 import { api, renderNav, toast, getSession, safeUrl } from './core.js';
 import { initChat, openChat } from './chat.js';
 
-// Pagina principala: hero + cautare client-side + grila de serii + chat.
+// Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
+//
+// Inainte se incarcau toate seriile odata (pana la 500) si se filtrau in
+// browser. La 1000+ serii asta se rupea: API-ul se oprea la 500, deci
+// jumatate din catalog era invizibil, si fiecare vizita citea sute de
+// randuri din D1. Acum cerem cate o pagina si cautarea se face pe server.
 
-let allSeries = [];
+const PER_PAGE = 24;
+
+let allSeries = [];      // seriile incarcate pana acum (toate paginile)
+let page = 1;
+let query = '';
+let sort = 'latest';
+let sortsLoaded = false;
+let searchTimer = null;
 
 // ---------------- skeleton loading ----------------
 function skeletons(n = 10) {
@@ -105,62 +117,129 @@ function fallback() {
 }
 
 // ---------------- render + cautare ----------------
-function render(list) {
+/** Reseteaza grila si afiseaza tot ce am incarcat pana acum. */
+function render() {
   const grid = document.getElementById('series-grid');
   const count = document.getElementById('series-count');
   grid.innerHTML = '';
 
-  if (!list.length) {
+  if (!allSeries.length) {
     grid.appendChild(emptyState(
-      allSeries.length ? 'Nicio potrivire' : 'Încă nu există serii',
-      allSeries.length ? 'Încearcă alt termen de căutare.' : 'Adaugă prima serie din panoul de administrare.'
+      query ? 'Nicio potrivire' : 'Încă nu există serii',
+      query ? 'Încearcă alt termen de căutare.' : 'Adaugă prima serie din panoul de administrare.'
     ));
-    count.textContent = allSeries.length ? `0 din ${allSeries.length}` : '';
+    count.textContent = query ? '0 rezultate' : '';
     return;
   }
-
-  count.textContent = `${list.length} ${list.length === 1 ? 'serie' : 'serii'}`;
-  for (const s of list) grid.appendChild(seriesCard(s));
+  count.textContent = `${allSeries.length} afișate`;
+  for (const s of allSeries) grid.appendChild(seriesCard(s));
 }
 
-function filter(q) {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return render(allSeries);
-  const out = allSeries.filter((s) =>
-    [s.title, s.genre, s.description, s.year].some((v) => String(v ?? '').toLowerCase().includes(needle))
-  );
-  render(out);
+function fillSorts(sorts) {
+  if (sortsLoaded) return;
+  const sel = document.getElementById('sort-select');
+  if (!sel || !sorts?.length) return;
+  sel.innerHTML = '';
+  for (const o of sorts) {
+    const opt = document.createElement('option');
+    opt.value = o.value;
+    opt.textContent = o.label;
+    sel.appendChild(opt);
+  }
+  sel.value = sort;
+  sortsLoaded = true;
+}
+
+function setHeroStats(data) {
+  const total = data.total;
+  const eps = data.total_episodes;
+  if (!query && total != null) document.getElementById('stat-series').textContent = total.toLocaleString('ro-RO');
+  if (!query && eps != null) document.getElementById('stat-episodes').textContent = Number(eps).toLocaleString('ro-RO');
 }
 
 // ---------------- incarcare ----------------
-async function load() {
-  skeletons(10);
-  const res = await api('/series');
+/**
+ * @param {boolean} append  true = adauga pagina la ce e deja afisat
+ */
+async function load({ append = false, silent = false } = {}) {
+  const grid = document.getElementById('series-grid');
+  if (!append && !silent) skeletons(Math.min(PER_PAGE, 10));
+
+  const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE), sort });
+  if (query) params.set('q', query);
+
+  const res = await api(`/series?${params}`);
 
   if (!res.ok) {
-    document.getElementById('series-grid').innerHTML = '';
-    document.getElementById('series-grid').appendChild(
-      emptyState('Nu am putut încărca seriile', res.data?.error || 'Verifică conexiunea și reîncearcă.')
-    );
-    document.getElementById('series-count').textContent = '';
+    if (!append) {
+      grid.innerHTML = '';
+      grid.appendChild(emptyState('Nu am putut încărca seriile', res.data?.error || 'Verifică conexiunea și reîncearcă.'));
+      document.getElementById('series-count').textContent = '';
+    }
     toast(res.data?.error || 'Eroare la încărcarea seriilor', 'err');
     return;
   }
 
-  allSeries = res.data.series || [];
-  render(allSeries);
+  const data = res.data;
+  fillSorts(data.sorts);
 
-  const totalEp = allSeries.reduce((n, s) => n + (s.episode_count || 0), 0);
-  document.getElementById('stat-series').textContent = allSeries.length;
-  document.getElementById('stat-episodes').textContent = totalEp;
+  if (!append) {
+    allSeries = data.series || [];
+  } else {
+    // Apararea impotriva duplicatelor: daca intre doua cereri a fost adaugata
+    // o serie noua, paginarea se decaleaza si am putea primi acelasi rand de
+    // doua ori. Filtram dupa id.
+    const have = new Set(allSeries.map((s) => s.id));
+    for (const s of data.series || []) if (!have.has(s.id)) allSeries.push(s);
+  }
 
-  const user = await getSession();
-  document.getElementById('stat-points').textContent = user ? user.points : '0';
+  render();
+  setHeroStats(data);
+
+  const wrap = document.getElementById('load-more-wrap');
+  const btn = document.getElementById('load-more');
+  wrap.hidden = !data.has_more;
+  btn.disabled = false;
+  btn.textContent = data.total != null
+    ? `Încarcă mai multe (${allSeries.length} din ${data.total})`
+    : 'Încarcă mai multe';
+
+  if (!append) {
+    const user = await getSession();
+    document.getElementById('stat-points').textContent = user ? user.points : '0';
+  }
+}
+
+/** Cautarea se face pe server, deci resetam paginarea la fiecare termen nou. */
+function search(q) {
+  query = q.trim();
+  page = 1;
+  load();
 }
 
 await renderNav('/');
 skeletons(10);
 await Promise.all([load(), initChat()]);
 
-document.getElementById('search-input')?.addEventListener('input', (e) => filter(e.target.value));
+// Debounce: fara el, fiecare litera tastata ar insemna un LIKE pe tot
+// tabelul de serii — iar cautarea e exact operatia care nu e indexabila.
+document.getElementById('search-input')?.addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  const v = e.target.value;
+  searchTimer = setTimeout(() => search(v), 280);
+});
+
+document.getElementById('sort-select')?.addEventListener('change', (e) => {
+  sort = e.target.value;
+  page = 1;
+  load();
+});
+
+document.getElementById('load-more')?.addEventListener('click', async (e) => {
+  e.currentTarget.disabled = true;
+  e.currentTarget.textContent = 'Se încarcă…';
+  page++;
+  await load({ append: true, silent: true });
+});
+
 document.getElementById('hero-chat')?.addEventListener('click', openChat);

@@ -43,9 +43,22 @@
     <section class="section" id="serii">
       <div class="section__head">
         <h2 class="section__title">Serii disponibile</h2>
-        <span class="section__count" id="series-count">Se încarcă…</span>
+        <div class="section__tools">
+          <label class="sr-only" for="sort-select">Ordonează</label>
+          <select class="select select--sm" id="sort-select"></select>
+          <span class="section__count" id="series-count">Se încarcă…</span>
+        </div>
       </div>
       <div id="series-grid" class="grid" aria-live="polite"></div>
+      <!--
+        „Incarca mai multe" in loc de paginare numerotata: ca sa stim numarul
+        total de pagini ar trebui un COUNT(*) pe tot tabelul la fiecare
+        vizualizare, iar la 1000+ serii asta ar consuma aproape toata cota
+        gratuita D1. Asa cerem doar un rand in plus fata de pagina.
+      -->
+      <div class="load-more" id="load-more-wrap" hidden>
+        <button class="btn btn--ghost btn--lg" id="load-more" type="button">Încarcă mai multe</button>
+      </div>
     </section>
   </main>
 

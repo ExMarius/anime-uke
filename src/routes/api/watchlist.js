@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
       .prepare(
         `SELECT w.series_id, w.added_at,
                 s.title, s.cover_image, s.status, s.genre, s.year,
-                (SELECT COUNT(*) FROM episodes WHERE series_id = s.id) AS episode_count
+                s.episode_count
          FROM watchlist w JOIN anime_series s ON s.id = w.series_id
          WHERE w.user_id = ?
          ORDER BY w.added_at DESC, w.id DESC

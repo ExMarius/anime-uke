@@ -124,8 +124,49 @@ function allowedMethods(path) {
 // (local, wrangler raspundea cu un 502 care includea calea absoluta pe disc).
 const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.sql'];
 
+/**
+ * Pagini al caror URL contine un parametru de cale.
+ *
+ * `/admin/serie/123` serveste continutul lui `public/admin/serie.html`, iar
+ * JavaScript-ul citeste id-ul din `location.pathname`. Astfel URL-ul ramane
+ * curat si poate fi pus in bookmark sau trimis, fara sa fie nevoie de un
+ * fisier fizic pentru fiecare serie.
+ *
+ * ATENTIE: aici se serveste un asset la o ALTA cale decat cea ceruta, exact
+ * situatia care a produs bucla de la /profile. De aceea raspunsurile de
+ * redirect nu sunt pasate clientului — vezi followAssetRedirect().
+ */
+const DYNAMIC_PAGES = [
+  { re: /^\/admin\/serie\/\d+\/?$/, asset: '/admin/serie' },
+];
+
+function assetPathFor(path) {
+  for (const rule of DYNAMIC_PAGES) {
+    if (rule.re.test(path)) return rule.asset;
+  }
+  return null;
+}
+
+/**
+ * Urmareste un singur redirect intern de la routerul de assete.
+ *
+ * Routerul Pages aplica „clean URLs": pentru /admin/serie.html raspunde cu
+ * 308 catre /admin/serie. Daca am pasa redirectul acela browserului in timp
+ * ce el ceruse /admin/serie/123, am obtine o bucla. Il rezolvam aici, in
+ * interiorul workerului, iar daca si al doilea raspuns e un redirect ne
+ * oprim — mai bine un 404 onest decat o bucla infinita.
+ */
+async function followAssetRedirect(env, origin, location, headers) {
+  if (!location) return null;
+  const target = new URL(location, origin);
+  const res = await env.ASSETS.fetch(new Request(target.toString(), { method: 'GET', headers }));
+  if (res.status >= 300 && res.status < 400) return null;
+  return res;
+}
+
 async function serveStatic(request, env) {
-  const path = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const path = url.pathname;
 
   if (BLOCKED_PATHS.includes(path) || path.startsWith('/.git') || path.startsWith('/migrations')) {
     return jsonResponse({ error: 'Not found' }, 404);
@@ -135,12 +176,22 @@ async function serveStatic(request, env) {
     return jsonResponse({ error: 'Assetele statice nu sunt disponibile' }, 500);
   }
 
-  // NU remapam /profile -> /profile.html. Routerul de assete Pages aplica
-  // deja „clean URLs": serveste profile.html la /profile si raspunde cu
-  // 308 catre /profile daca primeste /profile.html. O remapare in sensul
-  // asta inchidea o bucla infinita de redirecturi (ERR_TOO_MANY_REDIRECTS).
+  // Pentru caile obisnuite NU remapam nimic: routerul de assete Pages stie
+  // deja sa serveasca profile.html la /profile. O remapare /profile ->
+  // /profile.html ar inchide o bucla infinita (ERR_TOO_MANY_REDIRECTS).
+  const assetPath = assetPathFor(path);
+  const assetRequest = assetPath
+    ? new Request(new URL(assetPath, url.origin).toString(), { method: 'GET', headers: request.headers })
+    : request;
+
   try {
-    return await env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(assetRequest);
+
+    if (assetPath && res.status >= 300 && res.status < 400) {
+      const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
+      return followed || jsonResponse({ error: 'Not found' }, 404);
+    }
+    return res;
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);
