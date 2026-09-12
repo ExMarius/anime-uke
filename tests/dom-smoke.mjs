@@ -382,6 +382,16 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // Subtitrarea din episod trebuie sa ajunga ca <track> in <video>.
   const trackOk = await until(() => p.$('#player-video track')?.getAttribute('srclang') === 'ro');
   check('Subtitrarea se ataseaza ca <track srclang="ro">', trackOk, `track=${p.$('#player-video track')?.outerHTML?.slice(0, 90)}`);
+
+  // Controllerele de player: fullscreen dedicat, controale native, taste.
+  // jsdom nu are Fullscreen API, deci click-ul trebuie sa degradeze frumos
+  // (toast de avertisment), nu sa arunce.
+  check('Butonul de fullscreen exista', !!p.$('#fs-btn'), 'lipseste #fs-btn');
+  check('Video are controale native', p.$('#player-video')?.hasAttribute('controls') === true, 'lipseste atributul controls');
+  p.$('#fs-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+  p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+  check('Fullscreen/tastele degradeaza fara crash cand API-ul lipseste', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
   await p.teardown();
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }

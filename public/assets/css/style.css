@@ -962,3 +962,13 @@ a.quick__item:hover {
 .lb__week { font-size: .72rem; color: var(--dim); }
 .lb__pts { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 800; }
 @media (max-width: 480px) { .lb__week { display: none; } }
+
+/* --- toolbar player (fullscreen + hint taste) --- */
+.player-tools {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .8rem; margin-top: .55rem; flex-wrap: wrap;
+}
+.player-tools__hint { font-size: .72rem; color: var(--dim-2, #8a7a80); }
+@media (max-width: 560px) { .player-tools__hint { display: none; } }
+.player:fullscreen { aspect-ratio: auto; width: 100%; height: 100%; border-radius: 0; }
+.player:fullscreen video, .player:fullscreen iframe { position: absolute; inset: 0; width: 100%; height: 100%; }

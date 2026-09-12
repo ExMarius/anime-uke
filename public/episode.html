@@ -58,6 +58,13 @@
         referrerpolicy="strict-origin-when-cross-origin"
         hidden></video>
     </div>
+    <!-- Toolbar de player: fullscreen dedicat (butonul nativ din controls
+         lipseste sau e blocat in unele contexte) + scurtaturi de taste. -->
+    <div class="player-tools">
+      <button class="btn btn--ghost btn--sm" id="fs-btn" type="button" title="Fullscreen (F)">⛶ Fullscreen</button>
+      <span class="player-tools__hint">Spațiu: play/pauză · F: fullscreen · M: mute · ←/→: ±10s</span>
+    </div>
+
     <!-- Alternativa discreta pentru o sursa de tip link. Sta SUB player si nu
          inlocuieste niciodata zona de redare: playerul ramane mereu acolo. -->
     <a class="ext-inline" id="ext-link" href="#" target="_blank" rel="noopener noreferrer nofollow" hidden>Deschide „<span id="ext-label"></span>" într-o filă nouă</a>

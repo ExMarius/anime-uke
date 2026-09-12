@@ -17,6 +17,7 @@ let heartbeatTimer = null;
 let activityTimer = null;
 let pendingSeconds = 0;
 let currentSubtitle = '';
+let resumedOnce = false;
 
 function fmtTime(total) {
   const m = Math.floor(total / 60);
@@ -218,6 +219,18 @@ function selectSource(index) {
     }
     // `loadeddata` e mai de incredere decat `load` la elemente media.
     video.addEventListener('loadeddata', () => clearLoading(), { once: true });
+    // Reluare din unde a ramas: progresul vine de pe server, deci functioneaza
+    // si intre dispozitive. Sarim peste daca e la inceput sau aproape de final.
+    video.addEventListener('loadedmetadata', () => {
+      if (resumedOnce) return;
+      resumedOnce = true;
+      const resumeAt = watchSeconds;
+      const dur = Number.isFinite(video.duration) ? video.duration : 0;
+      if (resumeAt > 5 && dur > 0 && resumeAt < dur - 30) {
+        video.currentTime = resumeAt;
+        toast(`▶ Reluat de la ${fmtTime(resumeAt)}`, 'ok');
+      }
+    }, { once: true });
     video.addEventListener('error', () => {
       clearLoading();
       showLoading('Fișierul video nu poate fi redat în browserul tău.');
@@ -356,6 +369,11 @@ async function load() {
 
   const ep = res.data.episode;
   currentSubtitle = ep.subtitle_url || '';
+  // Fara linia asta heartbeat-ul nu trimitea NICIODATA secundele: flushProgress
+  // iesea pe `if (!episodeId) return`. Timpul de vizionare parea mort din
+  // cauza unei singure variabile neasignate.
+  episodeId = Number(id);
+  resumedOnce = false;
 
   const label = `Episodul ${ep.episode_number}${ep.title ? ` — ${ep.title}` : ''}`;
   titleEl.textContent = label;
@@ -381,6 +399,60 @@ async function load() {
   api('/view', { method: 'POST', body: { episode_id: Number(id) } }).catch(() => {});
 }
 
+// ---------------------------------------------------------------------
+// Fullscreen + scurtaturi de taste
+//
+// Butonul nativ din controls nu acopera toate cazurile (unele browsere
+// mobile, contexte embedded), deci avem fullscreen propriu pe zona de
+// player, cu fallback-urile Safari. Tastele functioneaza doar cand
+// focusul nu e intr-un camp de text.
+// ---------------------------------------------------------------------
+function toggleFullscreen() {
+  const zone = document.querySelector('.player');
+  const doc = document;
+  const fsEl = doc.fullscreenElement || doc.webkitFullscreenElement;
+  if (fsEl) {
+    (doc.exitFullscreen || doc.webkitExitFullscreen)?.call(doc);
+    return;
+  }
+  const target = zone || document.documentElement;
+  const req = target.requestFullscreen || target.webkitRequestFullscreen;
+  if (typeof req !== 'function') {
+    toast('Fullscreen nu e disponibil în contextul ăsta (browser sau fereastră embedded).', 'warn');
+    return;
+  }
+  req.call(target);
+}
+
+function initPlayerTools() {
+  document.getElementById('fs-btn')?.addEventListener('click', toggleFullscreen);
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    const v = document.getElementById('player-video');
+    const fileActive = v && !v.hidden;
+    switch (e.key) {
+      case ' ':
+        if (fileActive) { e.preventDefault(); if (v.paused) v.play(); else v.pause(); }
+        break;
+      case 'f': case 'F':
+        toggleFullscreen();
+        break;
+      case 'm': case 'M':
+        if (fileActive) v.muted = !v.muted;
+        break;
+      case 'ArrowRight':
+        if (fileActive && Number.isFinite(v.duration)) v.currentTime = Math.min(v.duration, v.currentTime + 10);
+        break;
+      case 'ArrowLeft':
+        if (fileActive) v.currentTime = Math.max(0, v.currentTime - 10);
+        break;
+      default:
+        return;
+    }
+  });
+}
+
 /**
  * Plasa de siguranta a paginii. Fara ea, o eroare aruncata in renderNav sau o
  * cerere care atarna lasa pagina in starea HTML initiala: titlu „Se incarca…",
@@ -404,6 +476,7 @@ function showBootFailure(why) {
 
 async function boot() {
   await renderNav('');
+  initPlayerTools();
   await load();
 }
 
