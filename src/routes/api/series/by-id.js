@@ -72,6 +72,7 @@ export async function onRequestGet(context) {
       .bind(id.value)
       .first();
     let myRating = 0;
+    let subscribed = false;
     const gate = await requireUser(request, env);
     if (!gate.response) {
       const mine = await env.DB
@@ -79,7 +80,17 @@ export async function onRequestGet(context) {
         .bind(gate.user.id, id.value)
         .first();
       myRating = mine?.rating || 0;
+      // abonarea: un singur read pe indexul PK, doar cu sesiune
+      const sub = await env.DB
+        .prepare('SELECT 1 AS x FROM series_subscriptions WHERE user_id = ? AND series_id = ?')
+        .bind(gate.user.id, id.value)
+        .first();
+      subscribed = !!sub;
     }
+    const sc = await env.DB
+      .prepare('SELECT COUNT(*) AS n FROM series_subscriptions WHERE series_id = ?')
+      .bind(id.value)
+      .first();
 
     return json({
       series,
@@ -92,6 +103,8 @@ export async function onRequestGet(context) {
       rating_average: Math.round((agg?.avg || 0) * 10) / 10,
       rating_count: agg?.n || 0,
       my_rating: myRating,
+      subscribed,
+      subscriber_count: sc?.n || 0,
     });
   } catch (e) {
     console.error('GET /api/series/:id esuat:', e?.message || e);

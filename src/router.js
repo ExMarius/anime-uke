@@ -35,6 +35,9 @@ import * as ranksRoute from './routes/api/ranks.js';
 import * as meThemeRoute from './routes/api/me-theme.js';
 import * as adminRankThemesRoute from './routes/api/admin/rank-themes.js';
 import * as adminModsRoute from './routes/api/admin/mods.js';
+import * as subscribeRoute from './routes/api/subscribe.js';
+import * as notificationsRoute from './routes/api/notifications.js';
+import * as notifUnreadRoute from './routes/api/notifications-unread.js';
 import * as registerRoute from './routes/api/auth/register.js';
 import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
@@ -77,6 +80,10 @@ const ROUTES = [
   { method: 'POST', path: '/api/me/theme', mod: meThemeRoute },
   { method: '*', path: '/api/admin/rank-themes', mod: adminRankThemesRoute },
   { method: 'POST', path: '/api/admin/mods', mod: adminModsRoute },
+  { method: 'POST', path: '/api/subscribe', mod: subscribeRoute },
+  { method: 'GET', path: '/api/notifications/unread', mod: notifUnreadRoute },
+  { method: 'POST', path: '/api/notifications/read', mod: notificationsRoute },
+  { method: 'GET', path: '/api/notifications', mod: notificationsRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
 
   // --- profil + lista „de vizionat" ---

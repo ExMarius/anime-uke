@@ -2,6 +2,7 @@ import { json, errorResponse, isSameOrigin } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
 import { validateEpisode, validateEpisodePatch, validatePositiveInt } from '../../../lib/validate.js';
 import { logAdminAction } from '../../../lib/audit.js';
+import { notifySubscribers } from '../../../lib/notify.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { parsePaging, parseQuery, escapeLike, counterStmts } from '../../../lib/paging.js';
 
@@ -207,6 +208,12 @@ async function createOne(context, admin, body) {
   await logAdminAction(env, admin, 'create_episode', 'episode', id,
     `Ep. ${v.value.episode_number} din „${series.title}" — surse: ${srcSummary}`);
 
+  // Abonatii seriei afla primii: un singur INSERT ... SELECT in D1.
+  await notifySubscribers(env, v.value.series_id, 'new_episode', {
+    series_id: v.value.series_id, series_title: series.title,
+    episode_id: id, episode_number: v.value.episode_number, episode_title: v.value.title,
+  });
+
   return json({ success: true, id, episode: { id, ...v.value } }, { status: 201 });
 }
 
@@ -305,6 +312,20 @@ async function createBulk(context, admin, body) {
   if (created) {
     await logAdminAction(env, admin, 'bulk_create_episodes', 'series', seriesId.value,
       `${created} episoade în „${series.title}"${skipped.length ? ` (${skipped.length} sărite)` : ''}`);
+
+    // Bulk = un singur rezumat pentru abonati, nu N notificari identice:
+    // cine urmareste seria afla ca a cazut un sezon intreg, dintr-o data.
+    if (created === 1) {
+      const ep = toCreate[0];
+      await notifySubscribers(env, seriesId.value, 'new_episode', {
+        series_id: seriesId.value, series_title: series.title,
+        episode_number: ep.episode_number, episode_title: ep.title,
+      });
+    } else {
+      await notifySubscribers(env, seriesId.value, 'new_episodes', {
+        series_id: seriesId.value, series_title: series.title, count: created,
+      });
+    }
   }
 
   return json({

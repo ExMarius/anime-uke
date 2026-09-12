@@ -224,6 +224,7 @@ async function load() {
 
   setHead(res.data.series);
   paintRating(res.data);
+  paintSubscribe(res.data);
 
   epPerPage = res.data.per_page || 100;
   epTotal = res.data.episode_count || 0;
@@ -406,6 +407,30 @@ function paintRating(d) {
     });
     stars.appendChild(b);
   }
+}
+
+/** Butonul „Urmărește”: abonarea aduce notificari la episoade noi. */
+function paintSubscribe(d) {
+  const btn = document.getElementById('sub-btn');
+  if (!btn || !d.series) return;
+  btn.hidden = false;
+  const on = !!d.subscribed;
+  const cnt = d.subscriber_count ? ` · ${d.subscriber_count}` : '';
+  btn.textContent = on ? `✅ Urmărită${cnt}` : `🔔 Urmărește${cnt}`;
+  btn.classList.toggle('btn--accent', on);
+  btn.classList.toggle('btn--ghost', !on);
+  btn.title = on ? 'Primești notificări la episoade noi' : 'Abonează-te la episoade noi';
+  if (btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', async () => {
+    const next = !d.subscribed;
+    const r = await api('/subscribe', { method: 'POST', body: { series_id: d.series.id, on: next ? 1 : 0 } });
+    if (!r.ok) { toast(r.data?.error || 'Nu am putut schimba abonarea.', 'error'); return; }
+    d.subscribed = next;
+    d.subscriber_count = r.data.subscriber_count;
+    paintSubscribe(d);
+    toast(next ? 'Urmărești seria — primești notificări la episoade noi.' : 'Nu mai urmărești seria.', 'success');
+  });
 }
 
 async function loadChests(seriesId) {

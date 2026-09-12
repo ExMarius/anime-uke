@@ -1271,3 +1271,38 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
 .sticker-pop__item .msg__sticker { width: 62px; height: 62px; animation: none; }
 @keyframes stickerIn { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .msg:has(.msg__sticker) { align-items: center; }
+
+/* ===================== Clopotel de notificari (nav) ===================== */
+.bell { position: relative; display: inline-flex; align-items: center; }
+.bell__btn { position: relative; font-size: 1.05rem; line-height: 1; padding: .45rem .5rem; }
+.bell__badge {
+  position: absolute; top: 2px; right: 0; min-width: 1.05rem; height: 1.05rem;
+  padding: 0 .22rem; border-radius: 999px; background: var(--crimson, #DC143C);
+  color: #fff; font-size: .62rem; font-weight: 800; line-height: 1.05rem;
+  text-align: center; box-shadow: 0 0 0 2px rgba(13, 13, 18, .9);
+}
+.notif-pop {
+  position: absolute; top: calc(100% + .5rem); right: 0; z-index: 80;
+  width: min(21rem, calc(100vw - 1.5rem)); max-height: 70vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: .15rem; padding: .4rem;
+  background: #17171f; border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: .8rem; box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+}
+.notif-pop[hidden] { display: none; }
+.notif-pop__item {
+  display: flex; gap: .6rem; align-items: flex-start; padding: .55rem .6rem;
+  border-radius: .6rem; color: var(--text, #eee); text-decoration: none;
+}
+.notif-pop__item:hover { background: rgba(220, 20, 60, .12); }
+.notif-pop__item--new { background: rgba(220, 20, 60, .08); box-shadow: inset 2px 0 0 var(--crimson, #DC143C); }
+.notif-pop__icon { font-size: 1.05rem; line-height: 1.3; }
+.notif-pop__text { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.notif-pop__text b { font-size: .84rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.notif-pop__text small { color: rgba(255, 255, 255, .45); font-size: .7rem; }
+.notif-pop__empty { padding: 1rem .6rem; text-align: center; color: rgba(255, 255, 255, .5); font-size: .85rem; }
+.notif-pop__all {
+  margin-top: .3rem; padding: .5rem; border: 0; border-radius: .6rem;
+  background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .75);
+  font-size: .78rem; cursor: pointer;
+}
+.notif-pop__all:hover { background: rgba(220, 20, 60, .18); color: #fff; }

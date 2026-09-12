@@ -71,7 +71,7 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
     }
 
     if (res.status === 401) {
-      sessionCache = null;
+      sessionCache = undefined;
       return { ok: false, status: 401, data: data || { error: 'Sesiune expirată' }, retryAfter };
     }
 
@@ -106,13 +106,17 @@ export async function getSession(force = false) {
     } catch { /* mod privat */ }
   }
   const res = await api('/auth/me');
-  sessionCache = res.ok ? (res.data.user || null) : null;
+  if (!res.ok && res.status === 0) return sessionCache ?? null; // retea moarta: nu suprascrie
+  sessionCache = res.ok ? (res.data.user || null) : undefined;
   try { sessionStorage.setItem('auk-me', JSON.stringify({ t: Date.now(), user: sessionCache })); } catch { /* ignora */ }
   return sessionCache;
 }
 
+/** Invalidare: undefined = „nu stim inca”, spre deosebire de null = „guest
+ *  confirmat”. Fara distinctia asta, orice POST reusit transforma sesiunea in
+ *  guest pana la reload — guard-urile dadeau redirect aiurea. */
 export function clearSession() {
-  sessionCache = null;
+  sessionCache = undefined;
   try { sessionStorage.removeItem('auk-me'); } catch { /* ignora */ }
 }
 
@@ -214,6 +218,8 @@ export async function renderNav(active = '') {
     gold.title = `${user.gold || 0} Gold`;
     links.appendChild(gold);
 
+    links.appendChild(buildBell());
+
     if (user.is_admin) add('/admin', 'Admin', { accent: true });
 
     const me = document.createElement('a');
@@ -247,6 +253,127 @@ export async function renderNav(active = '') {
   }
 
   return user;
+}
+
+// ---------------------------------------------------------------------
+// CLOPOTEL DE NOTIFICARI (nav)
+// Un singur element pe pagina, construit odata cu nav-ul. Badge-ul vine
+// din GET /notifications/unread (indexat, ieftin): poll la 60 s + refresh
+// imediat cand tab-ul revine in fata. Lista se incarca doar la click.
+// ---------------------------------------------------------------------
+let bellPop = null;
+
+function notifHref(n) {
+  const p = n.payload || {};
+  if (p.episode_id) return `/episode?id=${encodeURIComponent(p.episode_id)}`;
+  if (p.series_id) return `/series?id=${encodeURIComponent(p.series_id)}`;
+  return null;
+}
+
+async function refreshBellBadge() {
+  const b = document.getElementById('nav-bell-badge');
+  if (!b) return;
+  const res = await api('/notifications/unread');
+  const n = res.ok ? Number(res.data.count || 0) : 0;
+  b.textContent = n > 99 ? '99+' : String(n);
+  b.hidden = n === 0;
+}
+
+async function loadNotifPop() {
+  if (!bellPop) return;
+  bellPop.textContent = 'Se încarcă…';
+  const res = await api('/notifications?limit=30');
+  bellPop.textContent = '';
+  const list = res.ok ? (res.data.notifications || []) : [];
+
+  if (!list.length) {
+    const e = document.createElement('div');
+    e.className = 'notif-pop__empty';
+    e.textContent = 'Nicio notificare încă.';
+    bellPop.appendChild(e);
+    return;
+  }
+
+  for (const n of list) {
+    const a = document.createElement('a');
+    a.className = `notif-pop__item${n.read ? '' : ' notif-pop__item--new'}`;
+    const href = notifHref(n);
+    if (href) a.href = href; else a.href = '#';
+    const ic = document.createElement('span');
+    ic.className = 'notif-pop__icon';
+    ic.textContent = n.icon || '🔔';
+    const txt = document.createElement('span');
+    txt.className = 'notif-pop__text';
+    const t = document.createElement('b');
+    t.textContent = n.text || 'Notificare';
+    const d = document.createElement('small');
+    d.textContent = formatDate(n.created_at);
+    txt.append(t, d);
+    a.append(ic, txt);
+    a.addEventListener('click', async (ev) => {
+      if (href) ev.preventDefault();
+      await api('/notifications/read', { method: 'POST', body: { ids: [n.id] } });
+      refreshBellBadge();
+      if (href) location.href = href;
+      else if (bellPop) { bellPop.hidden = true; }
+    });
+    bellPop.appendChild(a);
+  }
+
+  const markAll = document.createElement('button');
+  markAll.className = 'notif-pop__all';
+  markAll.type = 'button';
+  markAll.textContent = 'Marchează tot ca citit';
+  markAll.addEventListener('click', async () => {
+    await api('/notifications/read', { method: 'POST', body: { all: 1 } });
+    await loadNotifPop();
+    refreshBellBadge();
+  });
+  bellPop.appendChild(markAll);
+}
+
+function buildBell() {
+  const wrap = document.createElement('div');
+  wrap.className = 'bell';
+
+  const btn = document.createElement('button');
+  btn.id = 'nav-bell';
+  btn.className = 'nav__link bell__btn';
+  btn.type = 'button';
+  btn.title = 'Notificări';
+  btn.setAttribute('aria-label', 'Notificări');
+  btn.textContent = '🔔';
+  const badge = document.createElement('span');
+  badge.id = 'nav-bell-badge';
+  badge.className = 'bell__badge';
+  badge.hidden = true;
+  btn.appendChild(badge);
+
+  const pop = document.createElement('div');
+  pop.id = 'notif-pop';
+  pop.className = 'notif-pop';
+  pop.hidden = true;
+
+  btn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    pop.hidden = !pop.hidden;
+    if (!pop.hidden) loadNotifPop();
+  });
+  document.addEventListener('click', (ev) => {
+    if (!pop.hidden && !pop.contains(ev.target) && ev.target !== btn) pop.hidden = true;
+  });
+
+  wrap.append(btn, pop);
+  bellPop = pop;
+
+  // Badge proaspat: acum, la fiecare minut si cand tab-ul revine in fata.
+  refreshBellBadge();
+  setInterval(refreshBellBadge, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshBellBadge();
+  });
+
+  return wrap;
 }
 
 /** Dezactiveaza un buton pe durata unei actiuni async (anti dublu-click). */

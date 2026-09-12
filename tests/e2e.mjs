@@ -1189,6 +1189,62 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
   }
 }
 
+console.log('\n=== 13h. ABONARI LA SERII + NOTIFICARI ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // --- abonare: toggle idempotent + flag in ruta seriei
+  const anon = await req(jar(), 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 1 });
+  check('Abonarea anonima → 401', anon.status === 401, `status=${anon.status}`);
+  const s1 = await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 1 });
+  check('Abonarea reuseste si numara abonatii', s1.data?.success === true && s1.data?.subscribed === true && s1.data?.subscriber_count >= 1, JSON.stringify(s1.data));
+  const ser1 = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+  check('Ruta seriei expune subscribed + subscriber_count', ser1.data?.subscribed === true && ser1.data?.subscriber_count >= 1, JSON.stringify({ s: ser1.data?.subscribed, n: ser1.data?.subscriber_count }));
+
+  // --- episod nou admin → notificare pentru abonat
+  const ep1 = await req(globalThis.admin, 'POST', '/api/admin/episodes', { series_id: globalThis.seriesId, episode_number: 901, title: 'Ep notificare', sources: [] });
+  const n1 = await req(j, 'GET', '/api/notifications');
+  const notif = (n1.data?.notifications || [])[0];
+  check('Abonatul primeste notificare la episod nou', n1.data?.unread === 1 && notif?.type === 'new_episode' && notif?.payload?.episode_number === 901, JSON.stringify(notif)?.slice(0, 160));
+  check('Notificarea are text uman si link catre episod', typeof notif?.text === 'string' && notif.text.includes('901'), notif?.text);
+  const un1 = await req(j, 'GET', '/api/notifications/unread');
+  check('Count-ul de unread e 1 pentru badge', un1.data?.count === 1, JSON.stringify(un1.data));
+
+  // --- mark read: per id si tot
+  const mr = await req(j, 'POST', '/api/notifications/read', { ids: [notif.id] });
+  check('Marcharea per id scade unread', mr.data?.changed === 1 && mr.data?.unread === 0, JSON.stringify(mr.data));
+  const ep2 = await req(globalThis.admin, 'POST', '/api/admin/episodes', { series_id: globalThis.seriesId, episode_number: 902, title: 'Ep notificare 2', sources: [] });
+  const n2 = await req(j, 'GET', '/api/notifications?unread=1');
+  check('Al doilea episod aduce a doua notificare', n2.data?.notifications?.length === 1 && n2.data?.notifications[0].payload?.episode_number === 902, JSON.stringify(n2.data?.notifications)?.slice(0, 140));
+  const ma = await req(j, 'POST', '/api/notifications/read', { all: 1 });
+  check('„Marcheaza tot” curata badge-ul', ma.data?.changed === 1 && ma.data?.unread === 0, JSON.stringify(ma.data));
+
+  // --- dezabonare: episoadele noi nu mai notifica
+  const s0 = await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 0 });
+  check('Dezabonarea scade numarul de abonati', s0.data?.subscribed === false && s0.data?.subscriber_count === 0, JSON.stringify(s0.data));
+  const before = (await req(j, 'GET', '/api/notifications')).data.notifications.length;
+  await req(globalThis.admin, 'POST', '/api/admin/episodes', { series_id: globalThis.seriesId, episode_number: 903, title: 'Ep fara abonat', sources: [] });
+  const after = (await req(j, 'GET', '/api/notifications')).data.notifications.length;
+  check('Dupa dezabonare nu mai vin notificari', after === before, `before=${before} after=${after}`);
+
+  // --- bulk: un singur rezumat, nu N notificari
+  await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 1 });
+  const bulk = await req(globalThis.admin, 'POST', '/api/admin/episodes', {
+    series_id: globalThis.seriesId,
+    episodes: [{ episode_number: 904, title: 'B1', sources: [] }, { episode_number: 905, title: 'B2', sources: [] }],
+  });
+  const n3 = await req(j, 'GET', '/api/notifications?unread=1');
+  const rez = (n3.data?.notifications || [])[0];
+  check('Bulk-ul notifica o singura data, cu rezumat', bulk.data?.created === 2 && rez?.type === 'new_episodes' && rez?.payload?.count === 2, JSON.stringify(rez)?.slice(0, 160));
+
+  // --- curatare: episoadele de test
+  for (const id of [ep1.data?.id, ep2.data?.id]) if (id) await req(globalThis.admin, 'DELETE', `/api/admin/episodes?id=${id}`);
+  const listEp = await req(globalThis.admin, 'GET', `/api/admin/episodes?series_id=${globalThis.seriesId}&per_page=200`);
+  for (const ep of listEp.data?.episodes || []) if ([903, 904, 905].includes(ep.episode_number)) await req(globalThis.admin, 'DELETE', `/api/admin/episodes?id=${ep.id}`);
+  await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 0 });
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));

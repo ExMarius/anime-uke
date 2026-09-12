@@ -79,6 +79,8 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
     const abs = path.startsWith('http') ? path : `${BASE}${path}`;
     const headers = { ...(init.headers || {}) };
     if (cookie) headers.Cookie = cookie;
+    // POST-urile din pagini trec de isSameOrigin doar cu Origin explicit
+    if ((init.method || 'GET') !== 'GET' && !headers.Origin) headers.Origin = BASE;
     // jsdom nu stie de 'same-origin'; Node ar cere un URL absolut valid.
     const { credentials, ...rest } = init;
     try {
@@ -185,6 +187,11 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
   check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
   check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('script[type="speculationrules"]'), 'lipseste speculationrules');
+  const bellOn = await until(() => !!p.$('#nav-bell'));
+  check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
+  p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const popOn = await until(() => p.$('#notif-pop')?.hidden === false);
+  check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));
   check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
   p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   p.$('#chat-sticker-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
@@ -338,6 +345,11 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   // Widgetul de rating: 10 butoane, media vizibila.
   const rateOn = await until(() => p.$$('#rate-stars .rate__star').length === 10);
   check('Widgetul de rating are 10 note', rateOn, `n=${p.$$('#rate-stars .rate__star').length}`);
+  const subOn = await until(() => p.$('#sub-btn') && !p.$('#sub-btn').hidden);
+  check('Butonul de urmărire a seriei exista', subOn, `hidden=${p.$('#sub-btn')?.hidden}`);
+  p.$('#sub-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const subToggled = await until(() => /Urmărită/.test(p.$('#sub-btn')?.textContent || ''));
+  check('Click pe „Urmărește” comută starea prin API', subToggled, p.$('#sub-btn')?.textContent);
   check('Media de vot e afisata', (p.text('#rate-avg') || '').length > 0, p.text('#rate-avg'));
   check('Cuferele isi arata starea (blocat/deschis)', /mai ai|Deschide|Deschis/.test(p.text('#chests-row') || ''), p.text('#chests-row')?.slice(0, 60));
   check('Posterul seriei e randat (fallback cand lipseste coperta)', p.$('#series-poster')?.hidden === false && p.$$('#series-poster > *').length === 1, `hidden=${p.$('#series-poster')?.hidden} copii=${p.$$('#series-poster > *').length}`);
