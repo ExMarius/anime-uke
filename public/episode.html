@@ -38,20 +38,23 @@
     <div class="player" id="player-wrap">
       <div class="loading" id="player-loading"><div class="spinner"></div>Se încarcă playerul…</div>
       <!--
-        FARA sandbox: playerii terti (video.js + Rocket Loader la mp4upload,
-        DoodStream etc.) cad silentios pe fallback CSS cand mediul e sandboxed,
-        iar butonul LOR de fullscreen pare mort. Embed-ul oficial al sursei nu
-        are sandbox nici el — il redam exact ca la furnizor, ca sa mearga
-        fullscreen-ul nativ. Siguranta ramane din: referrerpolicy (nu trimitem
-        URL-ul nostru), allow limitat la ce trebuie playerului, si faptul ca
-        navigarea din iframe nu poate scoate utilizatorul de pe site fara
-        voie (tab-ul e al lui, pagina noastra nu e capturata).
+        FARA sandbox + allow CU STEA: playerii terti (video.js + Rocket Loader
+        la mp4upload) cad silentios pe fallback CSS cand fullscreen-ul e blocat,
+        deci butonul LOR pare mort. Doua capcane rezolvate aici:
+          1. sandbox-ul transforma embed-ul intr-un mediu pe care playerii nu
+             il intalnesc niciodata la furnizor;
+          2. in atributul `allow`, o functiune scrisa FARA allowlist (bare
+             `fullscreen`) inseamna `self` = DOAR originul nostrul — frame-ul
+             mp4upload ar fi refuzat. Steaua (`fullscreen *`) delega catre
+             ORICE origin din iframe, exact ca allowfullscreen-ul clasic.
+        Siguranta: referrerpolicy strict + doar functiunile de care are nevoie
+        un player video.
       -->
       <iframe
         id="player"
         title="Player video"
         referrerpolicy="strict-origin-when-cross-origin"
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+        allow="fullscreen *; autoplay *; picture-in-picture *; encrypted-media *"
         allowfullscreen
         webkitallowfullscreen
         mozallowfullscreen

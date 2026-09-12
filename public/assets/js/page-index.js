@@ -288,11 +288,9 @@ async function renderHero(salt = spotSalt()) {
 
   document.getElementById('hero-tag').textContent =
     SPOT_TAGS[hashStr(`spot-tag-${bucket}-${salt}`) % SPOT_TAGS.length];
-  const href = `/series?id=${encodeURIComponent(pick.id)}`;
-  const a = document.getElementById('hero-title');
-  a.textContent = pick.title;
-  a.setAttribute('href', href);
-  document.getElementById('hero-open').setAttribute('href', href);
+  // Tot bannerul e un singur <a>: click oriunde duce la seria afisata.
+  document.getElementById('hero-banner').setAttribute('href', `/series?id=${encodeURIComponent(pick.id)}`);
+  document.getElementById('hero-title').textContent = pick.title;
   document.getElementById('hero-sub').textContent =
     [pick.genre, pick.year, pick.episode_count ? `${pick.episode_count} episoade` : '']
       .filter(Boolean).join(' · ');
@@ -300,16 +298,21 @@ async function renderHero(salt = spotSalt()) {
   const bg = document.getElementById('hero-bg');
   bg.innerHTML = '';
   const cover = safeUrl(pick.cover_image, '');
-  if (cover && cover !== '#') {
-    const img = document.createElement('img');
-    img.className = 'hban__bg-img';
-    img.src = cover;
-    img.alt = '';
-    img.addEventListener('error', () => { img.remove(); bg.appendChild(genHeroArt(pick.title)); }, { once: true });
-    bg.appendChild(img);
-  } else {
-    bg.appendChild(genHeroArt(pick.title));
-  }
+  // Fara coperta proprie: una din imaginile anime bundled (arta originala),
+  // aleasa determinist din aceeasi sare ca si seria — bannerul arata mereu
+  // „cu totul”, nu ca un placeholder.
+  const HERO_ART = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
+  const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
+  const img = document.createElement('img');
+  img.className = 'hban__bg-img';
+  img.src = cover && cover !== '#' ? cover : artUrl;
+  img.alt = '';
+  img.addEventListener('error', () => {
+    // coperta seriei a picat -> arta bundled; arta bundled a picat -> poster generat
+    if (img.src.endsWith(artUrl.slice(artUrl.lastIndexOf('/')))) { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
+    else { img.src = artUrl; }
+  }, { once: true });
+  bg.appendChild(img);
 
   box.hidden = false;
   box.classList.remove('hban--in');
@@ -320,6 +323,9 @@ async function renderHero(salt = spotSalt()) {
 async function initHero() {
   await renderHero();
   document.getElementById('hero-shuffle')?.addEventListener('click', async (ev) => {
+    // butonul sta IN anchorul-banner: nu vrem sa si navigheze la shuffle
+    ev.preventDefault();
+    ev.stopPropagation();
     const btn = ev.currentTarget;
     btn.disabled = true;
     const salt = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;

@@ -178,19 +178,20 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
   check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
 
-  // Hero banner: anime random sus de tot, arta full-bleed + shuffle.
+  // Hero banner: anime random sus de tot, TOT bannerul e link catre serie.
   check('Hero bannerul exista in DOM', !!p.$('#hero-banner'), 'lipseste #hero-banner');
   check('Hero bannerul e prima sectiune din main (sus de tot)', p.$('main')?.firstElementChild?.id === 'hero-banner', p.$('main')?.firstElementChild?.id);
   check('Butonul de shuffle „Alt anime” exista', !!p.$('#hero-shuffle'), 'lipseste #hero-shuffle');
   check('Randul „Continua vizionarea” exista in DOM', !!p.$('#continue-section'), 'lipseste #continue-section');
   if (p.$('#hero-banner')?.hidden === false) {
-    check('Bannerul vizibil duce catre o serie', /^\/series\?id=\d+$/.test(p.$('#hero-title')?.getAttribute('href') || ''), p.$('#hero-title')?.getAttribute('href'));
+    check('TOT bannerul e un link catre seria afisata', p.$('#hero-banner')?.tagName === 'A' && /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || ''), `${p.$('#hero-banner')?.tagName} ${p.$('#hero-banner')?.getAttribute('href')}`);
+    check('Titlul anime-ului e afisat in banner', (p.text('#hero-title') || '').length > 1, p.text('#hero-title'));
     check('Bannerul vizibil are eticheta editoriala', (p.text('#hero-tag') || '').length > 3, p.text('#hero-tag'));
-    check('Bannerul are arta de fundal (imagine sau poster generat)', !!p.$('#hero-bg .hban__bg-img, #hero-bg .hban__bg-gen'), p.$('#hero-bg')?.innerHTML?.slice(0, 80));
-    check('CTA-ul „Vezi seria” duce tot catre seria aleasa', p.$('#hero-open')?.getAttribute('href') === p.$('#hero-title')?.getAttribute('href'), p.$('#hero-open')?.getAttribute('href'));
+    check('Bannerul are arta de fundal (coperta, arta bundled sau poster generat)', !!p.$('#hero-bg img, #hero-bg .hban__bg-gen'), p.$('#hero-bg')?.innerHTML?.slice(0, 80));
+    check('CTA-ul vizual „Vezi seria” exista', !!p.$('#hero-open'), 'lipseste #hero-open');
     p.$('#hero-shuffle')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 400));
-    check('Shuffle-ul re-randeaza bannerul fara erori', /^\/series\?id=\d+$/.test(p.$('#hero-title')?.getAttribute('href') || '') && p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
+    check('Shuffle-ul re-randeaza fara sa navigheze si fara erori', /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || '') && p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
   } else {
     check('Bannerul ramane ascuns cand catalogul e gol', true);
   }

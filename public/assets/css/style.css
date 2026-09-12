@@ -1191,3 +1191,15 @@ a.quick__item:hover {
   .hban { min-height: 300px; }
   .hban__body { padding: 1.1rem; }
 }
+
+/* Bannerul e un singur link mare: reset de anchor + CTA vizual */
+a.hban { color: inherit; text-decoration: none; cursor: pointer; display: flex; }
+.hban__open {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--accent, #DC143C); color: #fff; font-weight: 800; font-size: .88rem;
+  padding: .55rem 1.1rem; border-radius: 10px;
+  box-shadow: 0 6px 22px rgba(220,20,60,.4);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+a.hban:hover .hban__open { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(220,20,60,.55); }
+a.hban:hover .hban__title { color: var(--accent, #DC143C); }
