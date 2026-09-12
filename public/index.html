@@ -17,6 +17,22 @@
   <nav class="nav" id="nav"></nav>
 
   <main class="container">
+    <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
+    <section class="hban" id="hero-banner" hidden>
+      <div class="hban__bg" id="hero-bg" aria-hidden="true"></div>
+      <div class="hban__veil" aria-hidden="true"></div>
+      <div class="hban__body">
+        <span class="hban__tag" id="hero-tag"></span>
+        <a class="hban__title" id="hero-title" href="#"></a>
+        <p class="hban__sub" id="hero-sub"></p>
+        <div class="hban__cta">
+          <a class="btn btn--accent hban__open" id="hero-open" href="#">▶ Vezi seria</a>
+          <button class="btn btn--ghost btn--sm" id="hero-shuffle" type="button"
+            title="Alt anime random">🎲 Alt anime</button>
+        </div>
+      </div>
+    </section>
+
     <header class="hero">
       <span class="hero__eyebrow">🔴 Streaming gratuit</span>
       <h1 class="hero__title">Anime-ul tău,<br><em>la un click distanță.</em></h1>
@@ -46,15 +62,7 @@
       chiar e o recomandare comuna, nu un random per vizita. Inchiderea lui
       se tine minte doar pentru intervalul curent.
     -->
-    <section class="spot" id="spot-banner" hidden>
-      <div class="spot__art" id="spot-art" aria-hidden="true"></div>
-      <div class="spot__body">
-        <span class="spot__tag" id="spot-tag"></span>
-        <a class="spot__title" id="spot-title" href="#"></a>
-        <p class="spot__sub" id="spot-sub"></p>
-      </div>
-      <button class="spot__close" id="spot-close" type="button" aria-label="Închide bannerul">✕</button>
-    </section>
+
 
     <!-- Randul „Continua vizionarea": din progresul real, nu din istoric fals. -->
     <section class="section" id="continue-section" hidden>

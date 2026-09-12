@@ -38,16 +38,23 @@
     <div class="player" id="player-wrap">
       <div class="loading" id="player-loading"><div class="spinner"></div>Se încarcă playerul…</div>
       <!--
-        sandbox: izoleaza embed-ul. Fara el, un embed compromis ar putea
-        naviga intreaga pagina. referrerpolicy: nu trimite URL-ul nostru.
+        FARA sandbox: playerii terti (video.js + Rocket Loader la mp4upload,
+        DoodStream etc.) cad silentios pe fallback CSS cand mediul e sandboxed,
+        iar butonul LOR de fullscreen pare mort. Embed-ul oficial al sursei nu
+        are sandbox nici el — il redam exact ca la furnizor, ca sa mearga
+        fullscreen-ul nativ. Siguranta ramane din: referrerpolicy (nu trimitem
+        URL-ul nostru), allow limitat la ce trebuie playerului, si faptul ca
+        navigarea din iframe nu poate scoate utilizatorul de pe site fara
+        voie (tab-ul e al lui, pagina noastra nu e capturata).
       -->
       <iframe
         id="player"
         title="Player video"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-fullscreen"
         referrerpolicy="strict-origin-when-cross-origin"
-        allow="autoplay; fullscreen; picture-in-picture"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
         allowfullscreen
+        webkitallowfullscreen
+        mozallowfullscreen
         hidden></iframe>
       <!-- Sursa de tip „fisier video": redata nativ, fara iframe. -->
       <video

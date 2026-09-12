@@ -213,15 +213,11 @@ function search(q) {
   load();
 }
 
-// ---------------------------------------------------------------------
-// Banner rotativ: o recomandare comuna, schimbata o data la 3 ore.
-//
-// Fereastra de timp (bucket-ul de 3h) e aceeasi pentru toti utilizatorii,
-// deci in intervalul curent toata lumea vede aceeasi recomandare — arata a
-// editorial, nu a zar per vizita. Alegerea e determinista din bucket, deci
-// nu cerem nimic in plus de la server pentru „randomizarea" itself.
-// Inchiderea bannerului se tine minte doar pentru intervalul curent: la
-// urmatorul bucket reapare cu alt continut.
+// Hero banner: arta anime full-bleed sus de tot. Fereastra de 3 ore e
+// comuna tuturor (recomandare editoriala), iar butonul „Alt anime” adauga
+// un salt aleator per vizita peste bucket, ca sa poti da mai departe pana
+// gasesti ceva pe placul tau. Alegerea e determinista pe (bucket, salt),
+// deci shuffle-ul nu loveste serverul de fiecare data (cache in sessionStorage).
 // ---------------------------------------------------------------------
 const SPOT_WINDOW_MS = 3 * 60 * 60 * 1000;
 const SPOT_TAGS = [
@@ -235,60 +231,103 @@ function hashStr(str) {
   return Math.abs(h);
 }
 
-async function renderSpotlight() {
-  const box = document.getElementById('spot-banner');
+function spotSalt() {
+  try { return sessionStorage.getItem('auk-spot-salt') || ''; } catch { return ''; }
+}
+
+/** Arta de rezervă pentru hero: gradient cinematic din titlu + initiala
+ *  mare, ca un poster de anime fără imagine oficială. */
+function genHeroArt(title) {
+  const t = String(title || '').trim();
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  const el = document.createElement('div');
+  el.className = 'hban__bg-gen';
+  el.style.background = [
+    `radial-gradient(120% 90% at 85% 10%, hsl(${hue} 70% 34% / .85), transparent 60%)`,
+    `radial-gradient(90% 80% at 10% 90%, hsl(${(hue + 40) % 360} 75% 26% / .9), transparent 65%)`,
+    `radial-gradient(60% 60% at 50% 50%, hsl(${(hue + 320) % 360} 60% 18% / .8), transparent 70%)`,
+    `linear-gradient(160deg, hsl(${hue} 45% 16%), hsl(${(hue + 300) % 360} 55% 7%))`,
+  ].join(', ');
+  const kanji = document.createElement('span');
+  kanji.className = 'hban__bg-kanji';
+  kanji.textContent = (t.split(/\s+/)[0]?.[0] || '鬼').toUpperCase();
+  el.appendChild(kanji);
+  return el;
+}
+
+async function pickSpotSeries(salt) {
+  const bucket = Math.floor(Date.now() / SPOT_WINDOW_MS);
+  const cacheKey = `auk-spot-data-${bucket}-${salt}`;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+    if (cached) return cached;
+  } catch { /* ignora */ }
+
+  const first = await api('/series?per_page=24&page=1');
+  if (!first.ok || !first.data?.series?.length) return null;
+  const pages = Math.max(1, Number(first.data.pages) || 1);
+  const page = (hashStr(`spot-page-${bucket}-${salt}`) % pages) + 1;
+  const list = page === 1
+    ? first.data.series
+    : (await api(`/series?per_page=24&page=${page}`))?.data?.series || [];
+  if (!list.length) return null;
+  const pick = list[hashStr(`spot-item-${bucket}-${salt}`) % list.length];
+  try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
+  return pick;
+}
+
+async function renderHero(salt = spotSalt()) {
+  const box = document.getElementById('hero-banner');
   if (!box) return;
 
   const bucket = Math.floor(Date.now() / SPOT_WINDOW_MS);
-  try { if (localStorage.getItem(`auk-spot-${bucket}`)) return; } catch { /* mod privat */ }
+  const pick = await pickSpotSeries(salt);
+  if (!pick) { box.hidden = true; return; }
 
-  // Alegerea se cache-uieste pe bucket in sessionStorage: o a doua vizita in
-  // acelasi interval nu mai face cererile catre catalog.
-  const cacheKey = `auk-spot-data-${bucket}`;
-  let pick = null;
-  try { pick = JSON.parse(sessionStorage.getItem(cacheKey) || 'null'); } catch { /* ignora */ }
-
-  if (!pick) {
-    const first = await api('/series?per_page=24&page=1');
-    if (!first.ok || !first.data?.series?.length) return;
-    const pages = Math.max(1, Number(first.data.pages) || 1);
-    const page = (hashStr(`spot-page-${bucket}`) % pages) + 1;
-    const list = page === 1
-      ? first.data.series
-      : (await api(`/series?per_page=24&page=${page}`))?.data?.series || [];
-    if (!list.length) return;
-    pick = list[hashStr(`spot-item-${bucket}`) % list.length];
-    try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
-  }
-
-  document.getElementById('spot-tag').textContent = SPOT_TAGS[hashStr(`spot-tag-${bucket}`) % SPOT_TAGS.length];
-  const a = document.getElementById('spot-title');
+  document.getElementById('hero-tag').textContent =
+    SPOT_TAGS[hashStr(`spot-tag-${bucket}-${salt}`) % SPOT_TAGS.length];
+  const href = `/series?id=${encodeURIComponent(pick.id)}`;
+  const a = document.getElementById('hero-title');
   a.textContent = pick.title;
-  a.href = `/series?id=${encodeURIComponent(pick.id)}`;
-  document.getElementById('spot-sub').textContent =
-    [pick.genre, pick.year, pick.episode_count ? `${pick.episode_count} ep.` : ''].filter(Boolean).join(' · ');
+  a.setAttribute('href', href);
+  document.getElementById('hero-open').setAttribute('href', href);
+  document.getElementById('hero-sub').textContent =
+    [pick.genre, pick.year, pick.episode_count ? `${pick.episode_count} episoade` : '']
+      .filter(Boolean).join(' · ');
 
-  const art = document.getElementById('spot-art');
-  art.innerHTML = '';
+  const bg = document.getElementById('hero-bg');
+  bg.innerHTML = '';
   const cover = safeUrl(pick.cover_image, '');
   if (cover && cover !== '#') {
     const img = document.createElement('img');
-    img.src = cover; img.alt = ''; img.loading = 'lazy';
-    art.appendChild(img);
+    img.className = 'hban__bg-img';
+    img.src = cover;
+    img.alt = '';
+    img.addEventListener('error', () => { img.remove(); bg.appendChild(genHeroArt(pick.title)); }, { once: true });
+    bg.appendChild(img);
   } else {
-    art.appendChild(genPoster(pick.title));
+    bg.appendChild(genHeroArt(pick.title));
   }
 
   box.hidden = false;
-  document.getElementById('spot-close')?.addEventListener('click', () => {
-    box.hidden = true;
-    try { localStorage.setItem(`auk-spot-${bucket}`, '1'); } catch { /* ignora */ }
-  }, { once: true });
+  box.classList.remove('hban--in');
+  void box.offsetWidth;
+  box.classList.add('hban--in');
 }
 
-// ---------------------------------------------------------------------
-// „Continua vizionarea": ultimele episoade cu progres real, din
-// watch_progress. Randul apare doar cand exista ce continua.
+async function initHero() {
+  await renderHero();
+  document.getElementById('hero-shuffle')?.addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    btn.disabled = true;
+    const salt = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+    try { sessionStorage.setItem('auk-spot-salt', salt); } catch { /* mod privat */ }
+    try { await renderHero(salt); } finally { btn.disabled = false; }
+  });
+}
+
 // ---------------------------------------------------------------------
 async function renderContinue() {
   const section = document.getElementById('continue-section');
@@ -335,7 +374,7 @@ async function renderContinue() {
 await renderNav('/');
 skeletons(10);
 await Promise.all([load(), initChat()]);
-renderSpotlight().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
+initHero().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
 renderContinue().catch(() => { /* randul de continuare e optional */ });
 
 // Debounce: fara el, fiecare litera tastata ar insemna un LIKE pe tot

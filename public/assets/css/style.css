@@ -1132,3 +1132,62 @@ a.quick__item:hover {
   .econ__num { min-width: 0; font-size: .68rem; }
   .nav__points--lvl, .nav__points--gold { display: none; }
 }
+
+/* =====================================================================
+   HERO BANNER (hban): anime random, arta full-bleed sus de tot
+   ===================================================================== */
+.hban {
+  position: relative; overflow: hidden; isolation: isolate;
+  margin: 0 calc(50% - 50vw) 1.4rem;          /* full-bleed in container */
+  width: 100vw; min-height: clamp(280px, 44vh, 460px);
+  display: flex; align-items: flex-end;
+  border-block: 1px solid var(--line, rgba(255,255,255,.08));
+  opacity: 0; transform: translateY(-8px);
+}
+.hban--in { animation: hbanIn .7s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes hbanIn { to { opacity: 1; transform: none; } }
+
+.hban__bg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.hban__bg-img, .hban__bg-gen {
+  position: absolute; inset: -4%; width: 108%; height: 108%;
+  object-fit: cover; object-position: center 30%;
+  animation: hbanZoom 26s ease-in-out infinite alternate;   /* Ken Burns */
+}
+.hban__bg-gen { display: grid; place-items: center; }
+.hban__bg-kanji {
+  font-size: clamp(8rem, 30vw, 20rem); font-weight: 900; line-height: 1;
+  color: rgba(255,255,255,.07); user-select: none;
+  text-shadow: 0 0 60px rgba(220,20,60,.25);
+}
+@keyframes hbanZoom { from { transform: scale(1) translateY(0); } to { transform: scale(1.12) translateY(-2%); } }
+
+/* voal: lizibilitate + vigneta crimson */
+.hban__veil {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(to top, rgba(8,4,6,.96) 4%, rgba(8,4,6,.55) 42%, rgba(8,4,6,.12) 75%),
+    linear-gradient(100deg, rgba(12,7,9,.88) 0%, rgba(12,7,9,.35) 45%, transparent 70%),
+    radial-gradient(120% 90% at 50% 110%, rgba(220,20,60,.28), transparent 60%);
+}
+
+.hban__body { padding: clamp(1.2rem, 4vw, 3rem) clamp(1.2rem, 5vw, 4rem); max-width: 640px; }
+.hban__tag {
+  display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: #ffd7de;
+  background: rgba(220,20,60,.32); border: 1px solid rgba(220,20,60,.55);
+  padding: .22rem .6rem; border-radius: 999px; backdrop-filter: blur(6px);
+}
+.hban__title {
+  display: block; margin: .55rem 0 .3rem; color: #fff; text-decoration: none;
+  font-size: clamp(1.7rem, 5vw, 3.2rem); font-weight: 900; line-height: 1.05;
+  text-shadow: 0 4px 26px rgba(0,0,0,.65);
+}
+.hban__title:hover { color: var(--accent, #DC143C); }
+.hban__sub { margin: 0 0 1rem; color: rgba(255,255,255,.82); font-size: .92rem; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+.hban__cta { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.hban__cta .btn--ghost { backdrop-filter: blur(6px); background: rgba(255,255,255,.08); }
+
+@media (max-width: 640px) {
+  .hban { min-height: 300px; }
+  .hban__body { padding: 1.1rem; }
+}
