@@ -1,6 +1,7 @@
 import { json, errorResponse } from '../../../lib/http.js';
 import { validatePositiveInt } from '../../../lib/validate.js';
 import { parsePaging, DEFAULT_EPISODES_PER_PAGE, MAX_EPISODES_PER_PAGE } from '../../../lib/paging.js';
+import { requireUser } from '../../../lib/session.js';
 
 // =====================================================================
 // GET /api/series/:id — detaliile seriei + o PAGINA de episoade.
@@ -64,6 +65,22 @@ export async function onRequestGet(context) {
     // vazut efectiv, ca selectorul de intervale sa nu minta.
     const total = Math.max(Number(series.episode_count) || 0, offset + episodes.length);
 
+    // Ratingul comunitatii: media si numarul de voturi se citesc pe indexul
+    // de serie (randuri putine), iar nota proprie doar cand exista sesiune.
+    const agg = await env.DB
+      .prepare('SELECT AVG(rating) AS avg, COUNT(*) AS n FROM series_ratings WHERE series_id = ?')
+      .bind(id.value)
+      .first();
+    let myRating = 0;
+    const gate = await requireUser(request, env);
+    if (!gate.response) {
+      const mine = await env.DB
+        .prepare('SELECT rating FROM series_ratings WHERE user_id = ? AND series_id = ?')
+        .bind(gate.user.id, id.value)
+        .first();
+      myRating = mine?.rating || 0;
+    }
+
     return json({
       series,
       episodes,
@@ -72,6 +89,9 @@ export async function onRequestGet(context) {
       has_more: hasMore,
       pages: Math.max(1, Math.ceil(total / perPage)),
       episode_count: total,
+      rating_average: Math.round((agg?.avg || 0) * 10) / 10,
+      rating_count: agg?.n || 0,
+      my_rating: myRating,
     });
   } catch (e) {
     console.error('GET /api/series/:id esuat:', e?.message || e);

@@ -67,6 +67,24 @@
 
     <!-- Alternativa discreta pentru o sursa de tip link. Sta SUB player si nu
          inlocuieste niciodata zona de redare: playerul ramane mereu acolo. -->
+    <!-- Comentarii pe episod: lista + formular, cu tag de spoiler. -->
+    <section class="section comments" id="comments-section">
+      <div class="section__head">
+        <h2 class="section__title">💬 Comentarii</h2>
+        <span class="section__count" id="comments-count"></span>
+      </div>
+      <form id="comment-form" class="comments__form">
+        <label class="sr-only" for="comment-body">Comentariu</label>
+        <textarea id="comment-body" class="input comments__input" rows="3" maxlength="2000"
+          placeholder="Scrie un comentariu… Folosește [spoiler]…[/spoiler] ca să ascunzi spoilerele."></textarea>
+        <div class="comments__actions">
+          <span class="hint" id="comment-hint"></span>
+          <button class="btn btn--accent btn--sm" id="comment-submit" type="submit">Trimite</button>
+        </div>
+      </form>
+      <div class="comments__list" id="comments-list"></div>
+    </section>
+
     <a class="ext-inline" id="ext-link" href="#" target="_blank" rel="noopener noreferrer nofollow" hidden>Deschide „<span id="ext-label"></span>" într-o filă nouă</a>
 
     <!--

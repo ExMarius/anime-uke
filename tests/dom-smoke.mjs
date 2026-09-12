@@ -181,6 +181,7 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   // Bannerul rotativ: trebuie sa existe in DOM, iar daca e vizibil sa duca
   // catre o serie reala. Inchiderea lui se persista pe intervalul de 3h.
   check('Bannerul rotativ exista in DOM', !!p.$('#spot-banner'), 'lipseste #spot-banner');
+  check('Randul „Continua vizionarea" exista in DOM', !!p.$('#continue-section'), 'lipseste #continue-section');
   if (p.$('#spot-banner')?.hidden === false) {
     check('Bannerul vizibil duce catre o serie', /^\/series\?id=\d+$/.test(p.$('#spot-title')?.getAttribute('href') || ''), p.$('#spot-title')?.getAttribute('href'));
     check('Bannerul vizibil are eticheta de interval', (p.text('#spot-tag') || '').length > 3, p.text('#spot-tag'));
@@ -308,6 +309,11 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   // aiba exact 3 cufere, nu un container gol.
   const chestsOn = await until(() => p.$$('#chests-row .chest').length === 3);
   check('Cufărul cu comori se randeaza cu 3 cufere', chestsOn, `n=${p.$$('#chests-row .chest').length} hidden=${p.$('#chests-section')?.hidden}`);
+
+  // Widgetul de rating: 10 butoane, media vizibila.
+  const rateOn = await until(() => p.$$('#rate-stars .rate__star').length === 10);
+  check('Widgetul de rating are 10 note', rateOn, `n=${p.$$('#rate-stars .rate__star').length}`);
+  check('Media de vot e afisata', (p.text('#rate-avg') || '').length > 0, p.text('#rate-avg'));
   check('Cuferele isi arata starea (blocat/deschis)', /mai ai|Deschide|Deschis/.test(p.text('#chests-row') || ''), p.text('#chests-row')?.slice(0, 60));
   check('Posterul seriei e randat (fallback cand lipseste coperta)', p.$('#series-poster')?.hidden === false && p.$$('#series-poster > *').length === 1, `hidden=${p.$('#series-poster')?.hidden} copii=${p.$$('#series-poster > *').length}`);
   check('Selectorul de intervale e vizibil la o serie lunga', p.$('#ep-ranges')?.hidden === false, `hidden=${p.$('#ep-ranges')?.hidden}`);
@@ -392,6 +398,10 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'f', bubbles: true }));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
   check('Fullscreen/tastele degradeaza fara crash cand API-ul lipseste', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
+
+  // Comentariile: formular prezent, lista randata (macar starea vida).
+  const comOn = await until(() => !!p.$('#comments-list')?.textContent);
+  check('Sectiunea de comentarii se randeaza', comOn && !!p.$('#comment-form'), `list=${(p.$('#comments-list')?.textContent || '').slice(0, 40)}`);
   await p.teardown();
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }

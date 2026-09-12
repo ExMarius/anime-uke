@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate } from './core.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -388,6 +388,9 @@ async function load() {
   // Playerul se incarca doar dupa ce avem URL-urile validate pe server.
   renderSources(res.data.sources || []);
 
+  initComments(Number(id));
+  loadComments(Number(id)).catch(() => { /* comentariile sunt optionale */ });
+
   watchThreshold = Number(res.data.watch_threshold) || 900;
   watchSeconds = Number(res.data.progress_seconds) || 0;
   watchedDone = !!res.data.watched;
@@ -450,6 +453,106 @@ function initPlayerTools() {
       default:
         return;
     }
+  });
+}
+
+// ---------------------------------------------------------------------
+// Comentarii pe episod: lista, postare, stergere (proprie / admin).
+// Textul se escape-uieste INTOTDEAUNA; singurul markup permis e tag-ul
+// [spoiler], transformat intr-un span care se dezvaluie la click.
+// ---------------------------------------------------------------------
+function renderCommentBody(raw) {
+  const safe = escapeHtml(raw)
+    .replace(/\[spoiler\]([\s\S]*?)\[\/spoiler\]/gi, '<span class="spoiler">$1</span>')
+    .replace(/\n/g, '<br>');
+  return safe;
+}
+
+async function loadComments(episodeId) {
+  const list = document.getElementById('comments-list');
+  const count = document.getElementById('comments-count');
+  if (!list) return;
+
+  const res = await api(`/comments?episode_id=${encodeURIComponent(episodeId)}`);
+  if (!res.ok) { list.innerHTML = '<p class="hint">Comentariile nu sunt disponibile acum.</p>'; return; }
+
+  const me = await getSession();
+  const items = res.data.comments || [];
+  count.textContent = items.length ? `${items.length}` : '';
+  list.innerHTML = '';
+
+  if (!items.length) {
+    list.innerHTML = '<p class="hint">Fii primul care comentează episodul ăsta.</p>';
+    return;
+  }
+
+  for (const c of items) {
+    const art = document.createElement('article');
+    art.className = 'comment';
+
+    const head = document.createElement('div');
+    head.className = 'comment__head';
+    const who = document.createElement('span');
+    who.className = 'comment__who';
+    who.textContent = c.username;
+    const when = document.createElement('span');
+    when.className = 'comment__when';
+    when.textContent = formatDate(c.created_at);
+    head.appendChild(who);
+    head.appendChild(when);
+    if (c.own || me?.is_admin) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'comment__del';
+      del.textContent = '🗑';
+      del.title = c.own ? 'Șterge comentariul' : 'Șterge (admin)';
+      del.addEventListener('click', async () => {
+        if (!confirm('Ștergi comentariul?')) return;
+        const r = await api(`/comments?id=${c.id}`, { method: 'DELETE' });
+        if (!r.ok) { toast(r.data?.error || 'Nu am putut șterge', 'err'); return; }
+        loadComments(episodeId);
+      });
+      head.appendChild(del);
+    }
+    art.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'comment__body';
+    body.innerHTML = renderCommentBody(c.body);
+    art.appendChild(body);
+    list.appendChild(art);
+  }
+}
+
+function initComments(episodeId) {
+  const form = document.getElementById('comment-form');
+  const input = document.getElementById('comment-body');
+  const hint = document.getElementById('comment-hint');
+  if (!form) return;
+
+  input.addEventListener('input', () => {
+    hint.textContent = `${input.value.trim().length}/2000`;
+  });
+
+  // Dezvaluie spoilerele la click (delegare: span-urile apar dinamic).
+  document.getElementById('comments-list')?.addEventListener('click', (e) => {
+    const sp = e.target.closest('.spoiler');
+    if (sp) sp.classList.add('spoiler--open');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (text.length < 4) { toast('Comentariul e prea scurt.', 'warn'); return; }
+    const btn = document.getElementById('comment-submit');
+    btn.disabled = true;
+    const r = await api('/comments', { method: 'POST', body: { episode_id: episodeId, body: text } });
+    btn.disabled = false;
+    if (!r.ok) { toast(r.data?.error || 'Nu am putut posta comentariul', 'err'); return; }
+    input.value = '';
+    hint.textContent = '';
+    toast('Comentariul a fost postat.', 'ok');
+    loadComments(episodeId);
   });
 }
 

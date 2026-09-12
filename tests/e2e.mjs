@@ -975,6 +975,48 @@ console.log('\n=== 13b. SUBTITRARI WEBVTT IN ROMANA ===');
   await req(j, 'DELETE', `/api/admin/episodes?id=${newId}`);
 }
 
+console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // --- rating: vot, revot (upsert), validare, agregare in ruta seriei
+  const r1 = await req(j, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 8 });
+  check('Nota 8 se salveaza', r1.data?.success === true && r1.data?.average === 8 && r1.data?.count === 1, JSON.stringify(r1.data));
+  const r2 = await req(j, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 10 });
+  check('Revotul e upsert: count ramane 1, media devine 10', r2.data?.count === 1 && r2.data?.average === 10, JSON.stringify(r2.data));
+  const r3 = await req(j, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 11 });
+  check('Nota 11 e respinsa → 400', r3.status === 400, `status=${r3.status}`);
+  const ser = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+  check('Ruta seriei expune media, numarul si nota proprie', ser.data?.rating_average === 10 && ser.data?.rating_count === 1 && ser.data?.my_rating === 10, JSON.stringify({ a: ser.data?.rating_average, n: ser.data?.rating_count, m: ser.data?.my_rating }));
+
+  // --- comentarii: postare, spoiler pastrat ca text, minim de lungime,
+  //     stergere proprie vs a altcuiva
+  const c1 = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Primul comentariu [spoiler]Zoro iar moare[/spoiler]' });
+  check('Comentariul se posteaza', c1.data?.success === true, JSON.stringify(c1.data));
+  const short = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'x' });
+  check('Comentariu prea scurt → 400', short.status === 400, `status=${short.status}`);
+
+  const list = await req(j, 'GET', `/api/comments?episode_id=${globalThis.epId}`);
+  check('Lista contine comentariul cu autor si marcajul own', list.data?.comments?.length === 1 && list.data.comments[0].own === true && list.data.comments[0].username, JSON.stringify(list.data?.comments));
+  check('Spoilerul ramane text curat (se randaza in browser)', list.data?.comments?.[0]?.body?.includes('[spoiler]'), list.data?.comments?.[0]?.body);
+
+  const adminComment = await req(globalThis.admin, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariul adminului pentru testul de moderare' });
+  const adminCommentId = adminComment.data?.id;
+  const forbidden = await req(j, 'DELETE', `/api/comments?id=${adminCommentId}`);
+  check('Un user nu poate sterge comentariul altcuiva → 403', forbidden.status === 403, `status=${forbidden.status}`);
+  const adminDel = await req(globalThis.admin, 'DELETE', `/api/comments?id=${adminCommentId}`);
+  check('Adminul poate sterge orice comentariu', adminDel.data?.success === true, JSON.stringify(adminDel.data));
+  const ownDel = await req(j, 'DELETE', `/api/comments?id=${c1.data?.id}`);
+  check('Autorul isi poate sterge propriul comentariu', ownDel.data?.success === true, JSON.stringify(ownDel.data));
+
+  // --- continua vizionarea: din progresul real al lui user2
+  const cont = await req(j, 'GET', '/api/continue');
+  const hit = (cont.data?.items || []).find((it) => it.episode_id === globalThis.epId);
+  check('Rândul „Continua vizionarea" contine episodul cu progres', !!hit && hit.seconds >= 900, JSON.stringify(cont.data?.items?.[0]));
+  check('Itemul are serie si numar de episod pentru card', !!hit?.series_title && Number.isInteger(hit?.episode_number), JSON.stringify(hit)?.slice(0, 120));
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));

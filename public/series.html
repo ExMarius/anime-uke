@@ -21,6 +21,11 @@
         <div id="series-badges" style="display:flex;gap:.45rem;flex-wrap:wrap"></div>
         <h1 class="hero__title" id="series-title" style="font-size:clamp(1.9rem,5vw,3rem)">Se încarcă…</h1>
         <p class="hero__sub ser-desc" id="series-desc"></p>
+        <div class="rate" id="rate-box" hidden>
+          <span class="rate__avg" id="rate-avg">–</span>
+          <div class="rate__stars" id="rate-stars" role="radiogroup" aria-label="Nota ta pentru serie"></div>
+          <span class="rate__count" id="rate-count"></span>
+        </div>
         <div class="hero__actions" id="series-actions">
           <button class="btn btn--ghost" id="watchlist-btn" type="button" hidden>🔖 Adaugă la „de vizionat”</button>
           <a class="btn btn--ghost" id="profile-link" href="/profile" hidden>👤 Profilul meu</a>

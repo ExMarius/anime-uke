@@ -26,6 +26,9 @@ import * as viewRoute from './routes/api/view.js';
 import * as progressRoute from './routes/api/progress.js';
 import * as chestsRoute from './routes/api/chests.js';
 import * as leaderboardRoute from './routes/api/leaderboard.js';
+import * as ratingsRoute from './routes/api/ratings.js';
+import * as commentsRoute from './routes/api/comments.js';
+import * as continueRoute from './routes/api/continue.js';
 import * as registerRoute from './routes/api/auth/register.js';
 import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
@@ -59,6 +62,9 @@ const ROUTES = [
   { method: 'POST', path: '/api/progress', mod: progressRoute },
   { method: '*', path: '/api/chests', mod: chestsRoute },
   { method: 'GET', path: '/api/leaderboard', mod: leaderboardRoute },
+  { method: 'POST', path: '/api/ratings', mod: ratingsRoute },
+  { method: '*', path: '/api/comments', mod: commentsRoute },
+  { method: 'GET', path: '/api/continue', mod: continueRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
 
   // --- profil + lista „de vizionat" ---

@@ -223,6 +223,7 @@ async function load() {
   }
 
   setHead(res.data.series);
+  paintRating(res.data);
 
   epPerPage = res.data.per_page || 100;
   epTotal = res.data.episode_count || 0;
@@ -371,6 +372,40 @@ function chestCard(ch, totalSeconds, seriesId) {
     el.appendChild(left);
   }
   return el;
+}
+
+// ---------------------------------------------------------------------
+// Rating 1-10: media comunitatii + nota proprie, revot prin upsert.
+// ---------------------------------------------------------------------
+function paintRating(d) {
+  const box = document.getElementById('rate-box');
+  const stars = document.getElementById('rate-stars');
+  if (!box || !stars) return;
+  box.hidden = false;
+
+  document.getElementById('rate-avg').textContent =
+    d.rating_count ? d.rating_average.toLocaleString('ro-RO') : '–';
+  document.getElementById('rate-count').textContent =
+    d.rating_count ? `${d.rating_count} ${d.rating_count === 1 ? 'vot' : 'voturi'}` : 'fără voturi încă';
+
+  stars.innerHTML = '';
+  for (let n = 1; n <= 10; n++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rate__star' + (n <= (d.my_rating || 0) ? ' rate__star--on' : '');
+    b.textContent = String(n);
+    b.title = `Dă nota ${n}`;
+    b.setAttribute('aria-label', `Nota ${n}`);
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      const r = await api('/ratings', { method: 'POST', body: { series_id: d.series.id, rating: n } });
+      b.disabled = false;
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut salva nota', 'err'); return; }
+      toast(`Ai notat seria cu ${n}.`, 'ok');
+      paintRating({ ...d, my_rating: n, rating_average: r.data.average, rating_count: r.data.count });
+    });
+    stars.appendChild(b);
+  }
 }
 
 async function loadChests(seriesId) {

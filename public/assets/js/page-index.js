@@ -286,10 +286,57 @@ async function renderSpotlight() {
   }, { once: true });
 }
 
+// ---------------------------------------------------------------------
+// „Continua vizionarea": ultimele episoade cu progres real, din
+// watch_progress. Randul apare doar cand exista ce continua.
+// ---------------------------------------------------------------------
+async function renderContinue() {
+  const section = document.getElementById('continue-section');
+  const row = document.getElementById('continue-row');
+  if (!section || !row) return;
+
+  const res = await api('/continue');
+  if (!res.ok || !res.data?.items?.length) { section.hidden = true; return; }
+
+  section.hidden = false;
+  row.innerHTML = '';
+  for (const it of res.data.items) {
+    const a = document.createElement('a');
+    a.className = 'continue-card';
+    a.href = `/episode?id=${encodeURIComponent(it.episode_id)}`;
+
+    const art = document.createElement('div');
+    art.className = 'continue-card__art';
+    const cover = safeUrl(it.cover_image, '');
+    if (cover && cover !== '#') {
+      const img = document.createElement('img');
+      img.src = cover; img.alt = ''; img.loading = 'lazy';
+      art.appendChild(img);
+    } else {
+      art.appendChild(genPoster(it.series_title));
+    }
+    a.appendChild(art);
+
+    const meta = document.createElement('div');
+    meta.className = 'continue-card__meta';
+    const t1 = document.createElement('span');
+    t1.className = 'continue-card__series';
+    t1.textContent = it.series_title;
+    const t2 = document.createElement('span');
+    t2.className = 'continue-card__ep';
+    t2.textContent = `Episodul ${it.episode_number}`;
+    meta.appendChild(t1);
+    meta.appendChild(t2);
+    a.appendChild(meta);
+    row.appendChild(a);
+  }
+}
+
 await renderNav('/');
 skeletons(10);
 await Promise.all([load(), initChat()]);
 renderSpotlight().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
+renderContinue().catch(() => { /* randul de continuare e optional */ });
 
 // Debounce: fara el, fiecare litera tastata ar insemna un LIKE pe tot
 // tabelul de serii — iar cautarea e exact operatia care nu e indexabila.
