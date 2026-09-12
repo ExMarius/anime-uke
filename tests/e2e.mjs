@@ -1091,6 +1091,100 @@ console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ==
   check('Schimbarea notei nu mai acorda XP (doar primul vot)', a2 === b2, `before=${b2} after=${a2}`);
 }
 
+console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // --- catalogul de teme + gradul propriu
+  const r1 = await req(j, 'GET', '/api/ranks');
+  check('GET /api/ranks returneaza temele seeduite', r1.status === 200 && ['naruto', 'onepiece', 'hunter'].every((sl) => (r1.data?.themes || []).some((t) => t.slug === sl)), JSON.stringify((r1.data?.themes || []).map((t) => t.slug)));
+  check('Gradul propriu e Genin la nivel mic (tema naruto)', r1.data?.me?.rank?.label === 'Genin' && r1.data.me.rank.icon === '🍃', JSON.stringify(r1.data?.me));
+
+  // --- schimbarea temei din profil
+  const sw = await req(j, 'POST', '/api/me/theme', { theme: 'onepiece' });
+  check('Schimbarea temei merge si schimba gradul', sw.data?.success === true && sw.data?.me?.rank?.label === 'Rookie', JSON.stringify(sw.data?.me));
+  const bad = await req(j, 'POST', '/api/me/theme', { theme: 'n-exista' });
+  check('Tema inexistenta → 400', bad.status === 400, `status=${bad.status}`);
+  await req(j, 'POST', '/api/me/theme', { theme: 'naruto' });
+
+  // --- identitate in comentarii: staff badge pentru admin, grad pentru user
+  const ownC = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariul lui user2 pentru testul de grade' });
+  const ac = await req(globalThis.admin, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu de admin cu badge de staff' });
+  const list = await req(j, 'GET', `/api/comments?episode_id=${globalThis.epId}`);
+  const adminC = (list.data?.comments || []).find((c) => c.id === ac.data?.id);
+  const userC = (list.data?.comments || []).find((c) => c.id === ownC.data?.id);
+  check('Comentariul adminului vine cu staff=Admin', adminC?.staff === 'Admin', JSON.stringify(adminC)?.slice(0, 120));
+  check('Comentariile au grad tematic (rank.label)', typeof userC?.rank?.label === 'string' && userC.rank.label.length > 1, JSON.stringify(userC?.rank));
+  await req(globalThis.admin, 'DELETE', `/api/comments?id=${ac.data?.id}`);
+  await req(j, 'DELETE', `/api/comments?id=${ownC.data?.id}`);
+
+  // --- clasamentul expune gradele
+  const lb = await req(j, 'GET', '/api/leaderboard');
+  check('Clasamentul are grad pe randuri', (lb.data?.top || []).every((r) => r.rank?.label) && (lb.data?.top || []).length > 0, JSON.stringify(lb.data?.top?.[0])?.slice(0, 120));
+
+  // --- admin: tema custom din „alta serie”, validare, stergere
+  const mk = await req(globalThis.admin, 'POST', '/api/admin/rank-themes', {
+    slug: 'bleach', title: 'Bleach — Soul Society',
+    tiers: [{ min: 1, label: 'Elev', icon: '🗡️' }, { min: 6, label: 'Shinigami', icon: '⚔️' }, { min: 14, label: 'Căpitan', icon: '👑' }],
+  });
+  check('Adminul poate adauga o tema din alta serie', mk.data?.success === true && (mk.data?.themes || []).some((t) => t.slug === 'bleach'), JSON.stringify(mk.data)?.slice(0, 120));
+  const mkBad = await req(globalThis.admin, 'POST', '/api/admin/rank-themes', { slug: 'x', title: 'X', tiers: [{ min: 5, label: 'Fara baza' }] });
+  check('Tema fara treapta de la nivelul 1 → 400', mkBad.status === 400, `status=${mkBad.status}`);
+  const mkUser = await req(j, 'POST', '/api/admin/rank-themes', { slug: 'hack', title: 'Hack', tiers: [{ min: 1, label: 'X' }] });
+  check('Non-admin nu poate adauga teme → 403', mkUser.status === 403, `status=${mkUser.status}`);
+  const sw2 = await req(j, 'POST', '/api/me/theme', { theme: 'bleach' });
+  check('Userul poate alege tema custom', sw2.data?.me?.rank?.label === 'Elev', JSON.stringify(sw2.data?.me));
+  const del = await req(globalThis.admin, 'DELETE', '/api/admin/rank-themes?slug=bleach');
+  const after = await req(j, 'GET', '/api/ranks');
+  check('Tema stearsa: userii ei cad inapoi pe naruto', del.data?.success === true && after.data?.me?.rank?.theme === 'naruto', JSON.stringify(after.data?.me?.rank));
+  const delBuiltin = await req(globalThis.admin, 'DELETE', '/api/admin/rank-themes?slug=naruto');
+  check('Temele builtin nu se sterg → 400', delBuiltin.status === 400, `status=${delBuiltin.status}`);
+
+  // --- moderatori: promovare/retrogradare + protectii
+  const promo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 1 });
+  const meMod = await req(j, 'GET', '/api/auth/me');
+  check('Promovarea ca moderator se vede in sesiune', promo.data?.success === true && !!meMod.data?.user?.is_mod, JSON.stringify(meMod.data?.user)?.slice(0, 120));
+  // clasamentul e cache-uit 15 minute, deci staff-ul proaspat se verifica pe
+  // profil (sursa live), nu prin cache
+  const profMod = await req(j, 'GET', '/api/profile/user2');
+  check('Profilul unui moderator arata staff=Moderator', profMod.data?.identity?.staff === 'Moderator', JSON.stringify(profMod.data?.identity));
+  const adminMe = await req(globalThis.admin, 'GET', '/api/auth/me');
+  const selfPromo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: adminMe.data?.user?.username, is_mod: 1 });
+  check('Adminul nu-si poate schimba propriul rol', selfPromo.status === 400 || selfPromo.status === 404, `status=${selfPromo.status}`);
+  const demo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 0 });
+  check('Retrogradarea merge', demo.data?.success === true && demo.data?.is_mod === 0, JSON.stringify(demo.data));
+  const modTheme = await req(j, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 1 });
+  check('Un moderator nu poate promova → 403', modTheme.status === 403, `status=${modTheme.status}`);
+  await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 0 });
+
+  // --- chat: mesajele poarta gradul si rolul de staff din server
+  await new Promise((r) => setTimeout(r, 1200));
+  const ws1 = new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } });
+  try {
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), 8000);
+      ws1.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };
+      ws1.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
+    });
+    ws1.send(JSON.stringify({ type: 'chat', message: 'Mesaj cu grad tematic' }));
+    await new Promise((r) => setTimeout(r, 1500));
+    ws1.close();
+    const ws2 = new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } });
+    const init2 = await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), 8000);
+      ws2.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'init') { clearTimeout(t); resolve(d); } };
+      ws2.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
+    });
+    const mine = (init2.history || []).find((m) => m.message === 'Mesaj cu grad tematic');
+    check('Mesajele din chat poarta gradul tematic persistat', !!mine && typeof mine.rank_label === 'string' && mine.rank_label.length > 1, JSON.stringify(mine)?.slice(0, 140));
+    check('Lista de online include gradul si rolul', (init2.online || []).some((o) => 'rank_label' in o && 'staff_role' in o), JSON.stringify(init2.online)?.slice(0, 140));
+    ws2.close();
+  } catch (e) {
+    check('Conexiunea WS pentru teste de grade', false, e.message);
+  }
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));

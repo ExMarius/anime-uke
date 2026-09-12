@@ -89,7 +89,10 @@ export class ChatDO {
     const [client, server] = Object.values(pair);
 
     this.state.acceptWebSocket(server);
-    server.serializeAttachment({ userId: user.id, username: user.username });
+    server.serializeAttachment({
+      userId: user.id, username: user.username,
+      rank_label: user.rank_label || '', rank_icon: user.rank_icon || '', staff_role: user.staff_role || '',
+    });
 
     // Nu blocam handshake-ul pe I/O
     this.state.waitUntil(this.onConnected(server, user));
@@ -147,6 +150,10 @@ export class ChatDO {
       username: att.username,
       message,
       created_at: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      // identitatea vine verificata din ruta /chat (session + D1)
+      rank_label: att.rank_label || '',
+      rank_icon: att.rank_icon || '',
+      staff_role: att.staff_role || '',
     };
 
     // --- broadcast imediat (fara sa asteptam D1) ---
@@ -196,7 +203,7 @@ export class ChatDO {
     if (this.history) return this.history.slice(-HISTORY_LIMIT);
     try {
       const res = await this.env.DB.prepare(
-        `SELECT user_id, username, message, created_at
+        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role
          FROM chat_messages ORDER BY id DESC LIMIT ?`
       ).bind(HISTORY_LIMIT).all();
 
@@ -217,10 +224,12 @@ export class ChatDO {
 
     try {
       const stmt = this.env.DB.prepare(
-        `INSERT INTO chat_messages (user_id, username, message, created_at) VALUES (?, ?, ?, ?)`
+        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       );
       await this.env.DB.batch(batch.map((m) =>
-        stmt.bind(m.user_id, m.username, m.message, m.created_at)
+        stmt.bind(m.user_id, m.username, m.message, m.created_at,
+          m.rank_label || '', m.rank_icon || '', m.staff_role || '')
       ));
     } catch (e) {
       console.error('ChatDO flush esuat:', e?.message || e);
@@ -262,10 +271,13 @@ export class ChatDO {
     for (const ws of this.state.getWebSockets()) {
       const att = ws.deserializeAttachment();
       if (att?.userId && !seen.has(att.userId)) {
-        seen.set(att.userId, att.username);
+        seen.set(att.userId, att);
       }
     }
-    return [...seen.entries()].map(([id, username]) => ({ id, username }));
+    return [...seen.entries()].map(([id, att]) => ({
+      id, username: att.username,
+      rank_label: att.rank_label || '', rank_icon: att.rank_icon || '', staff_role: att.staff_role || '',
+    }));
   }
 
   broadcast(payload, except = null) {

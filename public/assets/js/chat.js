@@ -9,7 +9,7 @@
 // nici macar handler de onclose).
 // =====================================================================
 
-import { escapeHtml, getSession, toast } from './core.js';
+import { escapeHtml, getSession, toast , staffBadge, rankChip } from './core.js';
 
 let ws = null;
 let me = null;
@@ -123,7 +123,7 @@ function renderOnline(list) {
   const box = document.getElementById('chat-online');
   if (!box) return;
   box.textContent = list.length
-    ? 'Online: ' + list.map((u) => u.username).join(', ')
+    ? 'Online: ' + list.map((u) => `${u.staff_role ? (u.staff_role === 'Admin' ? '🛡️' : '🛠️') : ''}${u.rank_icon || ''} ${u.username}`.trim()).join(', ')
     : 'Nimeni online momentan';
 }
 
@@ -140,6 +140,13 @@ function renderMessage(m) {
   const row = document.createElement('div');
   row.className = 'msg' + (me && m.user_id === me.id ? ' msg--own' : '');
 
+  // identitatea: staff badge + grad tematic, ambele din server (niciodata
+  // din client) — cine vorbeste si cu ce autoritate se vede dintr-o privire
+  const badges = [
+    staffBadge(m.staff_role),
+    rankChip(m.rank_label ? { label: m.rank_label, icon: m.rank_icon } : null),
+  ].filter(Boolean);
+
   const user = document.createElement('span');
   user.className = 'msg__user';
   user.textContent = m.username || 'Anon';
@@ -148,7 +155,7 @@ function renderMessage(m) {
   text.className = 'msg__text';
   text.textContent = m.message || '';
 
-  row.append(user, text);
+  row.append(...badges, user, text);
 
   if (m.created_at) {
     const time = document.createElement('span');

@@ -31,6 +31,10 @@ import * as commentsRoute from './routes/api/comments.js';
 import * as continueRoute from './routes/api/continue.js';
 import * as chestRoute from './routes/api/chest.js';
 import * as economyRoute from './routes/api/economy.js';
+import * as ranksRoute from './routes/api/ranks.js';
+import * as meThemeRoute from './routes/api/me-theme.js';
+import * as adminRankThemesRoute from './routes/api/admin/rank-themes.js';
+import * as adminModsRoute from './routes/api/admin/mods.js';
 import * as registerRoute from './routes/api/auth/register.js';
 import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
@@ -69,6 +73,10 @@ const ROUTES = [
   { method: 'GET', path: '/api/continue', mod: continueRoute },
   { method: '*', path: '/api/chest', mod: chestRoute },
   { method: 'GET', path: '/api/economy', mod: economyRoute },
+  { method: 'GET', path: '/api/ranks', mod: ranksRoute },
+  { method: 'POST', path: '/api/me/theme', mod: meThemeRoute },
+  { method: '*', path: '/api/admin/rank-themes', mod: adminRankThemesRoute },
+  { method: 'POST', path: '/api/admin/mods', mod: adminModsRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
 
   // --- profil + lista „de vizionat" ---

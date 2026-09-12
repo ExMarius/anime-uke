@@ -14,6 +14,7 @@
 // doar de dragul clasamentului.
 // =====================================================================
 import { json, errorResponse } from '../../lib/http.js';
+import { identity, loadRankThemes } from '../../lib/ranks.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 
@@ -28,9 +29,10 @@ function ageSeconds(updatedAt) {
 }
 
 async function computeTop(env) {
+  // gradele tematice se calculeaza din nivel + tema fiecarui om
   const top = await env.DB
     .prepare(
-      `SELECT username, points FROM users
+      `SELECT username, points, level, rank_theme, is_admin, is_mod FROM users
        WHERE is_banned = 0
        ORDER BY points DESC, id ASC
        LIMIT ${TOP_N}`
@@ -50,10 +52,13 @@ async function computeTop(env) {
     .all();
   const weekByUser = new Map((week.results || []).map((r) => [r.username, r.n]));
 
+  const themes = await loadRankThemes(env);
   return (top.results || []).map((r) => ({
     username: r.username,
     points: r.points,
     week: weekByUser.get(r.username) || 0,
+    rank: identity(r, themes).rank,
+    staff: identity(r, themes).staff,
   }));
 }
 

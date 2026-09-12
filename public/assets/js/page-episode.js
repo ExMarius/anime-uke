@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip } from './core.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -478,6 +478,7 @@ async function loadComments(episodeId) {
     when.className = 'comment__when';
     when.textContent = formatDate(c.created_at);
     head.appendChild(who);
+    for (const b of [staffBadge(c.staff), rankChip(c.rank)].filter(Boolean)) head.appendChild(b);
     head.appendChild(when);
     if (c.own || me?.is_admin) {
       const del = document.createElement('button');

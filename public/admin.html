@@ -34,6 +34,7 @@
       <button class="tab" role="tab" id="tab-stats"    aria-controls="panel-stats"    aria-selected="true"  type="button">📊 Statistici</button>
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
       <button class="tab" role="tab" id="tab-invites"  aria-controls="panel-invites"  aria-selected="false" type="button">🎟️ Invitații</button>
+      <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
       <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
     </div>
 
@@ -98,6 +99,35 @@
           </tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ===================== GRADE & STAFF ===================== -->
+    <section class="panel" id="panel-ranks" role="tabpanel" aria-labelledby="tab-ranks" hidden>
+      <div class="box">
+        <h2 class="box__title">Teme de grade</h2>
+        <p class="box__hint">Gradele cresc din nivelul contului. Adaugă teme din orice serie: fiecare treaptă pe un rând, formatul <code>min | Label | icon</code>.</p>
+        <div class="ranks-list" id="ranks-list"></div>
+        <form id="rank-theme-form" class="rank-form">
+          <div class="rank-form__grid">
+            <input class="input" id="rt-slug" placeholder="slug (ex. bleach)" required maxlength="40">
+            <input class="input" id="rt-title" placeholder="Titlu (ex. Bleach — Soul Society)" required maxlength="60">
+          </div>
+          <textarea class="input rank-form__tiers" id="rt-tiers" rows="5" required
+            placeholder="1 | Elev | 🗡️&#10;6 | Shinigami | ⚔️&#10;14 | Căpitan | 👑"></textarea>
+          <button class="btn btn--accent" type="submit">Salvează tema</button>
+        </form>
+      </div>
+      <div class="box">
+        <h2 class="box__title">Moderatori</h2>
+        <p class="box__hint">Moderatorii primesc badge 🛠️ în chat, comentarii și clasament, plus drepturi de moderare.</p>
+        <form id="mod-form" class="rank-form__grid">
+          <input class="input" id="mod-username" placeholder="username" required>
+          <div class="rank-form__btns">
+            <button class="btn btn--accent btn--sm" type="submit" data-mod="1">Promovează</button>
+            <button class="btn btn--ghost btn--sm" type="submit" data-mod="0">Retrogradează</button>
+          </div>
+        </form>
       </div>
     </section>
 

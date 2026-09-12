@@ -1,5 +1,6 @@
 import { errorResponse } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
+import { identity, loadRankThemes } from '../lib/ranks.js';
 
 // =====================================================================
 // /chat — upgrade WebSocket catre ChatDO.
@@ -37,8 +38,16 @@ export async function onRequest(context) {
 
   // Pasa identitatea VERIFICATA catre DO. DO-ul are incredere in acest
   // parametru pentru ca singura cale de acces e prin aceasta functie.
+  // Gradul + rolul de staff se rezolva AICI (din D1, la conectare), ca DO-ul
+  // sa le broadcast-uiasca fara sa citeasca baza la fiecare mesaj. Clientul
+  // nu poate falsifica nimic: tot lantul vine din sesiunea HttpOnly.
+  const themes = await loadRankThemes(env);
+  const me = identity(user, themes);
   const url = new URL(request.url);
-  url.searchParams.set('u', JSON.stringify({ id: user.id, username: user.username }));
+  url.searchParams.set('u', JSON.stringify({
+    id: user.id, username: user.username,
+    rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
+  }));
 
   return stub.fetch(new Request(url.toString(), request));
 }

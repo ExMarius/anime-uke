@@ -15,6 +15,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { identity, loadRankThemes } from '../../lib/ranks.js';
 
 const MAX_LEN = 2000;
 const MIN_LEN = 4;
@@ -29,9 +30,10 @@ export async function onRequestGet(context) {
   const eid = validatePositiveInt(url.searchParams.get('episode_id'), 'ID-ul episodului');
   if (!eid.ok) return errorResponse(400, eid.error);
 
+  const themes = await loadRankThemes(env);
   const rows = await env.DB
     .prepare(
-      `SELECT c.id, c.body, c.created_at, c.user_id, u.username
+      `SELECT c.id, c.body, c.created_at, c.user_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod
        FROM episode_comments c
        JOIN users u ON u.id = c.user_id
        WHERE c.episode_id = ?
@@ -42,13 +44,18 @@ export async function onRequestGet(context) {
     .all();
 
   return json({
-    comments: (rows.results || []).map((r) => ({
-      id: r.id,
-      body: r.body,
-      created_at: r.created_at,
-      username: r.username,
-      own: r.user_id === user.id,
-    })),
+    comments: (rows.results || []).map((r) => {
+      const idn = identity(r, themes);
+      return {
+        id: r.id,
+        body: r.body,
+        created_at: r.created_at,
+        username: r.username,
+        own: r.user_id === user.id,
+        rank: idn.rank,
+        staff: idn.staff,
+      };
+    }),
   });
 }
 

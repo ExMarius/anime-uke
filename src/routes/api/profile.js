@@ -3,6 +3,7 @@ import { getSessionUser } from '../../lib/session.js';
 import { getRank, getZodiac, formatRoDate, getAge, GENDERS } from '../../lib/rank.js';
 import { validateProfilePatch } from '../../lib/profile.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
+import { identity, loadRankThemes } from '../../lib/ranks.js';
 
 // =====================================================================
 // /api/profile/:username  — profil public + statistici
@@ -13,7 +14,7 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 // =====================================================================
 
 /** Serieaza profilul pentru client. Email-ul NU pleaca niciodata de aici. */
-function present(user, profile, stats, isSelf) {
+function present(user, profile, stats, isSelf, themes = []) {
   const birthDate = profile?.birth_date || '';
   const rank = getRank(user.points);
 
@@ -23,9 +24,13 @@ function present(user, profile, stats, isSelf) {
       username: user.username,
       points: user.points,
       is_admin: !!user.is_admin,
+      is_mod: !!user.is_mod,
+      level: user.level || 1,
+      rank_theme: user.rank_theme || 'naruto',
       created_at: user.created_at,
       member_since: formatRoDate(user.created_at),
     },
+    identity: identity(user, themes),
     rank,
     profile: {
       birth_date: birthDate,
@@ -87,7 +92,7 @@ export async function onRequestGet(context) {
     user = me;
   } else {
     user = await env.DB
-      .prepare('SELECT id, username, points, is_admin, created_at FROM users WHERE username = ?')
+      .prepare('SELECT id, username, points, is_admin, is_mod, level, rank_theme, created_at FROM users WHERE username = ?')
       .bind(raw)
       .first();
     if (!user) return errorResponse(404, 'Utilizatorul nu există');
@@ -116,7 +121,7 @@ export async function onRequestGet(context) {
     ]);
 
     return json({
-      ...present(user, profile, stats, me?.id === user.id),
+      ...present(user, profile, stats, me?.id === user.id, await loadRankThemes(env)),
       recommendations: recommendations?.results || [],
     }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {
@@ -190,7 +195,7 @@ export async function onRequestPatch(context) {
       .first();
 
     const stats = await loadStats(env, me.id);
-    return json(present(me, saved, stats, true));
+    return json(present(me, saved, stats, true, await loadRankThemes(env)));
   } catch (e) {
     console.error('PATCH /api/profile esuat:', e?.message || e);
     return errorResponse(500, 'Nu am putut salva profilul');

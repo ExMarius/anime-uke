@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, safeUrl } from './core.js';
+import { api, renderNav, toast, withBusy, safeUrl, staffBadge, rankChip } from './core.js';
 
 // =====================================================================
 // Pagina de profil public — sectiunile „Informatii" si „Acces rapid".
@@ -127,7 +127,10 @@ function renderHead() {
   badges.innerHTML = '';
   const rank = el('span', `rank rank--${r.key}`, `${r.icon} ${r.label}`);
   badges.appendChild(rank);
-  if (u.is_admin) badges.appendChild(el('span', 'pill pill--admin', 'Admin'));
+  // identitatea tematica: staff badge + gradul ales (Genin/Chunin/…)
+  for (const b of [staffBadge(data.identity?.staff), rankChip(data.identity?.rank)].filter(Boolean)) {
+    badges.appendChild(b);
+  }
 
   document.getElementById('p-xp-fill').style.width = `${r.progress}%`;
   const label = document.getElementById('p-xp-label');
@@ -345,6 +348,7 @@ async function loadLeaderboard() {
     name.className = 'lb__name';
     name.textContent = row.username;
     li.appendChild(name);
+    for (const b of [staffBadge(row.staff), rankChip(row.rank)].filter(Boolean)) li.appendChild(b);
 
     const week = document.createElement('span');
     week.className = 'lb__week';
@@ -380,6 +384,34 @@ function fmtRemaining(ms) {
   if (h > 0) return `${h}h ${m}m`;
   const sec = total % 60;
   return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+/** Selectorul de tema de grade: Naruto / One Piece / Hunter x Hunter /
+ *  orice tema adaugata de admin. Salvarea e un singur POST. */
+async function initThemePicker() {
+  const res = await api('/ranks');
+  if (!res.ok || !res.data?.themes?.length) return;
+  const wrap = document.getElementById('econ-theme-wrap');
+  const sel = document.getElementById('econ-theme');
+  if (!wrap || !sel) return;
+  wrap.hidden = false;
+  sel.innerHTML = '';
+  for (const t of res.data.themes) {
+    const o = document.createElement('option');
+    o.value = t.slug;
+    o.textContent = `${t.title} — ${t.tiers.map((x) => x.label).join(' → ')}`;
+    sel.appendChild(o);
+  }
+  sel.value = res.data.me?.rank?.theme || 'naruto';
+  sel.addEventListener('change', async () => {
+    const r = await api('/me/theme', { method: 'POST', body: { theme: sel.value } });
+    if (r.ok) {
+      toast(`Tema de grade: ${sel.value}`, 'success');
+      renderNav('').catch(() => {});
+    } else {
+      toast(r.data?.error || 'Nu am putut schimba tema.', 'error');
+    }
+  });
 }
 
 function renderEconomy() {
@@ -543,6 +575,7 @@ async function initEconomy() {
   econData = res.data;
   document.getElementById('p-econ').hidden = false;
   renderEconomy();
+  initThemePicker().catch(() => { /* selectorul e optional */ });
 
   document.getElementById('chest-btn').addEventListener('click', () => {
     // shake-ul porneste imediat (800ms) chiar daca POST-ul e pe drum

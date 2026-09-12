@@ -248,6 +248,26 @@ export function formatDate(value) {
  * stricat; o nuanta derivata din titlu face catalogul variat si citibil,
  * fara sa coste vreo imagine si fara vreo cerere in plus.
  */
+/** Badge de staff (Admin/Moderator) — ierarhia de moderare, vizibila. */
+export function staffBadge(staff) {
+  if (!staff) return null;
+  const s = document.createElement('span');
+  s.className = 'ubadge ubadge--' + (staff === 'Admin' ? 'admin' : staff === 'Moderator' ? 'mod' : 'staff');
+  s.textContent = staff === 'Admin' ? '🛡️ Admin' : staff === 'Moderator' ? '🛠️ Moderator' : staff;
+  s.title = `Echipa de staff: ${staff}`;
+  return s;
+}
+
+/** Gradul tematic (Genin/Chunin/…) al unui om, ca cip mic langa nume. */
+export function rankChip(rank) {
+  if (!rank || !rank.label) return null;
+  const s = document.createElement('span');
+  s.className = 'uchip';
+  s.textContent = `${rank.icon || '🎗️'} ${rank.label}`;
+  s.title = `Grad: ${rank.label}`;
+  return s;
+}
+
 export function genPoster(title) {
   const t = String(title || '').trim();
   let h = 0;

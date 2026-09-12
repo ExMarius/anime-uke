@@ -36,6 +36,7 @@ const LOADERS = {
   stats: loadStats,
   users: loadUsers,
   invites: loadInvites,
+  ranks: loadRanks,
   log: loadLog,
 };
 
@@ -471,3 +472,66 @@ if (await guard()) {
   initTabs();
   await loadStats();
 }
+
+// ---------------------------------------------------------------------
+// GRADE & STAFF: teme de grade (din orice serie) + moderatori
+// ---------------------------------------------------------------------
+async function loadRanks() {
+  const res = await api('/ranks');
+  const box = document.getElementById('ranks-list');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!res.ok) { box.textContent = 'Nu am putut încărca temele.'; return; }
+  for (const t of res.data.themes) {
+    const row = document.createElement('div');
+    row.className = 'ranks-row';
+    const title = document.createElement('span');
+    title.className = 'ranks-row__title';
+    title.textContent = `${t.title} (${t.slug})`;
+    const tiers = document.createElement('span');
+    tiers.className = 'ranks-row__tiers';
+    tiers.textContent = t.tiers.map((x) => `${x.icon} ${x.label}`).join(' → ');
+    row.append(title, tiers);
+    if (t.slug !== 'naruto') {
+      const del = document.createElement('button');
+      del.className = 'btn btn--ghost btn--sm';
+      del.type = 'button';
+      del.textContent = 'Șterge';
+      del.addEventListener('click', async () => {
+        const r = await api(`/admin/rank-themes?slug=${encodeURIComponent(t.slug)}`, { method: 'DELETE' });
+        toast(r.ok ? 'Temă ștearsă' : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
+        if (r.ok) loadRanks();
+      });
+      row.appendChild(del);
+    }
+    box.appendChild(row);
+  }
+}
+
+function initRanks() {
+  document.getElementById('rank-theme-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const lines = document.getElementById('rt-tiers').value
+      .split('\n').map((l) => l.trim()).filter(Boolean);
+    const tiers = lines.map((l) => {
+      const [min, label, icon] = l.split('|').map((x) => (x || '').trim());
+      return { min: Number(min), label, icon: icon || '🎗️' };
+    });
+    const r = await api('/admin/rank-themes', {
+      method: 'POST',
+      body: { slug: document.getElementById('rt-slug').value, title: document.getElementById('rt-title').value, tiers },
+    });
+    toast(r.ok ? 'Temă salvată' : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
+    if (r.ok) { ev.target.reset(); loadRanks(); }
+  });
+  document.getElementById('mod-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = ev.submitter;
+    const r = await api('/admin/mods', {
+      method: 'POST',
+      body: { username: document.getElementById('mod-username').value, is_mod: btn?.dataset?.mod === '1' ? 1 : 0 },
+    });
+    toast(r.ok ? (r.data.is_mod ? 'Moderator promovat' : 'Retrogradat') : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
+  });
+}
+initRanks();

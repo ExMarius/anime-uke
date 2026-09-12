@@ -345,6 +345,10 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   check('Dashboard-ul se incarca si isi umple statisticile', loaded, `who=${p.text('#admin-who')}`);
   check('Linkul catre pagina noua de serii e prezent', p.$('a[href="/admin/serii"]') !== null, 'lipseste linkul');
   check('Nicio eroare de runtime dupa eliminarea taburilor', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+    p.$('#tab-ranks')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const ranksOn = await until(() => p.$$('#ranks-list .ranks-row').length >= 3);
+  check('Panoul admin de grade listeaza temele', ranksOn, `randuri=${p.$$('#ranks-list .ranks-row').length}`);
+  check('Formularele de tema noua si moderatori exista', !!p.$('#rank-theme-form') && !!p.$('#mod-form'), 'lipsesc formularele');
   await p.teardown();
 }
 
@@ -433,6 +437,9 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Vitrina de insigne e populata (insigne sau hint de pornire)', p.$$('#econ-badges > *').length > 0, p.$('#econ-badges')?.innerHTML?.slice(0, 100));
   check('Modalul de recompensa exista dar e ascuns', !!p.$('#chest-modal') && p.$('#chest-modal').hidden === true, String(p.$('#chest-modal')?.hidden));
   check('Nicio eroare de runtime in panoul de economie', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  check('Profilul arata gradul tematic ca cip langa nume', !!p.$('#p-badges .uchip'), p.$('#p-badges')?.innerHTML?.slice(0, 120));
+  const themeOn = await until(() => p.$('#econ-theme-wrap')?.hidden === false && p.$$('#econ-theme option').length >= 3);
+  check('Selectorul de teme de grade e populat pe profilul propriu', themeOn, `opt=${p.$$('#econ-theme option').length}`);
   await p.teardown();
 }
 
