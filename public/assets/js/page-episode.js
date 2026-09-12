@@ -403,32 +403,14 @@ async function load() {
 }
 
 // ---------------------------------------------------------------------
-// Fullscreen + scurtaturi de taste
+// Scurtaturi de taste pentru fisierul video redat nativ.
 //
-// Butonul nativ din controls nu acopera toate cazurile (unele browsere
-// mobile, contexte embedded), deci avem fullscreen propriu pe zona de
-// player, cu fallback-urile Safari. Tastele functioneaza doar cand
-// focusul nu e intr-un camp de text.
+// Fullscreen-ul NU e treaba noastra la embed-uri: butonul nativ al sursei
+// (mp4upload, DoodStream…) functioneaza singur, pentru ca iframe-ul din
+// episode.html are allowfullscreen + allow-fullscreen in sandbox. Un buton
+// propriu peste al lui doar ar strica experienta.
 // ---------------------------------------------------------------------
-function toggleFullscreen() {
-  const zone = document.querySelector('.player');
-  const doc = document;
-  const fsEl = doc.fullscreenElement || doc.webkitFullscreenElement;
-  if (fsEl) {
-    (doc.exitFullscreen || doc.webkitExitFullscreen)?.call(doc);
-    return;
-  }
-  const target = zone || document.documentElement;
-  const req = target.requestFullscreen || target.webkitRequestFullscreen;
-  if (typeof req !== 'function') {
-    toast('Fullscreen nu e disponibil în contextul ăsta (browser sau fereastră embedded).', 'warn');
-    return;
-  }
-  req.call(target);
-}
-
 function initPlayerTools() {
-  document.getElementById('fs-btn')?.addEventListener('click', toggleFullscreen);
   document.addEventListener('keydown', (e) => {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
@@ -437,9 +419,6 @@ function initPlayerTools() {
     switch (e.key) {
       case ' ':
         if (fileActive) { e.preventDefault(); if (v.paused) v.play(); else v.pause(); }
-        break;
-      case 'f': case 'F':
-        toggleFullscreen();
         break;
       case 'm': case 'M':
         if (fileActive) v.muted = !v.muted;

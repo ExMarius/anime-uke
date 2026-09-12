@@ -168,6 +168,19 @@ export async function renderNav(active = '') {
     points.title = `${user.points} puncte`;
     links.appendChild(points);
 
+    // Economie: nivelul si gold-ul vin deja in sesiune — chipuri gratuite.
+    const lvl = document.createElement('span');
+    lvl.className = 'nav__points nav__points--lvl';
+    lvl.textContent = `⚔️ Nv ${user.level || 1}`;
+    lvl.title = `Nivel ${user.level || 1}`;
+    links.appendChild(lvl);
+
+    const gold = document.createElement('span');
+    gold.className = 'nav__points nav__points--gold';
+    gold.textContent = `🪙 ${(user.gold || 0).toLocaleString('ro-RO')}`;
+    gold.title = `${user.gold || 0} Gold`;
+    links.appendChild(gold);
+
     if (user.is_admin) add('/admin', 'Admin', { accent: true });
 
     const me = document.createElement('a');

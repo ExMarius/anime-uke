@@ -389,15 +389,18 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   const trackOk = await until(() => p.$('#player-video track')?.getAttribute('srclang') === 'ro');
   check('Subtitrarea se ataseaza ca <track srclang="ro">', trackOk, `track=${p.$('#player-video track')?.outerHTML?.slice(0, 90)}`);
 
-  // Controllerele de player: fullscreen dedicat, controale native, taste.
-  // jsdom nu are Fullscreen API, deci click-ul trebuie sa degradeze frumos
-  // (toast de avertisment), nu sa arunce.
-  check('Butonul de fullscreen exista', !!p.$('#fs-btn'), 'lipseste #fs-btn');
+  // Fullscreen-ul e al sursei: iframe-ul trebuie sa aiba permisiunile, iar
+  // noi nu mai punem buton propriu peste cel nativ al furnizorului.
+  check('Nu mai exista buton propriu de fullscreen (fullscreen-ul e al sursei)', !p.$('#fs-btn'), 'a ramas #fs-btn');
+  const iframe = p.$('#player');
+  const sb = iframe?.getAttribute('sandbox') || '';
+  check('Sandbox-ul iframe-ului permite fullscreen-ul nativ al sursei', sb.includes('allow-fullscreen'), sb);
+  check('Permissions policy permite fullscreen in iframe', (iframe?.getAttribute('allow') || '').includes('fullscreen'), iframe?.getAttribute('allow'));
+  check('Iframe-ul are atributul allowfullscreen', iframe?.hasAttribute('allowfullscreen') === true, iframe?.outerHTML?.slice(0, 120));
   check('Video are controale native', p.$('#player-video')?.hasAttribute('controls') === true, 'lipseste atributul controls');
-  p.$('#fs-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'f', bubbles: true }));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-  check('Fullscreen/tastele degradeaza fara crash cand API-ul lipseste', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
+  p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
+  check('Scurtaturile degradeaza fara crash cand API-urile lipsesc', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
 
   // Comentariile: formular prezent, lista randata (macar starea vida).
   const comOn = await until(() => !!p.$('#comments-list')?.textContent);
@@ -413,6 +416,20 @@ console.log('\n=== DOM: /profile (clasamentul randat) ===');
   check('Clasamentul se randeaza pe profil', loaded, `randuri=${p.$$('#lb-list .lb__row').length} note=${p.text('#lb-note')}`);
   check('Fiecare rand are nume si puncte', p.$$('#lb-list .lb__row').every((r) => r.textContent.includes('pct')), p.$('#lb-list')?.textContent?.slice(0, 80));
   check('Nicio eroare de runtime pe profil', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+}
+
+console.log('\n=== DOM: /profile (panoul de economie) ===');
+{
+  const p = await mountPage({ htmlFile: 'public/profile.html', url: '/profile', module: 'page-profile.js' });
+  const econOn = await until(() => p.$('#p-econ') && !p.$('#p-econ').hidden);
+  check('Panoul de economie apare pe propriul profil', econOn, `hidden=${p.$('#p-econ')?.hidden}`);
+  check('Bara de XP anunta progresul catre nivelul urmator', /XP până la nivelul următor/.test(p.text('#econ-xp-label') || ''), p.text('#econ-xp-label'));
+  check('Randul lunar arata punctele si pragul de 10.000', /10\.000 pct/.test(p.text('#econ-month-label') || ''), p.text('#econ-month-label'));
+  check('Butonul cufarului are o stare reala (disponibil sau countdown)', /așteaptă|deschide peste/i.test(p.text('#chest-label') || ''), p.text('#chest-label'));
+  check('Vitrina de insigne e populata (insigne sau hint de pornire)', p.$$('#econ-badges > *').length > 0, p.$('#econ-badges')?.innerHTML?.slice(0, 100));
+  check('Modalul de recompensa exista dar e ascuns', !!p.$('#chest-modal') && p.$('#chest-modal').hidden === true, String(p.$('#chest-modal')?.hidden));
+  check('Nicio eroare de runtime in panoul de economie', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
 }
 

@@ -44,7 +44,7 @@
       <iframe
         id="player"
         title="Player video"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-fullscreen"
         referrerpolicy="strict-origin-when-cross-origin"
         allow="autoplay; fullscreen; picture-in-picture"
         allowfullscreen
@@ -58,11 +58,13 @@
         referrerpolicy="strict-origin-when-cross-origin"
         hidden></video>
     </div>
-    <!-- Toolbar de player: fullscreen dedicat (butonul nativ din controls
-         lipseste sau e blocat in unele contexte) + scurtaturi de taste. -->
+    <!-- Fullscreen-ul e BUTONUL SURSEI: iframe-ul are allow-fullscreen +
+         allow-fullscreen in sandbox, deci playerul furnizorului (mp4upload,
+         DoodStream etc.) isi poate face singur fullscreen. Noi nu punem
+         buton propriu peste al lui. Raman doar scurtaturile pentru fisierul
+         video redat nativ. -->
     <div class="player-tools">
-      <button class="btn btn--ghost btn--sm" id="fs-btn" type="button" title="Fullscreen (F)">⛶ Fullscreen</button>
-      <span class="player-tools__hint">Spațiu: play/pauză · F: fullscreen · M: mute · ←/→: ±10s</span>
+      <span class="player-tools__hint">Spațiu: play/pauză · M: mute · ←/→: ±10s (doar pentru fișiere video)</span>
     </div>
 
     <!-- Alternativa discreta pentru o sursa de tip link. Sta SUB player si nu

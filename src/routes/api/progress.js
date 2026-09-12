@@ -2,6 +2,7 @@ import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
+import { addActivity, grantBadge } from '../../lib/xp.js';
 
 // =====================================================================
 // POST /api/progress — acumuleaza timp real de vizionare.
@@ -103,6 +104,18 @@ export async function onRequestPost(context) {
           .bind(POINTS_PER_EPISODE, user.id).run();
         pointsAdded = POINTS_PER_EPISODE;
         points = user.points + POINTS_PER_EPISODE;
+
+        // Economie: episodul vizionat hraneste XP-ul contului si punctele
+        // lunare (spec: +10 XP), plus insignele de vizionare. Ruleaza doar
+        // la prima trecere a pragului, pentru ca INSERT OR IGNORE de mai
+        // sus garanteaza changes = 1 exact o data per episod.
+        await addActivity(env, user.id, POINTS_PER_EPISODE);
+        await grantBadge(env, user.id, 'first_watch');
+        const wc = await env.DB
+          .prepare('SELECT COUNT(*) AS n FROM watched_history WHERE user_id = ?')
+          .bind(user.id)
+          .first();
+        if ((wc?.n || 0) >= 50) await grantBadge(env, user.id, 'watcher_50');
       }
     } else if (total >= WATCH_THRESHOLD_SECONDS) {
       const cur = await env.DB.prepare('SELECT points FROM users WHERE id = ?').bind(user.id).first();

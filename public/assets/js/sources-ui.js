@@ -38,6 +38,17 @@ export function fillKindSelect(select, meta, selected) {
  */
 const VIDEO_EXT = /\.(mp4|webm|ogv|ogg|mov|m4v|m3u8)(\?.*)?$/i;
 
+/** Oglindeste extractEmbedUrl de pe server: adminul vede imediat URL-ul
+ *  curatat din codul embed lipit, nu snippet-ul intreg. */
+export function extractEmbedUrl(raw) {
+  const text = String(raw || '').trim();
+  if (!/<iframe/i.test(text)) return text;
+  const m = text.match(/<iframe[^>]*?\ssrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
+  const inner = (m && (m[1] || m[2] || m[3]) || '').trim();
+  const url = inner || (text.match(/https?:\/\/[^\s"'<>]+/i) || [])[0] || text;
+  return url.replace(/&amp;/g, '&');
+}
+
 export function guessKind(url) {
   try {
     const u = new URL(String(url || ''));
@@ -89,6 +100,9 @@ export function buildSourceRow(meta, src = {}, { onRemove } = {}) {
   // rotit (f7hyg4q.org) ajunsese salvat ca „link extern" si nu rula in
   // player, pentru ca tipul fusese ales manual gresit.
   url.addEventListener('blur', () => {
+    // cod embed lipit intreg -> pastram doar src-ul, ca sa mearga playerul
+    const cleaned = extractEmbedUrl(url.value);
+    if (cleaned && cleaned !== url.value.trim()) url.value = cleaned;
     if (!url.value.trim()) return;
     if (!label.value.trim()) label.value = labelFromUrl(url.value);
     if (!kind.dataset.touched) kind.value = guessKind(url.value);
@@ -135,7 +149,7 @@ export function buildSourceRow(meta, src = {}, { onRemove } = {}) {
 export function collectSourceRows(container) {
   const out = [];
   for (const row of container.querySelectorAll('.src-row')) {
-    const url = row.querySelector('[name="src_url"]').value.trim();
+    const url = extractEmbedUrl(row.querySelector('[name="src_url"]').value);
     if (!url) continue;
     out.push({
       label: row.querySelector('[name="src_label"]').value.trim(),

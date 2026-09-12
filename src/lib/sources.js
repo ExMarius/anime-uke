@@ -100,6 +100,22 @@ function normalizeDoodstream(url) {
 }
 
 /**
+ * Admin-ul copiaza adesea codul embed INTREG de la furnizor:
+ *   <IFRAME SRC="https://x.com/embed-abc.html" WIDTH=640 ... allowfullscreen>
+ * In loc sa-l respingem ca „URL invalid”, extragem src-ul din el. Asa
+ * functioneaza cerinta „doar pune link-ul sau embed-ul si mearge”.
+ */
+export function extractEmbedUrl(raw) {
+  const text = String(raw || '').trim();
+  if (!/<iframe/i.test(text)) return text;
+  const m = text.match(/<iframe[^>]*?\ssrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
+  const inner = (m && (m[1] || m[2] || m[3]) || '').trim();
+  const url = inner || (text.match(/https?:\/\/[^\s"'<>]+/i) || [])[0] || text;
+  // atributele din codul embed vin cu entitati HTML in src
+  return url.replace(/&amp;/g, '&');
+}
+
+/**
  * Valideaza o sursa video.
  * @returns {{ok:true,value:{label:string,kind:string,url:string}}|{ok:false,error:string}}
  */
@@ -111,7 +127,7 @@ export function validateSource(input) {
     return { ok: false, error: 'Tip de sursă necunoscut (embed / file / link)' };
   }
 
-  const raw = typeof input.url === 'string' ? input.url.trim() : '';
+  const raw = extractEmbedUrl(input.url);
   if (!raw) return { ok: false, error: 'URL-ul sursei este obligatoriu' };
   if (raw.length > 800) return { ok: false, error: 'URL prea lung (max 800 caractere)' };
 

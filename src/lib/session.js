@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null
@@ -37,6 +37,9 @@ export async function getSessionUser(request, env) {
     username: user.username,
     email: user.email,
     points: user.points,
+    xp: user.xp || 0,
+    level: user.level || 1,
+    gold: user.gold || 0,
     is_admin: !!user.is_admin,
     // Necesar paginii de profil („Membru din"). Nu e informatie sensibila —
     // e afisata public pe orice profil, spre deosebire de email, care ramane
@@ -53,6 +56,10 @@ export function publicUser(user) {
     username: user.username,
     points: user.points,
     is_admin: user.is_admin,
+    // Economie: nav-ul arata nivelul si gold-ul fara o cerere in plus.
+    xp: user.xp || 0,
+    level: user.level || 1,
+    gold: user.gold || 0,
   };
 }
 

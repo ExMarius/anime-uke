@@ -32,6 +32,33 @@
     </header>
 
     <div class="profile-grid">
+      <!-- ============ ECONOMIE (doar profilul propriu) ============ -->
+      <section class="box econ" id="p-econ" hidden>
+        <h2 class="box__title">Economie</h2>
+
+        <div class="econ__row">
+          <span class="econ__level" id="econ-level">Nivel 1</span>
+          <div class="econ__bar"><div class="econ__fill" id="econ-xp-fill" style="width:0%"></div></div>
+          <span class="econ__num" id="econ-xp-label">0 / 600 XP</span>
+        </div>
+
+        <div class="econ__row">
+          <span class="econ__cap">Luna asta</span>
+          <div class="econ__bar econ__bar--month"><div class="econ__fill" id="econ-month-fill" style="width:0%"></div></div>
+          <span class="econ__num" id="econ-month-label">0 / 10.000 pct</span>
+        </div>
+
+        <div class="econ__meta">
+          <span class="econ__gold" id="econ-gold">🪙 0 Gold</span>
+          <button class="chest-btn" id="chest-btn" type="button" title="Cufărul cu comori">
+            <span class="chest-btn__icon" id="chest-icon">🧰</span>
+            <span class="chest-btn__label" id="chest-label">Se încarcă…</span>
+          </button>
+        </div>
+
+        <div class="econ__badges" id="econ-badges"></div>
+      </section>
+
       <!-- ============ INFORMATII ============ -->
       <section class="box">
         <h2 class="box__title">Informații</h2>
@@ -123,5 +150,13 @@
   </main>
 
   <script type="module" src="/assets/js/page-profile.js"></script>
+  <!-- modalul recompensei din cufar -->
+  <div class="econ-modal" id="chest-modal" hidden>
+    <div class="econ-modal__card">
+      <div class="econ-modal__icon" id="chest-modal-icon">🪙</div>
+      <p class="econ-modal__text" id="chest-modal-text"></p>
+      <button class="btn btn--accent" id="chest-modal-close" type="button">Mersi! ✨</button>
+    </div>
+  </div>
 </body>
 </html>

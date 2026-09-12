@@ -364,5 +364,211 @@ async function loadLeaderboard() {
     : 'Se recalculează la 15 minute.';
 }
 
+// ---------------------------------------------------------------------
+// Economie: XP + nivel, puncte lunare, gold, cufar la 4 ore, insigne.
+// Panoul apare doar pe propriul profil — /api/economy e privat oricum.
+// ---------------------------------------------------------------------
+let econData = null;
+let chestBusy = false;
+
+const fmt = (n) => Number(n).toLocaleString('ro-RO');
+
+function fmtRemaining(ms) {
+  const total = Math.ceil(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  const sec = total % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+function renderEconomy() {
+  const d = econData;
+  document.getElementById('econ-level').textContent = `Nivel ${d.level}`;
+
+  const xpPct = d.xp_needed > 0 ? Math.min(100, Math.round((d.xp / d.xp_needed) * 100)) : 0;
+  document.getElementById('econ-xp-fill').style.width = `${xpPct}%`;
+  document.getElementById('econ-xp-label').textContent =
+    `${fmt(d.xp)} / ${fmt(d.xp_needed)} XP până la nivelul următor`;
+
+  const mPct = Math.min(100, Math.round((d.monthly_points / d.monthly_goal) * 100));
+  document.getElementById('econ-month-fill').style.width = `${mPct}%`;
+  document.getElementById('econ-month-label').textContent =
+    `${fmt(d.monthly_points)} / ${fmt(d.monthly_goal)} pct`;
+
+  document.getElementById('econ-gold').textContent = `🪙 ${fmt(d.gold)} Gold`;
+
+  renderBadges();
+  renderChestState();
+}
+
+function renderBadges() {
+  const box = document.getElementById('econ-badges');
+  box.innerHTML = '';
+  if (!econData.badges.length) {
+    const hint = el('p', 'econ__hint', 'Încă nicio insignă. Vizionează un episod ca să primești prima!');
+    box.appendChild(hint);
+    return;
+  }
+
+  // „Utilizator activ" se aggregateaza: xN luni, tooltip cu fiecare luna.
+  const grouped = new Map();
+  for (const b of econData.badges) {
+    const key = b.badge === 'month_active' ? 'month_active' : `${b.badge}:${b.month || ''}`;
+    if (!grouped.has(key)) grouped.set(key, { ...b, count: 0, months: [] });
+    const g = grouped.get(key);
+    g.count += 1;
+    if (b.month) g.months.push(b.month);
+  }
+  const monthPoints = new Map(econData.months.map((m) => [m.month, m.points]));
+
+  for (const g of grouped.values()) {
+    const tile = el('span', 'econ-badge');
+    tile.textContent = `${g.icon} ${g.name}${g.count > 1 ? ` ×${g.count}` : ''}`;
+    if (g.badge === 'month_active' && g.months.length) {
+      const lines = g.months
+        .map((m) => `${m}: ${fmt(monthPoints.get(m) || 0)} pct`)
+        .join('\n');
+      tile.title = `Utilizator activ în:\n${lines}`;
+    } else {
+      tile.title = g.name;
+    }
+    box.appendChild(tile);
+  }
+}
+
+function renderChestState() {
+  const btn = document.getElementById('chest-btn');
+  const icon = document.getElementById('chest-icon');
+  const label = document.getElementById('chest-label');
+  btn.classList.remove('chest-btn--ready', 'chest-btn--wait');
+  if (econData.chest.available) {
+    btn.classList.add('chest-btn--ready');
+    icon.textContent = '🧰';
+    label.textContent = 'Cufărul te așteaptă!';
+    btn.disabled = false;
+  } else {
+    btn.classList.add('chest-btn--wait');
+    icon.textContent = '🔒';
+    label.textContent = `Poți deschide peste ${fmtRemaining(econData.chest.remaining_ms)}`;
+    btn.disabled = true;
+  }
+}
+
+// --- animatia cufarului, exact secventa din spec:
+// shake 800ms → deschidere pop 500ms → sclipici → modal → puls gold ---
+function sparkleBurst(host) {
+  for (let i = 0; i < 14; i++) {
+    const sp = document.createElement('span');
+    sp.className = 'sparkle';
+    sp.textContent = '✨';
+    sp.style.setProperty('--dx', `${Math.round((Math.random() - 0.5) * 220)}px`);
+    sp.style.setProperty('--dy', `${Math.round((Math.random() - 0.8) * 220)}px`);
+    sp.style.animationDelay = `${Math.round(Math.random() * 200)}ms`;
+    host.appendChild(sp);
+    setTimeout(() => sp.remove(), 900);
+  }
+}
+
+async function openChest() {
+  if (chestBusy || !econData || !econData.chest.available) return;
+  chestBusy = true;
+
+  const btn = document.getElementById('chest-btn');
+  const icon = document.getElementById('chest-icon');
+  btn.disabled = true;
+  btn.classList.add('chest-shake');
+
+  try {
+    const res = await api('/chest', { method: 'POST' });
+    if (!res.ok) {
+      btn.classList.remove('chest-shake');
+      if (res.status === 409) {
+        toast('Cufărul se răcește încă — mai ai de așteptat.', 'warn');
+        econData = (await api('/economy')).data || econData;
+        if (econData) renderChestState();
+      } else {
+        toast(res.data?.error || 'Nu am putut deschide cufărul.', 'error');
+        btn.disabled = false;
+      }
+      return;
+    }
+
+    const r = res.data;
+    // pop + sclipici pe buton
+    btn.classList.remove('chest-shake');
+    icon.textContent = r.reward === 'gold' ? '🪙' : r.reward === 'xp' ? '⚡' : '💨';
+    icon.classList.add('chest-pop');
+    sparkleBurst(btn);
+    setTimeout(() => icon.classList.remove('chest-pop'), 550);
+
+    // modal cu recompensa
+    const modal = document.getElementById('chest-modal');
+    document.getElementById('chest-modal-icon').textContent =
+      r.reward === 'gold' ? '🪙' : r.reward === 'xp' ? '⚡' : '🫙';
+    document.getElementById('chest-modal-text').textContent = r.text;
+    modal.hidden = false;
+    modal.querySelector('.econ-modal__card').classList.add('econ-modal__card--in');
+
+    // puls gold pe chipul din header-ul economiei
+    if (r.reward === 'gold') {
+      const g = document.getElementById('econ-gold');
+      g.textContent = `🪙 ${fmt(r.gold)} Gold`;
+      g.classList.remove('gold-pulse');
+      void g.offsetWidth; // restart animatie
+      g.classList.add('gold-pulse');
+      setTimeout(() => g.classList.remove('gold-pulse'), 1600);
+    }
+
+    // re-sincronizare completa (xp/luna/insigne s-ar fi putut schimba)
+    econData.gold = r.gold;
+    econData.chest = r.chest;
+    const fresh = await api('/economy');
+    if (fresh.ok) econData = fresh.data;
+    renderEconomy();
+    if (r.reward === 'xp') toast(`+${r.amount} XP!`, 'success');
+    renderNav('').catch(() => {});
+  } catch {
+    btn.classList.remove('chest-shake');
+    btn.disabled = false;
+    toast('Eroare de rețea la deschiderea cufărului.', 'error');
+  } finally {
+    chestBusy = false;
+  }
+}
+
+async function initEconomy() {
+  const res = await api('/economy');
+  if (!res.ok) return;
+  econData = res.data;
+  document.getElementById('p-econ').hidden = false;
+  renderEconomy();
+
+  document.getElementById('chest-btn').addEventListener('click', () => {
+    // shake-ul porneste imediat (800ms) chiar daca POST-ul e pe drum
+    if (!chestBusy && econData?.chest.available) {
+      document.getElementById('chest-btn').classList.add('chest-shake');
+    }
+    openChest();
+  });
+  document.getElementById('chest-modal-close').addEventListener('click', () => {
+    const modal = document.getElementById('chest-modal');
+    modal.hidden = true;
+    modal.querySelector('.econ-modal__card').classList.remove('econ-modal__card--in');
+  });
+  document.getElementById('chest-modal').addEventListener('click', (ev) => {
+    if (ev.target.id === 'chest-modal') document.getElementById('chest-modal-close').click();
+  });
+
+  // countdown-ul din buton se actualizeaza singur, fara cereri catre server
+  setInterval(() => {
+    if (!econData || econData.chest.available || chestBusy) return;
+    econData.chest.remaining_ms = Math.max(0, econData.chest.remaining_ms - 1000);
+    if (econData.chest.remaining_ms === 0) econData.chest.available = true;
+    renderChestState();
+  }, 1000);
+}
+
 await renderNav('');
 await load();
+if (target === 'me') initEconomy().catch(() => { /* panoul e bonus, profilul merge oricum */ });

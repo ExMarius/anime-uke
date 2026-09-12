@@ -1017,6 +1017,80 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   check('Itemul are serie si numar de episod pentru card', !!hit?.series_title && Number.isInteger(hit?.episode_number), JSON.stringify(hit)?.slice(0, 120));
 }
 
+console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // --- /api/economy: XP-ul acumulat pana aici (vizionare +10, rating +5, comentarii)
+  const e1 = await req(j, 'GET', '/api/economy');
+  check('GET /api/economy returneaza economia completa', e1.status === 200 && Number.isInteger(e1.data?.xp) && e1.data.xp >= 15, JSON.stringify(e1.data)?.slice(0, 160));
+  check('Formula de nivel e 100n²+500n', e1.data?.xp_needed === 100 * e1.data.level * e1.data.level + 500 * e1.data.level, `level=${e1.data?.level} need=${e1.data?.xp_needed}`);
+  check('Punctele lunare merg in paralel cu XP-ul', e1.data?.monthly_points === e1.data.xp && e1.data.monthly_goal === 10000, JSON.stringify({ m: e1.data?.monthly_points, x: e1.data?.xp }));
+  check('Insigna „Primul episod" e acordata dupa vizionare', (e1.data?.badges || []).some((b) => b.badge === 'first_watch'), JSON.stringify(e1.data?.badges));
+  check('Cufarul e disponibil la prima accesare', e1.data?.chest?.available === true, JSON.stringify(e1.data?.chest));
+
+  // --- /api/auth/me expune noile coloane pentru chipurile din nav
+  const me = await req(j, 'GET', '/api/auth/me');
+  check('Sesiunea expune xp, level si gold', Number.isInteger(me.data?.user?.xp) && Number.isInteger(me.data?.user?.level) && Number.isInteger(me.data?.user?.gold), JSON.stringify(me.data?.user)?.slice(0, 160));
+
+  // --- anon: 401 pe ambele rute
+  const anonE = await req(jar(), 'GET', '/api/economy');
+  check('GET /api/economy anon → 401', anonE.status === 401, `status=${anonE.status}`);
+  const anonC = await req(jar(), 'POST', '/api/chest');
+  check('POST /api/chest anon → 401', anonC.status === 401, `status=${anonC.status}`);
+
+  // --- cufar: deschidere cu recompensa ponderata, apoi cooldown 4h
+  const open1 = await req(j, 'POST', '/api/chest');
+  const rewards = ['gold', 'xp', 'nothing'];
+  check('Prima deschidere reuseste cu recompensa din tabelul ponderat', open1.data?.success === true && rewards.includes(open1.data?.reward) && typeof open1.data?.text === 'string', JSON.stringify(open1.data)?.slice(0, 160));
+  check('Gold-ul cade in intervalul 10-100, XP-ul in 5-50',
+    (open1.data?.reward !== 'gold' || (open1.data.amount >= 10 && open1.data.amount <= 100)) &&
+    (open1.data?.reward !== 'xp' || (open1.data.amount >= 5 && open1.data.amount <= 50)),
+    JSON.stringify({ r: open1.data?.reward, a: open1.data?.amount }));
+  const open2 = await req(j, 'POST', '/api/chest');
+  check('A doua deschidere in cooldown → 409', open2.status === 409, `status=${open2.status}`);
+  check('409-ul aduce timpul ramas in header', Number(open2.headers?.get('x-remaining-ms')) > 3 * 60 * 60 * 1000, `hdr=${open2.headers?.get('x-remaining-ms')}`);
+  const st = await req(j, 'GET', '/api/chest');
+  check('GET /api/chest arata cooldown-ul activ si gold-ul curent', st.data?.chest?.available === false && st.data.chest.remaining_ms > 0 && Number.isInteger(st.data?.gold), JSON.stringify(st.data)?.slice(0, 160));
+
+  // --- XP din comentariu: +5 exact (spec)
+  const before = (await req(j, 'GET', '/api/economy')).data.xp;
+  const cm = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu pentru testul de XP' });
+  const after = (await req(j, 'GET', '/api/economy')).data.xp;
+  check('Comentariul adauga exact +5 XP', cm.data?.success === true && after === before + 5, `before=${before} after=${after}`);
+  await req(j, 'DELETE', `/api/comments?id=${cm.data?.id}`);
+
+  // --- +5 XP la deschiderea cufarului (indiferent de recompensa)
+  const e2 = await req(j, 'GET', '/api/economy');
+  check('Deschiderea cufarului a hranit XP-ul (+5 minim, plus recompensa daca a fost XP)', e2.data.xp > before || open1.data?.reward !== 'xp', `xp=${e2.data.xp}`);
+
+  // --- cod embed lipit intreg in campul URL -> se salveaza doar src-ul
+  const emb = await req(globalThis.admin, 'POST', '/api/admin/episode-sources', {
+    episode_id: globalThis.epId, label: 'Embed cod', kind: 'embed',
+    url: '<IFRAME SRC="https://mp4upload.com/embed-nyb3ksspsd9l.html" FRAMEBORDER=0 MARGINWIDTH=0 MARGINHEIGHT=0 SCROLLING=NO WIDTH=640 HEIGHT=480 allowfullscreen> </IFRAME>',
+  });
+  check('Codul embed lipit intreg e curatat la src-ul din el', emb.status === 201 && emb.data?.source?.url === 'https://mp4upload.com/embed-nyb3ksspsd9l.html', JSON.stringify(emb.data?.source)?.slice(0, 160));
+  if (emb.data?.id) await req(globalThis.admin, 'DELETE', `/api/admin/episode-sources?id=${emb.data.id}`);
+  const plain = await req(globalThis.admin, 'POST', '/api/admin/episode-sources', {
+    episode_id: globalThis.epId, label: 'Link simplu', kind: 'embed', url: 'https://mp4upload.com/embed-alt.html',
+  });
+  check('URL-ul simplu trece neschimbat prin validare', plain.data?.source?.url === 'https://mp4upload.com/embed-alt.html', JSON.stringify(plain.data?.source)?.slice(0, 120));
+  if (plain.data?.id) await req(globalThis.admin, 'DELETE', `/api/admin/episode-sources?id=${plain.data.id}`);
+
+  // --- prag de activitate la rating: admin n-a vizionat seria → 403
+  const gate = await req(globalThis.admin, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 9 });
+  check('Rating fara niciun episod vizionat din serie → 403', gate.status === 403, `status=${gate.status} ${JSON.stringify(gate.data)}`);
+  const okAgain = await req(j, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 9 });
+  check('User-ul care a vizionat poate nota in continuare', okAgain.data?.success === true, JSON.stringify(okAgain.data));
+
+  // --- revotul nu mai da XP (anti-farming)
+  const b2 = (await req(j, 'GET', '/api/economy')).data.xp;
+  await req(j, 'POST', '/api/ratings', { series_id: globalThis.seriesId, rating: 7 });
+  const a2 = (await req(j, 'GET', '/api/economy')).data.xp;
+  check('Schimbarea notei nu mai acorda XP (doar primul vot)', a2 === b2, `before=${b2} after=${a2}`);
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));
