@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, genPoster } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -377,9 +377,11 @@ async function renderContinue() {
   }
 }
 
-await renderNav('/');
 skeletons(10);
-await Promise.all([load(), initChat()]);
+// nav-ul si lista merg in paralel; chat-ul (WebSocket) doar cand pagina e
+// efectiv activa, ca un tab prerenderat sa nu deschida socket degeaba
+await Promise.all([renderNav('/'), load()]);
+whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 initHero().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
 renderContinue().catch(() => { /* randul de continuare e optional */ });
 

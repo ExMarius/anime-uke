@@ -92,10 +92,18 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
   // Chat-ul deschide un WebSocket; intr-un test DOM nu ne intereseaza,
   // dar lipsa constructorului ar opri executia paginii principale.
   class FakeSocket {
-    constructor() { this.readyState = 0; setTimeout(() => this.onerror?.({}), 0); }
-    send() {} close() {} addEventListener() {}
+    constructor() {
+      this.readyState = 1;               // OPEN: ca testele sa poata trimite
+      this.sent = [];
+      globalThis.__fakeSocket = this;    // accesibil din assert-uri
+      setTimeout(() => this.onopen?.({}), 0);
+    }
+    send(d) { this.sent.push(d); }
+    close() { this.readyState = 3; }
+    addEventListener() {}
   }
   FakeSocket.OPEN = 1;
+  FakeSocket.CLOSED = 3;
 
   const globals = {
     window, document: window.document, navigator: window.navigator,
@@ -176,7 +184,20 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   // server, indiferent daca baza are 1 serie sau 1000.
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
   check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
-  check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('script[type="speculationrules"]'), 'lipseste speculationrules');
+  check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
+  p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  p.$('#chat-sticker-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Pickerul de stikere se deschide cu setul complet', p.$$('#sticker-pop .sticker-pop__item').length >= 9, `n=${p.$$('#sticker-pop .sticker-pop__item').length}`);
+  p.$('#sticker-pop .sticker-pop__item')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const sentSticker = (globalThis.__fakeSocket?.sent || [])[0] || '';
+  check('Click pe sticker trimite tag-ul de sticker prin socket', sentSticker.includes('[sticker:salut]'), sentSticker);
+  globalThis.__fakeSocket?.onmessage?.({ data: JSON.stringify({ type: 'message', user_id: 4242, username: 'StickerBot', message: '[sticker:party]', created_at: '2026-09-12 12:00:00' }) });
+  check('Stickerul primit se randeaza ca imagine din setul propriu', p.$('#chat-body .msg__sticker')?.getAttribute('src')?.includes('/assets/img/stickers/party.png') === true, p.$('#chat-body .msg__sticker')?.getAttribute('src'));
+  globalThis.__fakeSocket?.onmessage?.({ data: JSON.stringify({ type: 'message', user_id: 4243, username: 'Hacker', message: '[sticker:nu-exista]', created_at: '2026-09-12 12:00:01' }) });
+  globalThis.__fakeSocket?.onmessage?.({ data: JSON.stringify({ type: 'message', user_id: 4244, username: 'Mixt', message: 'salut [sticker:lol] pic', created_at: '2026-09-12 12:00:02' }) });
+  check('Tag-urile necunoscute sau amestecate raman text (sigur)', p.$$('#chat-body .msg__sticker').length === 1 && (p.$('#chat-body')?.textContent || '').includes('[sticker:nu-exista]'), `img=${p.$$('#chat-body .msg__sticker').length}`);
+    check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
 
   // Hero banner: anime random sus de tot, TOT bannerul e link catre serie.
   check('Hero bannerul exista in DOM', !!p.$('#hero-banner'), 'lipseste #hero-banner');

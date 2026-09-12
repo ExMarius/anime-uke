@@ -428,8 +428,7 @@ async function loadChests(seriesId) {
     : 'Pornește un episod: timpul petrecut pe seria asta deblochează cuferele, rând pe rând.';
 }
 
-await renderNav('');
-await load();
+await Promise.all([renderNav(''), load()]);
 const sid = Number(getParam('id'));
 if (sid) {
   await initWatchlist(sid);

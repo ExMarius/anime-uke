@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip , whenActive } from './core.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -558,9 +558,14 @@ function showBootFailure(why) {
 }
 
 async function boot() {
-  await renderNav('');
   initPlayerTools();
-  await load();
+  // nav-ul si continutul merg in paralel; load() are efecte secundare
+  // (POST /view, heartbeat de watch-time) deci ruleaza doar cand pagina e
+  // efectiv activa — un tab prerenderat nu trebuie sa numere vizionari
+  await Promise.all([
+    renderNav(''),
+    new Promise((done) => whenActive(async () => { await load(); done(); })),
+  ]);
 }
 
 // Ceas de paza: daca dupa 15s pagina e tot in starea initiala, ceva a atarnat

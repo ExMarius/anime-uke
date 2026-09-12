@@ -8,6 +8,12 @@
   <title>Cont nou • anime-uke</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
   <link rel="stylesheet" href="/assets/css/style.css">
+  <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
+       pentru paginile fara efecte secundare la load (series/profile).
+       Browserele fara Speculation Rules ignora scriptul silentios. -->
+  <script type="speculationrules">
+  {"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/api/*","/admin/*","/logout","/assets/*","#*"]}}]},"eagerness":"moderate"}],"prerender":[{"source":"document","where":{"or":[{"href_matches":"/series*"},{"href_matches":"/profile*"}]},"eagerness":"conservative"}]}
+  </script>
 </head>
 <body>
   <div class="auth-wrap">

@@ -75,6 +75,9 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
       return { ok: false, status: 401, data: data || { error: 'Sesiune expirată' }, retryAfter };
     }
 
+    // orice mutatie reusita invalideaza cache-ul de sesiune
+    if (method !== 'GET' && res.ok) clearSession();
+
     return { ok: res.ok, status: res.status, data: data || {}, retryAfter };
   } catch (e) {
     if (e?.name === 'AbortError') return { ok: false, status: 0, data: { error: 'Anulat' } };
@@ -82,16 +85,46 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
   }
 }
 
-/** Sesiunea curenta, cache-uita per pagina (1 singur apel la /auth/me). */
+/** Sesiunea curenta, cache-uita per pagina SI intre pagini (sessionStorage,
+ *  TTL scurt). Fara cache, fiecare navigare facea un round-trip serial catre
+ *  /auth/me inainte sa randeze nav-ul — una din sursele de delay perceput.
+ *  Cache-ul se invalideaza la orice mutatie (POST/PATCH/DELETE) si la 401,
+ *  deci punctele/gold-ul din nav raman corecte dupa actiuni. */
+const ME_TTL_MS = 20 * 1000;
 export async function getSession(force = false) {
   if (sessionCache !== undefined && !force) return sessionCache;
+  if (!force) {
+    try {
+      const raw = sessionStorage.getItem('auk-me');
+      if (raw) {
+        const c = JSON.parse(raw);
+        if (c && typeof c.t === 'number' && Date.now() - c.t < ME_TTL_MS) {
+          sessionCache = c.user ?? null;
+          return sessionCache;
+        }
+      }
+    } catch { /* mod privat */ }
+  }
   const res = await api('/auth/me');
   sessionCache = res.ok ? (res.data.user || null) : null;
+  try { sessionStorage.setItem('auk-me', JSON.stringify({ t: Date.now(), user: sessionCache })); } catch { /* ignora */ }
   return sessionCache;
 }
 
 export function clearSession() {
   sessionCache = null;
+  try { sessionStorage.removeItem('auk-me'); } catch { /* ignora */ }
+}
+
+/** Ruleaza fn imediat, sau la activare daca pagina e prerandata: paginile
+ *  prerenderate nu trebuie sa aiba efecte secundare (vizualizari, heartbeat,
+ *  WebSocket) inainte ca utilizatorul sa ajunga efectiv pe ele. */
+export function whenActive(fn) {
+  if (document.prerendering) {
+    document.addEventListener('prerenderingchange', () => fn(), { once: true });
+  } else {
+    fn();
+  }
 }
 
 export async function logout() {

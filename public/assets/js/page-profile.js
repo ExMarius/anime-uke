@@ -602,6 +602,5 @@ async function initEconomy() {
   }, 1000);
 }
 
-await renderNav('');
-await load();
+await Promise.all([renderNav(''), load()]);
 if (target === 'me') initEconomy().catch(() => { /* panoul e bonus, profilul merge oricum */ });

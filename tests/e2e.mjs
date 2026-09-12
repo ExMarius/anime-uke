@@ -913,6 +913,10 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
       ws.onmessage = (e) => { const d = JSON.parse(e.data); if (d.type === 'message') { clearTimeout(t); resolve(d); } };
     });
     check('Mesaj difuzat cu username corect', msg.username === 'marius' && msg.message === 'Salut din test!', JSON.stringify(msg));
+    // stikerele merg prin acelasi canal de mesaje; asteptam intervalul minim
+    // anti-spam al DO-ului inainte de al doilea mesaj
+    await new Promise((r) => setTimeout(r, 1800));
+    ws.send(JSON.stringify({ type: 'chat', message: '[sticker:party]' }));
 
     // Rate limiter-ul cere 1.5s intre mesaje — asteptam, altfel testul
     // primeste 'error' in loc de 'message' (comportament corect, test gresit).
@@ -1202,6 +1206,7 @@ console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
   }
   if (init) {
     check('Istoricul contine mesajul salvat anterior', JSON.stringify(init.history).includes('Salut din test!'), JSON.stringify(init.history).slice(0,200));
+    check('Stickerul trimis prin WS se persista ca tag in istoric', JSON.stringify(init.history).includes('[sticker:party]'), JSON.stringify(init.history).slice(0, 240));
     check('Istoric limitat la max 30 mesaje', init.history.length <= 30, `lungime=${init.history.length}`);
     ws.close();
   }

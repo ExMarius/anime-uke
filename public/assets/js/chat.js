@@ -35,6 +35,7 @@ export async function initChat() {
     e.preventDefault();
     sendMessage();
   });
+  initStickers();
 
   fab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
 }
@@ -132,6 +133,66 @@ function scrollDown() {
   if (body) body.scrollTop = body.scrollHeight;
 }
 
+/** Stikerele site-ului: arta proprie, chibi decupat. Id-ul e whitelist —
+ *  orice tag necunoscut din mesaj se randeaza ca text simplu, niciodata img. */
+export const STICKERS = [
+  { id: 'salut', label: 'Salut' },
+  { id: 'lol', label: 'Râs' },
+  { id: 'love', label: 'Dragoste' },
+  { id: 'nervos', label: 'Nervos' },
+  { id: 'plans', label: 'Plâns' },
+  { id: 'shock', label: 'Șoc' },
+  { id: 'ok', label: 'OK' },
+  { id: 'zzz', label: 'Somn' },
+  { id: 'party', label: 'Petrecere' },
+];
+const STICKER_IDS = new Set(STICKERS.map((x) => x.id));
+const STICKER_RE = /^\[sticker:([a-z0-9-]{1,24})\]$/;
+
+function stickerImg(id, label) {
+  const img = document.createElement('img');
+  img.className = 'msg__sticker';
+  img.src = `/assets/img/stickers/${id}.png`;
+  img.alt = label || id;
+  img.title = label || id;
+  img.loading = 'lazy';
+  return img;
+}
+
+/** Picker-ul de stikere: butonul 😄 din formular deschide grila; un click pe
+ *  un sticker il trimite instant ca mesaj de sine statator. */
+function initStickers() {
+  const btn = document.getElementById('chat-sticker-btn');
+  const pop = document.getElementById('sticker-pop');
+  if (!btn || !pop) return;
+  pop.innerHTML = '';
+  for (const st of STICKERS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sticker-pop__item';
+    b.title = st.label;
+    b.appendChild(stickerImg(st.id, st.label));
+    b.addEventListener('click', () => {
+      pop.hidden = true;
+      sendSticker(st.id);
+    });
+    pop.appendChild(b);
+  }
+  btn.addEventListener('click', () => { pop.hidden = !pop.hidden; });
+  document.addEventListener('click', (e) => {
+    if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
+  });
+}
+
+function sendSticker(id) {
+  if (!STICKER_IDS.has(id)) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    toast('Chat-ul nu e conectat încă. Încearcă din nou într-o secundă.', 'warn');
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'chat', message: `[sticker:${id}]` }));
+}
+
 /** Construieste noduri cu textContent — niciodata innerHTML cu date de la utilizator. */
 function renderMessage(m) {
   const body = document.getElementById('chat-body');
@@ -139,6 +200,25 @@ function renderMessage(m) {
 
   const row = document.createElement('div');
   row.className = 'msg' + (me && m.user_id === me.id ? ' msg--own' : '');
+
+  // mesajele care sunt DOAR un sticker se randeaza ca imagine mare; un tag
+  // necunoscut sau amestecat cu text ramane text simplu (sigur)
+  const sm = String(m.message || '').match(STICKER_RE);
+  if (sm && STICKER_IDS.has(sm[1])) {
+    const who = document.createElement('span');
+    who.className = 'msg__user';
+    who.textContent = m.username || 'Anon';
+    row.append(who, stickerImg(sm[1]));
+    if (m.created_at) {
+      const time = document.createElement('span');
+      time.className = 'msg__time';
+      time.textContent = String(m.created_at).slice(11, 16);
+      row.appendChild(time);
+    }
+    body.appendChild(row);
+    trimBody(body);
+    return;
+  }
 
   // identitatea: staff badge + grad tematic, ambele din server (niciodata
   // din client) — cine vorbeste si cu ce autoritate se vede dintr-o privire
