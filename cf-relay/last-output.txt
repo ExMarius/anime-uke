@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ c3494f9
+comanda: cf-relay/cmd.sh @ b05caf1
 ────────────────────────────────────
 homepage (302 = privat, ok)                  -> HTTP 302
 API missions fara auth (401 ok)              -> HTTP 401
@@ -7,6 +7,6 @@ API economy fara auth (401 ok)               -> HTTP 401
 CSS: economie noua live (200)                -> HTTP 200
 sitemap                                      -> HTTP 200
 ── CSS contine clasele noi (misiuni/rang)? ──
-✗ .mission__claim LIPSA
+✓ .mission__fill prezent
 ✓ .econ__rank prezent
 ✓ .howto__card prezent
