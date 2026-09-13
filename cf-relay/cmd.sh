@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy + verificare plafoane in productie.
+# Deploy + verificare: cereri de cod invitație + cache assets (productie).
 set -uo pipefail
 B="https://anime-uke.pages.dev"
 H="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
@@ -12,12 +12,32 @@ echo "── deploy ──"
 echo "exit deploy: $?"
 
 echo ""
-echo "═══ PLAFOANE IN PRODUCTIE ═══"
-echo "register-options:"
-curl -s "$B/api/auth/register-options" -H "Origin: $B" | jq -c '.'
-echo "contez direct in D1:"
-q "SELECT (SELECT COUNT(*) FROM users) AS users, (SELECT COUNT(*) FROM anime_series) AS series, (SELECT COUNT(*) FROM chat_messages) AS chat" | jq -c '.result[0].results[0]'
-echo "chat depaseste plafonul de 500?"
-q "SELECT COUNT(*) AS peste_plafon FROM (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 1 OFFSET 500)" | jq -c '.result[0].results[0]'
+echo "═══ MIGRATIA 0018 (invite_requests) ═══"
+q "SELECT COUNT(*) AS exista FROM sqlite_master WHERE type='table' AND name='invite_requests'" | jq -c '.result[0].results[0]'
+
+echo ""
+echo "═══ FLUX PUBLIC: cerere de cod (cont de proba, se sterge) ═══"
+R=$(curl -s -X POST "$B/api/invite-requests" -H "Content-Type: application/json" -H "Origin: $B" \
+  -d '{"email":"probe.audit@exemplu.ro","message":"Verificare automata a fluxului de cereri (se sterge)."}')
+echo "POST: $(echo "$R" | head -c 120)"
+TICKET=$(echo "$R" | jq -r '.request_code // empty')
+if [ -n "$TICKET" ]; then
+  echo "GET bilet: $(curl -s "$B/api/invite-requests?code=$TICKET" -H "Origin: $B" | jq -c '.')"
+fi
+echo "admin fara sesiune -> astept 401: $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/invite-requests" -H "Origin: $B")"
+echo "portalul exista pe /login: $(curl -s "$B/login" | grep -c 'cere-cod') aparitii"
+
+echo ""
+echo "═══ CURATENIE: stergem cererea de proba ═══"
+[ -n "$TICKET" ] && q "DELETE FROM invite_requests WHERE request_code = '$TICKET'" | jq -c '{success, errors: [.errors[]?.message]}'
+q "SELECT COUNT(*) AS ramase FROM invite_requests" | jq -c '.result[0].results[0]'
+
+echo ""
+echo "═══ CACHE ASSETS ═══"
+echo "style.css?v=abc: $(curl -s -o /dev/null -w '%{http_code} → %header{cache-control}' "$B/assets/css/style.css?v=abc")"
+echo "covers/one-piece.jpg: $(curl -s -o /dev/null -w '%{http_code} → %header{cache-control}' "$B/covers/one-piece.jpg")"
+echo "meta og:image pe /: $(curl -s "$B/login" -o /dev/null -w '%{http_code}') (login 200), og:image: $(curl -s "$B/" -L | grep -c 'og:image' || true)"
+
+echo ""
 echo "── still alive ──"
-for p in / /login; do echo "  $p -> $(curl -s -o /dev/null -w '%{http_code}' "$B$p")"; done
+for p in / /login /register; do echo "  $p -> $(curl -s -o /dev/null -w '%{http_code}' "$B$p")"; done
