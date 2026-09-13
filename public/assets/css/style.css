@@ -1421,3 +1421,10 @@ body.cinema .ep-hero { margin-bottom: .55rem; gap: .7rem; }
 body.cinema .ep-hero__num { width: 44px; height: 44px; font-size: 1.15rem; border-radius: .8rem; }
 body.cinema #episode-title { font-size: 1.15rem !important; }
 body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
+
+.ptool--select { display: inline-flex; align-items: center; gap: .3rem; cursor: default; }
+.ptool--select select {
+  background: transparent; color: inherit; border: 0; font: inherit;
+  cursor: pointer; outline: none;
+}
+.ptool--select select option { color: #111; }

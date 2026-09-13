@@ -821,6 +821,55 @@ function startAutoNext() {
   }, 1000);
 }
 
+// La surse EMBED iframe-ul e cross-origin: playerul terț NU are voie sa ne
+// spuna cand s-a terminat video-ul. Numaram deci timp real de vizionare
+// (doar cat tab-ul e vizibil) si declansam numărătoarea la pragul ales.
+const ANEXT_MINS = [20, 22, 24, 26];
+const anextMin = () => {
+  const v = Number(localStorage.getItem('auk-anext-min'));
+  return ANEXT_MINS.includes(v) ? v : 24;
+};
+let embedSeconds = 0;
+let embedTimer = null;
+
+function embedActive() {
+  const s = sources[activeSource];
+  return !!(s && s.kind === 'embed');
+}
+
+function startEmbedWatcher() {
+  if (embedTimer) clearInterval(embedTimer);
+  embedSeconds = 0;
+  embedTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;   // pauza = tab ascuns
+    if (!autonextOn() || !nextEp || !embedActive()) return;
+    embedSeconds += 1;
+    if (embedSeconds >= anextMin() * 60) {
+      clearInterval(embedTimer);
+      embedTimer = null;
+      startAutoNext();
+    }
+  }, 1000);
+}
+
+function paintAnextMin() {
+  const sel = qs('anext-min');
+  if (!sel) return;
+  if (!sel.options.length) {
+    for (const m of ANEXT_MINS) {
+      const o = document.createElement('option');
+      o.value = String(m);
+      o.textContent = String(m);
+      sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => {
+      localStorage.setItem('auk-anext-min', sel.value);
+      toast(`Auto-next embed: declanșăm la ${sel.value} min vizionate.`, 'success');
+    });
+  }
+  sel.value = String(anextMin());
+}
+
 function paintAutoBtn() {
   const b = qs('autonext-btn');
   if (!b) return;
@@ -840,6 +889,8 @@ function initAutoNext() {
     });
   }
   paintAutoBtn();
+  paintAnextMin();
+  startEmbedWatcher();
   qs('autonext-cancel')?.addEventListener('click', stopAutoNext);
   qs('autonext-go')?.addEventListener('click', () => { if (nextEp) location.href = `/episode?id=${nextEp.id}`; });
   // doar sursele de tip fisier ne spun cand s-au terminat

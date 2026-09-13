@@ -480,6 +480,15 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   p.$('#cinema-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
 
   check('Auto-next e pornit implicit si scrie asta pe buton', /pornit/.test(p.$('#autonext-btn')?.textContent || ''), p.$('#autonext-btn')?.textContent);
+  const minSel = p.$('#anext-min');
+  check('Selectorul de minute pentru embed exista cu 4 praguri', !!minSel && p.$$('#anext-min option').length === 4 && minSel.value === '24', `val=${minSel?.value} opt=${p.$$('#anext-min option').length}`);
+  if (minSel) {
+    minSel.value = '22';
+    minSel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
+    check('Pragul ales se persista in localStorage', p.window.localStorage.getItem('auk-anext-min') === '22', p.window.localStorage.getItem('auk-anext-min'));
+    minSel.value = '24';
+    minSel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
+  }
   p.$('#player-video')?.dispatchEvent(new p.window.Event('ended'));
   const anOn = await until(() => p.$('#autonext')?.hidden === false && /\d/.test(p.$('#autonext-count')?.textContent || ''));
   check('La finalul video apare numărătoarea auto-next', anOn, `count=${p.$('#autonext-count')?.textContent}`);
