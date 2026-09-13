@@ -436,6 +436,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // Subtitrarea din episod trebuie sa ajunga ca <track> in <video>.
   const trackOk = await until(() => p.$('#player-video track')?.getAttribute('srclang') === 'ro');
   check('Subtitrarea se ataseaza ca <track srclang="ro">', trackOk, `track=${p.$('#player-video track')?.outerHTML?.slice(0, 90)}`);
+  check('Track-ul de subtitrare trece prin proxy-ul anti-CORS', (p.$('#player-video track')?.getAttribute('src') || '').includes('/api/subtitle'), p.$('#player-video track')?.getAttribute('src'));
 
   // Fullscreen-ul e al sursei: iframe-ul trebuie sa aiba permisiunile, iar
   // noi nu mai punem buton propriu peste cel nativ al furnizorului.

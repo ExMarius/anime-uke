@@ -1413,3 +1413,11 @@ body.cinema .container-wide { width: min(1280px, 100% - 2.5rem); }
 }
 .eplist__ep:hover { border-color: var(--crimson, #DC143C); color: #fff; }
 .eplist__ep.is-on { background: var(--crimson, #DC143C); border-color: var(--crimson, #DC143C); color: #fff; }
+
+/* Cinema compact: playerul cat mai sus in ecran — antetul se strange */
+body.cinema main.container-wide { padding-top: .35rem; }
+body.cinema .crumb { margin: .1rem 0 .45rem; font-size: .8rem; }
+body.cinema .ep-hero { margin-bottom: .55rem; gap: .7rem; }
+body.cinema .ep-hero__num { width: 44px; height: 44px; font-size: 1.15rem; border-radius: .8rem; }
+body.cinema #episode-title { font-size: 1.15rem !important; }
+body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }

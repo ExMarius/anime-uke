@@ -207,15 +207,24 @@ function selectSource(index) {
     // de fiecare data cand porneste o sursa file, ca sa nu ramana un track
     // de la episodul anterior.
     video.querySelectorAll('track').forEach((tr) => tr.remove());
-    const sub = safeUrl(currentSubtitle, '');
-    if (sub && sub !== '#') {
+    // Subtitrarea trece prin proxy-ul NOSTRU (/api/subtitle): un .vtt extern
+    // fara header-e CORS esueaza SILENTIOS in <track>, iar un track adaugat
+    // dinamic are nevoie de mode='showing' — atributul `default` singur nu
+    // il activeaza in toate browserele.
+    if (currentSubtitle) {
       const track = document.createElement('track');
       track.kind = 'subtitles';
       track.label = 'Română';
       track.srclang = 'ro';
       track.default = true;
-      track.src = sub;
+      track.src = `/api/subtitle?episode_id=${encodeURIComponent(episodeId)}`;
       video.appendChild(track);
+      const enable = () => {
+        const tt = video.textTracks && video.textTracks[0];
+        if (tt) tt.mode = 'showing';
+      };
+      enable();
+      video.addEventListener('loadedmetadata', enable, { once: true });
     }
     // `loadeddata` e mai de incredere decat `load` la elemente media.
     video.addEventListener('loadeddata', () => clearLoading(), { once: true });

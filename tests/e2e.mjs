@@ -965,6 +965,12 @@ console.log('\n=== 13b. SUBTITRARI WEBVTT IN ROMANA ===');
 
   const got = await req(j, 'GET', `/api/episodes/${newId}`);
   check('API-ul returneaza subtitle_url', got.data?.episode?.subtitle_url === '/assets/subs/demo-ro.vtt', JSON.stringify(got.data?.episode?.subtitle_url));
+  const subAnon = await req(jar(), 'GET', `/api/subtitle?episode_id=${newId}`);
+  check('Proxy-ul de subtitrare anonim → 401', subAnon.status === 401, `status=${subAnon.status}`);
+  const subOk = await req(j, 'GET', `/api/subtitle?episode_id=${newId}`);
+  check('Proxy-ul serveste VTT prin originul nostru (anti-CORS)', subOk.status === 200 && String(subOk.data?.raw || subOk.data || '').startsWith('WEBVTT') && String(subOk.headers.get('content-type')).includes('text/vtt'), `status=${subOk.status} ct=${subOk.headers.get('content-type')}`);
+  const subNone = await req(j, 'GET', `/api/subtitle?episode_id=${globalThis.epId}`);
+  check('Episodul fara subtitrare → 404 curat', subNone.status === 404, `status=${subNone.status}`);
 
   const badHttp = await req(j, 'PATCH', '/api/admin/episodes', { id: newId, subtitle_url: 'http://insecure.example/x.vtt' });
   check('Subtitrare http:// (nesigura) → 400', badHttp.status === 400, `status=${badHttp.status}`);
