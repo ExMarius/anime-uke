@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Probe: variante ale ACEEASI animatii (baza rtMO2T0cQrE) + marker ANIM pt webp.
+# Simuleaza EXACT fluxul resolverului pe linkul utilizatorului.
 set -uo pipefail
-BASE="https://media.tenor.com/rtMO2T0cQrE"
-for SUF in AAAAC AAAAG AAAAM AAAAU AAAA1 AAAPo; do
-  for EXT in gif webp mp4; do
-    U="${BASE}${SUF}/42.${EXT}"
-    R=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' -I "$U")
-    echo "$R  <-  $U"
-  done
-done
-echo "── webp AAAA1 e animat? (cautam chunk ANIM) ──"
-curl -s "${BASE}AAAA1/42.webp" -o /tmp/t.webp 2>/dev/null && ls -la /tmp/t.webp && grep -c ANIM /tmp/t.webp || echo "0 (fara ANIM = static)"
-echo "── totusi: ce zice un GET pe m/ fara nume? ──"
-curl -s -o /dev/null -w '%{http_code} %{content_type}\n' -I "https://media1.tenor.com/m/rtMO2T0cQrEAAAAC.gif"
+URL="https://tenor.com/paKwmvU0Mgf.gif"
+HTML=$(curl -sL "$URL" | head -c 400000)
+OG=$(echo "$HTML" | grep -oE '<meta[^>]+property="og:image[^>]*' | head -1 | grep -oE 'content="[^"]+"' | sed 's/content="//; s/"$//' | head -1)
+echo "1) og:image gasit:    $OG"
+DIRECT=$(echo "$OG" | sed -E 's#(https://)media[0-9]?\.tenor\.com/m/([^/]+)/([^/?#]+)#\1media.tenor.com/\2/\3#')
+echo "2) varianta vida:     $DIRECT"
+CT=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' -I "$DIRECT")
+echo "3) verificare HEAD:   $CT"
+if echo "$CT" | grep -q "^200 image/"; then echo "REZULTAT: ✓ avatarul va functiona cu acest URL"; else echo "REZULTAT: ✗ inca mort"; fi
