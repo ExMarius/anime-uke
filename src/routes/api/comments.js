@@ -34,9 +34,10 @@ export async function onRequestGet(context) {
   const themes = await loadRankThemes(env);
   const rows = await env.DB
     .prepare(
-      `SELECT c.id, c.body, c.created_at, c.user_id, c.parent_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod
+      `SELECT c.id, c.body, c.created_at, c.user_id, c.parent_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod, up.avatar_url AS avatar
        FROM episode_comments c
        JOIN users u ON u.id = c.user_id
+       LEFT JOIN user_profiles up ON up.user_id = c.user_id
        WHERE c.episode_id = ?
        ORDER BY c.id ASC
        LIMIT 80`
@@ -72,6 +73,7 @@ export async function onRequestGet(context) {
         body: r.body,
         created_at: r.created_at,
         username: r.username,
+        avatar: r.avatar || '',
         own: r.user_id === user.id,
         parent_id: r.parent_id || null,
         score: scores[r.id] || 0,

@@ -118,6 +118,7 @@ function renderHead() {
     img.src = safeUrl(p.avatar_url, '');
     img.alt = u.username;
     img.loading = 'lazy';
+    img.setAttribute('referrerpolicy', 'no-referrer');
     img.addEventListener('error', () => { img.remove(); avText.hidden = false; }, { once: true });
     avText.hidden = true;
     av.appendChild(img);
@@ -346,6 +347,24 @@ async function loadLeaderboard() {
     rank.className = 'lb__rank';
     rank.textContent = LB_MEDALS[i] || `#${i + 1}`;
     li.appendChild(rank);
+
+    // Avatarul din profil (PNG/JPG/WEBP/GIF animat); picat -> initiala.
+    if (row.avatar) {
+      const av = document.createElement('span');
+      av.className = 'lb__avatar';
+      const img = document.createElement('img');
+      img.src = row.avatar;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      img.addEventListener('error', () => {
+        const fb = document.createElement('span');
+        fb.className = 'lb__avatar-fb';
+        fb.textContent = (row.username || 'A')[0].toUpperCase();
+        img.replaceWith(fb);
+      }, { once: true });
+      li.appendChild(av);
+    }
 
     const name = document.createElement('span');
     name.className = 'lb__name';

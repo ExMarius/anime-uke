@@ -1428,6 +1428,58 @@ console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 }
 
 // =====================================================================
+// AVATAR cu URL propriu — inclusiv GIF animat — vizibil peste tot.
+// =====================================================================
+console.log('\n=== Avatar (URL, GIF animat) ===');
+{
+  const GIF = 'https://media.tenor.com/test-host/x.gif';
+  const set = await req(globalThis.admin, 'PATCH', '/api/profile', { avatar_url: GIF });
+  check('PATCH avatar cu link .gif → 200', set.status === 200, `status=${set.status} ${JSON.stringify(set.data).slice(0, 120)}`);
+
+  const me = await req(globalThis.admin, 'GET', '/api/auth/me');
+  check('Sesiunea nu e afectata de avatar', me.status === 200 && !!me.data?.user);
+
+  const pub = await req(globalThis.admin, 'GET', `/api/profile/${me.data.user.username}`);
+  check('Profilul public expune avatarul gif', pub.status === 200 && pub.data?.profile?.avatar_url === GIF, JSON.stringify(pub.data?.profile?.avatar_url));
+
+  // Comentariul adminului (exista din sectiunea de moderare) duce avatarul.
+  const cm = await req(globalThis.admin, 'GET', `/api/comments?episode_id=${globalThis.epId}`);
+  const mine = (cm.data?.comments || []).find((c) => c.username === me.data.user.username);
+  check('Comentariile poarta avatarul autorului', !!mine && mine.avatar === GIF, JSON.stringify(mine?.avatar));
+
+  // Clasamentul la fel.
+  const lb = await req(globalThis.admin, 'GET', '/api/leaderboard');
+  const lbMe = (lb.data?.top || []).find((r) => r.username === me.data.user.username);
+  check('Clasamentul poarta avatarul', !!lbMe && lbMe.avatar === GIF, JSON.stringify(lbMe?.avatar));
+
+  // URL-urile non-http raman interzise (validarea existenta).
+  const bad = await req(globalThis.admin, 'PATCH', '/api/profile', { avatar_url: 'javascript:alert(1)' });
+  check('Avatar javascript: → respins', bad.status === 400, `status=${bad.status}`);
+
+  // WS: mesajul nou difuzat in chat poarta avatarul (de la connect).
+  const ws = new WS(`${WS_BASE}/chat`, { headers: { Cookie: globalThis.admin.cookie } });
+  let got = null;
+  try {
+    got = await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), 8000);
+      ws.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.type === 'init') { ws.send(JSON.stringify({ type: 'chat', message: 'verific avatar in chat' })); }
+        if (d.type === 'message' && d.message === 'verific avatar in chat') { clearTimeout(t); resolve(d); }
+      };
+      ws.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
+    });
+  } catch (e) {
+    check('WS pentru avatar s-a conectat', false, e.message);
+  }
+  if (got) {
+    check('Mesajul din chat poarta avatarul', got.avatar === GIF, JSON.stringify({ avatar: got.avatar }));
+    check('Lista online poarta avatarul', (got.online || []).some((u) => u.username === me.data.user.username && u.avatar === GIF), JSON.stringify(got.online));
+    ws.close();
+  }
+}
+
+// =====================================================================
 // MISIUNI ZILNICE + STREAK — logica economiei: progres real -> claim.
 // =====================================================================
 console.log('\n=== Misiuni zilnice + streak ===');

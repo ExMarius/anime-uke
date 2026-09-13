@@ -1676,3 +1676,26 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 .howto__card p { margin: 0; font-size: .76rem; color: var(--dim); line-height: 1.45; }
 @media (max-width: 900px) { .howto { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .howto { grid-template-columns: 1fr; } }
+
+/* =====================================================================
+   AVATARE cu URL propriu (PNG/JPG/WEBP/GIF animat).
+   Apare in chat, comentarii si clasament; cade pe initiala daca linkul
+   e mort sau gazda blocheaza hotlinking (de asta si referrerpolicy).
+   ===================================================================== */
+.msg__avatar, .comment__avatar, .lb__avatar {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.55rem; height: 1.55rem;
+  border-radius: 50%; overflow: hidden;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  margin-right: .1rem;
+}
+.lb__avatar { width: 1.8rem; height: 1.8rem; }
+.msg__avatar img, .comment__avatar img, .lb__avatar img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.msg__avatar-fb, .comment__avatar-fb, .lb__avatar-fb {
+  font-size: .72rem; font-weight: 900; color: var(--accent-hi);
+  line-height: 1; user-select: none;
+}
+.msg--own .msg__avatar { border-color: var(--accent); }

@@ -32,9 +32,11 @@ async function computeTop(env) {
   // gradele tematice se calculeaza din nivel + tema fiecarui om
   const top = await env.DB
     .prepare(
-      `SELECT username, points, level, rank_theme, is_admin, is_mod FROM users
-       WHERE is_banned = 0
-       ORDER BY points DESC, id ASC
+      `SELECT u.username, u.points, u.level, u.rank_theme, u.is_admin, u.is_mod, up.avatar_url AS avatar
+       FROM users u
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       WHERE u.is_banned = 0
+       ORDER BY u.points DESC, u.id ASC
        LIMIT ${TOP_N}`
     )
     .all();
@@ -55,6 +57,7 @@ async function computeTop(env) {
   const themes = await loadRankThemes(env);
   return (top.results || []).map((r) => ({
     username: r.username,
+    avatar: r.avatar || '',
     points: r.points,
     week: weekByUser.get(r.username) || 0,
     rank: identity(r, themes).rank,

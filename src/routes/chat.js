@@ -52,12 +52,20 @@ export async function onRequest(context) {
     .all();
   const owned = new Set((items.results || []).map((r) => r.item_id));
 
+  // Avatarul (URL, poate fi GIF animat) vine o data la connect, la fel ca
+  // rank-urile si cosmeticele: o citire indexata per conectare, zero per mesaj.
+  const prof = await env.DB
+    .prepare('SELECT avatar_url FROM user_profiles WHERE user_id = ?')
+    .bind(user.id)
+    .first();
+
   const url = new URL(request.url);
   url.searchParams.set('u', JSON.stringify({
     id: user.id, username: user.username,
     rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
     flair: owned.has('flair_supporter') ? '💎' : '',
     name_gold: owned.has('name_gold') ? 1 : 0,
+    avatar: prof?.avatar_url || '',
   }));
 
   return stub.fetch(new Request(url.toString(), request));

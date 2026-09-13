@@ -93,6 +93,7 @@ export class ChatDO {
       userId: user.id, username: user.username,
       rank_label: user.rank_label || '', rank_icon: user.rank_icon || '', staff_role: user.staff_role || '',
       flair: user.flair || '', name_gold: user.name_gold ? 1 : 0,
+      avatar: user.avatar || '',
     });
 
     // Nu blocam handshake-ul pe I/O
@@ -157,6 +158,7 @@ export class ChatDO {
       staff_role: att.staff_role || '',
       flair: att.flair || '',
       name_gold: att.name_gold ? 1 : 0,
+      avatar: att.avatar || '',
     };
 
     // --- broadcast imediat (fara sa asteptam D1) ---
@@ -206,7 +208,7 @@ export class ChatDO {
     if (this.history) return this.history.slice(-HISTORY_LIMIT);
     try {
       const res = await this.env.DB.prepare(
-        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold
+        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, avatar
          FROM chat_messages ORDER BY id DESC LIMIT ?`
       ).bind(HISTORY_LIMIT).all();
 
@@ -227,11 +229,11 @@ export class ChatDO {
 
     try {
       const stmt = this.env.DB.prepare(
-        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, avatar)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       await this.env.DB.batch(batch.map((m) =>
-        stmt.bind(m.user_id, m.username, m.message, m.created_at,
+        stmt.bind(m.user_id, m.username, m.message, m.created_at, m.avatar || '',
           m.rank_label || '', m.rank_icon || '', m.staff_role || '',
           m.flair || '', m.name_gold ? 1 : 0)
       ));
@@ -281,6 +283,7 @@ export class ChatDO {
     return [...seen.entries()].map(([id, att]) => ({
       id, username: att.username,
       rank_label: att.rank_label || '', rank_icon: att.rank_icon || '', staff_role: att.staff_role || '',
+      avatar: att.avatar || '',
     }));
   }
 

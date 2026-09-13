@@ -178,6 +178,10 @@ export async function onRequestPatch(context) {
     const merged = {};
     for (const f of FIELDS) merged[f] = f in patch ? patch[f] : (existing?.[f] ?? '');
 
+    // Avatar schimbat → clasamentul (cache-uit in D1) nu trebuie sa vada
+    // un avatar vechi pana expira TTL-ul. O singura scriere, doar la schimbare.
+    const avatarChanged = merged.avatar_url !== (existing?.avatar_url ?? '');
+
     await env.DB
       .prepare(
         `INSERT INTO user_profiles
@@ -196,6 +200,10 @@ export async function onRequestPatch(context) {
       .bind(me.id, merged.birth_date, merged.gender, merged.country,
             merged.motto, merged.mal_url, merged.avatar_url, merged.faction)
       .run();
+
+    if (avatarChanged) {
+      await env.DB.prepare('DELETE FROM leaderboard_cache').run();
+    }
 
     const saved = await env.DB
       .prepare('SELECT * FROM user_profiles WHERE user_id = ?')

@@ -248,7 +248,7 @@ function stickerImg(st, label) {
   img.alt = label || st.label;
   img.title = label || st.label;
   img.loading = 'lazy';
-  img.referrerPolicy = 'no-referrer';
+  img.setAttribute('referrerpolicy', 'no-referrer');
   return img;
 }
 
@@ -300,6 +300,8 @@ function renderMessage(m) {
   const sm = String(m.message || '').match(STICKER_RE);
   if (sm && STICKER_BY_ID.has(sm[1])) {
     const who = nameEl(m);
+    const av = avatarEl(m);
+    if (av) row.append(av);
     row.append(who, stickerImg(STICKER_BY_ID.get(sm[1])));
     if (m.created_at) {
       const time = document.createElement('span');
@@ -320,11 +322,13 @@ function renderMessage(m) {
   ].filter(Boolean);
 
   const user = nameEl(m);
+  const av = avatarEl(m);
 
   const text = document.createElement('span');
   text.className = 'msg__text';
   text.textContent = m.message || '';
 
+  if (av) row.append(av);
   row.append(...badges, user, text);
 
   if (m.created_at) {
@@ -376,4 +380,27 @@ function nameEl(m) {
   u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '');
   u.textContent = (m.flair ? m.flair + ' ' : '') + (m.username || 'Anon');
   return u;
+}
+
+/** Avatarul celui care vorbeste: <img> cu URL-ul din profil (poate fi GIF
+ *  animat — <img> randeaza animatia nativ). Linkul picat sau gazda care
+ *  blocheaza hotlinking cad pe initiala, niciodata pe imagine stricata. */
+function avatarEl(m) {
+  if (!m.avatar) return null;
+  const wrap = document.createElement('span');
+  wrap.className = 'msg__avatar';
+  const img = document.createElement('img');
+  img.src = m.avatar;
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.setAttribute('referrerpolicy', 'no-referrer');
+  img.addEventListener('error', () => {
+    const fb = document.createElement('span');
+    fb.className = 'msg__avatar-fb';
+    fb.textContent = (m.username || 'A')[0].toUpperCase();
+    img.replaceWith(fb);
+  }, { once: true });
+  wrap.appendChild(img);
+  return wrap;
 }

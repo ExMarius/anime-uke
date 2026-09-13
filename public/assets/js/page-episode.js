@@ -531,6 +531,24 @@ function commentNode(c, episodeId, me, replies, byParent) {
 
   const head = document.createElement('div');
   head.className = 'comment__head';
+  // Avatarul comentaristului (URL din profil; GIF animat randeaza nativ).
+  // Picat -> initiala, pe acelasi fond crimson ca si pe profil.
+  if (c.avatar) {
+    const av = document.createElement('span');
+    av.className = 'comment__avatar';
+    const img = document.createElement('img');
+    img.src = c.avatar;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.setAttribute('referrerpolicy', 'no-referrer');
+    img.addEventListener('error', () => {
+      const fb = document.createElement('span');
+      fb.className = 'comment__avatar-fb';
+      fb.textContent = (c.username || 'A')[0].toUpperCase();
+      img.replaceWith(fb);
+    }, { once: true });
+    head.appendChild(av);
+  }
   const who = document.createElement('span');
   who.className = 'comment__who';
   who.textContent = c.username;
