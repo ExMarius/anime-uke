@@ -23,6 +23,7 @@ import * as seriesList from './routes/api/series.js';
 import * as seriesById from './routes/api/series/by-id.js';
 import * as episodeById from './routes/api/episodes/by-id.js';
 import * as viewRoute from './routes/api/view.js';
+import * as pulseRoute from './routes/api/pulse.js';
 import * as progressRoute from './routes/api/progress.js';
 import * as chestsRoute from './routes/api/chests.js';
 import * as leaderboardRoute from './routes/api/leaderboard.js';
@@ -100,6 +101,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'POST', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'GET', path: '/api/notifications/unread', mod: notifUnreadRoute },
+  { method: 'GET', path: '/api/pulse', mod: pulseRoute },
   { method: 'POST', path: '/api/notifications/read', mod: notificationsRoute },
   { method: 'GET', path: '/api/notifications', mod: notificationsRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },

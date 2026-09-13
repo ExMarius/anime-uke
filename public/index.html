@@ -52,6 +52,7 @@
       <div class="hero__stats" id="hero-stats">
         <div class="hero__stat"><b id="stat-series">—</b><span>Serii</span></div>
         <div class="hero__stat"><b id="stat-episodes">—</b><span>Episoade</span></div>
+        <div class="hero__stat"><b id="stat-views">0</b><span>Vizionări</span></div>
         <div class="hero__stat"><b id="stat-points">0</b><span>Punctele tale</span></div>
       </div>
 
@@ -116,9 +117,36 @@
     </section>
   </main>
 
-  <footer class="container" style="padding-bottom:2.5rem">
-    <hr class="divider">
-    <p class="section__count" style="text-align:center">anime-uke · construit pe Cloudflare Pages · $0/lună</p>
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <span class="nav__brand__mark" aria-hidden="true">鬼</span>
+        <div>
+          <b>anime-uke</b>
+          <p>Anime subtitrat în română, cu puncte pentru fiecare episod urmărit și o comunitate live în chat.</p>
+        </div>
+      </div>
+      <nav class="footer__col" aria-label="Explorare">
+        <h3>Explorare</h3>
+        <a href="/#serii">Toate seriile</a>
+        <a href="/shop">Shop & cufere</a>
+        <a href="/profile">Profilul meu</a>
+      </nav>
+      <nav class="footer__col" aria-label="Comunitate">
+        <h3>Comunitate</h3>
+        <a href="/" id="footer-chat">Chat live</a>
+        <a href="/register">Cont nou</a>
+      </nav>
+      <div class="footer__col footer__meta">
+        <h3>Acum pe site</h3>
+        <span class="footer__line"><i class="pulse-chip__dot" aria-hidden="true"></i><b id="footer-online">—</b>&nbsp;în chat</span>
+        <span class="footer__line"><b id="footer-views">—</b>&nbsp;vizionări totale</span>
+      </div>
+    </div>
+    <div class="container footer__base">
+      <span>© <span id="footer-year">2026</span> anime-uke</span>
+      <span>Cloudflare Pages · D1 · Durable Objects</span>
+    </div>
   </footer>
 
   <!-- CHAT: buton flotant + modal -->

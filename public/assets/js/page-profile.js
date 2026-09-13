@@ -1,4 +1,5 @@
-import { api, renderNav, toast, withBusy, safeUrl, staffBadge, rankChip } from './core.js';
+import { api, renderNav, toast, withBusy, safeUrl, staffBadge, rankChip , whenActive } from './core.js';
+import { initChat } from './chat.js';
 
 // =====================================================================
 // Pagina de profil public — sectiunile „Informatii" si „Acces rapid".
@@ -614,4 +615,5 @@ async function initEconomy() {
 }
 
 await Promise.all([renderNav(''), load()]);
+whenActive(() => initChat().catch(() => { /* chat optional */ }));
 if (target === 'me') initEconomy().catch(() => { /* panoul e bonus, profilul merge oricum */ });

@@ -332,7 +332,7 @@ console.log('\n=== 5b. SURSE VIDEO (CRUD) ===');
 
   const pub = await req(j, 'GET', `/api/episodes/${epId}`);
   check('API public intoarce sursele active, in ordine', pub.data?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern,StreamTape RO', JSON.stringify(pub.data?.sources));
-  check('API public nu expune id-urile de episod inactive', pub.data.sources.every((x) => x.kind !== undefined && x.url.startsWith('https://')), JSON.stringify(pub.data?.sources).slice(0, 150));
+  check('API public nu expune id-urile de episod inactive', pub.data?.sources?.every((x) => x.kind !== undefined && x.url.startsWith('https://')) === true, JSON.stringify(pub.data?.sources).slice(0, 150));
 
   const del = await req(j, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
   check('Stergere sursa → 200', del.status === 200 && del.data?.success === true, `status=${del.status}`);

@@ -22,6 +22,13 @@ function b64urlDecode(str) {
 }
 
 async function hmacKey(secret, usage) {
+  // Guard explicit: un secret gol (ex. .dev.vars lipsa in dev, deploy fara
+  // pasul de secret pe Pages) producea o eroare criptica WebCrypto
+  // („Imported HMAC key length (0)") si un 500 fara sens la login/register.
+  // Acum mesajul spune exact ce e de facut.
+  if (typeof secret !== 'string' || secret.length < 16) {
+    throw new Error('JWT_SECRET lipsă sau prea scurt — setează secretul (pages secret put JWT_SECRET / .dev.vars în dev)');
+  }
   return crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),

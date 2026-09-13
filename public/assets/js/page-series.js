@@ -1,4 +1,5 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam , whenActive } from './core.js';
+import { initChat } from './chat.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -454,6 +455,7 @@ async function loadChests(seriesId) {
 }
 
 await Promise.all([renderNav(''), load()]);
+whenActive(() => initChat().catch(() => { /* chat optional */ }));
 const sid = Number(getParam('id'));
 if (sid) {
   await initWatchlist(sid);

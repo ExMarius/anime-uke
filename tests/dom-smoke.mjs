@@ -116,6 +116,7 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
     localStorage: window.localStorage, sessionStorage: window.sessionStorage,
     fetch: window.fetch, WebSocket: FakeSocket,
     getComputedStyle: window.getComputedStyle,
+    matchMedia: (q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }),
     alert: () => {}, confirm: () => true,
   };
   // Timerii paginii (heartbeat, raf) raman pe Node; window.close() nu i-ar

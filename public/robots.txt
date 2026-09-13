@@ -1,0 +1,9 @@
+# Robotii care indexeaza paginile publice de autentificare. Catalogul e in
+# spatele autentificarii (site privat), deci restul e dezactivat explicit,
+# nu lasat la noroc.
+User-agent: *
+Allow: /login
+Allow: /register
+Disallow: /
+
+Sitemap: https://anime-uke.pages.dev/sitemap.xml

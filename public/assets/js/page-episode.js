@@ -1,4 +1,5 @@
 import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip , whenActive } from './core.js';
+import { initChat } from './chat.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -672,6 +673,7 @@ async function boot() {
     renderNav(''),
     new Promise((done) => whenActive(async () => { await load(); done(); })),
   ]);
+  whenActive(() => initChat().catch(() => { /* chat optional */ }));
 }
 
 // Ceas de paza: daca dupa 15s pagina e tot in starea initiala, ceva a atarnat

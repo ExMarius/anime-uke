@@ -23,7 +23,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // cu ~50 de request-uri fiecare inseamna ~50.000 de randuri citite/zi,
 // adica 1% din cota gratuita de 5.000.000.
 // =====================================================================
-const PUBLIC_PAGES = new Set(['/login', '/register', '/favicon.ico']);
+const PUBLIC_PAGES = new Set(['/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml']);
 const PUBLIC_API = new Set([
   '/api/auth/login',
   '/api/auth/register',
@@ -75,6 +75,8 @@ export async function handleFetch(request, env, ctx) {
 
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
+    } else if (path === '/sitemap.xml') {
+      response = await sitemapHandler(request, env);
     } else {
       response = await serveStatic(request, env);
     }
@@ -120,6 +122,49 @@ function allowedMethods(path) {
     if (match?.handler) found.add(m);
   }
   return [...found];
+}
+
+// =====================================================================
+// SITEMAP — partea „site real”, nu jucărie: motoarele de căutare primesc
+// o hartă validă a catalogului. E publică (roboții nu au cont), dar nu
+// expune nimic sensitiv: doar URL-uri canoinice.
+//
+// Buget: un singur SELECT indexat (id + updated_at), ținut în cache la
+// nivel de izolat 1 oră — cost D1 neglijabil indiferent de trafic.
+// =====================================================================
+const SITEMAP_CACHE_MS = 60 * 60 * 1000;
+const sitemapCache = { at: 0, body: null };
+
+async function sitemapHandler(request, env) {
+  const origin = new URL(request.url).origin;
+  const now = Date.now();
+
+  if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
+    let urls = ['/', '/login', '/register'];
+    try {
+      const res = await env.DB
+        .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
+        .all();
+      for (const r of res.results || []) urls.push(`/series?id=${r.id}`);
+    } catch (e) {
+      console.error('sitemap D1 esuat:', e?.message || e);
+    }
+    const esc = (s) => s.replace(/&/g, '&amp;');
+    sitemapCache.body =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls.map((u) => `  <url><loc>${esc(origin + u)}</loc></url>`).join('\n') +
+      `\n</urlset>\n`;
+    sitemapCache.at = now;
+  }
+
+  return new Response(sitemapCache.body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+    },
+  });
 }
 
 // Cai care nu trebuie servite niciodata ca asset static. In productie Pages

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -49,9 +49,10 @@ function emptyState(text, sub = '') {
 }
 
 // ---------------- card ----------------
-function seriesCard(s) {
+function seriesCard(s, idx = 0) {
   const a = document.createElement('a');
-  a.className = 'card';
+  a.className = 'card rv';
+  a.style.setProperty('--rv-delay', `${Math.min(idx, 11) * 40}ms`);
   a.href = `/series?id=${encodeURIComponent(s.id)}`;
 
   const poster = document.createElement('div');
@@ -128,7 +129,9 @@ function render() {
     return;
   }
   count.textContent = `${allSeries.length} afișate`;
-  for (const s of allSeries) grid.appendChild(seriesCard(s));
+  let idx = 0;
+  for (const s of allSeries) grid.appendChild(seriesCard(s, idx++));
+  observeReveals(grid);
 }
 
 function fillSorts(sorts) {
@@ -149,9 +152,19 @@ function fillSorts(sorts) {
 function setHeroStats(data) {
   const total = data.total;
   const eps = data.total_episodes;
-  if (!query && total != null) document.getElementById('stat-series').textContent = total.toLocaleString('ro-RO');
-  if (!query && eps != null) document.getElementById('stat-episodes').textContent = Number(eps).toLocaleString('ro-RO');
+  if (!query && total != null) countUp(document.getElementById('stat-series'), total);
+  if (!query && eps != null) countUp(document.getElementById('stat-episodes'), eps);
 }
+
+// Vizionările totale și „online acum” vin din /api/pulse (cache 5 min pe
+// server). countUp le face să „alerge” la încărcare — semnul site-ului viu.
+onPulse((p) => {
+  countUp(document.getElementById('stat-views'), p.views);
+  const fo = document.getElementById('footer-online');
+  if (fo) fo.textContent = String(p.online || 0);
+  const fv = document.getElementById('footer-views');
+  if (fv) fv.textContent = (p.views || 0).toLocaleString('ro-RO');
+});
 
 // ---------------- incarcare ----------------
 /**
@@ -372,6 +385,13 @@ async function renderContinue() {
     t2.textContent = `Episodul ${it.episode_number}`;
     meta.appendChild(t1);
     meta.appendChild(t2);
+    // „acum 2 ore” — rândul pare viu, nu o listă înghețată
+    if (it.updated_at) {
+      const t3 = document.createElement('span');
+      t3.className = 'continue-card__ago';
+      t3.textContent = relativeTime(it.updated_at);
+      meta.appendChild(t3);
+    }
     a.appendChild(meta);
     row.appendChild(a);
   }
@@ -418,7 +438,137 @@ renderContinue().catch(() => { /* randul de continuare e optional */ });
 document.getElementById('search-input')?.addEventListener('input', (e) => {
   clearTimeout(searchTimer);
   const v = e.target.value;
-  searchTimer = setTimeout(() => search(v), 280);
+  // Sugestiile instant (dropdown sub search): si ele pe server, dar cer
+  // doar 6 rezultate — la fel de ieftin, arata ca un produs serios.
+  searchTimer = setTimeout(() => { search(v); searchSuggest(v); }, 180);
+});
+
+// ---------------------------------------------------------------------
+// SUGESTII LIVE sub bara de cautare: rezultate in timp real, navigare cu
+// sagetile, Enter deschide. O singura cerere de 6 randuri per bataie de
+// taste — cel mai bun raport efect/buget pentru senzatia de „site viu”.
+// ---------------------------------------------------------------------
+let sugItems = [];
+let sugActive = -1;
+let sugCtrl = null;
+
+function sugBox() {
+  let box = document.getElementById('search-sug');
+  if (!box) {
+    const wrap = document.querySelector('.search');
+    if (!wrap) return null;
+    box = document.createElement('div');
+    box.id = 'search-sug';
+    box.className = 'search-sug';
+    box.hidden = true;
+    wrap.appendChild(box);
+  }
+  return box;
+}
+
+function sugClose() {
+  const box = sugBox();
+  if (box) { box.hidden = true; box.innerHTML = ''; }
+  sugItems = [];
+  sugActive = -1;
+  sugCtrl?.abort();
+  sugCtrl = null;
+}
+
+function sugPaint(q) {
+  const box = sugBox();
+  if (!box) return;
+  box.innerHTML = '';
+  sugActive = -1;
+  if (!sugItems.length) { sugClose(); return; }
+
+  const needle = q.toLowerCase();
+  const mark = (text) => {
+    const s = document.createElement('span');
+    const i = String(text).toLowerCase().indexOf(needle);
+    if (!needle || i < 0) { s.textContent = text; return s; }
+    s.append(text.slice(0, i));
+    const m = document.createElement('mark');
+    m.textContent = text.slice(i, i + needle.length);
+    s.append(m, text.slice(i + needle.length));
+    return s;
+  };
+
+  sugItems.forEach((s, i) => {
+    const a = document.createElement('a');
+    a.className = 'search-sug__item';
+    a.href = `/series?id=${encodeURIComponent(s.id)}`;
+    const art = document.createElement('span');
+    art.className = 'search-sug__art';
+    const cover = safeUrl(s.cover_image, '');
+    if (cover && cover !== '#') {
+      const img = document.createElement('img');
+      img.src = cover; img.alt = ''; img.loading = 'lazy';
+      art.appendChild(img);
+    } else {
+      art.appendChild(genPoster(s.title));
+    }
+    const meta = document.createElement('span');
+    meta.className = 'search-sug__meta';
+    const t = document.createElement('b');
+    t.appendChild(mark(s.title || 'Fără titlu'));
+    const sub = document.createElement('small');
+    sub.textContent = [s.genre?.split(',')[0]?.trim(), s.year, s.episode_count ? `${s.episode_count} EP` : '']
+      .filter(Boolean).join(' · ');
+    meta.append(t, sub);
+    a.append(art, meta);
+    a.addEventListener('mouseenter', () => sugHighlight(i));
+    a.addEventListener('click', () => sugClose());
+    box.appendChild(a);
+  });
+
+  const foot = document.createElement('div');
+  foot.className = 'search-sug__foot';
+  foot.textContent = 'Enter deschide · ↑↓ navighează · Esc închide';
+  box.appendChild(foot);
+  box.hidden = false;
+}
+
+function sugHighlight(i) {
+  const box = sugBox();
+  if (!box) return;
+  sugActive = i;
+  for (const [j, el] of [...box.querySelectorAll('.search-sug__item')].entries()) {
+    el.classList.toggle('is-active', j === i);
+  }
+}
+
+async function searchSuggest(q) {
+  const term = q.trim();
+  const box = sugBox();
+  if (!box) return;
+  if (term.length < 2) { sugClose(); return; }
+
+  sugCtrl?.abort();
+  sugCtrl = new AbortController();
+  const res = await api(`/series?q=${encodeURIComponent(term)}&per_page=6&page=1`, { signal: sugCtrl.signal });
+  if (res.status === 0) return; // anulată de o cerere mai nouă sau rețea moartă
+  sugItems = res.ok ? (res.data.series || []) : [];
+  sugPaint(term);
+}
+
+document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+  const box = sugBox();
+  if (!box || box.hidden) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const next = sugActive + (e.key === 'ArrowDown' ? 1 : -1);
+    sugHighlight((next + sugItems.length) % Math.max(1, sugItems.length));
+  } else if (e.key === 'Enter' && sugActive >= 0 && sugItems[sugActive]) {
+    e.preventDefault();
+    location.href = `/series?id=${encodeURIComponent(sugItems[sugActive].id)}`;
+  } else if (e.key === 'Escape') {
+    sugClose();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest?.('.search')) sugClose();
 });
 
 document.getElementById('sort-select')?.addEventListener('change', (e) => {
@@ -435,3 +585,9 @@ document.getElementById('load-more')?.addEventListener('click', async (e) => {
 });
 
 document.getElementById('hero-chat')?.addEventListener('click', openChat);
+document.getElementById('footer-chat')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  openChat();
+});
+const fy = document.getElementById('footer-year');
+if (fy) fy.textContent = String(new Date().getFullYear());

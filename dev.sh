@@ -30,6 +30,15 @@ if [ ! -f wrangler.local.toml ]; then
   echo "Lipseste wrangler.local.toml" >&2; exit 1
 fi
 
+# .dev.vars lipsa (workspace proaspat, .dev.vars e gitignore) inseamna
+# JWT_SECRET gol => orice login/register pica cu „Imported HMAC key length
+# (0)" -> 500. Generam un secret de dev la prima rulare, ca site-ul local
+# sa functioneze imediat dupa clone, fara pas manual.
+if [ ! -f .dev.vars ]; then
+  printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" > .dev.vars
+  echo "  (am generat .dev.vars cu JWT_SECRET random pentru dezvoltare)"
+fi
+
 cp wrangler.local.toml wrangler.toml
 echo "  (folosesc configuratia locala cu DO inline)"
 

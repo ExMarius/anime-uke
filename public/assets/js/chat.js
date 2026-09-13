@@ -19,10 +19,45 @@ let retryTimer = null;
 let onlineCount = 0;
 
 const MAX_RETRY_DELAY = 20000;
-
 export async function initChat() {
-  const fab = document.getElementById('chat-fab');
-  const modal = document.getElementById('chat-modal');
+  let fab = document.getElementById('chat-fab');
+  let modal = document.getElementById('chat-modal');
+  // Pana acum chat-ul exista doar pe pagina principala; paginile de serie /
+  // episod ramaneau fara el, iar site-ul parea „fara viata” pe jumatate din
+  // pagini. Daca markup-ul lipseste, il construim aici — identic cu cel din
+  // index.html — ca sa mearga identic peste tot, fara duplicate in HTML.
+  if (!fab || !modal) {
+    const frag = document.createRange().createContextualFragment(`
+      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live">
+        <span class="chat-fab__dot"></span>
+        <span class="chat-fab__label">Chat live</span>
+      </button>
+      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live">
+        <div class="chat-box">
+          <div class="chat-head">
+            <span class="chat-head__title">Chat global</span>
+            <span class="chat-head__count" id="chat-online-count">0 online</span>
+            <span class="chat-badge" id="chat-badge"></span>
+            <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
+          </div>
+          <div class="chat-online" id="chat-online">Se conectează…</div>
+          <div class="chat-body" id="chat-body"></div>
+          <form class="chat-form" id="chat-form">
+            <label class="sr-only" for="chat-input">Mesaj</label>
+            <div class="sticker-wrap">
+              <button class="chat-sticker-btn" id="chat-sticker-btn" type="button"
+                title="Stikere" aria-label="Deschide stikerele">😄</button>
+              <div class="sticker-pop" id="sticker-pop" hidden></div>
+            </div>
+            <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie un mesaj…" autocomplete="off">
+            <button class="btn btn--accent" type="submit">Trimite</button>
+          </form>
+        </div>
+      </div>`);
+    document.body.appendChild(frag);
+    fab = document.getElementById('chat-fab');
+    modal = document.getElementById('chat-modal');
+  }
   if (!fab || !modal) return;
 
   me = await getSession();
@@ -38,6 +73,15 @@ export async function initChat() {
   initStickers();
 
   fab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
+
+  // Chip-ul „N online” din nav (core.js) deschide chat-ul printr-un eveniment
+  // global — fara import circular core <-> chat. Chat-ul exista doar pentru
+  // utilizatori logati (paginile publice nici nu initializeaza chat.js).
+  document.addEventListener('auk:open-chat', () => openChat());
+}
+
+function getSessionCached() {
+  try { return !!sessionStorage.getItem('auk-me'); } catch { return false; }
 }
 
 export function openChat() {

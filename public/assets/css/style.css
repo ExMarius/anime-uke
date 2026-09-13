@@ -1467,3 +1467,133 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 }
 .toplist a:hover { color: var(--crimson, #DC143C); }
 .toplist__meta { color: var(--dim); font-size: .74rem; white-space: nowrap; }
+
+/* =====================================================================
+   PULSE & LIVE — semnele vizuale ale unui site „în viață”.
+   Chip online în nav, sugestii de căutare instant, footer real, reveal
+   la scroll. Totul CSS pur + clasele puse de JS (core.js / page-index).
+   ===================================================================== */
+
+/* --- chip-ul „N online” din nav -------------------------------------- */
+.pulse-chip {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .32rem .8rem; border-radius: 99px;
+  background: rgba(52, 211, 153, .08);
+  border: 1px solid rgba(52, 211, 153, .25);
+  color: var(--ok); font-size: .8rem; font-weight: 750;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+.pulse-chip:hover { background: rgba(52, 211, 153, .16); border-color: rgba(52, 211, 153, .5); transform: translateY(-1px); }
+.pulse-chip__dot {
+  width: .5rem; height: .5rem; border-radius: 50%;
+  background: var(--ok); flex: none;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, .55);
+  animation: livePulse 2.2s ease-out infinite;
+}
+.pulse-chip:not(.pulse-chip--live) .pulse-chip__dot { background: var(--dim-2); animation: none; box-shadow: none; }
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, .55); }
+  70%  { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* --- sugestii live sub bara de căutare ------------------------------- */
+.search { position: relative; }
+.search-sug {
+  position: absolute; z-index: 60; top: calc(100% + .55rem); left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: sugIn .18s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes sugIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.search-sug__item {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .5rem .7rem; border-bottom: 1px solid var(--line-soft);
+  transition: background .15s;
+}
+.search-sug__item:last-of-type { border-bottom: 0; }
+.search-sug__item.is-active, .search-sug__item:hover { background: var(--accent-soft); }
+.search-sug__art {
+  width: 2.6rem; height: 3.5rem; flex: none; border-radius: 6px; overflow: hidden;
+  background: var(--surface-2); display: block;
+}
+.search-sug__art img, .search-sug__art .poster__gen { width: 100%; height: 100%; object-fit: cover; font-size: 1rem; }
+.search-sug__meta { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.search-sug__meta b { font-size: .88rem; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-sug__meta small { color: var(--dim-2); font-size: .72rem; }
+.search-sug__item mark { background: transparent; color: var(--accent-hi); padding: 0; }
+.search-sug__foot {
+  padding: .45rem .8rem; font-size: .7rem; color: var(--dim-2);
+  background: var(--bg-2); border-top: 1px solid var(--line-soft);
+}
+
+/* --- „acum 2 ore” pe cardurile de continuare ------------------------- */
+.continue-card__ago { font-size: .68rem; color: var(--dim-2); font-style: italic; }
+
+/* --- scroll reveal ---------------------------------------------------- */
+.rv { opacity: 0; transform: translateY(14px); }
+.rv.in {
+  opacity: 1; transform: none;
+  transition: opacity .5s cubic-bezier(.2, .8, .3, 1) var(--rv-delay, 0ms),
+              transform .5s cubic-bezier(.2, .8, .3, 1) var(--rv-delay, 0ms);
+}
+
+/* --- luciu subtil pe card la hover (sweep) ---------------------------- */
+.card::after {
+  content: ""; position: absolute; z-index: 4; top: 0; left: -80%; width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.075), transparent);
+  transform: skewX(-18deg); transition: left .55s ease; pointer-events: none;
+}
+.card:hover::after { left: 130%; }
+
+/* --- footer real ------------------------------------------------------- */
+.footer {
+  margin-top: 4rem;
+  background: linear-gradient(to bottom, transparent, rgba(26, 17, 20, .82));
+  border-top: 1px solid var(--line);
+}
+.footer__grid {
+  display: grid; gap: 2rem; padding-block: 2.6rem 2rem;
+  grid-template-columns: 1.6fr 1fr 1fr 1.2fr;
+}
+.footer__brand { display: flex; gap: .9rem; align-items: flex-start; }
+.footer__brand .nav__brand__mark { font-size: 1.9rem; }
+.footer__brand b { font-size: 1.05rem; letter-spacing: -.02em; }
+.footer__brand p { margin: .35rem 0 0; color: var(--dim); font-size: .84rem; max-width: 34ch; }
+.footer__col { display: flex; flex-direction: column; gap: .45rem; }
+.footer__col h3 {
+  margin: 0 0 .3rem; font-size: .72rem; font-weight: 850;
+  text-transform: uppercase; letter-spacing: .12em; color: var(--dim-2);
+}
+.footer__col a { color: var(--dim); font-size: .86rem; width: fit-content; transition: color .15s, transform .15s; }
+.footer__col a:hover { color: var(--accent-hi); transform: translateX(2px); }
+.footer__meta .footer__line {
+  display: inline-flex; align-items: center; gap: .45rem;
+  color: var(--dim); font-size: .84rem; font-variant-numeric: tabular-nums;
+}
+.footer__meta .footer__line b { color: var(--text); }
+.footer__meta .pulse-chip__dot { animation: none; }
+.footer__base {
+  display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding-block: 1rem; border-top: 1px solid var(--line-soft);
+  color: var(--dim-2); font-size: .75rem;
+}
+@media (max-width: 860px) {
+  .footer__grid { grid-template-columns: 1fr 1fr; }
+  .footer__brand { grid-column: 1 / -1; }
+}
+@media (max-width: 520px) {
+  .footer__grid { grid-template-columns: 1fr; gap: 1.4rem; }
+}
+
+/* --- Respectă utilizatorii cu mișcare redusă -------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-chip__dot { animation: none; }
+  .rv { opacity: 1; transform: none; }
+  .card::after { display: none; }
+  .search-sug { animation: none; }
+}

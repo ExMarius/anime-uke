@@ -255,6 +255,9 @@ export async function renderNav(active = '') {
     add('/register', 'Cont nou', { accent: true });
   }
 
+  // Semnele live („N online”) pe toate paginile — site-ul respiră.
+  startPulse();
+
   return user;
 }
 
@@ -282,10 +285,20 @@ function bumpBadge(delta) {
   b.hidden = n === 0;
 }
 
+// Un singur apel fara retry inseamna: un fetch picat tranzitoriu (retea de
+// telefon, server rece) tine badge-ul greșit pana la urmatorul poll de 60 s.
+// Reia scurt cu backoff la eroare de retea; succesul reseteaza backoff-ul.
+let bellRetryMs = 0;
 async function refreshBellBadge() {
   const b = document.getElementById('nav-bell-badge');
   if (!b) return;
   const res = await api('/notifications/unread');
+  if (!res.ok && res.status === 0) {
+    bellRetryMs = bellRetryMs ? Math.min(bellRetryMs * 2, 15000) : 2500;
+    setTimeout(refreshBellBadge, bellRetryMs);
+    return;
+  }
+  bellRetryMs = 0;
   const n = res.ok ? Number(res.data.count || 0) : 0;
   b.textContent = n > 99 ? '99+' : String(n);
   b.hidden = n === 0;
@@ -425,6 +438,141 @@ export function formatDate(value) {
   const d = new Date(String(value).replace(' ', 'T') + (String(value).includes('Z') ? '' : 'Z'));
   if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
   return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/** Timp relativ în română („acum 3 min”) — limbajul site-urilor vii.
+ *  Fără biblioteci: un wrapper subțire peste Intl.RelativeTimeFormat. */
+export function relativeTime(value) {
+  if (!value) return '';
+  const d = new Date(String(value).replace(' ', 'T') + (String(value).includes('Z') ? '' : 'Z'));
+  if (Number.isNaN(d.getTime())) return '';
+  const diff = (d.getTime() - Date.now()) / 1000; // negativ = trecut
+  const abs = Math.abs(diff);
+  const rtf = new Intl.RelativeTimeFormat('ro', { numeric: 'auto' });
+  if (abs < 60) return 'chiar acum';
+  if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'ore');
+  if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), 'zile');
+  return formatDate(value);
+}
+
+/** prefers-reduced-motion, acces defensiv (medii fara matchMedia). */
+function reducedMotion() {
+  try { return !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  catch { return false; }
+}
+
+/** Numărătoare animată (count-up): numerele care „aleargă” sunt semnul
+ *  universal al unui site live. Respectă prefers-reduced-motion. */
+export function countUp(el, target, { ms = 900, format } = {}) {
+  const to = Number(target) || 0;
+  const fmt = format || ((n) => n.toLocaleString('ro-RO'));
+  if (!el) return;
+  const paint = (n) => { el.textContent = fmt(n); };
+  if (reducedMotion() || typeof requestAnimationFrame !== 'function') {
+    paint(to);
+    el.dataset.countFrom = String(to);
+    return;
+  }
+  const from = Number(el.dataset.countFrom ?? '0') || 0;
+  el.dataset.countFrom = String(to);
+  const t0 = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / ms);
+    const eased = 1 - Math.pow(1 - k, 3); // easeOutCubic
+    paint(Math.round(from + (to - from) * eased));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// ---------------------------------------------------------------------
+// PULSE — semnele live ale site-ului, pe toate paginile.
+// Un chip verde în nav („N online”) + date pentru strip-ul de pe index.
+// Poll la 90 s DOAR când tab-ul e vizibil; serverul ține D1 în cache
+// 5 minute, deci costul total e neglijabil față de cota gratuită.
+// ---------------------------------------------------------------------
+let pulseData = null;
+let pulseWaiters = [];
+
+export function getPulse() {
+  return pulseData;
+}
+
+/** Consumatorii se abonează; primul apel aduce datele, următorii primesc
+ *  instant ultima valoare fără cereri în plus. */
+export function onPulse(fn) {
+  if (pulseData) fn(pulseData);
+  pulseWaiters.push(fn);
+}
+
+async function fetchPulse() {
+  const res = await api('/pulse');
+  if (!res.ok || res.status === 0) return;
+  pulseData = res.data;
+  for (const fn of pulseWaiters.splice(0)) fn(pulseData);
+  updatePulseChip(pulseData);
+}
+
+function updatePulseChip(data) {
+  const chip = document.getElementById('pulse-chip');
+  if (!chip || !data) return;
+  const n = Number(data.online) || 0;
+  chip.hidden = false;
+  const label = chip.querySelector('.pulse-chip__n');
+  if (label) label.textContent = n > 0 ? `${n} online` : 'online';
+  chip.classList.toggle('pulse-chip--live', n > 0);
+}
+
+/** Chip-ul de pulse din nav. Click → deschide chat-ul (eveniment global,
+ *  ca să nu importăm chat.js din core — ar fi ciclu de module). */
+function buildPulseChip() {
+  const chip = document.createElement('button');
+  chip.id = 'pulse-chip';
+  chip.type = 'button';
+  chip.className = 'pulse-chip';
+  chip.hidden = true;
+  chip.title = 'Cine e online acum — deschide chat-ul';
+  chip.innerHTML = '<span class="pulse-chip__dot" aria-hidden="true"></span>' +
+    '<span class="pulse-chip__n">online</span>';
+  chip.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('auk:open-chat'));
+  });
+  return chip;
+}
+
+export function startPulse() {
+  if (document.getElementById('pulse-chip')) return;
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  nav.appendChild(buildPulseChip());
+  const tick = () => { if (!document.hidden) fetchPulse(); };
+  tick();
+  setInterval(tick, 90000);
+  document.addEventListener('visibilitychange', tick);
+}
+
+// ---------------------------------------------------------------------
+// SCROLL REVEAL — elementele „apăr” la scroll, nu stau_toate de la început.
+// IntersectionObserver = zero cost pe frame; .rv primește .in o singură dată.
+// ---------------------------------------------------------------------
+let revealIO = null;
+
+export function observeReveals(root = document) {
+  if (reducedMotion() || !('IntersectionObserver' in window)) {
+    for (const el of root.querySelectorAll('.rv:not(.in)')) el.classList.add('in');
+    return;
+  }
+  if (!revealIO) {
+    revealIO = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add('in');
+        revealIO.unobserve(e.target);
+      }
+    }, { rootMargin: '0px 0px -40px 0px', threshold: 0.05 });
+  }
+  for (const el of root.querySelectorAll('.rv:not(.in)')) revealIO.observe(el);
 }
 
 /**
