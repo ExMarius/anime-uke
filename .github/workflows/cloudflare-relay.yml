@@ -1,0 +1,99 @@
+# =====================================================================
+# Cloudflare relay — ruleaza comenzi wrangler/curl pe un runner GitHub,
+# pentru ca sandbox-ul de lucru nu are acces de retea la api.cloudflare.com.
+#
+# Cum functioneaza:
+#   1. Secretul CLOUDFLARE_ACCOUNT_ID e optional (se descopera automat);
+#      CLOUDFLARE_API_TOKEN e OBLIGATORIU:
+#      Settings → Secrets and variables → Actions → New repository secret
+#   2. Comanda de rulat sta in cf-relay/cmd.sh (comis in repo).
+#   3. Declansare: orice push pe branch arena/** care modifica cmd.sh,
+#      SAU manual prin workflow_dispatch (input "cmd").
+#
+# Securitate:
+#   - Token-ul Cloudflare sta DOAR in GitHub Secrets (criptat, mascat in
+#     loguri). Nu apare niciodata in cod sau in istoricul git.
+#   - Orice valoare de secret care ar aparea in log e masca automat de GitHub.
+# =====================================================================
+name: cloudflare-relay
+
+on:
+  workflow_dispatch:
+    inputs:
+      cmd:
+        description: 'Comanda bash (suprascrie cf-relay/cmd.sh daca e nevida)'
+        required: false
+        default: ''
+  push:
+    branches:
+      - 'arena/**'
+    paths:
+      - 'cf-relay/cmd.sh'
+
+concurrency:
+  group: cf-relay
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instaleaza dependinte
+        run: npm ci --no-audit --no-fund
+
+      - name: Verifica secretul si descopera Account ID
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "✗ Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo."
+            echo "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "✓ Token prezent."
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
+            AID="$(curl -sS https://api.cloudflare.com/client/v4/accounts \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              | jq -r '.result[0].id // empty')"
+            if [ -z "$AID" ]; then
+              echo "✗ Nu am putut descoperi Account ID (token fara Account Settings Read?)"
+              exit 1
+            fi
+            echo "CLOUDFLARE_ACCOUNT_ID=${AID}" >> "$GITHUB_ENV"
+            echo "✓ Account ID descoperit automat: ${AID}"
+          else
+            echo "✓ Account ID din secret."
+          fi
+
+      - name: Ruleaza comanda
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DISPATCH_CMD: ${{ github.event.inputs.cmd }}
+        run: |
+          set -euo pipefail
+          CMD_FILE="cf-relay/cmd.sh"
+          if [ -n "${DISPATCH_CMD}" ]; then
+            printf '%s\n' "${DISPATCH_CMD}" > "${CMD_FILE}"
+          fi
+          if [ ! -f "${CMD_FILE}" ]; then
+            echo "✗ Lipseste ${CMD_FILE} — scrie comanda acolo sau foloseste inputul cmd."
+            exit 1
+          fi
+          echo "── continut cf-relay/cmd.sh ──"
+          cat "${CMD_FILE}"
+          echo "───────────────────────────────"
+          bash "${CMD_FILE}"
