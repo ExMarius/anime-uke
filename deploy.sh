@@ -96,7 +96,9 @@ step "4/5  Cloudflare Pages: $PROJECT"
 # de deploy („butonul nu merge” dupa fiecare release). Fiecare HTML primeste
 # ?v=<git hash>; dupa deploy readucem fisierele la forma din repo.
 BUILD_V="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
-sed -i -E "s|(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?"|\1?v=${BUILD_V}"|g" public/*.html public/admin/*.html 2>/dev/null || true
+sed -i -E 's#(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?#\1?v='"${BUILD_V}"'#g' public/*.html public/admin/*.html \
+  || die "versionarea assetelor a esuat (sed)"
+grep -q "?v=${BUILD_V}" public/index.html || die "index.html nu a primit ?v=${BUILD_V}"
 ok "assete versionate ?v=${BUILD_V}"
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
