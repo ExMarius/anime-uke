@@ -1597,3 +1597,82 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   .card::after { display: none; }
   .search-sug { animation: none; }
 }
+
+/* =====================================================================
+   ECONOMIE CU LOGICĂ — rang hero, streak, statistici, misiuni zilnice.
+   Fiecare valoare are o singură identitate; panoul de profil o explică.
+   ===================================================================== */
+.econ__hero {
+  display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+  padding: .7rem .9rem; margin-bottom: .4rem;
+  background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+}
+.econ__rank {
+  font-size: 1.06rem; font-weight: 900; letter-spacing: .04em;
+  color: var(--accent-hi); text-transform: uppercase;
+  text-shadow: 0 0 18px var(--accent-glow);
+}
+.econ__rank-next { color: var(--dim); font-size: .78rem; flex: 1; min-width: 12ch; }
+.econ__streak {
+  margin-left: auto; font-weight: 850; font-size: .86rem; color: var(--dim);
+  padding: .22rem .65rem; border-radius: 99px;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+.econ__streak--on {
+  color: var(--warn);
+  border-color: rgba(251, 191, 36, .4);
+  background: rgba(251, 191, 36, .08);
+}
+
+.econ__stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem;
+  margin-block: .7rem;
+}
+.econ__stat {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+  padding: .55rem .3rem; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+.econ__stat b { font-size: 1.05rem; }
+.econ__stat span { font-size: .68rem; color: var(--dim-2); white-space: nowrap; }
+@media (max-width: 560px) { .econ__stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* --- misiunile zilnice ------------------------------------------------ */
+.econ__cap--missions { margin: .9rem 0 .45rem; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.mission {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .55rem .7rem; margin-bottom: .45rem;
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  transition: border-color .2s, background .2s;
+}
+.mission--ready { border-color: rgba(52, 211, 153, .5); background: rgba(52, 211, 153, .06); }
+.mission--done { opacity: .55; }
+.mission__icon { font-size: 1.3rem; flex: none; }
+.mission__mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .28rem; }
+.mission__label { font-size: .86rem; font-weight: 700; }
+.mission__bar { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.mission__fill {
+  height: 100%; border-radius: inherit; width: 0;
+  background: var(--grad);
+  transition: width .5s cubic-bezier(.2, .8, .3, 1);
+}
+.mission--ready .mission__fill { background: linear-gradient(90deg, var(--ok), #6ee7b7); }
+.mission__right { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; flex: none; }
+.mission__reward { font-size: .72rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mission__state { font-size: .74rem; color: var(--dim-2); }
+.mission--done .mission__state { color: var(--ok); font-weight: 800; }
+
+/* --- cheat-sheet „cum funcționează" în shop --------------------------- */
+.howto { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-bottom: 1.6rem; }
+.howto__card {
+  padding: .9rem 1rem; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--line-soft);
+}
+.howto__card h3 { margin: 0 0 .25rem; font-size: .86rem; }
+.howto__card p { margin: 0; font-size: .76rem; color: var(--dim); line-height: 1.45; }
+@media (max-width: 900px) { .howto { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .howto { grid-template-columns: 1fr; } }

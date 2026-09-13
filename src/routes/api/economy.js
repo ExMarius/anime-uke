@@ -6,6 +6,8 @@
 import { json } from '../../lib/http.js';
 import { requireUser } from '../../lib/session.js';
 import { BADGES, MONTHLY_GOAL, monthKey, xpNeeded } from '../../lib/xp.js';
+import { loadRankThemes, rankForUser } from '../../lib/ranks.js';
+import { getStreak } from '../../lib/missions.js';
 import { CHEST_COOLDOWN_MS } from './chest.js';
 
 export async function onRequestGet(context) {
@@ -56,10 +58,38 @@ export async function onRequestGet(context) {
   const level = me?.level || 1;
   const xp = me?.xp || 0;
 
+  // Rangul curent + urmatorul prag („la nivelul 10 devii Jonin”).
+  const themes = await loadRankThemes(env);
+  const rank = rankForUser({ ...user, level }, themes);
+  const theme = themes.find((t) => t.slug === rank.theme) || themes[0];
+  const sortedTiers = [...(theme?.tiers || [])].sort((a, b) => a.min - b.min);
+  const nextTier = sortedTiers.find((t) => t.min > level) || null;
+
+  // Statistici reale pentru gridul de profil (toate COUNT pe indexuri).
+  const stats = await env.DB
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM watched_history WHERE user_id = ?)      AS watched,
+         (SELECT COUNT(*) FROM episode_comments WHERE user_id = ?)     AS comments,
+         (SELECT COUNT(*) FROM series_subscriptions WHERE user_id = ?) AS subscriptions`
+    )
+    .bind(user.id, user.id, user.id)
+    .first();
+
+  const streak = await getStreak(env, user.id);
+
   return json({
     xp,
     level,
     xp_needed: xpNeeded(level),
+    rank: { ...rank, next_label: nextTier?.label || null, next_min: nextTier?.min || null, next_icon: nextTier?.icon || null },
+    streak,
+    stats: {
+      watched: stats?.watched || 0,
+      comments: stats?.comments || 0,
+      subscriptions: stats?.subscriptions || 0,
+      chest_opens: chest.opens,
+    },
     monthly_points: monthly?.points || 0,
     monthly_goal: MONTHLY_GOAL,
     month: mk,

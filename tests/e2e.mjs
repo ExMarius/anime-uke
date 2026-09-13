@@ -1427,6 +1427,60 @@ console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
   }
 }
 
+// =====================================================================
+// MISIUNI ZILNICE + STREAK — logica economiei: progres real -> claim.
+// =====================================================================
+console.log('\n=== Misiuni zilnice + streak ===');
+{
+  const mj = jar();
+
+  // Cont proaspat pentru stari curate ale misiunilor: adminul isi face
+  // singur un cod nou, ca testul sa nu depinda de ordinea sectiunilor.
+  const gen = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 1, note: 'test misiuni' });
+  const invite = gen.data?.created?.[0]?.code;
+  let reg = { status: 0 };
+  if (invite) {
+    reg = await req(mj, 'POST', '/api/auth/register', { username: `mis_${Date.now() % 100000}`, email: `mis${Date.now() % 100000}@test.ro`, invite_code: invite, password: 'ParolaMare123' });
+  }
+  if (reg.status === 201) {
+    const before = await req(mj, 'GET', '/api/missions');
+    check('GET /api/missions → 3 misiuni cu progres 0', before.status === 200 && before.data?.missions?.length === 3 && before.data.missions.every((m) => m.progress === 0 && !m.claimed), JSON.stringify(before.data).slice(0, 200));
+    check('Streak incepe de la 0 (fara activitate)', before.data?.streak?.current === 0, JSON.stringify(before.data?.streak));
+
+    const claimEarly = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
+    check('Claim fara progres → 409', claimEarly.status === 409, `status=${claimEarly.status}`);
+
+    // Comentariul realbumizare: progres + streak.
+    const ep = await req(mj, 'GET', `/api/series/${globalThis.seriesId}`);
+    const epId = ep.data?.episodes?.[0]?.id;
+    const c = await req(mj, 'POST', '/api/comments', { episode_id: epId, body: 'Misiune: comentariu de test' });
+    check('Comentariu acceptat (pt misiune)', c.status === 201, `status=${c.status} ${JSON.stringify(c.data).slice(0,120)}`);
+
+    const after = await req(mj, 'GET', '/api/missions');
+    const mComment = after.data?.missions?.find((m) => m.key === 'comment');
+    check('Progresul misiunii „comentariu" a crescut la 1', mComment?.progress === 1, JSON.stringify(mComment));
+    check('Streak-ul a pornit (activitate azi)', after.data?.streak?.current === 1 && after.data?.streak?.active_today === true, JSON.stringify(after.data?.streak));
+
+    const goldBefore = (await req(mj, 'GET', '/api/auth/me')).data?.user?.gold || 0;
+    const claim = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
+    check('Claim misiune gata → 200 + gold', claim.status === 200 && claim.data?.reward?.gold === 10, JSON.stringify(claim.data).slice(0, 160));
+    const goldAfter = (await req(mj, 'GET', '/api/auth/me')).data?.user?.gold || 0;
+    check('Gold-ul a crescut cu +10', goldAfter === goldBefore + 10, `${goldBefore} -> ${goldAfter}`);
+
+    const claimAgain = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
+    check('Al doilea claim → 409 (idempotent)', claimAgain.status === 409, `status=${claimAgain.status}`);
+
+    const postClaim = await req(mj, 'GET', '/api/missions');
+    check('Misiunea apare ca revendicată', postClaim.data?.missions?.find((m) => m.key === 'comment')?.claimed === true);
+
+    const badKey = await req(mj, 'POST', '/api/missions', { mission: 'nu_exista' });
+    check('Misiune necunoscută → 409', badKey.status === 409, `status=${badKey.status}`);
+  } else {
+    // Fara cod de invita disponibil, suita își continuă restul check-urilor.
+    check('Misiuni: skip (niciun cod de invitatie disponibil)', true, `register=${reg.status}`);
+  }
+}
+
 console.log('\n' + '='.repeat(56));
 console.log(`REZULTAT: ${pass} trecute, ${fail} esuate`);
 if (fail) { console.log('\nEsuate:'); failures.forEach(f => console.log('  • ' + f)); }

@@ -39,8 +39,18 @@
 
     <div class="profile-grid">
       <!-- ============ ECONOMIE (doar profilul propriu) ============ -->
+      <!-- Fiecare valoare are O singura identitate (explicabila intr-o fraza):
+           ⭐ Puncte = trofeu de vizionare · ⚔️ XP -> Nivel -> Rang
+           🪙 Gold = bani de shop (cufar + misiuni) · 🎯 Misiuni = 3/zi
+           🔥 Streak = zile consecutive cu activitate. -->
       <section class="box econ" id="p-econ" hidden>
-        <h2 class="box__title">Economie</h2>
+        <h2 class="box__title">Progresul tău</h2>
+
+        <div class="econ__hero">
+          <span class="econ__rank" id="econ-rank" title="Rangul tău, după nivelul contului">🎗️ Membru</span>
+          <span class="econ__rank-next" id="econ-rank-next"></span>
+          <span class="econ__streak" id="econ-streak" title="Zile consecutive cu cel puțin o misiune făcută">🔥 —</span>
+        </div>
 
         <div class="econ__row">
           <span class="econ__level" id="econ-level">Nivel 1</span>
@@ -49,9 +59,16 @@
         </div>
 
         <div class="econ__row">
-          <span class="econ__cap">Luna asta</span>
+          <span class="econ__cap">Activitate lunară</span>
           <div class="econ__bar econ__bar--month"><div class="econ__fill" id="econ-month-fill" style="width:0%"></div></div>
           <span class="econ__num" id="econ-month-label">0 / 10.000 pct</span>
+        </div>
+
+        <div class="econ__stats" id="econ-stats">
+          <div class="econ__stat"><b id="econ-st-watched">0</b><span>📺 episoade</span></div>
+          <div class="econ__stat"><b id="econ-st-comments">0</b><span>💬 comentarii</span></div>
+          <div class="econ__stat"><b id="econ-st-chest">0</b><span>🎁 cufere</span></div>
+          <div class="econ__stat"><b id="econ-st-subs">0</b><span>⭐ serii urmărite</span></div>
         </div>
 
         <div class="econ__meta">
@@ -60,6 +77,12 @@
             <span class="chest-btn__icon" id="chest-icon">🧰</span>
             <span class="chest-btn__label" id="chest-label">Se încarcă…</span>
           </button>
+        </div>
+
+        <!-- Misiunile zilnice: gold SIGUR, pe lângă norocul de la cufăr. -->
+        <div class="econ__missions" id="econ-missions-wrap">
+          <h3 class="econ__cap econ__cap--missions">🎯 Misiunile de azi</h3>
+          <div id="econ-missions"></div>
         </div>
 
         <div class="econ__badges" id="econ-badges"></div>

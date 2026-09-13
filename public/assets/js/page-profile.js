@@ -421,6 +421,29 @@ function renderEconomy() {
   const d = econData;
   document.getElementById('econ-level').textContent = `Nivel ${d.level}`;
 
+  // Rangul tematic, mare, cu urmatorul prag — progresia ta intr-o privire.
+  const rankEl = document.getElementById('econ-rank');
+  if (rankEl && d.rank) rankEl.textContent = `${d.rank.icon || '🎗️'} ${d.rank.label}`;
+  const nextEl = document.getElementById('econ-rank-next');
+  if (nextEl) {
+    nextEl.textContent = d.rank?.next_label
+      ? `Următorul: ${d.rank.next_icon || ''} ${d.rank.next_label} la nivelul ${d.rank.next_min}`
+      : 'Rang maxim atins 👑';
+  }
+  const stEl = document.getElementById('econ-streak');
+  if (stEl && d.streak) {
+    stEl.textContent = `🔥 ${d.streak.current} ${d.streak.current === 1 ? 'zi' : 'zile'} la rând`;
+    stEl.title = `Recordul tău: ${d.streak.best} ${d.streak.best === 1 ? 'zi' : 'zile'} consecutive`;
+    stEl.classList.toggle('econ__streak--on', d.streak.active_today);
+  }
+
+  const st = d.stats || {};
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = fmt(v || 0); };
+  set('econ-st-watched', st.watched);
+  set('econ-st-comments', st.comments);
+  set('econ-st-chest', st.chest_opens);
+  set('econ-st-subs', st.subscriptions);
+
   const xpPct = d.xp_needed > 0 ? Math.min(100, Math.round((d.xp / d.xp_needed) * 100)) : 0;
   document.getElementById('econ-xp-fill').style.width = `${xpPct}%`;
   document.getElementById('econ-xp-label').textContent =
@@ -435,6 +458,107 @@ function renderEconomy() {
 
   renderBadges();
   renderChestState();
+}
+
+// ---------------------------------------------------------------------
+// MISIUNILE ZILNICE — 3 scopuri pe zi, gold sigur. Progresul se actualizeaza
+// singur cand faci actiunea (watch/comment/chest deja notifica serverul);
+// aici doar afisam si permitem revendicarea.
+// ---------------------------------------------------------------------
+let missionData = null;
+
+async function loadMissions() {
+  const res = await api('/missions');
+  if (!res.ok) return;
+  missionData = res.data;
+  renderMissions();
+}
+
+function renderMissions() {
+  const box = document.getElementById('econ-missions');
+  if (!box || !missionData?.missions?.length) return;
+  box.innerHTML = '';
+
+  for (const m of missionData.missions) {
+    const row = document.createElement('div');
+    row.className = `mission${m.claimed ? ' mission--done' : ''}${m.progress >= m.target && !m.claimed ? ' mission--ready' : ''}`;
+
+    const ic = document.createElement('span');
+    ic.className = 'mission__icon';
+    ic.textContent = m.icon;
+
+    const mid = document.createElement('div');
+    mid.className = 'mission__mid';
+    const lab = document.createElement('span');
+    lab.className = 'mission__label';
+    lab.textContent = m.label;
+    const bar = document.createElement('div');
+    bar.className = 'mission__bar';
+    const fill = document.createElement('div');
+    fill.className = 'mission__fill';
+    fill.style.width = `${Math.min(100, Math.round((m.progress / m.target) * 100))}%`;
+    bar.appendChild(fill);
+    mid.append(lab, bar);
+
+    const right = document.createElement('div');
+    right.className = 'mission__right';
+    const rew = document.createElement('span');
+    rew.className = 'mission__reward';
+    rew.textContent = `🪙 ${m.gold} · +${m.xp} XP`;
+    right.appendChild(rew);
+
+    if (m.claimed) {
+      const ok = document.createElement('span');
+      ok.className = 'mission__state';
+      ok.textContent = '✓ luată';
+      right.appendChild(ok);
+    } else if (m.progress >= m.target) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn--accent btn--sm mission__claim';
+      btn.type = 'button';
+      btn.textContent = 'Revendică';
+      btn.addEventListener('click', () => claimMission(btn, m.key));
+      right.appendChild(btn);
+    } else {
+      const p = document.createElement('span');
+      p.className = 'mission__state';
+      p.textContent = `${m.progress}/${m.target}`;
+      right.appendChild(p);
+    }
+
+    row.append(ic, mid, right);
+    box.appendChild(row);
+  }
+
+  // Streak-ul din banda hero e si el informatia din misiuni (proaspata).
+  if (missionData.streak && econData) {
+    econData.streak = missionData.streak;
+    const stEl = document.getElementById('econ-streak');
+    if (stEl) {
+      const c = missionData.streak.current;
+      stEl.textContent = `🔥 ${c} ${c === 1 ? 'zi' : 'zile'} la rând`;
+      stEl.classList.toggle('econ__streak--on', missionData.streak.active_today);
+    }
+  }
+}
+
+async function claimMission(btn, key) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  const res = await api('/missions', { method: 'POST', body: { mission: key } });
+  if (!res.ok) {
+    toast(res.data?.error || 'Nu am putut revendica recompensa', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Revendică';
+    return;
+  }
+  missionData = { missions: res.data.missions, streak: res.data.streak };
+  if (econData && res.data.me) {
+    econData.gold = res.data.me.gold;
+    document.getElementById('econ-gold').textContent = `🪙 ${fmt(econData.gold)} Gold`;
+  }
+  renderMissions();
+  toast(`+${res.data.reward.gold} 🪙 și +${res.data.reward.xp} XP — misiune îndeplinită!`, 'ok');
 }
 
 function renderBadges() {
@@ -588,6 +712,7 @@ async function initEconomy() {
   document.getElementById('p-econ').hidden = false;
   renderEconomy();
   initThemePicker().catch(() => { /* selectorul e optional */ });
+  loadMissions().catch(() => { /* misiunile sunt optionale */ });
 
   document.getElementById('chest-btn').addEventListener('click', () => {
     // shake-ul porneste imediat (800ms) chiar daca POST-ul e pe drum

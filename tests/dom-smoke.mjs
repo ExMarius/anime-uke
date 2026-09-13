@@ -561,6 +561,11 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Profilul arata gradul tematic ca cip langa nume', !!p.$('#p-badges .uchip'), p.$('#p-badges')?.innerHTML?.slice(0, 120));
   const themeOn = await until(() => p.$('#econ-theme-wrap')?.hidden === false && p.$$('#econ-theme option').length >= 3);
   check('Selectorul de teme de grade e populat pe profilul propriu', themeOn, `opt=${p.$$('#econ-theme option').length}`);
+  const missionsOn = await until(() => p.$$('#econ-missions .mission').length >= 3);
+  check('Misiunile zilnice se randeaza (3 randuri)', missionsOn, `n=${p.$$('#econ-missions .mission').length}`);
+  check('Fiecare misiune arata recompensa', p.$$('#econ-missions .mission__reward').every((r) => /🪙/.test(r.textContent)), p.$('#econ-missions')?.textContent?.slice(0, 120));
+  check('Rangul tematic e afisat mare pe profil', /Genin|Chunin|Jonin|Kage|Hokage|Membru/.test(p.text('#econ-rank') || ''), p.text('#econ-rank'));
+  check('Statisticile reale apar in grid (episoade/comentarii)', p.$$('#econ-stats .econ__stat').length >= 4, `n=${p.$$('#econ-stats .econ__stat').length}`);
   await p.teardown();
 }
 
@@ -605,6 +610,7 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
   check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
   check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
+  check('Shop explica economia: 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length === 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
 }

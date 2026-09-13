@@ -12,6 +12,7 @@ import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { bumpMission, streakTouch } from '../../lib/missions.js';
 
 export const CHEST_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
@@ -96,6 +97,9 @@ export async function onRequestPost(context) {
   }
   // Deschiderea in sine valoreaza +5 XP / +5 puncte lunare, ca in spec.
   await addActivity(env, user.id, 5);
+  // Misiunea zilnica „deschide cufarul" + streak.
+  await bumpMission(env, user.id, 'chest');
+  await streakTouch(env, user.id);
 
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const up = await env.DB

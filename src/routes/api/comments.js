@@ -15,6 +15,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { bumpMission, streakTouch } from '../../lib/missions.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
 
 const MAX_LEN = 2000;
@@ -127,6 +128,9 @@ export async function onRequestPost(context) {
 
   // +5 XP / +5 puncte lunare pe comentariu, ca in spec.
   await addActivity(env, user.id, 5);
+  // Misiunea zilnica „scrie un comentariu" + streak.
+  await bumpMission(env, user.id, 'comment');
+  await streakTouch(env, user.id);
   const cc = await env.DB.prepare('SELECT COUNT(*) AS n FROM episode_comments WHERE user_id = ?').bind(user.id).first();
   if ((cc?.n || 0) >= 25) await grantBadge(env, user.id, 'commenter_25');
 

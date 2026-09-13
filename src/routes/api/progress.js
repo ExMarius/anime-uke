@@ -3,6 +3,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { bumpMission, streakTouch } from '../../lib/missions.js';
 
 // =====================================================================
 // POST /api/progress — acumuleaza timp real de vizionare.
@@ -111,6 +112,9 @@ export async function onRequestPost(context) {
         // sus garanteaza changes = 1 exact o data per episod.
         await addActivity(env, user.id, POINTS_PER_EPISODE);
         await grantBadge(env, user.id, 'first_watch');
+        // Misiunea zilnica „vezi un episod" + streak (lib/missions.js).
+        await bumpMission(env, user.id, 'watch');
+        await streakTouch(env, user.id);
         const wc = await env.DB
           .prepare('SELECT COUNT(*) AS n FROM watched_history WHERE user_id = ?')
           .bind(user.id)

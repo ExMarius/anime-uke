@@ -172,6 +172,7 @@ După ce există admini, bootstrap-ul nu se mai declanșează niciodată.
 | GET | `/api/auth/me` | oricine | `{ user }` sau `{ user: null }` |
 | POST | `/api/watch` | logat | +10 puncte, o singură dată per episod |
 | GET | `/api/pulse` | logat | semnele live: online (ChatDO), serii/episoade/vizionări (cache 5 min) |
+| GET/POST | `/api/missions` | logat | misiunile zilnice (3/zi) + revendicare recompensă |
 | GET | `/api/admin/stats` | admin | statistici |
 | GET/POST/DELETE | `/api/admin/series` | admin | CRUD serii |
 | GET/POST/DELETE | `/api/admin/episodes` | admin | CRUD episoade |
@@ -291,3 +292,16 @@ pe un runner GitHub (care are acces liber), cu token-ul Cloudflare tinut in
 secretul repo-ului `CLOUDFLARE_API_TOKEN`, si comite rezultatul inapoi in
 `cf-relay/last-output.txt`. Deploy complet = `cmd.sh` apeleaza `./deploy.sh`.
 
+
+---
+
+## Economia, pe scurt (fiecare valoare = o identitate)
+
+| Valoare | De unde vine | La ce folosește |
+|---|---|---|
+| ⭐ **Puncte** | doar vizionare (+10/episod, 15 min) | clasament onest — nu pot fi cumpărate |
+| ⚔️ **XP → Nivel** | toată activitatea (vizionare, comentarii, cufere, misiuni) | îți dă **rangul** vizibil: Genin → Chunin → Jonin → Kage → Hokage |
+| 🪙 **Gold** | cufăr (noroc, /4h) + misiuni zilnice (sigur) | shop: chei de cufăr, nume de aur, flair suporter |
+| 🎯 **Misiuni** | 3/zi, reset UTC: vezi un episod, comentează, deschide cufărul | gold + XP garantate pe fiecare |
+| 🔥 **Streak** | zile consecutive cu cel puțin o misiune | record personal, afișat pe profil |
+| 📊 **Activitate lunară** | aceleași acțiuni ca XP-ul, contor separat | bară pe profil; insigna „Utilizator activ" la 10.000 |
