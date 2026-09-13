@@ -13,6 +13,6 @@ check "CSS: economie noua live (200)"      "https://anime-uke.pages.dev/assets/c
 check "sitemap"                            "https://anime-uke.pages.dev/sitemap.xml"
 echo "── CSS contine clasele noi (misiuni/rang)? ──"
 CSS=$(curl -s "https://anime-uke.pages.dev/assets/css/style.css")
-for cls in ".mission__claim" ".econ__rank" ".howto__card"; do
+for cls in ".mission__fill" ".econ__rank" ".howto__card"; do
   if echo "$CSS" | grep -q "$cls"; then echo "✓ $cls prezent"; else echo "✗ $cls LIPSA"; fi
 done
