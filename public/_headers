@@ -1,0 +1,17 @@
+# JS/CSS: mereu proaspete — browserul revalideaza cu ETag (304 ieftin),
+# deci dupa fiecare deploy utilizatorii primesc codul nou fara hard-refresh.
+/assets/*.js
+  Cache-Control: no-cache
+
+/assets/*.css
+  Cache-Control: no-cache
+
+/assets/js/*.js
+  Cache-Control: no-cache
+
+/assets/css/*.css
+  Cache-Control: no-cache
+
+# Imagini/fonturi: cache lung (nu se schimba la deploy)
+/assets/img/*
+  Cache-Control: public, max-age=86400
