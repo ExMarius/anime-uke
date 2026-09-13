@@ -3,17 +3,20 @@
 # pentru ca sandbox-ul de lucru nu are acces de retea la api.cloudflare.com.
 #
 # Cum functioneaza:
-#   1. Secretul CLOUDFLARE_ACCOUNT_ID e optional (se descopera automat);
-#      CLOUDFLARE_API_TOKEN e OBLIGATORIU:
+#   1. Secretul CLOUDFLARE_API_TOKEN e OBLIGATORIU:
 #      Settings → Secrets and variables → Actions → New repository secret
+#      (CLOUDFLARE_ACCOUNT_ID e optional — se descopera automat din API.)
 #   2. Comanda de rulat sta in cf-relay/cmd.sh (comis in repo).
-#   3. Declansare: orice push pe branch arena/** care modifica cmd.sh,
+#   3. Declansare: orice push pe branch arena/** care modifica cmd.sh
 #      SAU manual prin workflow_dispatch (input "cmd").
+#   4. Output-ul e scris inapoi in cf-relay/last-output.txt pe acelasi
+#      branch (logurile de Actions nu se pot citi din sandbox).
 #
 # Securitate:
 #   - Token-ul Cloudflare sta DOAR in GitHub Secrets (criptat, mascat in
 #     loguri). Nu apare niciodata in cod sau in istoricul git.
-#   - Orice valoare de secret care ar aparea in log e masca automat de GitHub.
+#   - Repo-ul e PUBLIC: comenzi nu afiseaza date de utilizatori sau
+#     valori de secrete, doar ID-uri/statusuri.
 # =====================================================================
 name: cloudflare-relay
 
@@ -84,16 +87,47 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           CMD_FILE="cf-relay/cmd.sh"
           if [ -n "${DISPATCH_CMD}" ]; then
             printf '%s\n' "${DISPATCH_CMD}" > "${CMD_FILE}"
           fi
           if [ ! -f "${CMD_FILE}" ]; then
-            echo "✗ Lipseste ${CMD_FILE} — scrie comanda acolo sau foloseste inputul cmd."
+            echo "✗ Lipseste ${CMD_FILE}"
             exit 1
           fi
           echo "── continut cf-relay/cmd.sh ──"
           cat "${CMD_FILE}"
           echo "───────────────────────────────"
-          bash "${CMD_FILE}"
+          set +e
+          bash "${CMD_FILE}" > cf-relay/last-output.raw 2>&1
+          RC=$?
+          set -e
+          {
+            echo "exit_code: ${RC}"
+            echo "comanda: cf-relay/cmd.sh @ ${GITHUB_SHA::7}"
+            echo "────────────────────────────────────"
+            tail -c 50000 cf-relay/last-output.raw
+          } > cf-relay/last-output.txt
+          rm -f cf-relay/last-output.raw
+          echo "${RC}" > /tmp/relay-rc
+          echo "── output (exit ${RC}) ──"
+          cat cf-relay/last-output.txt
+
+      - name: Publica output-ul in repo
+        if: always()
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name  "cf-relay[bot]"
+          git config user.email "cf-relay[bot]@users.noreply.github.com"
+          git add cf-relay/last-output.txt 2>/dev/null || exit 0
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -q -m "relay: output (${GITHUB_SHA::7})"
+          git push -q origin "HEAD:${BRANCH}"
+
+      - name: Propaga codul de iesire al comenzii
+        run: |
+          RC="$(cat /tmp/relay-rc 2>/dev/null || echo 1)"
+          exit "${RC}"
