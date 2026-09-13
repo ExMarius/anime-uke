@@ -1,5 +1,5 @@
 import { initAuthForm } from './auth.js';
-import { api } from './core.js';
+import { api, renderNav } from './core.js';
 
 // =====================================================================
 // Pagina de inregistrare.
@@ -29,3 +29,5 @@ async function setupInviteGate() {
 
 await setupInviteGate();
 initAuthForm('register');
+
+renderNav('/register').catch(() => { /* nav e decorativ aici */ });

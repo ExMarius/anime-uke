@@ -898,8 +898,23 @@ function initEpListModal() {
   const open = qs('ep-list');
   if (!modal || !open || open.dataset.wired) return;
   open.dataset.wired = '1';
+  // Cardul mosteneste opacity:0 de la .econ-modal__card si e invizibil pana
+  // primeste clasa de animatie --in (aceeasi regula ca la modalul cufarului).
+  // Fara asta, „Alte episoade" se deschidea... invizibil.
+  const card = modal.querySelector('.econ-modal__card');
+  const setEpList = (show) => {
+    modal.hidden = !show;
+    if (!card) return;
+    if (show) {
+      card.classList.remove('econ-modal__card--in');
+      void card.offsetWidth; // reflow: reporneste animatia la fiecare deschidere
+      card.classList.add('econ-modal__card--in');
+    } else {
+      card.classList.remove('econ-modal__card--in');
+    }
+  };
   open.addEventListener('click', async () => {
-    modal.hidden = false;
+    setEpList(true);
     // Daca contextul nu e incarcat inca, il tragem acum cu spinner —
     // modalul gol pare „buton stricat”.
     if (!epCtx && currentSeriesId) {
@@ -914,10 +929,10 @@ function initEpListModal() {
     renderEpList();
   });
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && !modal.hidden) modal.hidden = true;
+    if (ev.key === 'Escape' && !modal.hidden) setEpList(false);
   });
-  qs('eplist-close')?.addEventListener('click', () => { modal.hidden = true; });
-  modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.hidden = true; });
+  qs('eplist-close')?.addEventListener('click', () => setEpList(false));
+  modal.addEventListener('click', (ev) => { if (ev.target === modal) setEpList(false); });
   qs('eplist-prev')?.addEventListener('click', () => { if (epCtx && epCtx.page > 1) gotoEpPage(epCtx.page - 1); });
   qs('eplist-next')?.addEventListener('click', () => { if (epCtx && epCtx.page < epCtx.pages) gotoEpPage(epCtx.page + 1); });
 }
