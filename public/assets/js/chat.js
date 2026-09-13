@@ -205,9 +205,7 @@ function renderMessage(m) {
   // necunoscut sau amestecat cu text ramane text simplu (sigur)
   const sm = String(m.message || '').match(STICKER_RE);
   if (sm && STICKER_IDS.has(sm[1])) {
-    const who = document.createElement('span');
-    who.className = 'msg__user';
-    who.textContent = m.username || 'Anon';
+    const who = nameEl(m);
     row.append(who, stickerImg(sm[1]));
     if (m.created_at) {
       const time = document.createElement('span');
@@ -227,9 +225,7 @@ function renderMessage(m) {
     rankChip(m.rank_label ? { label: m.rank_label, icon: m.rank_icon } : null),
   ].filter(Boolean);
 
-  const user = document.createElement('span');
-  user.className = 'msg__user';
-  user.textContent = m.username || 'Anon';
+  const user = nameEl(m);
 
   const text = document.createElement('span');
   text.className = 'msg__text';
@@ -277,4 +273,13 @@ function sendMessage() {
 
   ws.send(JSON.stringify({ type: 'chat', message: text.slice(0, 500) }));
   input.value = '';
+}
+
+/** Numele din chat: 💎 flair si 🌟 aur vin din server (atașate la handshake
+ *  si stocate pe mesaj) — clientul nu le poate falsifica. */
+function nameEl(m) {
+  const u = document.createElement('span');
+  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '');
+  u.textContent = (m.flair ? m.flair + ' ' : '') + (m.username || 'Anon');
+  return u;
 }

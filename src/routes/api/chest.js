@@ -66,9 +66,22 @@ export async function onRequestPost(context) {
   const rl = await checkRateLimit(env, `chest:${user.id}`, 60, 60 * 60 * 1000);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
+  let body = {};
+  try { body = await request.json(); } catch { body = {}; }
+
   const state = await chestState(env, user.id);
+  let usedKey = false;
   if (!state.available) {
-    return errorResponse(409, 'cooldown', { 'x-remaining-ms': String(state.remaining_ms) });
+    // 🗝️ Cheia din shop sare peste cooldown — se consuma la folosire.
+    if (!body.use_key) {
+      return errorResponse(409, 'cooldown', { 'x-remaining-ms': String(state.remaining_ms) });
+    }
+    const spent = await env.DB
+      .prepare(`UPDATE user_items SET qty = qty - 1 WHERE user_id = ? AND item_id = 'chest_key' AND qty > 0`)
+      .bind(user.id)
+      .run();
+    if (!spent.meta?.changes) return errorResponse(409, 'Nu ai nicio cheie — poți cumpăra una din Shop.');
+    usedKey = true;
   }
 
   const chosen = pickReward();
@@ -100,6 +113,7 @@ export async function onRequestPost(context) {
 
   return json({
     success: true,
+    used_key: usedKey,
     reward: chosen.reward,
     amount,
     text: chosen.text.replace('{amount}', String(amount)),

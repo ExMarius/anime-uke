@@ -37,6 +37,7 @@ const LOADERS = {
   users: loadUsers,
   invites: loadInvites,
   ranks: loadRanks,
+  reports: loadReports,
   log: loadLog,
 };
 
@@ -535,3 +536,96 @@ function initRanks() {
   });
 }
 initRanks();
+
+// ---------------------------------------------------------------------
+// 🚩 RAPORTARI DE SURSE — semnalul ca o sursa e moarta vine de la
+// privitori; aici le triezi: „Rezolva" (ai inlocuit sursa) sau
+// „Respinge" (raport fals). Lista e paginata server-side la 200.
+// ---------------------------------------------------------------------
+let reportsStatus = 'open';
+
+async function loadReports() {
+  const box = document.getElementById('reports-list');
+  if (!box) return;
+  box.innerHTML = '<div class="loading"><div class="spinner"></div>Se încarcă…</div>';
+  const res = await api(`/admin/reports?status=${encodeURIComponent(reportsStatus)}`);
+  if (!res.ok) {
+    box.innerHTML = '<div class="empty">Nu am putut încărca raportările.</div>';
+    return;
+  }
+  const c = res.data.counts || {};
+  const counts = document.getElementById('reports-counts');
+  if (counts) counts.textContent = `${c.open || 0} deschise · ${c.fixed || 0} rezolvate · ${c.dismissed || 0} respinse`;
+
+  box.innerHTML = '';
+  const list = res.data.reports || [];
+  if (!list.length) {
+    box.innerHTML = '<div class="empty"><div class="empty__icon">🎉</div>Nicio raportare aici.</div>';
+    return;
+  }
+
+  for (const r of list) {
+    const row = document.createElement('div');
+    row.className = 'report-row-admin box';
+
+    const main = document.createElement('div');
+    main.className = 'report-row-admin__main';
+    const title = document.createElement('b');
+    title.textContent = `${r.series_title} — E${r.episode_number} ${r.episode_title || ''}`.trim();
+    const meta = document.createElement('span');
+    meta.className = 'hint';
+    const reasonKey = String(r.reason || '').split(':')[0];
+    const reasonLabel = (res.data.reasons || {})[reasonKey] || reasonKey;
+    const note = String(r.reason || '').includes(':') ? String(r.reason).slice(String(r.reason).indexOf(':') + 2) : '';
+    meta.textContent = `${reasonLabel}${note ? ` — „${note}"` : ''} · sursa: ${r.source_label || '?'} · de ${r.username} · ${formatDate(r.created_at)}`;
+    main.append(title, meta);
+
+    const acts = document.createElement('div');
+    acts.className = 'report-row-admin__acts';
+    const mk = (label, cls, action) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn btn--sm ${cls}`;
+      b.textContent = label;
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        const rr = await api('/admin/reports', { method: 'POST', body: { id: r.id, action } });
+        if (!rr.ok) { b.disabled = false; toast(rr.data?.error || 'Acțiunea a eșuat', 'error'); return; }
+        toast(rr.data.status === 'fixed' ? 'Marcat ca rezolvat ✅' : rr.data.status === 'dismissed' ? 'Respins.' : 'Redeschis.', 'success');
+        loadReports();
+      });
+      return b;
+    };
+    if (r.status === 'open') {
+      acts.append(mk('✅ Rezolvă', 'btn--accent', 'fix'), mk('🗑️ Respinge', 'btn--ghost', 'dismiss'));
+    } else {
+      acts.append(mk('↩️ Redeschide', 'btn--ghost', 'reopen'));
+      const st = document.createElement('span');
+      st.className = 'hint';
+      st.textContent = r.status === 'fixed' ? 'rezolvat' : 'respins';
+      acts.appendChild(st);
+    }
+
+    row.append(main, acts);
+    box.appendChild(row);
+  }
+}
+
+function initReports() {
+  const filters = document.getElementById('reports-filters');
+  if (!filters || filters.dataset.wired) return;
+  filters.dataset.wired = '1';
+  for (const b of filters.querySelectorAll('button[data-status]')) {
+    b.addEventListener('click', () => {
+      reportsStatus = b.dataset.status;
+      for (const x of filters.querySelectorAll('button')) {
+        x.classList.toggle('is-on', x === b);
+        x.classList.toggle('btn--accent', x === b);
+        x.classList.toggle('btn--ghost', x !== b);
+      }
+      loadReports();
+    });
+  }
+}
+
+initReports();

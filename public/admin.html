@@ -41,6 +41,7 @@
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
       <button class="tab" role="tab" id="tab-invites"  aria-controls="panel-invites"  aria-selected="false" type="button">🎟️ Invitații</button>
       <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
+      <button class="tab" role="tab" id="tab-reports"  aria-controls="panel-reports"  aria-selected="false" type="button">🚩 Raportări</button>
       <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
     </div>
 
@@ -134,6 +135,22 @@
             <button class="btn btn--ghost btn--sm" type="submit" data-mod="0">Retrogradează</button>
           </div>
         </form>
+      </div>
+    </section>
+
+    <!-- ===================== RAPORTARI SURSE ===================== -->
+    <section class="panel" id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" hidden>
+      <div class="box">
+        <h2 class="box__title">Raportări de surse <span class="hint" id="reports-counts"></span></h2>
+        <div class="reports-filters" id="reports-filters">
+          <button class="btn btn--accent btn--sm is-on" type="button" data-status="open">Deschise</button>
+          <button class="btn btn--ghost btn--sm" type="button" data-status="fixed">Rezolvate</button>
+          <button class="btn btn--ghost btn--sm" type="button" data-status="dismissed">Respinse</button>
+          <button class="btn btn--ghost btn--sm" type="button" data-status="all">Toate</button>
+        </div>
+        <div class="reports-list" id="reports-list">
+          <div class="loading"><div class="spinner"></div>Se încarcă…</div>
+        </div>
       </div>
     </section>
 

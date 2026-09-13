@@ -218,6 +218,8 @@ export async function renderNav(active = '') {
     gold.title = `${user.gold || 0} Gold`;
     links.appendChild(gold);
 
+    add('/shop', '🛒 Shop');
+
     links.appendChild(buildBell());
 
     if (user.is_admin) add('/admin', 'Admin', { accent: true });

@@ -47,6 +47,12 @@ export async function onRequestGet(context) {
     chest = { opens: cool.opens, available: remaining <= 0, remaining_ms: Math.max(0, remaining) };
   }
 
+  // Cate chei de cufar are in inventar (shop) — aceeasi citire indexata.
+  const keyRow = await env.DB
+    .prepare(`SELECT qty FROM user_items WHERE user_id = ? AND item_id = 'chest_key'`)
+    .bind(user.id)
+    .first();
+
   const level = me?.level || 1;
   const xp = me?.xp || 0;
 
@@ -59,6 +65,7 @@ export async function onRequestGet(context) {
     month: mk,
     gold: me?.gold || 0,
     chest,
+    chest_keys: keyRow?.qty || 0,
     badges: (badgeRows.results || []).map((b) => ({
       badge: b.badge,
       month: b.month || null,

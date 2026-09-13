@@ -36,6 +36,10 @@ import * as meThemeRoute from './routes/api/me-theme.js';
 import * as adminRankThemesRoute from './routes/api/admin/rank-themes.js';
 import * as adminModsRoute from './routes/api/admin/mods.js';
 import * as subscribeRoute from './routes/api/subscribe.js';
+import * as shopRoute from './routes/api/shop.js';
+import * as shopBuyRoute from './routes/api/shop-buy.js';
+import * as reportRoute from './routes/api/report.js';
+import * as adminReportsRoute from './routes/api/admin/reports.js';
 import * as notificationsRoute from './routes/api/notifications.js';
 import * as notifUnreadRoute from './routes/api/notifications-unread.js';
 import * as registerRoute from './routes/api/auth/register.js';
@@ -81,6 +85,11 @@ const ROUTES = [
   { method: '*', path: '/api/admin/rank-themes', mod: adminRankThemesRoute },
   { method: 'POST', path: '/api/admin/mods', mod: adminModsRoute },
   { method: 'POST', path: '/api/subscribe', mod: subscribeRoute },
+  { method: 'GET', path: '/api/shop', mod: shopRoute },
+  { method: 'POST', path: '/api/shop/buy', mod: shopBuyRoute },
+  { method: 'POST', path: '/api/report', mod: reportRoute },
+  { method: 'GET', path: '/api/admin/reports', mod: adminReportsRoute },
+  { method: 'POST', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'GET', path: '/api/notifications/unread', mod: notifUnreadRoute },
   { method: 'POST', path: '/api/notifications/read', mod: notificationsRoute },
   { method: 'GET', path: '/api/notifications', mod: notificationsRoute },

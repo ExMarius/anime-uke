@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0709">
+  <title>Shop • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="speculationrules">
+  {"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/api/*","/admin/*","/logout","/assets/*","#*"]}}]},"eagerness":"moderate"}],"prerender":[{"source":"document","where":{"or":[{"href_matches":"/series*"},{"href_matches":"/profile*"}]},"eagerness":"conservative"}]}
+  </script>
+</head>
+<body>
+  <nav class="nav" id="nav"></nav>
+
+  <main class="container-narrow" style="padding-bottom:3rem">
+    <a href="/profile" class="crumb">← Înapoi la profil</a>
+
+    <header class="shop-head box">
+      <div>
+        <h1 class="section__title section__title--plain">🛒 Shop</h1>
+        <p class="hint">Gold-ul se câștigă din cufărul de comori (o dată la 4 ore) și din vizionare. Aici îl cheltui pe lucruri care se văd.</p>
+      </div>
+      <div class="shop-head__gold" id="shop-gold" title="Gold-ul tău">🪙 …</div>
+    </header>
+
+    <div class="shop-grid" id="shop-grid">
+      <div class="loading"><div class="spinner"></div>Se încarcă…</div>
+    </div>
+
+    <div class="box hint" style="margin-top:1rem">
+      💡 <b>Cheile de cufăr</b> se consumă la folosire: deschizi cufărul din
+      <a href="/profile">profil</a> fără să mai aștepți cooldown-ul. Cosmetics
+      (💎 Suporter, 🌟 Nume de aur) sunt permanente și se văd în chat și pe profil.
+    </div>
+  </main>
+
+  <script type="module" src="/assets/js/page-shop.js"></script>
+</body>
+</html>

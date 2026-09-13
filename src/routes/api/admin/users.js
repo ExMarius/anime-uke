@@ -16,7 +16,7 @@ import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 //     mai putea intra vreodata in /admin.html.
 // =====================================================================
 
-const ALLOWED_ACTIONS = ['set_role', 'set_ban', 'delete'];
+const ALLOWED_ACTIONS = ['set_role', 'set_ban', 'delete', 'set_gold'];
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -94,6 +94,22 @@ export async function onRequestPost(context) {
 
       await logAdminAction(env, admin, makeAdmin ? 'promote_admin' : 'demote_user', 'user', target.value, user.username);
       return json({ success: true, action, username: user.username, is_admin: makeAdmin });
+    }
+
+    if (action === 'set_gold') {
+      // Delta de gold (poate fi negativa). Suport: compenseaza utilizatorii
+      // cand o sursa a fost stricata mult timp, testeaza shop-ul in e2e.
+      const delta = Number(body.value);
+      if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 1000000) {
+        return errorResponse(400, 'Valoare invalidă pentru gold');
+      }
+      await env.DB
+        .prepare('UPDATE users SET gold = MAX(0, gold + ?) WHERE id = ?')
+        .bind(delta, target.value)
+        .run();
+      const fresh = await env.DB.prepare('SELECT gold FROM users WHERE id = ?').bind(target.value).first();
+      await logAdminAction(env, admin, 'adjust_gold', 'user', target.value, `${user.username} ${delta > 0 ? '+' : ''}${delta}`);
+      return json({ success: true, action, username: user.username, gold: fresh?.gold || 0 });
     }
 
     if (action === 'set_ban') {

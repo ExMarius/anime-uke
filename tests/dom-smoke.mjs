@@ -382,7 +382,11 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   const ranksOn = await until(() => p.$$('#ranks-list .ranks-row').length >= 3);
   check('Panoul admin de grade listeaza temele', ranksOn, `randuri=${p.$$('#ranks-list .ranks-row').length}`);
   check('Formularele de tema noua si moderatori exista', !!p.$('#rank-theme-form') && !!p.$('#mod-form'), 'lipsesc formularele');
-  await p.teardown();
+  p.$('#tab-reports')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const repTabOn = await until(() => p.$('#panel-reports')?.hidden === false);
+  check('Tabul de raportari deschide panoul', repTabOn, `hidden=${p.$('#panel-reports')?.hidden}`);
+  const repListOn = await until(() => p.$$('#reports-list .report-row-admin').length > 0 || /Nicio raportare|Nu am putut/.test(p.text('#reports-list') || ''));
+  check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
 }
 
 console.log('\n=== DOM: /episode (player, surse, progres) ===');
@@ -438,6 +442,13 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   check('Permissions policy permite fullscreen in iframe', (iframe?.getAttribute('allow') || '').includes('fullscreen'), iframe?.getAttribute('allow'));
   check('Iframe-ul are allowfullscreen (+ prefixe legacy)', iframe?.hasAttribute('allowfullscreen') === true && iframe?.hasAttribute('webkitallowfullscreen') === true, iframe?.outerHTML?.slice(0, 140));
   check('Video are controale native', p.$('#player-video')?.hasAttribute('controls') === true, 'lipseste atributul controls');
+  check('Butonul de raportare a sursei exista', !!p.$('#report-btn'), 'lipseste #report-btn');
+  p.$('#report-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const repPanelOn = await until(() => p.$('#report-panel')?.hidden === false);
+  check('Panoul de raportare se deschide cu cele 5 motive', repPanelOn && p.$$('#report-reasons .report-chip').length === 5, `chips=${p.$$('#report-reasons .report-chip').length}`);
+  const repChip2 = p.$$('#report-reasons .report-chip')[1];
+  repChip2?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Selectia motivului muta marcajul is-on', repChip2?.classList.contains('is-on') === true, repChip2?.className);
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
   check('Scurtaturile degradeaza fara crash cand API-urile lipsesc', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
@@ -473,6 +484,18 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Profilul arata gradul tematic ca cip langa nume', !!p.$('#p-badges .uchip'), p.$('#p-badges')?.innerHTML?.slice(0, 120));
   const themeOn = await until(() => p.$('#econ-theme-wrap')?.hidden === false && p.$$('#econ-theme option').length >= 3);
   check('Selectorul de teme de grade e populat pe profilul propriu', themeOn, `opt=${p.$$('#econ-theme option').length}`);
+  await p.teardown();
+}
+
+{
+  console.log('=== DOM: /shop (vitrina de gold) ===');
+  const p = await mountPage({ htmlFile: 'public/shop.html', url: '/shop', module: 'page-shop.js' });
+  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 3);
+  check('Shop-ul randeaza cele 3 articole', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
+  check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
+  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
+  check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
 }
 

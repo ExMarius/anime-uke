@@ -593,3 +593,63 @@ document.getElementById('back-btn')?.addEventListener('click', () => history.bac
 // Avertizam la parăsirea paginii doar daca playerul e incarcat — evitam
 // blocarea navigarii in mod inutil.
 window.addEventListener('pageshow', (e) => { if (e.persisted) load(); });
+
+// ---------------------------------------------------------------------
+// 🚩 Raportare sursa stricata — cel mai ieftin semnal de calitate: cine
+// vede ca nu merge, apasa un buton. +3 XP (din spec), dedup pe server.
+// ---------------------------------------------------------------------
+const REPORT_REASONS = [
+  ['nu_porneste', 'Nu pornește'],
+  ['se_intrerupe', 'Se întrerupe'],
+  ['audio_sync', 'Audio nesincronizat'],
+  ['sursa_moarta', 'Sursa e moartă'],
+  ['altceva', 'Altceva'],
+];
+
+function initReport() {
+  const btn = document.getElementById('report-btn');
+  const panel = document.getElementById('report-panel');
+  const reasonsBox = document.getElementById('report-reasons');
+  const note = document.getElementById('report-note');
+  if (!btn || !panel || !reasonsBox) return;
+
+  let reason = 'nu_porneste';
+  for (const [key, label] of REPORT_REASONS) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'report-chip' + (key === reason ? ' is-on' : '');
+    chip.textContent = label;
+    chip.addEventListener('click', () => {
+      reason = key;
+      for (const c of reasonsBox.children) c.classList.remove('is-on');
+      chip.classList.add('is-on');
+    });
+    reasonsBox.appendChild(chip);
+  }
+
+  btn.addEventListener('click', () => { panel.hidden = false; });
+  document.getElementById('report-cancel')?.addEventListener('click', () => { panel.hidden = true; });
+
+  document.getElementById('report-send')?.addEventListener('click', async (ev) => {
+    const src = sources[activeSource];
+    if (!src || !src.id) { toast('Nicio sursă activă de raportat.', 'warn'); return; }
+    const sendBtn = ev.currentTarget;
+    const prev = sendBtn.disabled;
+    sendBtn.disabled = true;
+    const res = await api('/report', {
+      method: 'POST',
+      body: { episode_id: episodeId, source_id: src.id, reason, note: note.value.trim() },
+    });
+    if (!res.ok && res.status !== 409) {
+      sendBtn.disabled = prev;
+      toast(res.data?.error || 'Nu am putut trimite raportul.', 'error');
+      return;
+    }
+    panel.hidden = true;
+    btn.textContent = res.status === 409 ? '✅ Deja raportat — mersi!' : '✅ Raportat — mulțumim! +3 XP';
+    btn.disabled = true;
+    toast(res.status === 409 ? 'Ai raportat deja sursa asta — o avem pe listă.' : 'Raport trimis! +3 XP pentru ajutor. 🙏', 'success');
+  });
+}
+
+initReport();

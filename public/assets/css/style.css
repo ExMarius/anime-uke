@@ -1306,3 +1306,47 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
   font-size: .78rem; cursor: pointer;
 }
 .notif-pop__all:hover { background: rgba(220, 20, 60, .18); color: #fff; }
+
+/* ============================ SHOP ============================ */
+.shop-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.shop-head__gold {
+  font-size: 1.25rem; font-weight: 800; color: #f5c542; white-space: nowrap;
+  background: rgba(245, 197, 66, .08); border: 1px solid rgba(245, 197, 66, .25);
+  border-radius: .8rem; padding: .5rem .9rem;
+}
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .9rem; }
+.shop-card { display: flex; flex-direction: column; gap: .55rem; padding: 1.1rem; position: relative; transition: transform .12s ease, border-color .12s ease; }
+.shop-card:hover { transform: translateY(-2px); border-color: rgba(220, 20, 60, .45); }
+.shop-card--owned { border-color: rgba(80, 200, 120, .35); }
+.shop-card__icon { font-size: 2rem; }
+.shop-card__name { margin: 0; font-size: 1.02rem; }
+.shop-card__desc { margin: 0; color: rgba(255, 255, 255, .55); font-size: .84rem; line-height: 1.45; flex: 1; }
+.shop-card__foot { display: flex; align-items: center; gap: .6rem; justify-content: space-between; margin-top: .3rem; }
+.shop-card__price { font-weight: 800; color: #f5c542; }
+.shop-card__qty { font-size: .75rem; color: rgba(255, 255, 255, .5); }
+
+/* ============ COSMETICE (nume de aur / flair suporter) ============ */
+.msg__user--gold, .name--gold {
+  color: #f5c542;
+  text-shadow: 0 0 10px rgba(245, 197, 66, .45);
+}
+
+/* ==================== RAPORTARE SURSA (episod) ==================== */
+.report-row { margin: .9rem 0; }
+.report-panel { display: flex; flex-direction: column; gap: .6rem; margin-top: .6rem; padding: .9rem; }
+.report-panel[hidden] { display: none; }
+.report-panel__reasons { display: flex; flex-wrap: wrap; gap: .4rem; }
+.report-chip {
+  padding: .35rem .7rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .75); font-size: .8rem;
+}
+.report-chip.is-on { border-color: var(--crimson, #DC143C); background: rgba(220, 20, 60, .16); color: #fff; }
+.report-panel__actions { display: flex; gap: .5rem; }
+
+/* ==================== RAPORTARI (panoul admin) ==================== */
+.reports-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.reports-list { display: flex; flex-direction: column; gap: .5rem; }
+.report-row-admin { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .7rem .9rem; flex-wrap: wrap; }
+.report-row-admin__main { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.report-row-admin__acts { display: flex; align-items: center; gap: .45rem; }

@@ -43,10 +43,21 @@ export async function onRequest(context) {
   // nu poate falsifica nimic: tot lantul vine din sesiunea HttpOnly.
   const themes = await loadRankThemes(env);
   const me = identity(user, themes);
+
+  // Cosmeticele din shop merg atasate la handshake (o citire indexata),
+  // nu recitite la fiecare mesaj — la fel ca rank-urile.
+  const items = await env.DB
+    .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter')`)
+    .bind(user.id)
+    .all();
+  const owned = new Set((items.results || []).map((r) => r.item_id));
+
   const url = new URL(request.url);
   url.searchParams.set('u', JSON.stringify({
     id: user.id, username: user.username,
     rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
+    flair: owned.has('flair_supporter') ? '💎' : '',
+    name_gold: owned.has('name_gold') ? 1 : 0,
   }));
 
   return stub.fetch(new Request(url.toString(), request));

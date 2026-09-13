@@ -1245,6 +1245,99 @@ console.log('\n=== 13h. ABONARI LA SERII + NOTIFICARI ===');
   await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 0 });
 }
 
+console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const prof = await req(j, 'GET', '/api/profile/user2');
+  const u2id = prof.data?.user?.id;
+  check('Profilul public expune id-ul (necesar pentru set_gold)', Number.isInteger(u2id), JSON.stringify(prof.data?.user)?.slice(0, 100));
+
+  // --- catalogul
+  const anonShop = await req(jar(), 'GET', '/api/shop');
+  check('Shop-ul anonim → 401', anonShop.status === 401, `status=${anonShop.status}`);
+  const shop = await req(j, 'GET', '/api/shop');
+  check('Catalogul are 3 articole cu preturi si flag-uri', shop.data?.items?.length === 3 && shop.data.items.every((i) => i.price > 0 && typeof i.can_buy === 'boolean'), JSON.stringify(shop.data?.items?.map((i) => [i.id, i.price]))?.slice(0, 140));
+
+  // --- fara gold nu cumperi nimic
+  const poor = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
+  const goldBefore = shop.data?.gold || 0;
+  check('Cumpararea fara gold → 400 (nu merge pe negativ)', poor.status === 400 || goldBefore >= 150, `status=${poor.status} gold=${goldBefore}`);
+
+  // --- admin alimenteaza (set_gold e si unealta de suport)
+  const grant = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2id, value: 2000 });
+  check('Adminul poate acorda gold (set_gold)', grant.data?.success === true && grant.data?.gold === goldBefore + 2000, JSON.stringify(grant.data));
+  const grantSelf = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: 1, value: 100 });
+  check('Adminul nu-si poate modifica propriul cont', grantSelf.status === 400, `status=${grantSelf.status}`);
+
+  // --- cumpara consumabila + durabila
+  const buyKey = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
+  check('Cheia de cufar se cumpara si scade gold-ul atomic', buyKey.data?.success === true && buyKey.data?.qty === 1 && buyKey.data?.gold === goldBefore + 2000 - 150, JSON.stringify(buyKey.data));
+  const buyName = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  check('Numele de aur se cumpara', buyName.data?.success === true && buyName.data?.gold === goldBefore + 2000 - 150 - 400, JSON.stringify(buyName.data));
+  const dupe = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  check('Articolul permanent nu se poate cumpara de doua ori → 409', dupe.status === 409, `status=${dupe.status}`);
+  const ghost = await req(j, 'POST', '/api/shop/buy', { item_id: 'yacht' });
+  check('Articolul inexistent → 400', ghost.status === 400, `status=${ghost.status}`);
+  const shop2 = await req(j, 'GET', '/api/shop');
+  check('GET /shop reflecta proprietatea si gold-ul ramas', shop2.data?.items?.find((i) => i.id === 'name_gold')?.owned === true && shop2.data?.items?.find((i) => i.id === 'chest_key')?.qty === 1, JSON.stringify(shop2.data?.items?.map((i) => [i.id, i.owned, i.qty]))?.slice(0, 140));
+
+  // --- cheia sare peste cooldown-ul cufarului
+  const cState = await req(j, 'GET', '/api/chest');
+  if (cState.data?.chest?.available) {
+    await req(j, 'POST', '/api/chest');
+  }
+  const locked = await req(j, 'POST', '/api/chest');
+  check('Fara cheie, cooldown-ul tine → 409', locked.status === 409, `status=${locked.status}`);
+  const keyed = await req(j, 'POST', '/api/chest', { use_key: 1 });
+  check('Cu cheie, cufarul se deschide in cooldown', keyed.data?.success === true && keyed.data?.used_key === true, JSON.stringify(keyed.data)?.slice(0, 160));
+  const econ = await req(j, 'GET', '/api/economy');
+  check('Cheia s-a consumat din inventar', econ.data?.chest_keys === 0, JSON.stringify(econ.data?.chest_keys));
+  const noKey = await req(j, 'POST', '/api/chest', { use_key: 1 });
+  check('Fara chei in inventar, use_key → 409', noKey.status === 409, `status=${noKey.status}`);
+
+  // --- cosmeticele se vad pe profil
+  const prof2 = await req(j, 'GET', '/api/profile/user2');
+  check('Profilul arata flair 💎 si numele de aur', prof2.data?.flair === '' && prof2.data?.name_gold === true, JSON.stringify({ f: prof2.data?.flair, g: prof2.data?.name_gold }));
+  const buyFlair = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
+  const prof3 = await req(j, 'GET', '/api/profile/user2');
+  check('Dupa cumpararea Suporterului apare 💎', buyFlair.data?.success === true && prof3.data?.flair === '💎', JSON.stringify(prof3.data?.flair));
+
+  // ================= RAPORTARE SURSE =================
+  const epFull = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
+  const srcId = epFull.data?.sources?.[0]?.id;
+  check('Episodul fixturii are o sursa cu id (baza raportarii)', Number.isInteger(srcId), JSON.stringify(epFull.data?.sources)?.slice(0, 120));
+
+  const anonRep = await req(jar(), 'POST', '/api/report', { episode_id: globalThis.epId, source_id: srcId, reason: 'nu_porneste' });
+  check('Raportarea anonima → 401', anonRep.status === 401, `status=${anonRep.status}`);
+  const xpBefore = (await req(j, 'GET', '/api/economy')).data?.xp ?? 0;
+  const rep = await req(j, 'POST', '/api/report', { episode_id: globalThis.epId, source_id: srcId, reason: 'nu_porneste', note: 'se invarte la infinit' });
+  const xpAfter = (await req(j, 'GET', '/api/economy')).data?.xp ?? 0;
+  check('Raportarea valida → 201 si +3 XP (din spec)', rep.status === 201 && rep.data?.xp === 3 && xpAfter === xpBefore + 3, `status=${rep.status} xp=${xpBefore}->${xpAfter}`);
+  const dup = await req(j, 'POST', '/api/report', { episode_id: globalThis.epId, source_id: srcId, reason: 'altceva' });
+  check('A doua raportare deschisa pe aceeasi sursa → 409', dup.status === 409, `status=${dup.status}`);
+  const badReason = await req(j, 'POST', '/api/report', { episode_id: globalThis.epId, source_id: srcId, reason: 'ca-ma-enerveaza' });
+  check('Motivul din afara listei → 400', badReason.status === 400, `status=${badReason.status}`);
+  const badSrc = await req(j, 'POST', '/api/report', { episode_id: globalThis.epId, source_id: 999999, reason: 'nu_porneste' });
+  check('Sursa care nu apartine episodului → 404', badSrc.status === 404, `status=${badSrc.status}`);
+
+  // --- admin: lista + rezolvare
+  const list = await req(globalThis.admin, 'GET', '/api/admin/reports?status=open');
+  const mine = (list.data?.reports || []).find((r) => r.episode_id === globalThis.epId && r.username === 'user2');
+  check('Adminul vede raportarea deschisa cu serie/episod/motiv', !!mine && mine.series_title && mine.reason.startsWith('nu_porneste') && mine.reason.includes('se invarte'), JSON.stringify(mine)?.slice(0, 180));
+  check('Numaratoarele pe stari vin pentru badge-ul din tab', Number.isInteger(list.data?.counts?.open) && list.data.counts.open >= 1, JSON.stringify(list.data?.counts));
+  const fix = await req(globalThis.admin, 'POST', '/api/admin/reports', { id: mine?.id, action: 'fix' });
+  check('Marcarea ca rezolvat functioneaza', fix.data?.status === 'fixed', JSON.stringify(fix.data));
+  const afterFix = await req(globalThis.admin, 'GET', '/api/admin/reports?status=open');
+  check('Dupa rezolvare nu mai e in lista deschisa', !(afterFix.data?.reports || []).some((r) => r.id === mine?.id), `n=${afterFix.data?.reports?.length}`);
+  const reRep = await req(j, 'POST', '/api/report', { episode_id: globalThis.epId, source_id: srcId, reason: 'sursa_moarta' });
+  check('Dupa rezolvare, userul poate raporta din nou daca iar e stricat', reRep.status === 201, `status=${reRep.status}`);
+  const dismiss = await req(globalThis.admin, 'POST', '/api/admin/reports', { id: reRep.data ? (await req(globalThis.admin, 'GET', '/api/admin/reports?status=open')).data.reports.find((r) => r.episode_id === globalThis.epId && r.username === 'user2')?.id : 0, action: 'dismiss' });
+  check('Respingerea functioneaza', dismiss.data?.status === 'dismissed', JSON.stringify(dismiss.data));
+  const userReports = await req(j, 'GET', '/api/admin/reports');
+  check('Lista de raportari e doar pentru admin → 403', userReports.status === 403, `status=${userReports.status}`);
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));

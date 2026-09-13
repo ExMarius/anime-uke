@@ -99,7 +99,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const [profile, stats, recommendations] = await Promise.all([
+    const [profile, stats, recommendations, cosmeticsRes] = await Promise.all([
       env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first(),
       loadStats(env, user.id),
       // „Serii recomandate": cele mai vizionate serii pe care NU le-a vazut.
@@ -118,10 +118,18 @@ export async function onRequestGet(context) {
         )
         .bind(user.id)
         .all(),
+      // Cosmeticele din shop (💎 Suporter / 🌟 Nume de aur) — o citire indexata.
+      env.DB
+        .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter')`)
+        .bind(user.id)
+        .all(),
     ]);
+    const owned = new Set((cosmeticsRes?.results || []).map((r) => r.item_id));
 
     return json({
       ...present(user, profile, stats, me?.id === user.id, await loadRankThemes(env)),
+      flair: owned.has('flair_supporter') ? '💎' : '',
+      name_gold: owned.has('name_gold'),
       recommendations: recommendations?.results || [],
     }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {

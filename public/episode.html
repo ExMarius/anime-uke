@@ -86,6 +86,19 @@
     <!-- Alternativa discreta pentru o sursa de tip link. Sta SUB player si nu
          inlocuieste niciodata zona de redare: playerul ramane mereu acolo. -->
     <!-- Comentarii pe episod: lista + formular, cu tag de spoiler. -->
+    <!-- ============ RAPORTARE SURSA ============ -->
+    <div class="report-row" id="report-row">
+      <button class="btn btn--ghost btn--sm" id="report-btn" type="button">🚩 Sursa nu merge? Raportează</button>
+      <div class="report-panel box" id="report-panel" hidden>
+        <div class="report-panel__reasons" id="report-reasons"></div>
+        <input class="input" id="report-note" maxlength="200" placeholder="Detalii opționale (ex. „se oprește la 12:30”)">
+        <div class="report-panel__actions">
+          <button class="btn btn--accent btn--sm" id="report-send" type="button">Trimite (+3 XP)</button>
+          <button class="btn btn--ghost btn--sm" id="report-cancel" type="button">Renunță</button>
+        </div>
+      </div>
+    </div>
+
     <section class="section comments" id="comments-section">
       <div class="section__head">
         <h2 class="section__title">💬 Comentarii</h2>

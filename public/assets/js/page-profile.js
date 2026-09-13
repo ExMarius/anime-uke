@@ -102,7 +102,9 @@ function renderHead() {
   const r = data.rank;
   const p = data.profile;
 
-  document.getElementById('p-username').textContent = u.username;
+  const nameNode = document.getElementById('p-username');
+  nameNode.textContent = (data.flair ? data.flair + ' ' : '') + u.username;
+  nameNode.classList.toggle('name--gold', !!data.name_gold);
   document.title = `${u.username} • anime-uke`;
 
   // avatar: imagine daca exista, altfel initiala pe fond crimson
@@ -474,11 +476,19 @@ function renderChestState() {
   const icon = document.getElementById('chest-icon');
   const label = document.getElementById('chest-label');
   btn.classList.remove('chest-btn--ready', 'chest-btn--wait');
+  btn.dataset.useKey = '';
   if (econData.chest.available) {
     btn.classList.add('chest-btn--ready');
     icon.textContent = '🧰';
     label.textContent = 'Cufărul te așteaptă!';
     btn.disabled = false;
+  } else if ((econData.chest_keys || 0) > 0) {
+    // 🗝️ Cheia din shop sare peste cooldown
+    btn.classList.add('chest-btn--ready');
+    icon.textContent = '🗝️';
+    label.textContent = `Deschide cu cheie (ai ${econData.chest_keys})`;
+    btn.disabled = false;
+    btn.dataset.useKey = '1';
   } else {
     btn.classList.add('chest-btn--wait');
     icon.textContent = '🔒';
@@ -503,7 +513,7 @@ function sparkleBurst(host) {
 }
 
 async function openChest() {
-  if (chestBusy || !econData || !econData.chest.available) return;
+  if (chestBusy || !econData || (!econData.chest.available && !(econData.chest_keys > 0))) return;
   chestBusy = true;
 
   const btn = document.getElementById('chest-btn');
@@ -512,7 +522,8 @@ async function openChest() {
   btn.classList.add('chest-shake');
 
   try {
-    const res = await api('/chest', { method: 'POST' });
+    const useKey = btn.dataset.useKey === '1';
+    const res = await api('/chest', { method: 'POST', body: useKey ? { use_key: 1 } : undefined });
     if (!res.ok) {
       btn.classList.remove('chest-shake');
       if (res.status === 409) {
