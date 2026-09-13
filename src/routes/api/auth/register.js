@@ -3,8 +3,6 @@ import { signJWT } from '../../../lib/jwt.js';
 import { json, errorResponse, setAuthCookie, getClientIp, sanitizeText, isSameOrigin } from '../../../lib/http.js';
 import { validateUsername, validateEmail, validatePassword } from '../../../lib/validate.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
-import { findUsableInvite, claimInvite, consumeInvite, releaseInvite } from '../../../lib/invite.js';
-import { logAdminAction } from '../../../lib/audit.js';
 import { DEFAULT_LIMIT_USERS, resolveLimit, usersFullMessage } from '../../../lib/limits.js';
 
 // Register: max 5 conturi/ora per IP. Previne crearea automata de conturi,
@@ -63,35 +61,11 @@ export async function onRequestPost(context) {
     return errorResponse(403, usersFullMessage(maxUsers));
   }
 
-  // Modul de înregistrare: „open" (implicit) = oricine își face cont;
-  // „invite" = doar cu cod (comutatorul REGISTRATION_MODE din configurarea
-  // Pages închide din nou ușa, fără modificări de cod).
-  const inviteMode = String(env.REGISTRATION_MODE || 'open').trim().toLowerCase() === 'invite';
-
-  // --- cod de invitatie ---
-  // În modul „invite" e obligatoriu. În modul „open" e OPȚIONAL: dacă cineva
-  // totuși introduce un cod valid, îl validăm și îl consumăm (păstrează
-  // util panoul de coduri — ex. invitați VIP — și auditul rămâne corect).
-  // Verificarea si rezervarea codului au loc INAINTE de PBKDF2 (~4.45 ms CPU),
-  // ca un cod gresit sa nu arunce pe fereastra timpul de CPU al planului gratuit.
-  let invite = null;
-  if (!isFirstUser && (inviteMode || body.invite_code)) {
-    const found = await findUsableInvite(env, body.invite_code);
-    if (!found.ok) return errorResponse(found.status, found.error);
-
-    // Rezervare atomica: doi oameni care trimit acelasi cod simultan nu pot
-    // castiga amandoi (UPDATE conditionat de used_by IS NULL).
-    const claimed = await claimInvite(env, found.row.code);
-    if (!claimed) return errorResponse(409, 'Codul de invitație a fost deja folosit.');
-    invite = found.row;
-  }
-
   const salt = randomHex(16);
   let hash;
   try {
     hash = await hashPassword(password.value, salt);
   } catch (e) {
-    if (invite) await releaseInvite(env, invite.code);
     console.error('hashPassword esuat:', e?.message || e);
     return errorResponse(500, 'Nu am putut crea contul');
   }
@@ -108,21 +82,7 @@ export async function onRequestPost(context) {
 
     userId = insert.meta?.last_row_id;
     if (!userId) throw new Error('last_row_id lipsa');
-
-    if (invite) {
-      // Codul se sterge dupa folosire (cerinta), dar urma ramane in audit:
-      // cine l-a generat si cine l-a consumat.
-      await logAdminAction(
-        env,
-        { id: invite.created_by, username: '—' },
-        'invite_used', 'user', userId,
-        `Codul ${invite.code} a fost folosit de ${username.value}`
-      );
-      await consumeInvite(env, invite.code);
-    }
   } catch (e) {
-    // Eliberam rezervarea ca sa nu pierdem codul utilizatorului.
-    if (invite) await releaseInvite(env, invite.code);
     console.error('INSERT users esuat:', e?.message || e);
     return errorResponse(500, 'Nu am putut crea contul');
   }

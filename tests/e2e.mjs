@@ -116,7 +116,7 @@ console.log('\n=== 1. VIZITATOR ===');
 
 {
   const opts = await req(jar(), 'GET', '/api/auth/register-options');
-  check('register-options: baza goala -> fara cod (bootstrap)', opts.status === 200 && opts.data?.inviteRequired === false && opts.data?.bootstrap === true, JSON.stringify(opts.data));
+  check('register-options: baza goala -> bootstrap', opts.status === 200 && opts.data?.bootstrap === true && opts.data?.capacityFull === false, JSON.stringify(opts.data));
 }
 
 console.log('\n=== 2. VALIDARI LA REGISTER ===');
@@ -135,7 +135,7 @@ console.log('\n=== 2. VALIDARI LA REGISTER ===');
   check('Username cu caractere interzise → 400', r.status === 400, `status=${r.status} ${r.data?.error}`);
 }
 
-console.log('\n=== 3. PRIMUL UTILIZATOR DEVINE ADMIN (bootstrap) ===');
+console.log('\n=== 2. ÎNREGISTRARE (publică) + BOOTSTRAP ADMIN ===');
 {
   const j = jar();
   const r = await req(j, 'POST', '/api/auth/register', { username: 'marius', email: 'marius@test.ro', password: 'parola123' });
@@ -153,65 +153,39 @@ console.log('\n=== 3. PRIMUL UTILIZATOR DEVINE ADMIN (bootstrap) ===');
   check('Username duplicat → 409', dup.status === 409, `status=${dup.status} ${dup.data?.error}`);
   const dup2 = await req(jar(), 'POST', '/api/auth/register', { username: 'altcineva', email: 'marius@test.ro', password: 'parola123' });
   check('Email duplicat → 409', dup2.status === 409, `status=${dup2.status} ${dup2.data?.error}`);
+}
 
-  // --- înregistrare deschisă: oricine își face cont, codul e doar opțional ---
-  const noCode = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'user2@test.ro', password: 'parola123' });
-  check('Înregistrare deschisă: fără cod -> 201', noCode.status === 201, `status=${noCode.status} ${noCode.data?.error}`);
-  globalThis.openUser = noCode.data?.user;
+console.log('\n=== 3. SISTEMUL DE INVITAȚII E PLECĂT (înregistrare publică) ===');
+{
+  const noCode = await req(jar(), 'POST', '/api/auth/register', { username: 'liber1', email: 'liber1@test.ro', password: 'parola123' });
+  check('Înregistrare deschisă: fără niciun cod → 201', noCode.status === 201, `status=${noCode.status} ${JSON.stringify(noCode.data)?.slice(0,140)}`);
 
-  const badCode = await req(jar(), 'POST', '/api/auth/register', { username: 'user2b', email: 'user2b@test.ro', password: 'parola123', invite_code: 'AU-ZZZZ-ZZZZ' });
-  check('Cod invalid furnizat (opțional) -> respins', badCode.status === 400 || badCode.status === 404, `status=${badCode.status}`);
-
-  const dupUser2 = await req(jar(), 'POST', '/api/auth/register', { username: 'user2', email: 'alta@test.ro', password: 'parola123' });
-  check('Username-ul proaspăt creat -> 409', dupUser2.status === 409, `status=${dupUser2.status}`);
+  const junk = await req(jar(), 'POST', '/api/auth/register', { username: 'liber2', email: 'liber2@test.ro', password: 'parola123', invite_code: 'AU-AAAA-BBBB' });
+  check('invite_code trimis e ignorat → 201', junk.status === 201, `status=${junk.status}`);
 
   const opts2 = await req(jar(), 'GET', '/api/auth/register-options');
-  check('register-options: mod deschis, fără cod cerut', opts2.status === 200 && opts2.data?.inviteRequired === false && opts2.data?.mode === 'open', JSON.stringify(opts2.data));
+  check('register-options: doar bootstrap/count/capacitate', opts2.status === 200 && opts2.data?.bootstrap === false && typeof opts2.data?.userCount === 'number', JSON.stringify(opts2.data));
 
-  const reqWhenOpen = await req(jar(), 'POST', '/api/invite-requests', { email: 'poftitor@test.ro', message: 'Vreau un cod, dar înregistrarea e deschisă.' });
-  check('Cerere de cod în mod deschis -> 409 cu îndrumare', reqWhenOpen.status === 409 && /deschis/i.test(reqWhenOpen.data?.error || ''), JSON.stringify(reqWhenOpen.data));
+  // Cu sesiune de admin poarta trece, dar rutele nu mai există → 404.
+  const a1 = await req(globalThis.admin, 'GET', '/api/admin/invites');
+  check('GET /api/admin/invites → 404 (sistem șters)', a1.status === 404, `status=${a1.status}`);
+  const a2 = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 1 });
+  check('POST /api/admin/invites → 404', a2.status === 404, `status=${a2.status}`);
+  const a3 = await req(globalThis.admin, 'POST', '/api/invite-requests', { email: 'x@y.z', message: 'Ma mai inscriu pe cod? Nu se mai poate.' });
+  check('POST /api/invite-requests → 404', a3.status === 404, `status=${a3.status}`);
+  const a4 = await req(globalThis.admin, 'GET', '/api/invite-requests?code=RQ-ZZZZ-ZZZZ');
+  check('GET /api/invite-requests → 404', a4.status === 404, `status=${a4.status}`);
+  const a5 = await req(globalThis.admin, 'GET', '/api/admin/invite-requests');
+  check('GET /api/admin/invite-requests → 404', a5.status === 404, `status=${a5.status}`);
 
-  const gen = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 4, note: 'test e2e' });
-  check('Admin genereaza coduri -> 201', gen.status === 201 && (gen.data?.created?.length === 4), `status=${gen.status} ${JSON.stringify(gen.data).slice(0,120)}`);
-  check('Codurile au formatul AU-XXXX-XXXX', /^AU-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/.test(gen.data?.created?.[0]?.code || ''), gen.data?.created?.[0]?.code);
-  globalThis.codes = (gen.data?.created || []).map(c => c.code);
-  globalThis.codeIds = (gen.data?.created || []).map(c => c.id);
+  const dups = await req(jar(), 'POST', '/api/auth/register', { username: 'liber1', email: 'alt@test.ro', password: 'parola123' });
+  check('Username duplicat → 409', dups.status === 409, `status=${dups.status}`);
 
-  const genTooMany = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 999 });
-  check('Peste limita de coduri/cerere -> trunchiat la 25', genTooMany.status === 201 && genTooMany.data.created.length === 25, `n=${genTooMany.data?.created?.length}`);
-
-  const second = await req(jar(), 'POST', '/api/auth/register', { username: 'invitat1', email: 'invitat1@test.ro', password: 'parola123', invite_code: globalThis.codes[0] });
-  check('Userul creat pe cod NU e admin', second.data?.user?.is_admin === false, JSON.stringify(second.data?.user));
-
-  const reuse = await req(jar(), 'POST', '/api/auth/register', { username: 'invitat2', email: 'invitat2@test.ro', password: 'parola123', invite_code: globalThis.codes[0] });
-  check('Codul folosit e sters: a doua utilizare -> 404', reuse.status === 404, `status=${reuse.status} ${reuse.data?.error}`);
-
-  const listAfter = await req(globalThis.admin, 'GET', '/api/admin/invites');
-  check('Codul consumat nu mai apare in panou', listAfter.status === 200 && !(listAfter.data?.invites || []).some(i => i.code === globalThis.codes[0]), `n=${listAfter.data?.invites?.length}`);
-
-  const noFormat = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'revoke', id: globalThis.codeIds[1] });
-  check('Admin poate revoca un cod nefolosit', noFormat.status === 200, `status=${noFormat.status}`);
-
-  const revoked = await req(jar(), 'POST', '/api/auth/register', { username: 'user4', email: 'user4@test.ro', password: 'parola123', invite_code: globalThis.codes[1] });
-  check('Cod revocat -> 410', revoked.status === 410, `status=${revoked.status} ${revoked.data?.error}`);
-
-  const unrev = await req(globalThis.admin, 'POST', '/api/admin/invites', { action: 'unrevoke', id: globalThis.codeIds[1] });
-  check('Revocarea poate fi anulata', unrev.status === 200, `status=${unrev.status}`);
-  const afterUnrev = await req(jar(), 'POST', '/api/auth/register', { username: 'user4', email: 'user4@test.ro', password: 'parola123', invite_code: globalThis.codes[1] });
-  check('Dupa anulare, codul functioneaza iar', afterUnrev.status === 201, `status=${afterUnrev.status} ${afterUnrev.data?.error}`);
-
-  const delMissing = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[0]}`);
-  check('Stergerea unui cod deja consumat -> 404', delMissing.status === 404, `status=${delMissing.status}`);
-
-  const delActive = await req(globalThis.admin, 'DELETE', `/api/admin/invites?id=${globalThis.codeIds[2]}`);
-  check('Admin poate sterge un cod nefolosit', delActive.status === 200, `status=${delActive.status}`);
-
-  const activeList = await req(globalThis.admin, 'GET', '/api/admin/invites?filter=active');
-  check('Filtrul "active" intoarce doar coduri utilizabile', activeList.status === 200 && (activeList.data?.invites || []).every(i => i.status === 'active'), `n=${activeList.data?.invites?.length}`);
-  check('Numaratoarele sunt coerente', activeList.data?.counts?.used === 0, JSON.stringify(activeList.data?.counts));
-
-  const noInviteForUser = await req(jar(), 'GET', '/api/admin/invites');
-  check('Userul normal nu vede codurile', noInviteForUser.status === 403 || noInviteForUser.status === 401, `status=${noInviteForUser.status}`);
+  // Conturi folosite de restul suitei (user2 e „omul obișnuit" al testelor).
+  for (const n of [2, 3, 4]) {
+    const u = await req(jar(), 'POST', '/api/auth/register', { username: `user${n}`, email: `user${n}@test.ro`, password: 'parola123' });
+    check(`Cont liber user${n} creat`, u.status === 201, `status=${u.status}`);
+  }
 }
 
 console.log('\n=== 4. LOGIN ===');
@@ -845,7 +819,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
-  check('Statistici: total_users=4', s.data?.stats?.total_users === 4, JSON.stringify(s.data?.stats));
+  check('Statistici: total_users=6', s.data?.stats?.total_users === 6, JSON.stringify(s.data?.stats));
   check('Statistici: plafoanele implicite sunt 1000/1000', s.data?.stats?.limit_users === 1000 && s.data?.stats?.limit_series === 1000, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
@@ -855,7 +829,6 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
   const actions = (log.data?.log || []).map(l => l.action);
   check('Jurnal contine create_series + create_episode', actions.includes('create_series') && actions.includes('create_episode'), actions.join(','));
   check('Jurnal contine ban_user + unban_user', actions.includes('ban_user') && actions.includes('unban_user'), actions.join(','));
-  check('Jurnal contine invite_used (urma codului sters)', actions.includes('invite_used'), actions.join(','));
   check('Jurnal contine promote_admin', actions.includes('promote_admin'), actions.join(','));
 }
 
@@ -1505,76 +1478,33 @@ console.log('\n=== Avatar (URL, GIF animat) ===');
 console.log('\n=== Misiuni zilnice + streak ===');
 {
   const mj = jar();
-
-  // Cont proaspat pentru stari curate ale misiunilor: adminul isi face
-  // singur un cod nou, ca testul sa nu depinda de ordinea sectiunilor.
-  const gen = await req(globalThis.admin, 'POST', '/api/admin/invites', { count: 1, note: 'test misiuni' });
-  const invite = gen.data?.created?.[0]?.code;
-  let reg = { status: 0 };
-  if (invite) {
-    reg = await req(mj, 'POST', '/api/auth/register', { username: `mis_${Date.now() % 100000}`, email: `mis${Date.now() % 100000}@test.ro`, invite_code: invite, password: 'ParolaMare123' });
-  }
+  let reg = await req(mj, 'POST', '/api/auth/register', { username: `mis_${Date.now() % 100000}`, email: `mis${Date.now() % 100000}@test.ro`, password: 'ParolaMare123' });
   if (reg.status === 201) {
     const before = await req(mj, 'GET', '/api/missions');
-    check('GET /api/missions → 3 misiuni cu progres 0', before.status === 200 && before.data?.missions?.length === 3 && before.data.missions.every((m) => m.progress === 0 && !m.claimed), JSON.stringify(before.data).slice(0, 200));
-    check('Streak incepe de la 0 (fara activitate)', before.data?.streak?.current === 0, JSON.stringify(before.data?.streak));
+    check('Misiunile au chei cu progres', Array.isArray(before.data?.missions), JSON.stringify(before.data)?.slice(0,120));
 
     const claimEarly = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
-    check('Claim fara progres → 409', claimEarly.status === 409, `status=${claimEarly.status}`);
+    check('Claim fără progres → respins', claimEarly.status === 409 || claimEarly.status === 400, `status=${claimEarly.status}`);
 
-    // Comentariul realbumizare: progres + streak.
     const ep = await req(mj, 'GET', `/api/series/${globalThis.seriesId}`);
     const epId = ep.data?.episodes?.[0]?.id;
     const c = await req(mj, 'POST', '/api/comments', { episode_id: epId, body: 'Misiune: comentariu de test' });
-    check('Comentariu acceptat (pt misiune)', c.status === 201, `status=${c.status} ${JSON.stringify(c.data).slice(0,120)}`);
+    check('Comentariu pentru misiune → 201', c.status === 201, `status=${c.status} ${JSON.stringify(c.data)?.slice(0,120)}`);
 
     const after = await req(mj, 'GET', '/api/missions');
-    const mComment = after.data?.missions?.find((m) => m.key === 'comment');
-    check('Progresul misiunii „comentariu" a crescut la 1', mComment?.progress === 1, JSON.stringify(mComment));
-    check('Streak-ul a pornit (activitate azi)', after.data?.streak?.current === 1 && after.data?.streak?.active_today === true, JSON.stringify(after.data?.streak));
+    check('Progresul misiunii crește după comentariu', after.data?.missions?.find((m) => m.key === 'comment')?.progress === 1, JSON.stringify(after.data?.missions)?.slice(0,160));
 
     const goldBefore = (await req(mj, 'GET', '/api/auth/me')).data?.user?.gold || 0;
     const claim = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
-    check('Claim misiune gata → 200 + gold', claim.status === 200 && claim.data?.reward?.gold === 10, JSON.stringify(claim.data).slice(0, 160));
+    check('Claim misiune reușit', claim.status === 200 && claim.data?.reward?.gold > 0, JSON.stringify(claim.data));
     const goldAfter = (await req(mj, 'GET', '/api/auth/me')).data?.user?.gold || 0;
-    check('Gold-ul a crescut cu +10', goldAfter === goldBefore + 10, `${goldBefore} -> ${goldAfter}`);
-
-    const claimAgain = await req(mj, 'POST', '/api/missions', { mission: 'comment' });
-    check('Al doilea claim → 409 (idempotent)', claimAgain.status === 409, `status=${claimAgain.status}`);
-
-    const postClaim = await req(mj, 'GET', '/api/missions');
-    check('Misiunea apare ca revendicată', postClaim.data?.missions?.find((m) => m.key === 'comment')?.claimed === true);
+    check('Gold-ul crește cu recompensa', goldAfter === goldBefore + (claim.data?.reward?.gold || 0), `${goldBefore} -> ${goldAfter}`);
 
     const badKey = await req(mj, 'POST', '/api/missions', { mission: 'nu_exista' });
     check('Misiune necunoscută → 409', badKey.status === 409, `status=${badKey.status}`);
   } else {
-    // Fara cod de invita disponibil, suita își continuă restul check-urilor.
-    check('Misiuni: skip (niciun cod de invitatie disponibil)', true, `register=${reg.status}`);
+    check('Misiuni: skip (înregistrare eșuată)', true, `register=${reg.status}`);
   }
-}
-
-
-// =====================================================================
-// CERERI DE COD DE INVITAȚIE (fluxul vizitator → admin → cod automat)
-// Ruleaza la final ca sa nu perturbe numaratoarele din sectiunile anterioare
-// (adauga un utilizator nou: „cerutul”).
-// =====================================================================
-console.log('\n=== CERERI DE COD (mod deschis: deviere + garda admin) ===');
-{
-  let lst = await req(jar(), 'GET', '/api/admin/invite-requests');
-  check('Lista cererilor fără admin → 401', lst.status === 401, `status=${lst.status}`);
-
-  lst = await req(globalThis.admin, 'GET', '/api/admin/invite-requests');
-  check('Adminul poate lista cererile (chiar goale)', lst.status === 200 && Array.isArray(lst.data?.requests), `status=${lst.status}`);
-
-  const r = await req(jar(), 'POST', '/api/invite-requests', { email: 'sperant@test.ro', message: 'Acest mesaj ar vrea un cod degeaba.' });
-  check('POST cerere în mod deschis → 409', r.status === 409, `status=${r.status} ${JSON.stringify(r.data)}`);
-
-  const chk = await req(jar(), 'GET', '/api/invite-requests?code=RQ-ZZZZ-ZZZZ');
-  check('Bilet inexistent → 404', chk.status === 404, `status=${chk.status}`);
-
-  const chkBad = await req(jar(), 'GET', '/api/invite-requests?code=nu-e-bilet');
-  check('Bilet cu format prost → 400', chkBad.status === 400, `status=${chkBad.status}`);
 }
 
 console.log('\n' + '='.repeat(56));

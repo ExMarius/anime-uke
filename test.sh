@@ -75,16 +75,15 @@ fi
 [ "$DOM_RC" -eq 0 ] || RC=1
 
 # ---------------------------------------------------------------------
-# Faza 3: plafoanele buget-0 + modul „invitație". Repornim serverul pe o
-# baza curata cu tavane mici (4 conturi, 2 serii) ca sa simulam „comunitatea
-# plina" fara sa inseram 1000 de randuri, iar REGISTRATION_MODE=invite
-# reactiveaza poarta cu coduri + cererile de coduri (fluxul complet).
+# Faza 3: plafoanele buget-0. Repornim serverul pe o baza curata cu tavane
+# mici (4 conturi, 2 serii) ca sa simulam „comunitatea plina" fara sa
+# inseram 1000 de randuri.
 # ---------------------------------------------------------------------
 stop_server
 echo
 echo "── reset baza locala (faza plafoane) ──"
 rm -rf .wrangler/state
-start_server LIMIT_USERS=4 LIMIT_SERIES=2 REGISTRATION_MODE=invite
+start_server LIMIT_USERS=4 LIMIT_SERIES=2
 
 echo
 echo "════════ caps-e2e (plafoane buget-0) ════════"

@@ -31,34 +31,10 @@
     </div>
 
     <form id="auth-form" novalidate>
-      <div class="field" id="invite-field" hidden>
-        <label for="invite_code">Cod de invitație *</label>
-        <input class="input input--code" id="invite_code" name="invite_code" type="text"
-               autocomplete="one-time-code" maxlength="16" placeholder="AU-XXXX-XXXX"
-               spellcheck="false" inputmode="latin">
-        <p class="hint" id="invite-hint">Codurile sunt generate de un administrator. Fără un cod valid nu se poate crea cont.</p>
-      </div>
-      <div class="field">
-        <label for="username">Username</label>
-        <input class="input" id="username" name="username" type="text" autocomplete="username"
-               minlength="3" maxlength="20" pattern="[A-Za-z0-9_.\-]{3,20}" required>
-        <p class="hint">3–20 caractere: litere, cifre, <code>.</code> <code>-</code> <code>_</code></p>
-      </div>
-      <div class="field">
-        <label for="email">Email</label>
-        <input class="input" id="email" name="email" type="email" autocomplete="email" required>
-      </div>
-      <div class="field">
-        <label for="password">Parolă</label>
-        <input class="input" id="password" name="password" type="password"
-               autocomplete="new-password" minlength="4" maxlength="128" required>
-        <p class="hint">Minim 4 caractere</p>
-      </div>
       <button class="btn btn--accent btn--block" id="submit-btn" type="submit">Creează cont</button>
     </form>
 
     <p class="auth-alt">Ai deja cont? <a href="/login">Login</a></p>
-    <p class="auth-alt" id="cere-cod-link" hidden>Nu ai cod de invitație? <a href="/login#cere-cod">Cere unul</a> — îl primești când e aprobat.</p>
     <p class="auth-back"><a href="/" class="crumb">← Înapoi la serii</a></p>
   </div>
 

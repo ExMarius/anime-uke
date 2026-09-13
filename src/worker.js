@@ -30,7 +30,6 @@ const PUBLIC_API = new Set([
   '/api/auth/register-options',
   '/api/auth/logout',
   '/api/auth/me',
-  '/api/invite-requests',
 ]);
 
 function isPublic(path) {

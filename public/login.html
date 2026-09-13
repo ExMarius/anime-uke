@@ -39,33 +39,6 @@
 
     <p class="auth-alt">Nu ai cont? <a href="/register">Creează unul</a></p>
 
-    <!-- Cerere de cod de invitație: fără formular de email extern — cererea
-         ajunge la admin în panou, iar răspunsul se vede cu biletul primit. -->
-    <details class="req-code" id="cere-cod" hidden>
-      <summary>Nu ai cod de invitație? <b>Cere unul</b></summary>
-      <form id="req-form" novalidate>
-        <div class="field">
-          <label for="req-email">Emailul tău</label>
-          <input class="input" id="req-email" name="email" type="email" maxlength="254" required>
-        </div>
-        <div class="field">
-          <label for="req-message">De ce vrei să intri în comunitate? (minim 10 caractere)</label>
-          <textarea class="input" id="req-message" name="message" rows="3" maxlength="600" required></textarea>
-        </div>
-        <button class="btn btn--accent btn--block" id="req-submit" type="submit">Trimite cererea</button>
-      </form>
-      <div class="req-result" id="req-result" hidden></div>
-
-      <form id="req-status-form" novalidate>
-        <div class="field">
-          <label for="req-status-code">Ai trimis deja o cerere? Verific-o cu biletul primit</label>
-          <input class="input" id="req-status-code" name="code" placeholder="RQ-XXXX-XXXX" maxlength="12" autocomplete="off">
-        </div>
-        <button class="btn btn--ghost btn--block" id="req-status-btn" type="submit">Verifică starea</button>
-      </form>
-      <div class="req-result" id="req-status-result" hidden></div>
-    </details>
-
     <p class="auth-back"><a href="/" class="crumb">← Înapoi la serii</a></p>
   </div>
 

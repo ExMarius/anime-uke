@@ -4,37 +4,18 @@ import { api, renderNav } from './core.js';
 // =====================================================================
 // Pagina de inregistrare.
 //
-// Intreaba serverul daca e nevoie de cod de invitatie: in modul bootstrap
-// (baza de date goala) campul e ascuns, iar primul cont devine admin.
-// Fara aceasta verificare, primul administrator ar ramane blocat in fata
-// unui camp obligatoriu pentru care nu exista niciun cod generat.
+// Intreaba serverul starea portii: in modul bootstrap (baza de date goala)
+// pagina anunta ca primul cont devine admin, iar cand comunitatea atinge
+// plafonul dezactiveaza formularul cu un mesaj clar.
 // =====================================================================
 
-async function setupInviteGate() {
-  const field = document.getElementById('invite-field');
+async function setupRegisterGate() {
   const banner = document.getElementById('bootstrap-banner');
-  const input = document.getElementById('invite_code');
   const form = document.getElementById('auth-form');
 
-  // Cod primit prin cerere (?code=... de pe pagina de login): îl punem
-  // direct în câmp, ca userul să nu mai scrie manual.
-  const prefill = new URLSearchParams(location.search).get('code');
-  if (prefill && input) input.value = prefill.trim().toUpperCase();
-
   const res = await api('/auth/register-options');
-  // La eroare alegem varianta stricta: cerem codul. E mai sigur decat sa
-  // lasam inregistrarile libere din cauza unui apel esuat.
-  const required = res.ok ? !!res.data?.inviteRequired : true;
-
-  if (field) {
-    field.hidden = !required;
-    if (input) input.required = required;
-  }
-  if (banner) banner.hidden = required;
-
-  // Linkul „Cere un cod" din register are rost doar în modul invitație.
-  const cereCod = document.getElementById('cere-cod-link');
-  if (cereCod) cereCod.hidden = !required;
+  // Bannerul „ești primul utilizator" apare doar in modul bootstrap.
+  if (banner) banner.hidden = !res.ok || !res.data?.bootstrap;
 
   // Plafon atins (buget 0): spunem din timp, nu doar la submit. Dezactivam
   // formularul ca userul sa nu completeze degeaba.
@@ -48,7 +29,7 @@ async function setupInviteGate() {
   }
 }
 
-await setupInviteGate();
+await setupRegisterGate();
 initAuthForm('register');
 
 renderNav('/register').catch(() => { /* nav e decorativ aici */ });

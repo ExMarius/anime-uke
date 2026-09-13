@@ -39,7 +39,6 @@
     <div class="tabs" role="tablist" aria-label="Secțiuni admin">
       <button class="tab" role="tab" id="tab-stats"    aria-controls="panel-stats"    aria-selected="true"  type="button">📊 Statistici</button>
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
-      <button class="tab" role="tab" id="tab-invites"  aria-controls="panel-invites"  aria-selected="false" type="button">🎟️ Invitații</button>
       <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
       <button class="tab" role="tab" id="tab-reports"  aria-controls="panel-reports"  aria-selected="false" type="button">🚩 Raportări</button>
       <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
@@ -71,58 +70,6 @@
 
     <!-- ============ JURNAL ============ -->
     <!-- ===================== INVITATII ===================== -->
-    <section class="panel" id="panel-invites" role="tabpanel" aria-labelledby="tab-invites" hidden>
-      <div class="box">
-        <h2 class="box__title">Generează coduri de invitație</h2>
-        <p class="hint">Codurile sunt de unică folosință și <b>se șterg automat după ce au fost folosite</b>. Un cont nou poate fi creat doar cu un cod valid.</p>
-        <form id="invite-form">
-          <div class="row">
-            <div class="field">
-              <label for="i-count">Câte coduri</label>
-              <input class="input" id="i-count" name="count" type="number" min="1" max="25" value="1" required>
-            </div>
-            <div class="field">
-              <label for="i-note">Notă (opțional)</label>
-              <input class="input" id="i-note" name="note" type="text" maxlength="120" placeholder="ex. pentru grupul de Discord">
-            </div>
-          </div>
-          <button class="btn btn--accent" id="invite-submit" type="submit">Generează codurile</button>
-        </form>
-        <div id="invite-result"></div>
-      </div>
-
-      <div class="section__head">
-        <h2 class="section__title">Coduri generate</h2>
-        <div class="filters" id="invite-filters">
-          <button class="btn btn--sm btn--accent" type="button" data-filter="all">Toate</button>
-          <button class="btn btn--sm btn--ghost" type="button" data-filter="active">Active</button>
-          <button class="btn btn--sm btn--ghost" type="button" data-filter="revoked">Revocate</button>
-        </div>
-      </div>
-      <div class="box table-wrap">
-        <table id="invites-table">
-          <thead><tr>
-            <th>Cod</th><th>Notă</th><th>Status</th><th>Creat de</th><th>Creat la</th><th>Acțiuni</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="section__head">
-        <h2 class="section__title">Cereri de coduri (de la vizitatori)</h2>
-        <button class="btn btn--sm btn--ghost" type="button" id="requests-refresh">Reîmprospătează</button>
-      </div>
-      <p class="hint">Secțiune utilă când înregistrarea e pe invitație (variabila REGISTRATION_MODE=invite). „Aprobă" generează <b>automat</b> un cod de invitație — cerutul îl vede pe pagina de login, cu biletul primit la trimitere.</p>
-      <div class="box table-wrap">
-        <table id="requests-table">
-          <thead><tr>
-            <th>Email</th><th>Motivul</th><th>Data</th><th>Status</th><th>Acțiuni</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
     <!-- ===================== GRADE & STAFF ===================== -->
     <section class="panel" id="panel-ranks" role="tabpanel" aria-labelledby="tab-ranks" hidden>
       <div class="box">

@@ -35,7 +35,6 @@ async function guard() {
 const LOADERS = {
   stats: loadStats,
   users: loadUsers,
-  invites: () => Promise.all([loadInvites(), loadInviteRequests()]),
   ranks: loadRanks,
   reports: loadReports,
   log: loadLog,
@@ -54,8 +53,6 @@ function selectTab(tab) {
   document.querySelectorAll('.panel').forEach((p) => { p.hidden = p.id !== `panel-${key}`; });
   LOADERS[key]?.();
 
-// Refresh manual pentru cererile de coduri (secțiunea Invitații).
-document.getElementById('requests-refresh')?.addEventListener('click', () => loadInviteRequests());
 }
 
 // ---------------------------------------------------------------------
@@ -205,384 +202,6 @@ async function deleteUser(user) {
   loadStats();
 }
 
-// ---------------------------------------------------------------------
-// JURNAL
-// ---------------------------------------------------------------------
-async function loadLog() {
-  const res = await api('/admin/log?limit=100');
-  if (!res.ok) { toast(res.data?.error || 'Eroare la încărcarea jurnalului', 'err'); return; }
-
-  fillTable(
-    'log-table',
-    ['Data', 'Admin', 'Acțiune', 'Țintă', 'Detalii'],
-    res.data.log || [],
-    (l) => [l.created_at, l.admin_name, l.action, `${l.target_type || ''}${l.target_id ? ' #' + l.target_id : ''}`, l.details || ''],
-    'Jurnalul e gol.'
-  );
-}
-
-// ---------------------------------------------------------------------
-// HELPERE DOM
-// ---------------------------------------------------------------------
-function cell(value) {
-  const td = document.createElement('td');
-  td.textContent = value ?? '';
-  return td;
-}
-
-function pill(text, cls) {
-  const td = document.createElement('td');
-  const span = document.createElement('span');
-  span.className = `pill ${cls || ''}`;
-  span.textContent = text;
-  td.appendChild(span);
-  return td;
-}
-
-function actionsCell(items) {
-  const td = document.createElement('td');
-  const wrap = document.createElement('div');
-  wrap.className = 'actions';
-
-  for (const item of items) {
-    if (item.href) {
-      const a = document.createElement('a');
-      a.className = item.cls;
-      a.href = item.href;
-      a.textContent = item.label;
-      wrap.appendChild(a);
-      continue;
-    }
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = item.cls;
-    b.textContent = item.label;
-    b.disabled = !!item.disabled;
-    if (item.onClick) {
-      b.addEventListener('click', async (e) => {
-        await withBusy(e.currentTarget, item.onClick);
-      });
-    }
-    wrap.appendChild(b);
-  }
-
-  td.appendChild(wrap);
-  return td;
-}
-
-function emptyRow(colspan, text) {
-  const tr = document.createElement('tr');
-  const td = document.createElement('td');
-  td.colSpan = colspan;
-  td.style.color = 'var(--text-dim)';
-  td.textContent = text;
-  tr.appendChild(td);
-  return tr;
-}
-
-// ---------------------------------------------------------------------
-// CODURI DE INVITATIE
-// ---------------------------------------------------------------------
-let inviteFilter = 'all';
-
-const INVITE_STATUS = {
-  active:  { label: 'Activ',   cls: 'pill pill--ok' },
-  used:    { label: 'Folosit', cls: 'pill pill--user' },
-  revoked: { label: 'Revocat', cls: 'pill pill--banned' },
-};
-
-async function loadInvites() {
-  const res = await api(`/admin/invites?filter=${encodeURIComponent(inviteFilter)}`);
-  if (!res.ok) {
-    toast(res.data?.error || 'Nu am putut încărca codurile', 'err');
-    return;
-  }
-
-  const c = res.data.counts || {};
-  const btns = document.querySelectorAll('#invite-filters [data-filter]');
-  btns.forEach((b) => {
-    const f = b.dataset.filter;
-    const n = f === 'all' ? c.total : c[f] ?? 0;
-    b.textContent = `${b.textContent.split(' (')[0]} (${n})`;
-    const on = f === inviteFilter;
-    b.className = `btn btn--sm ${on ? 'btn--accent' : 'btn--ghost'}`;
-  });
-
-  const tbody = document.querySelector('#invites-table tbody');
-  tbody.innerHTML = '';
-
-  const rows = res.data.invites || [];
-  if (!rows.length) {
-    tbody.appendChild(emptyRow(6, inviteFilter === 'all'
-      ? 'Nu ai generat încă niciun cod. Completează formularul de mai sus.'
-      : 'Niciun cod cu acest filtru.'));
-    return;
-  }
-
-  for (const inv of rows) {
-    const tr = document.createElement('tr');
-
-    // Codul, cu buton de copiere — adminul il da mai departe pe Discord etc.
-    const tdCode = document.createElement('td');
-    const chip = document.createElement('code');
-    chip.className = 'code-chip';
-    chip.textContent = inv.code;
-    tdCode.appendChild(chip);
-    if (inv.status === 'active') {
-      const copy = document.createElement('button');
-      copy.type = 'button';
-      copy.className = 'btn btn--ghost btn--sm';
-      copy.textContent = 'Copiază';
-      copy.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(inv.code);
-          copy.textContent = 'Copiat ✓';
-          setTimeout(() => { copy.textContent = 'Copiază'; }, 1500);
-        } catch { toast('Nu am putut copia. Selectează codul manual.', 'warn'); }
-      });
-      tdCode.appendChild(copy);
-    }
-    tr.appendChild(tdCode);
-
-    tr.appendChild(cell(inv.note || '—'));
-
-    const tdStatus = document.createElement('td');
-    const st = INVITE_STATUS[inv.status] || { label: inv.status, cls: 'pill' };
-    const pillEl = document.createElement('span');
-    pillEl.className = st.cls;
-    pillEl.textContent = st.label;
-    tdStatus.appendChild(pillEl);
-    tr.appendChild(tdStatus);
-
-    tr.appendChild(cell(inv.created_by_name || '—'));
-    tr.appendChild(cell(inv.created_at));
-
-    const actions = [];
-    if (inv.status === 'active') {
-      actions.push({
-        label: 'Revocă', cls: 'btn btn--ghost btn--sm',
-        onClick: () => inviteAction({ action: 'revoke', id: inv.id }, inv.code, 'revocat'),
-      });
-      actions.push({
-        label: 'Șterge', cls: 'btn btn--danger btn--sm',
-        onClick: () => deleteInvite(inv),
-      });
-    } else if (inv.status === 'revoked') {
-      actions.push({
-        label: 'Reactivează', cls: 'btn btn--ok btn--sm',
-        onClick: () => inviteAction({ action: 'unrevoke', id: inv.id }, inv.code, 'reactivat'),
-      });
-    }
-    tr.appendChild(actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]));
-
-    tbody.appendChild(tr);
-  }
-}
-
-async function inviteAction(body, code, verb) {
-  const res = await api('/admin/invites', { method: 'POST', body });
-  if (res.ok) {
-    toast(`Codul ${code} a fost ${verb}.`, 'ok');
-    await loadInvites();
-  } else {
-    toast(res.data?.error || `Nu am putut ${verb} codul`, 'err');
-  }
-}
-
-async function deleteInvite(inv) {
-  if (!confirm(`Ștergi definitiv codul ${inv.code}?`)) return;
-  const res = await api(`/admin/invites?id=${encodeURIComponent(inv.id)}`, { method: 'DELETE' });
-  if (res.ok) {
-    toast('Cod șters.', 'ok');
-    await loadInvites();
-  } else {
-    toast(res.data?.error || 'Nu am putut șterge codul', 'err');
-  }
-}
-
-document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  const btn = document.getElementById('invite-submit');
-  const data = Object.fromEntries(new FormData(form).entries());
-
-  await withBusy(btn, async () => {
-    const res = await api('/admin/invites', {
-      method: 'POST',
-      body: { count: Number(data.count) || 1, note: (data.note || '').trim() },
-    });
-
-    if (!res.ok) {
-      toast(res.data?.error || 'Nu am putut genera codurile', 'err');
-      return;
-    }
-
-    const created = res.data.created || [];
-    toast(`${created.length} cod${created.length === 1 ? '' : 'uri'} generat${created.length === 1 ? '' : 'e'}.`, 'ok');
-
-    // Afisam codurile proaspete ca sa poata fi copiate imediat, fara sa
-    // fie nevoie ca adminul sa le caute in tabel.
-    const box = document.getElementById('invite-result');
-    box.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'banner';
-    const head = document.createElement('b');
-    head.textContent = 'Coduri proaspăt generate — copiază-le acum:';
-    wrap.appendChild(head);
-    const list = document.createElement('div');
-    list.className = 'code-list';
-    for (const c of created) {
-      const chip = document.createElement('code');
-      chip.className = 'code-chip';
-      chip.textContent = c.code;
-      list.appendChild(chip);
-    }
-    wrap.appendChild(list);
-
-    if (created.length > 1) {
-      const all = document.createElement('button');
-      all.type = 'button';
-      all.className = 'btn btn--ghost btn--sm';
-      all.textContent = 'Copiază-le pe toate';
-      all.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(created.map((c) => c.code).join('\n'));
-          all.textContent = 'Copiate ✓';
-          setTimeout(() => { all.textContent = 'Copiază-le pe toate'; }, 1500);
-        } catch { toast('Nu am putut copia.', 'warn'); }
-      });
-      wrap.appendChild(all);
-    }
-
-    box.appendChild(wrap);
-    form.reset();
-    document.getElementById('i-count').value = '1';
-    inviteFilter = 'all';
-    await loadInvites();
-  });
-});
-
-document.getElementById('invite-filters')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-filter]');
-  if (!btn) return;
-  inviteFilter = btn.dataset.filter;
-  loadInvites();
-});
-
-// ---------------------------------------------------------------------
-// INIT
-// ---------------------------------------------------------------------
-if (await guard()) {
-  await renderNav('/admin');
-  initTabs();
-  await loadStats();
-}
-
-// ---------------------------------------------------------------------
-// CERERI DE CODURI (de la vizitatori)
-//
-// Aprobarea genereaza AUTOMAT un cod de invitație: codul pleaca spre
-// cerut prin biletul sau (pagina de login → „Verifică starea”), iar in
-// tabel apare si ca sa-l poata copia adminul, de pilda pentru Discord.
-// ---------------------------------------------------------------------
-const REQ_STATUS = {
-  pending:  { label: 'În așteptare', cls: 'pill pill--banned' },
-  approved: { label: 'Aprobată',     cls: 'pill pill--ok' },
-  rejected: { label: 'Respinsă',     cls: 'pill pill--user' },
-};
-
-async function loadInviteRequests() {
-  const tbody = document.querySelector('#requests-table tbody');
-  if (!tbody) return;
-
-  const res = await api('/admin/invite-requests');
-  if (!res.ok) {
-    tbody.innerHTML = '';
-    tbody.appendChild(emptyRow(5, res.data?.error || 'Nu am putut încărca cererile.'));
-    return;
-  }
-
-  const rows = res.data.requests || [];
-
-  // Badge pe tab: adminul vede din prima dacă așteaptă cineva.
-  const tab = document.getElementById('tab-invites');
-  if (tab) {
-    const pending = res.data.pending || 0;
-    tab.textContent = pending > 0 ? `🎟️ Invitații (${pending} cereri)` : '🎟️ Invitații';
-  }
-
-  tbody.innerHTML = '';
-  if (!rows.length) {
-    tbody.appendChild(emptyRow(5, 'Nicio cerere de cod încă. Cineva va scrie curând — cererile apar aici automat.'));
-    return;
-  }
-
-  for (const r of rows) {
-    const tr = document.createElement('tr');
-
-    const tdEmail = document.createElement('td');
-    tdEmail.textContent = r.email;
-    tr.appendChild(tdEmail);
-
-    const tdMsg = document.createElement('td');
-    tdMsg.textContent = r.message;
-    tdMsg.title = r.message;
-    tdMsg.style.maxWidth = '340px';
-    tr.appendChild(tdMsg);
-
-    const tdDate = document.createElement('td');
-    tdDate.textContent = String(r.created_at || '').slice(0, 16);
-    tr.appendChild(tdDate);
-
-    const tdStatus = document.createElement('td');
-    const st = REQ_STATUS[r.status] || { label: r.status, cls: 'pill' };
-    const pill = document.createElement('span');
-    pill.className = st.cls;
-    pill.textContent = st.label;
-    tdStatus.appendChild(pill);
-    if (r.status === 'approved' && r.invite_code) {
-      const codeEl = document.createElement('code');
-      codeEl.className = 'code-chip';
-      codeEl.textContent = r.invite_code;
-      tdStatus.appendChild(codeEl);
-    }
-    tr.appendChild(tdStatus);
-
-    const tdAct = document.createElement('td');
-    if (r.status === 'pending') {
-      const ok = document.createElement('button');
-      ok.type = 'button';
-      ok.className = 'btn btn--sm btn--accent';
-      ok.textContent = 'Aprobă';
-      ok.addEventListener('click', () => decideRequest(r.id, 'approve', tr));
-      const no = document.createElement('button');
-      no.type = 'button';
-      no.className = 'btn btn--sm btn--ghost';
-      no.textContent = 'Respinge';
-      no.addEventListener('click', () => decideRequest(r.id, 'reject', tr));
-      tdAct.append(ok, ' ', no);
-    } else {
-      tdAct.textContent = '—';
-    }
-    tr.appendChild(tdAct);
-
-    tbody.appendChild(tr);
-  }
-}
-
-async function decideRequest(id, action, tr) {
-  const res = await api('/admin/invite-requests', { method: 'POST', body: { id, action } });
-  if (!res.ok) { toast(res.data?.error || 'Decizia nu a putut fi salvată', 'err'); return; }
-
-  if (action === 'approve') {
-    toast(`Cod generat: ${res.data.invite_code} — cerutul îl vede cu biletul său.`, 'ok');
-  } else {
-    toast('Cerere respinsă.', 'ok');
-  }
-  loadInviteRequests();
-}
-
-// ---------------------------------------------------------------------
 // GRADE & STAFF: teme de grade (din orice serie) + moderatori
 // ---------------------------------------------------------------------
 async function loadRanks() {
@@ -737,3 +356,87 @@ function initReports() {
 }
 
 initReports();
+
+// ---------------------------------------------------------------------
+// JURNAL
+// ---------------------------------------------------------------------
+async function loadLog() {
+  const res = await api('/admin/log?limit=100');
+  if (!res.ok) { toast(res.data?.error || 'Eroare la încărcarea jurnalului', 'err'); return; }
+
+  fillTable(
+    'log-table',
+    ['Data', 'Admin', 'Acțiune', 'Țintă', 'Detalii'],
+    res.data.log || [],
+    (l) => [l.created_at, l.admin_name, l.action, `${l.target_type || ''}${l.target_id ? ' #' + l.target_id : ''}`, l.details || ''],
+    'Jurnalul e gol.'
+  );
+}
+
+// ---------------------------------------------------------------------
+// HELPERE DOM
+// ---------------------------------------------------------------------
+function cell(value) {
+  const td = document.createElement('td');
+  td.textContent = value ?? '';
+  return td;
+}
+
+function pill(text, cls) {
+  const td = document.createElement('td');
+  const span = document.createElement('span');
+  span.className = `pill ${cls || ''}`;
+  span.textContent = text;
+  td.appendChild(span);
+  return td;
+}
+
+function actionsCell(items) {
+  const td = document.createElement('td');
+  const wrap = document.createElement('div');
+  wrap.className = 'actions';
+
+  for (const item of items) {
+    if (item.href) {
+      const a = document.createElement('a');
+      a.className = item.cls;
+      a.href = item.href;
+      a.textContent = item.label;
+      wrap.appendChild(a);
+      continue;
+    }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = item.cls;
+    b.textContent = item.label;
+    b.disabled = !!item.disabled;
+    if (item.onClick) {
+      b.addEventListener('click', async (e) => {
+        await withBusy(e.currentTarget, item.onClick);
+      });
+    }
+    wrap.appendChild(b);
+  }
+
+  td.appendChild(wrap);
+  return td;
+}
+
+function emptyRow(colspan, text) {
+  const tr = document.createElement('tr');
+  const td = document.createElement('td');
+  td.colSpan = colspan;
+  td.style.color = 'var(--text-dim)';
+  td.textContent = text;
+  tr.appendChild(td);
+  return tr;
+}
+
+// ---------------------------------------------------------------------
+// INIT
+// ---------------------------------------------------------------------
+if (await guard()) {
+  await renderNav('/admin');
+  initTabs();
+  await loadStats();
+}

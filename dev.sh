@@ -61,15 +61,13 @@ fi
 # lasand wrangler.toml pe configuratia locala (adica deploy-ul urmator
 # ar publica bindinguri DO gresite).
 #
-# Plafoanele buget-0 (LIMIT_USERS / LIMIT_SERIES) si modul de inregistrare
-# (REGISTRATION_MODE) se pot suprascrie din mediu pentru faza de teste care
-# simuleaza o comunitate plina pe invitație. In productie variabilele nu
-# exista: tavan 1000 si înregistrare deschisa.
+# Plafoanele buget-0 (LIMIT_USERS / LIMIT_SERIES) se pot suprascrie din
+# mediu pentru faza de teste care simuleaza o comunitate plina. In
+# productie variabilele nu exista, deci tavanul ramane 1000.
 set +e
 BIND=()
 [ -n "${LIMIT_USERS:-}" ] && BIND+=(--binding "LIMIT_USERS=$LIMIT_USERS")
 [ -n "${LIMIT_SERIES:-}" ] && BIND+=(--binding "LIMIT_SERIES=$LIMIT_SERIES")
-[ -n "${REGISTRATION_MODE:-}" ] && BIND+=(--binding "REGISTRATION_MODE=$REGISTRATION_MODE")
 $W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e
