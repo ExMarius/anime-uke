@@ -16,6 +16,11 @@ async function setupInviteGate() {
   const input = document.getElementById('invite_code');
   const form = document.getElementById('auth-form');
 
+  // Cod primit prin cerere (?code=... de pe pagina de login): îl punem
+  // direct în câmp, ca userul să nu mai scrie manual.
+  const prefill = new URLSearchParams(location.search).get('code');
+  if (prefill && input) input.value = prefill.trim().toUpperCase();
+
   const res = await api('/auth/register-options');
   // La eroare alegem varianta stricta: cerem codul. E mai sigur decat sa
   // lasam inregistrarile libere din cauza unui apel esuat.

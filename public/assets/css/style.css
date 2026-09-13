@@ -1669,3 +1669,36 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   line-height: 1; user-select: none;
 }
 .msg--own .msg__avatar { border-color: var(--accent); }
+
+/* ---------------------------------------------------------------------
+   Cerere de cod de invitație (pagina de login)
+   Formular + verificare cu bilet; rezultatele vin ca text, nu HTML.
+   --------------------------------------------------------------------- */
+.req-code {
+  margin-top: 1rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: .65rem .9rem;
+  background: var(--surface-2, transparent);
+}
+.req-code summary { cursor: pointer; color: var(--dim); font-size: .86rem; }
+.req-code summary b { color: var(--accent-hi, var(--accent)); }
+.req-code summary:hover { color: var(--text); }
+.req-code form:first-of-type { margin-top: .8rem; }
+.req-code form + .req-result + form,
+.req-code form + form { margin-top: .9rem; padding-top: .9rem; border-top: 1px dashed var(--line-soft); }
+.req-result {
+  margin-top: .7rem;
+  padding: .65rem .8rem;
+  border-radius: 10px;
+  background: var(--surface, #14100e);
+  border: 1px solid var(--line-soft);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.req-result p { margin: 0 0 .35rem; }
+.req-result p:last-child { margin-bottom: 0; }
+.req-result b { color: var(--accent-hi, var(--accent)); letter-spacing: .03em; }
+.req-result--ok { border-color: #2c5c33; }
+.req-result--err { border-color: #7a2030; }
+.req-result .btn { margin-top: .45rem; }

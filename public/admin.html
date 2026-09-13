@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <meta name="robots" content="noindex,nofollow">
   <title>Admin • anime-uke</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎌</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
   <link rel="stylesheet" href="/assets/css/style.css">
   <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
        pentru paginile fara efecte secundare la load (series/profile).
@@ -103,6 +103,20 @@
         <table id="invites-table">
           <thead><tr>
             <th>Cod</th><th>Notă</th><th>Status</th><th>Creat de</th><th>Creat la</th><th>Acțiuni</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section__head">
+        <h2 class="section__title">Cereri de coduri (de la vizitatori)</h2>
+        <button class="btn btn--sm btn--ghost" type="button" id="requests-refresh">Reîmprospătează</button>
+      </div>
+      <p class="hint">Cineva vrea să intre și nu are cod? „Aprobă" generează <b>automat</b> un cod de invitație — cerutul îl vede pe pagina de login, cu biletul primit la trimitere.</p>
+      <div class="box table-wrap">
+        <table id="requests-table">
+          <thead><tr>
+            <th>Email</th><th>Motivul</th><th>Data</th><th>Status</th><th>Acțiuni</th>
           </tr></thead>
           <tbody></tbody>
         </table>

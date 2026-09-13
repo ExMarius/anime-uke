@@ -30,6 +30,7 @@ const PUBLIC_API = new Set([
   '/api/auth/register-options',
   '/api/auth/logout',
   '/api/auth/me',
+  '/api/invite-requests',
 ]);
 
 function isPublic(path) {
@@ -240,6 +241,23 @@ async function serveStatic(request, env) {
       const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
       return followed || jsonResponse({ error: 'Not found' }, 404);
     }
+
+    // Cache pe assete: JS/CSS-ul e versionat cu ?v=<commit> la fiecare deploy,
+    // deci URL-ul se schimba cand se schimba si continutul -> „immutable" e
+    // sigur si scurge zero continut vechi. Imaginile din /assets/img/ si
+    // coperțile NU au versiune in URL, deci primesc cache o saptamana:
+    // vizitatorii recurenți nu le redescarcă la fiecare navigare, iar un
+    // eventual inlocuit se propaga repede.
+    const immutable = path.startsWith('/assets/') && !path.startsWith('/assets/img/');
+    const medium = path.startsWith('/assets/img/') || path.startsWith('/covers/');
+    if ((immutable || medium) && res.status === 200) {
+      const headers = new Headers(res.headers);
+      headers.set('Cache-Control', immutable
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=604800');
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    }
+
     return res;
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client

@@ -35,7 +35,7 @@ async function guard() {
 const LOADERS = {
   stats: loadStats,
   users: loadUsers,
-  invites: loadInvites,
+  invites: () => Promise.all([loadInvites(), loadInviteRequests()]),
   ranks: loadRanks,
   reports: loadReports,
   log: loadLog,
@@ -53,6 +53,9 @@ function selectTab(tab) {
   document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
   document.querySelectorAll('.panel').forEach((p) => { p.hidden = p.id !== `panel-${key}`; });
   LOADERS[key]?.();
+
+// Refresh manual pentru cererile de coduri (secțiunea Invitații).
+document.getElementById('requests-refresh')?.addEventListener('click', () => loadInviteRequests());
 }
 
 // ---------------------------------------------------------------------
@@ -473,6 +476,110 @@ if (await guard()) {
   await renderNav('/admin');
   initTabs();
   await loadStats();
+}
+
+// ---------------------------------------------------------------------
+// CERERI DE CODURI (de la vizitatori)
+//
+// Aprobarea genereaza AUTOMAT un cod de invitație: codul pleaca spre
+// cerut prin biletul sau (pagina de login → „Verifică starea”), iar in
+// tabel apare si ca sa-l poata copia adminul, de pilda pentru Discord.
+// ---------------------------------------------------------------------
+const REQ_STATUS = {
+  pending:  { label: 'În așteptare', cls: 'pill pill--banned' },
+  approved: { label: 'Aprobată',     cls: 'pill pill--ok' },
+  rejected: { label: 'Respinsă',     cls: 'pill pill--user' },
+};
+
+async function loadInviteRequests() {
+  const tbody = document.querySelector('#requests-table tbody');
+  if (!tbody) return;
+
+  const res = await api('/admin/invite-requests');
+  if (!res.ok) {
+    tbody.innerHTML = '';
+    tbody.appendChild(emptyRow(5, res.data?.error || 'Nu am putut încărca cererile.'));
+    return;
+  }
+
+  const rows = res.data.requests || [];
+
+  // Badge pe tab: adminul vede din prima dacă așteaptă cineva.
+  const tab = document.getElementById('tab-invites');
+  if (tab) {
+    const pending = res.data.pending || 0;
+    tab.textContent = pending > 0 ? `🎟️ Invitații (${pending} cereri)` : '🎟️ Invitații';
+  }
+
+  tbody.innerHTML = '';
+  if (!rows.length) {
+    tbody.appendChild(emptyRow(5, 'Nicio cerere de cod încă. Cineva va scrie curând — cererile apar aici automat.'));
+    return;
+  }
+
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+
+    const tdEmail = document.createElement('td');
+    tdEmail.textContent = r.email;
+    tr.appendChild(tdEmail);
+
+    const tdMsg = document.createElement('td');
+    tdMsg.textContent = r.message;
+    tdMsg.title = r.message;
+    tdMsg.style.maxWidth = '340px';
+    tr.appendChild(tdMsg);
+
+    const tdDate = document.createElement('td');
+    tdDate.textContent = String(r.created_at || '').slice(0, 16);
+    tr.appendChild(tdDate);
+
+    const tdStatus = document.createElement('td');
+    const st = REQ_STATUS[r.status] || { label: r.status, cls: 'pill' };
+    const pill = document.createElement('span');
+    pill.className = st.cls;
+    pill.textContent = st.label;
+    tdStatus.appendChild(pill);
+    if (r.status === 'approved' && r.invite_code) {
+      const codeEl = document.createElement('code');
+      codeEl.className = 'code-chip';
+      codeEl.textContent = r.invite_code;
+      tdStatus.appendChild(codeEl);
+    }
+    tr.appendChild(tdStatus);
+
+    const tdAct = document.createElement('td');
+    if (r.status === 'pending') {
+      const ok = document.createElement('button');
+      ok.type = 'button';
+      ok.className = 'btn btn--sm btn--accent';
+      ok.textContent = 'Aprobă';
+      ok.addEventListener('click', () => decideRequest(r.id, 'approve', tr));
+      const no = document.createElement('button');
+      no.type = 'button';
+      no.className = 'btn btn--sm btn--ghost';
+      no.textContent = 'Respinge';
+      no.addEventListener('click', () => decideRequest(r.id, 'reject', tr));
+      tdAct.append(ok, ' ', no);
+    } else {
+      tdAct.textContent = '—';
+    }
+    tr.appendChild(tdAct);
+
+    tbody.appendChild(tr);
+  }
+}
+
+async function decideRequest(id, action, tr) {
+  const res = await api('/admin/invite-requests', { method: 'POST', body: { id, action } });
+  if (!res.ok) { toast(res.data?.error || 'Decizia nu a putut fi salvată', 'err'); return; }
+
+  if (action === 'approve') {
+    toast(`Cod generat: ${res.data.invite_code} — cerutul îl vede cu biletul său.`, 'ok');
+  } else {
+    toast('Cerere respinsă.', 'ok');
+  }
+  loadInviteRequests();
 }
 
 // ---------------------------------------------------------------------

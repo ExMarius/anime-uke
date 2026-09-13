@@ -77,7 +77,11 @@ check('seria 2 intra (2/2)', r.status === 201, JSON.stringify(r.data));
 r = await req(admin, 'POST', '/api/admin/series', { title: 'Seria trei', status: 'ongoing', year: 2026 });
 check('a 3-a serie → 403 cu mesaj de limită', r.status === 403 && /limita de 2 de anime-uri/i.test(r.data?.error || ''), JSON.stringify(r.data));
 
-// 7. Stats: plafoanele ajung la panoul admin.
+// 7. Cu comunitatea plină, cererile de coduri se închid și ele.
+r = await req(jar(), 'POST', '/api/invite-requests', { email: 'poftitor@test.ro', message: 'As vrea un cod de invitație, vă rog frumos.' });
+check('Comunitate plină → cererea de cod refuzată clar', r.status === 403 && /limita de 3 de conturi/i.test(r.data?.error || ''), JSON.stringify(r.data));
+
+// 8. Stats: plafoanele ajung la panoul admin.
 r = await req(admin, 'GET', '/api/admin/stats');
 check('stats: limit_users=3, limit_series=2, totaluri corecte',
   r.data?.stats?.limit_users === 3 && r.data?.stats?.limit_series === 2 && r.data?.stats?.total_users === 3,
