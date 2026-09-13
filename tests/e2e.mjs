@@ -71,6 +71,19 @@ console.log('\n=== 1. VIZITATOR ===');
   const s = await req(j, 'GET', '/api/series');
   check('Site public: GET /api/series fara cont → 200', s.status === 200 && Array.isArray(s.data?.series), `status=${s.status}`);
 
+  const gen = await req(j, 'GET', '/api/genres');
+  check('Genuri publice → 200 + listă', gen.status === 200 && Array.isArray(gen.data?.genres), JSON.stringify(gen.data)?.slice(0, 120));
+
+  const rec = await req(j, 'GET', '/api/recent');
+  check('Ultimele episoade publice → 200, max 8', rec.status === 200 && (rec.data?.items || []).length <= 8, JSON.stringify(rec.data)?.slice(0, 140));
+
+  const f1 = await req(j, 'GET', '/api/series?status=completed');
+  check('Filtru status=completed → 200', f1.status === 200 && (f1.data?.series || []).every((x) => x.status === 'completed'), `n=${f1.data?.series?.length}`);
+  const f2 = await req(j, 'GET', '/api/series?gen=acțiune');
+  check('Filtru gen → 200 (filtru valid sintactic)', f2.status === 200 && Array.isArray(f2.data?.series), `n=${f2.data?.series?.length}`);
+  const f3 = await req(j, 'GET', '/api/series?status=hack');
+  check('Filtru status invalid → ignorat (200)', f3.status === 200, `status=${f3.status}`);
+
   const w = await req(j, 'POST', '/api/progress', { episode_id: 1, seconds: 30 });
   check('POST /api/progress fara login → 401', w.status === 401, `status=${w.status}`);
 

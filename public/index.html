@@ -95,6 +95,14 @@
       </div>
     </section>
 
+    <!-- Ultimele episoade adăugate (public — standard pe site-urile de anime) -->
+    <section class="section" id="recent-section" hidden>
+      <div class="section__head">
+        <h2 class="section__title">Ultimele episoade</h2>
+      </div>
+      <div class="recent-row" id="recent-row"></div>
+    </section>
+
     <section class="section" id="serii">
       <div class="section__head">
         <h2 class="section__title">Serii disponibile</h2>
@@ -103,6 +111,20 @@
           <select class="select select--sm" id="sort-select"></select>
           <span class="section__count" id="series-count">Se încarcă…</span>
         </div>
+      </div>
+      <!-- Filtre de catalog, modelul site-urilor de anime: gen + status. -->
+      <div class="cat-filters" id="cat-filters">
+        <label class="sr-only" for="genre-select">Filtrează pe gen</label>
+        <select class="select select--sm" id="genre-select">
+          <option value="">Toate genurile</option>
+        </select>
+        <label class="sr-only" for="status-select">Filtrează pe status</label>
+        <select class="select select--sm" id="status-select">
+          <option value="">Toate</option>
+          <option value="ongoing">În difuzare</option>
+          <option value="completed">Finalizate</option>
+        </select>
+        <button class="btn btn--ghost btn--sm" type="button" id="filter-reset" hidden>Șterge filtrele ✕</button>
       </div>
       <div id="series-grid" class="grid" aria-live="polite"></div>
       <!--
@@ -177,6 +199,12 @@
       </form>
     </div>
   </div>
+
+
+  <footer class="site-foot">
+    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit, fără reclame.</p>
+    <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
+  </footer>
 
   <script type="module" src="/assets/js/page-index.js"></script>
 </body>

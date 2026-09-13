@@ -1689,3 +1689,92 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 @media (max-width: 560px) {
   .nudge { flex-direction: column; align-items: flex-start; gap: .55rem; }
 }
+
+/* ---------------------------------------------------------------------
+   Catalog: filtre (gen + status) — standard pe site-urile de anime
+   --------------------------------------------------------------------- */
+.cat-filters {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 .9rem;
+}
+.cat-filters .select { min-width: 160px; }
+
+/* Badge „RO SUB" — eticheta de nișă a site-urilor românești */
+.pill-ro {
+  position: absolute;
+  top: .45rem;
+  left: .45rem;
+  padding: .14rem .4rem;
+  border-radius: 6px;
+  background: rgba(12, 7, 9, .82);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #ffd166;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  pointer-events: none;
+}
+.poster .pill-ro { z-index: 2; }
+
+/* „Ultimele episoade" — banda orizontală de carduri mici */
+.recent-row {
+  display: flex;
+  gap: .7rem;
+  overflow-x: auto;
+  padding: .2rem .2rem .6rem;
+  scroll-snap-type: x proximity;
+}
+.recent-card {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+  text-decoration: none;
+  color: var(--text);
+}
+.recent-card__art {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+}
+.recent-card__art img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .45s cubic-bezier(.2,.8,.3,1);
+}
+.recent-card:hover .recent-card__art img { transform: scale(1.07); }
+.recent-card__ep {
+  position: absolute;
+  right: .35rem; bottom: .35rem;
+  padding: .1rem .35rem;
+  border-radius: 6px;
+  background: rgba(220, 20, 60, .92);
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 900;
+}
+.recent-card__title {
+  margin: .4rem 0 0;
+  font-size: .76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer public — despre + disclaimer (standard pe site-urile de anime) */
+.site-foot {
+  margin: 2.5rem auto 0;
+  max-width: 1100px;
+  padding: 1.2rem 1rem 2rem;
+  border-top: 1px solid var(--line-soft);
+  color: var(--dim);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+.site-foot p { margin: 0 0 .35rem; }
+.site-foot b { color: var(--text); }

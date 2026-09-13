@@ -224,6 +224,7 @@ async function load() {
   }
 
   setHead(res.data.series);
+  paintSeo(res.data.series, res.data);
   paintRating(res.data);
   paintSubscribe(res.data);
 
@@ -237,6 +238,52 @@ async function load() {
 
   renderRanges();
   renderEpisodes(res.data.episodes || []);
+}
+
+// ---------------------------------------------------------------------
+// SEO: date structurate (JSON-LD) + meta description cu descrierea
+// seriei. Așa înțelege Google că pagina e un serial TV cu genuri, an și
+// rating — exact cum indexează site-urile mari de anime.
+// ---------------------------------------------------------------------
+function paintSeo(series, d) {
+  try {
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'description';
+      document.head.appendChild(meta);
+    }
+    const desc = String(series.description || '').slice(0, 160);
+    meta.content = desc || `${series.title} — anime subtitrat în română pe anime-uke.`;
+
+    const old = document.getElementById('ld-series');
+    if (old) old.remove();
+    const ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.id = 'ld-series';
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'TVSeries',
+      name: series.title,
+      description: series.description || undefined,
+      image: series.cover_image || undefined,
+      genre: series.genre ? String(series.genre).split(',').map((g) => g.trim()).filter(Boolean) : undefined,
+      numberOfEpisodes: d.episode_count || undefined,
+      startDate: series.year ? String(series.year) : undefined,
+      inLanguage: 'ro',
+    };
+    if (d.rating_count > 0) {
+      data.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: d.rating_average,
+        ratingCount: d.rating_count,
+        bestRating: 10,
+        worstRating: 1,
+      };
+    }
+    ld.textContent = JSON.stringify(data);
+    document.head.appendChild(ld);
+  } catch { /* SEO-ul nu are voie sa strice pagina */ }
 }
 
 // ---------------------------------------------------------------------

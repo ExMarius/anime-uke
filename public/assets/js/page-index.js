@@ -14,6 +14,8 @@ let allSeries = [];      // seriile incarcate pana acum (toate paginile)
 let page = 1;
 let query = '';
 let sort = 'latest';
+let genreFilter = '';
+let statusFilter = '';
 let sortsLoaded = false;
 let searchTimer = null;
 
@@ -74,6 +76,12 @@ function seriesCard(s, idx = 0) {
   status.className = `pill-pos${s.status === 'completed' ? ' pill-pos--ok' : ''}`;
   status.textContent = s.status === 'completed' ? 'Finalizat' : 'În difuzare';
   poster.appendChild(status);
+
+  // Eticheta de nișă standard pe site-urile RO: subtitrat în română.
+  const ro = document.createElement('span');
+  ro.className = 'pill-ro';
+  ro.textContent = 'RO SUB';
+  poster.appendChild(ro);
 
   const count = document.createElement('span');
   count.className = 'pill-count';
@@ -170,12 +178,101 @@ onPulse((p) => {
 /**
  * @param {boolean} append  true = adauga pagina la ce e deja afisat
  */
+// ---------------------------------------------------------------------
+// FILTRE DE CATALOG (gen + status) — modelul site-urilor de anime.
+// Schimbarea unui filtru readuce pagina 1 cu noul set de parametri.
+// ---------------------------------------------------------------------
+function initCatalogFilters() {
+  const gsel = document.getElementById('genre-select');
+  const ssel = document.getElementById('status-select');
+  const reset = document.getElementById('filter-reset');
+  if (!gsel || !ssel || !reset) return;
+
+  // Genurile vin o singura data, din cache-ul serverului (10 min).
+  api('/genres').then((res) => {
+    if (!res.ok || !res.data?.genres?.length) return;
+    for (const g of res.data.genres) {
+      const o = document.createElement('option');
+      o.value = g;
+      o.textContent = g;
+      gsel.appendChild(o);
+    }
+  }).catch(() => { /* filtrele rămân cu opțiunea „Toate genurile" */ });
+
+  const apply = () => {
+    genreFilter = gsel.value;
+    statusFilter = ssel.value;
+    reset.hidden = !genreFilter && !statusFilter;
+    page = 1;
+    load();
+  };
+  gsel.addEventListener('change', apply);
+  ssel.addEventListener('change', apply);
+  reset.addEventListener('click', () => {
+    gsel.value = '';
+    ssel.value = '';
+    apply();
+  });
+}
+
+// ---------------------------------------------------------------------
+// ULTIMELE EPISOADE — secțiunea clasică a site-urilor de anime.
+// Publică, din cache-ul serverului (60s), zero citiri în plus pe D1.
+// ---------------------------------------------------------------------
+async function loadRecent() {
+  const section = document.getElementById('recent-section');
+  const row = document.getElementById('recent-row');
+  if (!section || !row) return;
+
+  const res = await api('/recent');
+  const items = res.ok ? res.data?.items || [] : [];
+  if (!items.length) return;
+
+  row.innerHTML = '';
+  for (const it of items) {
+    const a = document.createElement('a');
+    a.className = 'recent-card rv';
+    a.href = `/episode?id=${encodeURIComponent(it.id)}`;
+
+    const art = document.createElement('div');
+    art.className = 'recent-card__art';
+    if (it.cover_image) {
+      const img = document.createElement('img');
+      img.src = safeUrl(it.cover_image, '');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      art.appendChild(img);
+    } else {
+      art.appendChild(genPoster(it.series_title));
+    }
+    const ep = document.createElement('span');
+    ep.className = 'recent-card__ep';
+    ep.textContent = `EP ${it.episode_number}`;
+    art.appendChild(ep);
+    a.appendChild(art);
+
+    const t = document.createElement('p');
+    t.className = 'recent-card__title';
+    t.textContent = it.series_title || 'Fără titlu';
+    a.appendChild(t);
+
+    row.appendChild(a);
+  }
+  section.hidden = false;
+  observeReveals(row);
+}
+
+
+
 async function load({ append = false, silent = false } = {}) {
   const grid = document.getElementById('series-grid');
   if (!append && !silent) skeletons(Math.min(PER_PAGE, 10));
 
   const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE), sort });
   if (query) params.set('q', query);
+  if (genreFilter) params.set('gen', genreFilter);
+  if (statusFilter) params.set('status', statusFilter);
 
   const res = await api(`/series?${params}`);
 
@@ -431,6 +528,8 @@ async function loadTops() {
   sec.hidden = false;
 }
 
+initCatalogFilters();
+loadRecent().catch(() => { /* secțiunea e optională */ });
 await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale */ })]);
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 startGuestNudge();

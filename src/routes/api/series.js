@@ -46,6 +46,23 @@ export async function onRequestGet(context) {
     params.push(like, like);
   }
 
+  // --- filtre de catalog (modelul site-urilor de anime: genuri, status, an) ---
+  const genRaw = String(url.searchParams.get('gen') || '').trim().slice(0, 40);
+  if (genRaw) {
+    where.push(`s.genre LIKE ? ESCAPE '\\'`);
+    params.push(`%${escapeLike(genRaw)}%`);
+  }
+  const statusRaw = String(url.searchParams.get('status') || '');
+  if (statusRaw === 'ongoing' || statusRaw === 'completed') {
+    where.push('s.status = ?');
+    params.push(statusRaw);
+  }
+  const yearRaw = Number(url.searchParams.get('year'));
+  if (Number.isInteger(yearRaw) && yearRaw >= 1950 && yearRaw <= 2100) {
+    where.push('s.year = ?');
+    params.push(yearRaw);
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   try {
