@@ -83,7 +83,7 @@ stop_server
 echo
 echo "── reset baza locala (faza plafoane) ──"
 rm -rf .wrangler/state
-start_server LIMIT_USERS=4 LIMIT_SERIES=2
+start_server LIMIT_USERS=4 LIMIT_SERIES=2 CANONICAL_ORIGIN=https://anime-uke.test
 
 echo
 echo "════════ caps-e2e (plafoane buget-0) ════════"

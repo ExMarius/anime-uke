@@ -68,6 +68,7 @@ set +e
 BIND=()
 [ -n "${LIMIT_USERS:-}" ] && BIND+=(--binding "LIMIT_USERS=$LIMIT_USERS")
 [ -n "${LIMIT_SERIES:-}" ] && BIND+=(--binding "LIMIT_SERIES=$LIMIT_SERIES")
+[ -n "${CANONICAL_ORIGIN:-}" ] && BIND+=(--binding "CANONICAL_ORIGIN=$CANONICAL_ORIGIN")
 $W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e

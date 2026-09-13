@@ -28,7 +28,7 @@ async function req(j, method, path, body) {
   let data = null;
   const text = await res.text();
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text.slice(0, 120) }; }
-  return { status: res.status, data };
+  return { status: res.status, data, raw: text };
 }
 function check(name, cond, detail = '') {
   if (cond) { pass++; console.log(`  ✅ ${name}`); }
@@ -66,6 +66,20 @@ r = await req(admin, 'GET', '/api/admin/stats');
 check('stats: limit_users=4, limit_series=2, totaluri corecte',
   r.data?.stats?.limit_users === 4 && r.data?.stats?.limit_series === 2 && r.data?.stats?.total_users === 4,
   JSON.stringify(r.data?.stats));
+
+// ---------------------------------------------------------------------
+// Originea canonica: cu CANONICAL_ORIGIN setat (binding de test), sitemap-ul
+// si canonicele pointeaza spre domeniul declarat, nu spre originea cererii.
+// ---------------------------------------------------------------------
+{
+  const sm = await fetch(`${BASE}/sitemap.xml`);
+  const smText = await sm.text();
+  check('sitemap folosește CANONICAL_ORIGIN', smText.includes('https://anime-uke.test/serie/'), smText.slice(0, 140));
+
+  const sr = await fetch(`${BASE}/serie/1`);
+  const srText = await sr.text();
+  check('canonical + og:url folosesc CANONICAL_ORIGIN', srText.includes('https://anime-uke.test/serie/1'), srText.slice(0, 140));
+}
 
 console.log(`\nREZULTAT: ${pass} trecute, ${fail} esuate`);
 if (fail) { console.log(failures.map((f) => `  ✗ ${f}`).join('\n')); process.exit(1); }

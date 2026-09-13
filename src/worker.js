@@ -159,7 +159,7 @@ const SITEMAP_CACHE_MS = 60 * 60 * 1000;
 const sitemapCache = { at: 0, body: null };
 
 async function sitemapHandler(request, env) {
-  const origin = new URL(request.url).origin;
+  const origin = canonicalOrigin(env, request);
   const now = Date.now();
 
   if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
@@ -226,6 +226,18 @@ const DYNAMIC_PAGES = [
 // data indiferent cate pagini acceseaza.
 // ---------------------------------------------------------------------
 const SEO_CACHE_MS = 5 * 60 * 1000;
+
+/**
+ * Originea canonica pentru SEO (canonical, og:url, sitemap).
+ * Implicit originea cererii (ex. pages.dev). Cand ownerul adauga un domeniu
+ * propriu (gratuit DigitalPlat sau .ro platit), seteaza variabila
+ * CANONICAL_ORIGIN (ex. https://anime-uke.dpdns.org) in configurarea Pages —
+ * si TOATE referintele SEO comuta odata, fara modificari de cod.
+ */
+function canonicalOrigin(env, request) {
+  const raw = String(env.CANONICAL_ORIGIN || '').trim();
+  return raw.startsWith('http') ? raw.replace(/\/+$/, '') : new URL(request.url).origin;
+}
 const seoCache = new Map();   // id -> { at, row }
 
 async function seriesForSeo(env, id) {
@@ -255,8 +267,8 @@ function escAttr(v) {
 }
 
 /** Tagurile <head> generate pe server pentru o serie. */
-function seriesSeoTags(request, series) {
-  const origin = new URL(request.url).origin;
+function seriesSeoTags(env, request, series) {
+  const origin = canonicalOrigin(env, request);
   const canonical = `${origin}/serie/${series.id}`;
   const title = `${series.title} — Anime subtitrat în română online | Anime-Uke`;
   const desc = String(series.description || '').trim().slice(0, 160)
@@ -286,8 +298,8 @@ function seriesSeoTags(request, series) {
 }
 
 /** Injecteaza tagurile in HTML-ul paginii de serie (inlocuieste <title>). */
-function injectSeriesSeo(request, html, series) {
-  const tags = seriesSeoTags(request, series);
+function injectSeriesSeo(env, request, html, series) {
+  const tags = seriesSeoTags(env, request, series);
   const withTitle = html.replace(/<title>.*?<\/title>/i, '');
   return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
 }
@@ -354,7 +366,7 @@ async function serveStatic(request, env) {
         const headers = new Headers(res.headers);
         headers.delete('content-length');
         headers.delete('etag');
-        return new Response(injectSeriesSeo(request, html, series), { status: 200, headers });
+        return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
       }
     }
 
