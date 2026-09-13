@@ -1,48 +1,26 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 8d93ca1
+comanda: cf-relay/cmd.sh @ b1b1dd6
 ────────────────────────────────────
-── toate URL-urile media1/c.tenor din pagina ──
-https://media.tenor.com/45I418UopwsAAAA1/squad-seed-seed.webp
-https://media.tenor.com/45I418UopwsAAAAM/squad-seed-seed.gif
-https://media.tenor.com/45I418UopwsAAAP1/squad-seed-seed.mp4
-https://media.tenor.com/5js-qc7B2zoAAAA1/42-hitchhikers-guide-to-the-galaxy.webp
-https://media.tenor.com/5js-qc7B2zoAAAAM/42-hitchhikers-guide-to-the-galaxy.gif
-https://media.tenor.com/HHnqH0PmNEcAAAA1/42-percent-42percent.webp
-https://media.tenor.com/HHnqH0PmNEcAAAAM/42-percent-42percent.gif
-https://media.tenor.com/HHnqH0PmNEcAAAP1/42-percent-42percent.mp4
-https://media.tenor.com/NxI8_75GmTQAAAA1/moranguete-abacatudo.webp
-https://media.tenor.com/NxI8_75GmTQAAAAM/moranguete-abacatudo.gif
-https://media.tenor.com/NxI8_75GmTQAAAP1/moranguete-abacatudo.mp4
-https://media.tenor.com/T-weCEHq2BgAAAA1/life-the-universe-and-everything-hitchhikers-guide-to-the-galaxy.webp
-https://media.tenor.com/T-weCEHq2BgAAAAM/life-the-universe-and-everything-hitchhikers-guide-to-the-galaxy.gif
-https://media.tenor.com/rtMO2T0cQrEAAAPo/42.mp4
-https://media.tenor.com/uRp5MbV4XYIAAAA1/meaning-of-life-life-meme.webp
-https://media.tenor.com/uRp5MbV4XYIAAAAM/meaning-of-life-life-meme.gif
-https://media.tenor.com/uRp5MbV4XYIAAAP1/meaning-of-life-life-meme.mp4
-https://media.tenor.com/wVvJ6Lq26sQAAAA1/42-minka.webp
-https://media.tenor.com/wVvJ6Lq26sQAAAAM/42-minka.gif
-https://media1.tenor.com/m/rtMO2T0cQrEAAAAC/42.gif
-── care raspund cu imagine? ──
-200 image/webp  <-  https://media.tenor.com/45I418UopwsAAAA1/squad-seed-seed.webp
-200 image/gif  <-  https://media.tenor.com/45I418UopwsAAAAM/squad-seed-seed.gif
-200 video/mp4  <-  https://media.tenor.com/45I418UopwsAAAP1/squad-seed-seed.mp4
-200 image/webp  <-  https://media.tenor.com/5js-qc7B2zoAAAA1/42-hitchhikers-guide-to-the-galaxy.webp
-200 image/gif  <-  https://media.tenor.com/5js-qc7B2zoAAAAM/42-hitchhikers-guide-to-the-galaxy.gif
-200 image/webp  <-  https://media.tenor.com/HHnqH0PmNEcAAAA1/42-percent-42percent.webp
-200 image/gif  <-  https://media.tenor.com/HHnqH0PmNEcAAAAM/42-percent-42percent.gif
-200 video/mp4  <-  https://media.tenor.com/HHnqH0PmNEcAAAP1/42-percent-42percent.mp4
-200 image/webp  <-  https://media.tenor.com/NxI8_75GmTQAAAA1/moranguete-abacatudo.webp
-200 image/gif  <-  https://media.tenor.com/NxI8_75GmTQAAAAM/moranguete-abacatudo.gif
-200 video/mp4  <-  https://media.tenor.com/NxI8_75GmTQAAAP1/moranguete-abacatudo.mp4
-200 image/webp  <-  https://media.tenor.com/T-weCEHq2BgAAAA1/life-the-universe-and-everything-hitchhikers-guide-to-the-galaxy.webp
-200 image/gif  <-  https://media.tenor.com/T-weCEHq2BgAAAAM/life-the-universe-and-everything-hitchhikers-guide-to-the-galaxy.gif
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.gif
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.webp
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.mp4
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.gif
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.webp
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.mp4
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.gif
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.webp
+200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.mp4
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.gif
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.webp
+404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.mp4
+200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.gif
+200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.webp
+200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.mp4
+200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.gif
+200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.webp
 200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.mp4
-200 image/webp  <-  https://media.tenor.com/uRp5MbV4XYIAAAA1/meaning-of-life-life-meme.webp
-200 image/gif  <-  https://media.tenor.com/uRp5MbV4XYIAAAAM/meaning-of-life-life-meme.gif
-200 video/mp4  <-  https://media.tenor.com/uRp5MbV4XYIAAAP1/meaning-of-life-life-meme.mp4
-200 image/webp  <-  https://media.tenor.com/wVvJ6Lq26sQAAAA1/42-minka.webp
-200 image/gif  <-  https://media.tenor.com/wVvJ6Lq26sQAAAAM/42-minka.gif
-404 text/html  <-  https://media1.tenor.com/m/rtMO2T0cQrEAAAAC/42.gif
-── contentUrl din JSON-LD ──
-"contentUrl":"https:\u002F\u002Fmedia1.tenor.com\u002Fm\u002FrtMO2T0cQrEAAAAC\u002F42.gif"
-"contentUrl":"https:\u002F\u002Fmedia.tenor.com\u002FrtMO2T0cQrEAAAPo\u002F42.mp4"
+── webp AAAA1 e animat? (cautam chunk ANIM) ──
+-rw-r--r-- 1 runner runner 30256 Sep 13 17:12 /tmp/t.webp
+1
+── totusi: ce zice un GET pe m/ fara nume? ──
+404 text/html
