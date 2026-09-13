@@ -1,4 +1,5 @@
 import { json, errorResponse } from '../../../lib/http.js';
+import { DEFAULT_LIMIT_USERS, resolveLimit } from '../../../lib/limits.js';
 
 // =====================================================================
 // GET /api/auth/register-options
@@ -17,12 +18,15 @@ export async function onRequestGet(context) {
   try {
     const res = await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first();
     const userCount = res?.n ?? 0;
+    const maxUsers = resolveLimit(env, 'LIMIT_USERS', DEFAULT_LIMIT_USERS);
 
     return json({
       // Prima inregistrare e libera si devine admin; dupa aceea e nevoie de cod.
       inviteRequired: userCount > 0,
       bootstrap: userCount === 0,
       userCount,
+      // Plafon atins: pagina de inregistrare anunta din timp, nu doar la submit.
+      capacityFull: userCount >= maxUsers,
     }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {
     console.error('GET /api/auth/register-options esuat:', e?.message || e);

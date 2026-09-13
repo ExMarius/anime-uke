@@ -4,6 +4,7 @@ import { validateSeries, validateSeriesPatch, validatePositiveInt } from '../../
 import { logAdminAction } from '../../../lib/audit.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { parsePaging, parseQuery, parseSort, sortSql, sortOptions, escapeLike, readMeta, bumpMetaStmt, counterStmts } from '../../../lib/paging.js';
+import { DEFAULT_LIMIT_SERIES, resolveLimit, seriesFullMessage } from '../../../lib/limits.js';
 
 // =====================================================================
 // /api/admin/series — CRUD serii, doar pentru admini.
@@ -126,6 +127,15 @@ export async function onRequestPost(context) {
   if (!v.ok) return errorResponse(400, v.error);
 
   try {
+    // Plafonul catalogului: misiunea e buget 0, deci max LIMIT_SERIES serii.
+    // COUNT pe un tabel de max ~1000 randuri costa putin si e invocat doar
+    // la creare (operatiune rara, exclusiv admin).
+    const maxSeries = resolveLimit(env, 'LIMIT_SERIES', DEFAULT_LIMIT_SERIES);
+    const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM anime_series').first();
+    if ((cnt?.n ?? 0) >= maxSeries) {
+      return errorResponse(403, seriesFullMessage(maxSeries));
+    }
+
     const res = await env.DB
       .prepare(
         `INSERT INTO anime_series (title, description, cover_image, status, genre, year, created_by, episode_count)

@@ -28,6 +28,7 @@
 
 const HISTORY_LIMIT = 30;        // cerinta din spec: ultimele 30 la conectare
 const HISTORY_MEMORY_CAP = 60;   // pastram putin mai multe in memorie
+const CHAT_KEEP_LAST = 500;      // plafon buget 0: tabelul pastreaza doar ultimele 500
 const FLUSH_BATCH_SIZE = 10;
 const FLUSH_ALARM_MS = 15_000;
 const MAX_TOTAL_CONNECTIONS = 200;
@@ -234,15 +235,36 @@ export class ChatDO {
         `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, avatar)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
+      // Ordinea bind-urilor TREBUIE sa fie identica cu ordinea coloanelor de
+      // mai sus (bug istoric: avatarul ajungea in rank_label, iar avatarul
+      // salvat era „0"/„1" — istoricul de dupa reconectare era amestecat).
       await this.env.DB.batch(batch.map((m) =>
-        stmt.bind(m.user_id, m.username, m.message, m.created_at, m.avatar || '',
+        stmt.bind(m.user_id, m.username, m.message, m.created_at,
           m.rank_label || '', m.rank_icon || '', m.staff_role || '',
-          m.flair || '', m.name_gold ? 1 : 0)
+          m.flair || '', m.name_gold ? 1 : 0, m.avatar || '')
       ));
     } catch (e) {
       console.error('ChatDO flush esuat:', e?.message || e);
       // Repunem in buffer ca sa nu pierdem mesajele (max o data, ca sa nu creasca la infinit)
       if (batch.length <= FLUSH_BATCH_SIZE * 3) this.pending.unshift(...batch);
+      return;
+    }
+
+    // --- plafon de stocare (buget 0) ---
+    // Pastram doar ultimele CHAT_KEEP_LAST mesaje, ca tabelul sa nu creasca
+    // nelimitat intr-o comunitate de 1000 de oameni. Nu „uitam" istoria:
+    // interogarea de istoric citeaza oricum ultimele 30. O facem rar (1 din
+    // 20 flush-uri) ca sa nu ardem citiri D1 degeaba.
+    this.flushCount = (this.flushCount || 0) + 1;
+    if (this.flushCount % 20 === 1) {
+      try {
+        await this.env.DB.prepare(
+          `DELETE FROM chat_messages
+           WHERE id <= (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 1 OFFSET ?)`
+        ).bind(CHAT_KEEP_LAST - 1).run();
+      } catch (e) {
+        console.error('ChatDO prune esuat:', e?.message || e);
+      }
     }
   }
 

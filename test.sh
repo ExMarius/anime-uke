@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Ruleaza ambele suite locale pe o baza de date curata.
+# Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          e2e (API) + dom-smoke (pagini in jsdom)
+#   ./test.sh          e2e (API) + dom-smoke (pagini in jsdom) + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -11,6 +11,7 @@ cd "$(dirname "$0")"
 
 PORT=8788
 LOG=/tmp/anime-uke-dev.log
+DEV_PID=""
 
 cleanup() {
   if [ -n "${DEV_PID:-}" ] && kill -0 "$DEV_PID" 2>/dev/null; then
@@ -21,18 +22,32 @@ cleanup() {
 }
 trap cleanup EXIT
 
+start_server() {
+  # $@ = variabile de mediu pentru dev.sh (ex. LIMIT_USERS=3) — `env` le
+  # seteaza in procesul copil, ca wrangler sa le vada ca bindinguri.
+  echo "── pornesc dev.sh $* ──"
+  env "$@" ./dev.sh > "$LOG" 2>&1 &
+  DEV_PID=$!
+  for _ in $(seq 1 90); do
+    grep -q "Ready on" "$LOG" 2>/dev/null && break
+    kill -0 "$DEV_PID" 2>/dev/null || { echo "dev.sh a murit:"; tail -20 "$LOG"; exit 1; }
+    sleep 1
+  done
+  grep -q "Ready on" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG"; exit 1; }
+}
+
+stop_server() {
+  if [ -n "${DEV_PID:-}" ] && kill -0 "$DEV_PID" 2>/dev/null; then
+    pkill -P "$DEV_PID" 2>/dev/null
+    kill "$DEV_PID" 2>/dev/null
+    wait "$DEV_PID" 2>/dev/null
+    DEV_PID=""
+  fi
+}
+
 echo "── reset baza locala ──"
 rm -rf .wrangler/state
-
-echo "── pornesc dev.sh ──"
-./dev.sh > "$LOG" 2>&1 &
-DEV_PID=$!
-for _ in $(seq 1 90); do
-  grep -q "Ready on" "$LOG" 2>/dev/null && break
-  kill -0 "$DEV_PID" 2>/dev/null || { echo "dev.sh a murit:"; tail -20 "$LOG"; exit 1; }
-  sleep 1
-done
-grep -q "Ready on" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG"; exit 1; }
+start_server
 
 RC=0
 echo
@@ -59,6 +74,28 @@ if [ $DOM_RC -ne 0 ]; then
 fi
 [ "$DOM_RC" -eq 0 ] || RC=1
 
+# ---------------------------------------------------------------------
+# Faza 3: plafoanele buget-0. Repornim serverul pe o baza curata cu
+# tavane mici (3 conturi, 2 serii) ca sa simulam „comunitatea plina"
+# fara sa inseram 1000 de randuri.
+# ---------------------------------------------------------------------
+stop_server
 echo
-[ "$RC" -eq 0 ] && echo "✅ Ambele suite au trecut" || echo "❌ Exista esecuri"
+echo "── reset baza locala (faza plafoane) ──"
+rm -rf .wrangler/state
+start_server LIMIT_USERS=3 LIMIT_SERIES=2
+
+echo
+echo "════════ caps-e2e (plafoane buget-0) ════════"
+node tests/caps-e2e.mjs > /tmp/caps.log 2>&1
+CAPS_RC=$?
+tail -12 /tmp/caps.log
+if [ $CAPS_RC -ne 0 ]; then
+  echo "!! caps-e2e s-a oprit cu codul $CAPS_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/caps.log | tail -12
+fi
+[ "$CAPS_RC" -eq 0 ] || RC=1
+
+echo
+[ "$RC" -eq 0 ] && echo "✅ Toate suitele au trecut" || echo "❌ Exista esecuri"
 exit "$RC"

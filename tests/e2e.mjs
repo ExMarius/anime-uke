@@ -839,6 +839,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
   check('Statistici: total_users=3', s.data?.stats?.total_users === 3, JSON.stringify(s.data?.stats));
+  check('Statistici: plafoanele implicite sunt 1000/1000', s.data?.stats?.limit_users === 1000 && s.data?.stats?.limit_series === 1000, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
 
@@ -1187,7 +1188,12 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
       ws2.onerror = () => { clearTimeout(t); reject(new Error('ws error')); };
     });
     const mine = (init2.history || []).find((m) => m.message === 'Mesaj cu grad tematic');
+    // Pinteaza bugul istoric de ordine bind (avatarul ajungea in rank_label,
+    // iar in avatar se salva „0"/„1"): campurile trebuie sa fie la locul lor.
     check('Mesajele din chat poarta gradul tematic persistat', !!mine && typeof mine.rank_label === 'string' && mine.rank_label.length > 1, JSON.stringify(mine)?.slice(0, 140));
+    check('Istoricul salvat nu are campurile amestecate (avatar≠0/1, name_gold∈{0,1})',
+      !!mine && !['0', '1'].includes(mine.avatar) && (mine.name_gold === 0 || mine.name_gold === 1),
+      JSON.stringify(mine)?.slice(0, 140));
     check('Lista de online include gradul si rolul', (init2.online || []).some((o) => 'rank_label' in o && 'staff_role' in o), JSON.stringify(init2.online)?.slice(0, 140));
     ws2.close();
   } catch (e) {

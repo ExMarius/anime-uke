@@ -64,11 +64,12 @@ async function loadStats() {
   if (!res.ok) { toast(res.data?.error || 'Nu am putut încărca statisticile', 'err'); return; }
 
   const s = res.data.stats;
+  // Tavanele buget-0 direct pe carduri: adminul vede pe loc cat loc mai e.
   const cards = [
-    ['Utilizatori', s.total_users],
+    ['Utilizatori', `${s.total_users} / ${s.limit_users}`],
     ['Admini', s.total_admins],
     ['Banați', s.total_banned],
-    ['Serii', s.total_series],
+    ['Serii', `${s.total_series} / ${s.limit_series}`],
     ['Episoade', s.total_episodes],
     ['Vizionări', s.total_views],
     ['Marcate ca văzute', s.total_watched],

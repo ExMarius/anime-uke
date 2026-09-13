@@ -60,8 +60,15 @@ fi
 # NU folosim `exec`: ar inlocui shell-ul si capcana EXIT n-ar mai rula,
 # lasand wrangler.toml pe configuratia locala (adica deploy-ul urmator
 # ar publica bindinguri DO gresite).
+#
+# Plafoanele buget-0 (LIMIT_USERS / LIMIT_SERIES) se pot suprascrie din
+# mediu pentru faza de teste care simuleaza o comunitate plina. In
+# productie variabilele nu exista, deci tavanul ramane 1000.
 set +e
-$W pages dev --port="$PORT" --ip=0.0.0.0
+BIND=()
+[ -n "${LIMIT_USERS:-}" ] && BIND+=(--binding "LIMIT_USERS=$LIMIT_USERS")
+[ -n "${LIMIT_SERIES:-}" ] && BIND+=(--binding "LIMIT_SERIES=$LIMIT_SERIES")
+$W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e
 exit $RC

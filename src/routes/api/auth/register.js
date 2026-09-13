@@ -5,6 +5,7 @@ import { validateUsername, validateEmail, validatePassword } from '../../../lib/
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { findUsableInvite, claimInvite, consumeInvite, releaseInvite } from '../../../lib/invite.js';
 import { logAdminAction } from '../../../lib/audit.js';
+import { DEFAULT_LIMIT_USERS, resolveLimit, usersFullMessage } from '../../../lib/limits.js';
 
 // Register: max 5 conturi/ora per IP. Previne crearea automata de conturi,
 // care altfel ar umple D1 gratuit (500 MB) si ar putea depasi cota de scrieri.
@@ -54,6 +55,13 @@ export async function onRequestPost(context) {
   // cale de a crea primul admin — cel care, la randul lui, genereaza codurile.
   const countRes = await env.DB.prepare('SELECT COUNT(*) AS n FROM users').first();
   const isFirstUser = (countRes?.n ?? 0) === 0;
+
+  // Plafonul comunitatii: acelasi COUNT care ne-a spus daca e bootstrap ne
+  // spune si daca mai sunt locuri. 0 interogari in plus pe D1.
+  const maxUsers = resolveLimit(env, 'LIMIT_USERS', DEFAULT_LIMIT_USERS);
+  if ((countRes?.n ?? 0) >= maxUsers) {
+    return errorResponse(403, usersFullMessage(maxUsers));
+  }
 
   // --- cod de invitatie (obligatoriu dupa bootstrap) ---
   // Verificarea si rezervarea codului au loc INAINTE de PBKDF2 (~4.45 ms CPU),

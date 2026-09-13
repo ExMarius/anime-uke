@@ -1,5 +1,6 @@
 import { json, errorResponse } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
+import { DEFAULT_LIMIT_USERS, DEFAULT_LIMIT_SERIES, resolveLimit } from '../../../lib/limits.js';
 
 // =====================================================================
 // GET /api/admin/stats — tab-ul Statistici din panoul admin.
@@ -49,6 +50,9 @@ export async function onRequestGet(context) {
         total_views: counts?.total_views ?? 0,
         total_watched: counts?.total_watched ?? 0,
         total_chat_messages: counts?.total_chat_messages ?? 0,
+        // Tavanele buget-0, ca adminul sa vada mereu cat spatiu mai e.
+        limit_users: resolveLimit(env, 'LIMIT_USERS', DEFAULT_LIMIT_USERS),
+        limit_series: resolveLimit(env, 'LIMIT_SERIES', DEFAULT_LIMIT_SERIES),
       },
       top_episodes: topEpisodes.results || [],
       latest_users: latestUsers.results || [],
