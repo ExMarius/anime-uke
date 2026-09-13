@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ eafb408
+comanda: cf-relay/cmd.sh @ df32229
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,23 +15,12 @@ comanda: cf-relay/cmd.sh @ eafb408
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=eafb408
-    [0;32m✓[0m publicat: https://0f011f8b.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=df32229
+    [0;32m✓[0m publicat: https://9c9d1151.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-
-═══ SEO VERDICT ═══
-title pe /: <title>Anime-Uke — Anime Subtitrat în Română Online
-meta desc pe /: name="description" content="Urmărește gratuit seriile anime preferate subtitrate în limb
-sitemap primul URL: /serie/1014
-── /serie/1014 (SSR) ──
-title: <title>One Piece — Anime subtitrat în română online | Anime-Uke
-JSON-LD: 1 aparitii
-canonical: rel="canonical" href="https://anime-uke.pages.dev/serie/1014
-og:image: 1
-── /episod/1 -> 200
-── sanitate: / -> 200
+sanitate: / -> 200
