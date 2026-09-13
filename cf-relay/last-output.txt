@@ -1,26 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ b1b1dd6
+comanda: cf-relay/cmd.sh @ 8a079a4
 ────────────────────────────────────
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.gif
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.webp
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAC/42.mp4
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.gif
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.webp
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAG/42.mp4
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.gif
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.webp
-200 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAM/42.mp4
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.gif
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.webp
-404 image/gif  <-  https://media.tenor.com/rtMO2T0cQrEAAAAU/42.mp4
-200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.gif
-200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.webp
-200 image/webp  <-  https://media.tenor.com/rtMO2T0cQrEAAAA1/42.mp4
-200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.gif
-200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.webp
-200 video/mp4  <-  https://media.tenor.com/rtMO2T0cQrEAAAPo/42.mp4
-── webp AAAA1 e animat? (cautam chunk ANIM) ──
--rw-r--r-- 1 runner runner 30256 Sep 13 17:12 /tmp/t.webp
-1
-── totusi: ce zice un GET pe m/ fara nume? ──
-404 text/html
+1) og:image gasit:    https://media1.tenor.com/m/rtMO2T0cQrEAAAAC/42.gif
+2) varianta vida:     https://media.tenor.com/rtMO2T0cQrEAAAAC/42.gif
+3) verificare HEAD:   200 image/gif
+REZULTAT: ✓ avatarul va functiona cu acest URL
