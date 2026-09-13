@@ -380,7 +380,35 @@ async function renderContinue() {
 skeletons(10);
 // nav-ul si lista merg in paralel; chat-ul (WebSocket) doar cand pagina e
 // efectiv activa, ca un tab prerenderat sa nu deschida socket degeaba
-await Promise.all([renderNav('/'), load()]);
+async function loadTops() {
+  const sec = document.getElementById('tops-section');
+  const res = await api('/top');
+  if (!res.ok || !sec) return;
+  const week = res.data.weekly || [];
+  const rated = res.data.rated || [];
+  if (!week.length && !rated.length) return;
+
+  const fill = (id, rows, meta) => {
+    const ol = document.getElementById(id);
+    ol.innerHTML = '';
+    for (const r of rows) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `/series?id=${encodeURIComponent(r.id)}`;
+      a.textContent = r.title;
+      const m = document.createElement('span');
+      m.className = 'toplist__meta';
+      m.textContent = meta(r);
+      li.append(a, m);
+      ol.appendChild(li);
+    }
+  };
+  fill('top-weekly', week, (r) => `👥 ${r.watchers} · ${Math.round((r.seconds || 0) / 60)} min`);
+  fill('top-rated', rated, (r) => `★ ${r.average} · ${r.votes} ${r.votes === 1 ? 'vot' : 'voturi'}`);
+  sec.hidden = false;
+}
+
+await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale */ })]);
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 initHero().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
 renderContinue().catch(() => { /* randul de continuare e optional */ });

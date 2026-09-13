@@ -221,6 +221,7 @@ export async function renderNav(active = '') {
     add('/shop', '🛒 Shop');
 
     links.appendChild(buildBell());
+    refreshBellBadge(); // dupa append: badge-ul e acum in document
 
     if (user.is_admin) add('/admin', 'Admin', { accent: true });
 
@@ -272,6 +273,15 @@ function notifHref(n) {
   return null;
 }
 
+/** Ajusteaza badge-ul relativ (pentru updates optimiste). */
+function bumpBadge(delta) {
+  const b = document.getElementById('nav-bell-badge');
+  if (!b || b.hidden) return;
+  const n = Math.max(0, (Number(b.textContent) || 0) + delta);
+  b.textContent = n > 99 ? '99+' : String(n);
+  b.hidden = n === 0;
+}
+
 async function refreshBellBadge() {
   const b = document.getElementById('nav-bell-badge');
   if (!b) return;
@@ -314,6 +324,10 @@ async function loadNotifPop() {
     a.append(ic, txt);
     a.addEventListener('click', async (ev) => {
       if (href) ev.preventDefault();
+      // Optimist: dispare marcajul de „nou” imediat, chiar daca reteaua
+      // intarzie o suta de milisecunde.
+      a.classList.remove('notif-pop__item--new');
+      bumpBadge(-1);
       await api('/notifications/read', { method: 'POST', body: { ids: [n.id] } });
       refreshBellBadge();
       if (href) location.href = href;
@@ -327,8 +341,18 @@ async function loadNotifPop() {
   markAll.type = 'button';
   markAll.textContent = 'Marchează tot ca citit';
   markAll.addEventListener('click', async () => {
-    await api('/notifications/read', { method: 'POST', body: { all: 1 } });
-    await loadNotifPop();
+    markAll.disabled = true;
+    markAll.textContent = 'Se marchează…';
+    const r = await api('/notifications/read', { method: 'POST', body: { all: 1 } });
+    // Optimist: curatam lista si badge-ul pe loc, apoi reimprospatam.
+    for (const el of bellPop.querySelectorAll('.notif-pop__item--new')) {
+      el.classList.remove('notif-pop__item--new');
+    }
+    const b = document.getElementById('nav-bell-badge');
+    if (b) { b.hidden = true; b.textContent = '0'; }
+    markAll.disabled = false;
+    markAll.textContent = 'Marchează tot ca citit';
+    if (r.ok) await loadNotifPop();
     refreshBellBadge();
   });
   bellPop.appendChild(markAll);
@@ -368,8 +392,9 @@ function buildBell() {
   wrap.append(btn, pop);
   bellPop = pop;
 
-  // Badge proaspat: acum, la fiecare minut si cand tab-ul revine in fata.
-  refreshBellBadge();
+  // Badge proaspat: la fiecare minut si cand tab-ul revine in fata.
+  // Apelul initial e la call site (dupa appendChild) — aici wrap-ul e inca
+  // detach-at si getElementById n-ar gasi badge-ul.
   setInterval(refreshBellBadge, 60000);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refreshBellBadge();

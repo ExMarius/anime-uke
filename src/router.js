@@ -42,6 +42,7 @@ import * as reportRoute from './routes/api/report.js';
 import * as subtitleRoute from './routes/api/subtitle.js';
 import * as commentsVoteRoute from './routes/api/comments-vote.js';
 import * as reviewsRoute from './routes/api/reviews.js';
+import * as topRoute from './routes/api/top.js';
 import * as adminReportsRoute from './routes/api/admin/reports.js';
 import * as notificationsRoute from './routes/api/notifications.js';
 import * as notifUnreadRoute from './routes/api/notifications-unread.js';
@@ -95,6 +96,7 @@ const ROUTES = [
   { method: 'POST', path: '/api/comments/vote', mod: commentsVoteRoute },
   { method: 'GET', path: '/api/reviews', mod: reviewsRoute },
   { method: 'POST', path: '/api/reviews', mod: reviewsRoute },
+  { method: 'GET', path: '/api/top', mod: topRoute },
   { method: 'GET', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'POST', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'GET', path: '/api/notifications/unread', mod: notifUnreadRoute },

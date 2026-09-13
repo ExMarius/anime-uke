@@ -115,11 +115,22 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
     FormData: window.FormData, URLSearchParams: window.URLSearchParams,
     localStorage: window.localStorage, sessionStorage: window.sessionStorage,
     fetch: window.fetch, WebSocket: FakeSocket,
-    requestAnimationFrame: (cb) => setTimeout(() => cb(Date.now()), 0),
-    cancelAnimationFrame: clearTimeout,
     getComputedStyle: window.getComputedStyle,
     alert: () => {}, confirm: () => true,
   };
+  // Timerii paginii (heartbeat, raf) raman pe Node; window.close() nu i-ar
+  // anula si ar craspa suite-ul dupa teardown („document is not defined”).
+  // Solutia: ii invelim, retinem id-urile si le oprim la teardown.
+  const rawST = globalThis.setTimeout, rawCT = globalThis.clearTimeout;
+  const rawSI = globalThis.setInterval, rawCI = globalThis.clearInterval;
+  const pendingTimeouts = new Set(), pendingIntervals = new Set();
+  globals.setTimeout = (fn, ms, ...a) => { const id = rawST(fn, ms, ...a); pendingTimeouts.add(id); return id; };
+  globals.clearTimeout = (id) => { pendingTimeouts.delete(id); rawCT(id); };
+  globals.setInterval = (fn, ms, ...a) => { const id = rawSI(fn, ms, ...a); pendingIntervals.add(id); return id; };
+  globals.clearInterval = (id) => { pendingIntervals.delete(id); rawCI(id); };
+  globals.requestAnimationFrame = (cb) => globals.setTimeout(() => cb(Date.now()), 0);
+  globals.cancelAnimationFrame = globals.clearTimeout;
+
   const saved = {};
   for (const [k, v] of Object.entries(globals)) {
     saved[k] = Object.getOwnPropertyDescriptor(globalThis, k);
@@ -157,6 +168,9 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
         if (d) Object.defineProperty(globalThis, k, d);
         else delete globalThis[k];
       }
+      for (const id of pendingTimeouts) rawCT(id);
+      for (const id of pendingIntervals) rawCI(id);
+      pendingTimeouts.clear(); pendingIntervals.clear();
       window.close();
     },
   };
@@ -207,6 +221,9 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Nicio eroare de runtime la incarcare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
 
   // Hero banner: anime random sus de tot, TOT bannerul e link catre serie.
+  const topsOn = await until(() => p.$('#tops-section')?.hidden === false && p.$$('#top-weekly li').length >= 1);
+  check('Topul saptamanal se randeaza pe home', topsOn, `li=${p.$$('#top-weekly li').length}`);
+  check('Clasamentul de voturi se randeaza pe home', p.$$('#top-rated li').length >= 1 && /★/.test(p.$('#top-rated')?.textContent || ''), p.$('#top-rated')?.textContent?.slice(0, 60));
   check('Hero bannerul exista in DOM', !!p.$('#hero-banner'), 'lipseste #hero-banner');
   check('Hero bannerul e prima sectiune din main (sus de tot)', p.$('main')?.firstElementChild?.id === 'hero-banner', p.$('main')?.firstElementChild?.id);
   check('Butonul de shuffle „Alt anime” exista', !!p.$('#hero-shuffle'), 'lipseste #hero-shuffle');
@@ -463,8 +480,9 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   const navReady = await until(() => p.$('#ep-next') && !p.$('#ep-next').disabled);
   check('Butonul „următorul” e activ când exista episod după', navReady, `disabled=${p.$('#ep-next')?.disabled}`);
   check('Butonul „anterior” e dezactivat pe primul episod', p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
+  check('Modalul „Alte episoade” e invizibil cat e hidden (CSS [hidden])', p.window.getComputedStyle(p.$('#eplist-modal')).display === 'none', p.window.getComputedStyle(p.$('#eplist-modal')).display);
   p.$('#ep-list')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  const listOn = await until(() => p.$('#eplist-modal')?.hidden === false && p.$$('#eplist-grid .eplist__ep').length >= 1);
+  const listOn = await until(() => p.$('#eplist-modal')?.hidden === false && p.$$('#eplist-grid .eplist__ep').length >= 1 && p.window.getComputedStyle(p.$('#eplist-modal')).display !== 'none');
   check('Modalul „Alte episoade” se deschide cu grila de episoade', listOn, `n=${p.$$('#eplist-grid .eplist__ep').length}`);
   check('Episodul curent e marcat in grila', !!p.$('#eplist-grid .eplist__ep.is-on'), 'lipseste is-on');
   p.$('#eplist-close')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
@@ -541,6 +559,39 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   const themeOn = await until(() => p.$('#econ-theme-wrap')?.hidden === false && p.$$('#econ-theme option').length >= 3);
   check('Selectorul de teme de grade e populat pe profilul propriu', themeOn, `opt=${p.$$('#econ-theme option').length}`);
   await p.teardown();
+}
+
+{
+  console.log('=== DOM: notificari UI (badge + marcat citit) ===');
+  // Serie proprie: fixturele anterioare sunt sterse de sectiunile lor.
+  const mk = async (num, title) => fetch(`${BASE}/api/admin/episodes`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE }, body: JSON.stringify({ series_id: nsid, episode_number: num, title, sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] }) });
+  const ownSeries = await (await fetch(`${BASE}/api/admin/series`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE }, body: JSON.stringify({ title: `DOM Notif ${Date.now()}`, status: 'ongoing' }) })).json();
+  const nsid = ownSeries?.series?.id ?? ownSeries?.id;
+  check('Samanarea pentru notificari are o serie valida', Number.isInteger(nsid), `nsid=${nsid}`);
+  await fetch(`${BASE}/api/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE }, body: JSON.stringify({ series_id: nsid, on: 1 }) });
+  await mk(1, 'Notif Unu');
+  const p = await mountPage({ htmlFile: 'public/index.html', url: '/', module: 'page-index.js' });
+  const badgeOn = await until(() => p.$('#nav-bell-badge') && !p.$('#nav-bell-badge').hidden && Number(p.$('#nav-bell-badge').textContent) >= 1);
+  check('Badge-ul clopoțelului arata notificarea necitita', badgeOn, `badge=${p.$('#nav-bell-badge')?.textContent}`);
+  p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const itemsOn = await until(() => p.$$('#notif-pop .notif-pop__item').length >= 1);
+  check('Dropdown-ul listeaza notificarea cu marcajul „nou”', itemsOn && !!p.$('#notif-pop .notif-pop__item--new'), `n=${p.$$('#notif-pop .notif-pop__item').length}`);
+  p.$('#notif-pop .notif-pop__all')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const cleared = await until(() => p.$('#nav-bell-badge')?.hidden === true && p.$$('#notif-pop .notif-pop__item--new').length === 0);
+  check('„Marchează tot ca citit” curata badge-ul si marcajul', cleared, `hidden=${p.$('#nav-bell-badge')?.hidden} new=${p.$$('#notif-pop .notif-pop__item--new').length}`);
+  await mk(2, 'Notif Doi');
+  // Dropdown-ul a ramas deschis dupa markAll: un click il inchide, al
+  // doilea il redeschide si abia atunci reia lista din API.
+  p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 60));
+  p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const freshOn = await until(() => !!p.$('#notif-pop .notif-pop__item--new'));
+  check('Notificarea noua apare dupa refresh-ul listei', freshOn, 'lipseste item nou');
+  p.$('#notif-pop .notif-pop__item')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const readOn = await until(() => p.$('#nav-bell-badge')?.hidden === true);
+  check('Click pe notificare o marcheaza citita (badge dispare)', readOn, `hidden=${p.$('#nav-bell-badge')?.hidden}`);
+  await p.teardown();
+  await fetch(`${BASE}/api/admin/series?id=${nsid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
 {

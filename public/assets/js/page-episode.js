@@ -878,7 +878,24 @@ function initEpListModal() {
   const open = qs('ep-list');
   if (!modal || !open || open.dataset.wired) return;
   open.dataset.wired = '1';
-  open.addEventListener('click', () => { modal.hidden = false; renderEpList(); });
+  open.addEventListener('click', async () => {
+    modal.hidden = false;
+    // Daca contextul nu e incarcat inca, il tragem acum cu spinner —
+    // modalul gol pare „buton stricat”.
+    if (!epCtx && currentSeriesId) {
+      const grid = qs('eplist-grid');
+      if (grid) grid.innerHTML = '<div class="loading"><div class="spinner"></div>Se încarcă…</div>';
+      epCtx = await fetchEpPage(currentSeriesId, Math.floor((currentNumber - 1) / EP_PER) + 1);
+      if (epCtx) {
+        [prevEp, nextEp] = await Promise.all([sibling(-1), sibling(1)]);
+        paintEpNav();
+      }
+    }
+    renderEpList();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !modal.hidden) modal.hidden = true;
+  });
   qs('eplist-close')?.addEventListener('click', () => { modal.hidden = true; });
   modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.hidden = true; });
   qs('eplist-prev')?.addEventListener('click', () => { if (epCtx && epCtx.page > 1) gotoEpPage(epCtx.page - 1); });

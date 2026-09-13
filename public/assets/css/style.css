@@ -1,3 +1,6 @@
+/* Regula de aur: atributul hidden trebuie sa castige INTOTDEAUNA peste
+   orice display autor — altfel modalele „ascunse” raman vizibile. */
+[hidden] { display: none !important; }
 /* =====================================================================
    anime-uke — tema CRIMSON
    Vanilla CSS, fara framework. Dark, cu accent crimson (#DC143C).
@@ -1444,3 +1447,22 @@ body.cinema .ep-hero__num { width: 44px; height: 44px; font-size: 1.15rem; borde
 body.cinema #episode-title { font-size: 1.15rem !important; }
 body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 
+
+/* ============================ TOPURI ============================ */
+.tops__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: .9rem; }
+.tops__col { padding: 1rem 1.1rem; }
+.toplist { list-style: none; counter-reset: top; margin: .6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
+.toplist li { counter-increment: top; display: flex; align-items: center; gap: .6rem; }
+.toplist li::before {
+  content: counter(top); width: 1.6rem; height: 1.6rem; flex: none;
+  display: grid; place-items: center; border-radius: .5rem;
+  background: rgba(220, 20, 60, .15); color: var(--crimson, #DC143C);
+  font-weight: 900; font-size: .8rem;
+}
+.toplist li:first-child::before { background: var(--crimson, #DC143C); color: #fff; }
+.toplist a {
+  color: var(--text); text-decoration: none; font-weight: 700; font-size: .88rem;
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.toplist a:hover { color: var(--crimson, #DC143C); }
+.toplist__meta { color: var(--dim); font-size: .74rem; white-space: nowrap; }

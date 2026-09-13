@@ -92,10 +92,17 @@ fi
 
 # ---------------------------------------------------------------------
 step "4/5  Cloudflare Pages: $PROJECT"
+# Versionare assete: browserele cu cache vechi primeau JS-ul de dinainte
+# de deploy („butonul nu merge” dupa fiecare release). Fiecare HTML primeste
+# ?v=<git hash>; dupa deploy readucem fisierele la forma din repo.
+BUILD_V="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
+sed -i -E "s|(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?"|\1?v=${BUILD_V}"|g" public/*.html public/admin/*.html 2>/dev/null || true
+ok "assete versionate ?v=${BUILD_V}"
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
+git checkout -- public/*.html public/admin/*.html 2>/dev/null || true
 
 # ---------------------------------------------------------------------
 step "5/5  JWT_SECRET"

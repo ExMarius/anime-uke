@@ -1393,6 +1393,15 @@ console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
   check('Nota 11 → 400', rvBad.status === 400, `status=${rvBad.status}`);
   const rvShort = await req(j, 'POST', '/api/reviews', { series_id: globalThis.seriesId, rating: 7, body: 'scurt' });
   check('Recenzie prea scurta → 400', rvShort.status === 400, `status=${rvShort.status}`);
+  // --- topuri: saptamanal + voturi
+  const anonTop = await req(jar(), 'GET', '/api/top');
+  check('Topurile anonime → 401', anonTop.status === 401, `status=${anonTop.status}`);
+  const top = await req(j, 'GET', '/api/top');
+  const ratedRow = (top.data?.rated || []).find((r) => r.id === globalThis.seriesId);
+  check('Clasamentul de voturi are media si numarul de voturi', !!ratedRow && Number(ratedRow.average) === 8 && ratedRow.votes >= 1, JSON.stringify(ratedRow));
+  const weekRow = (top.data?.weekly || []).find((r) => r.id === globalThis.seriesId);
+  check('Topul saptamanal numara privitori unici din progresul real', !!weekRow && weekRow.watchers >= 1 && typeof weekRow.seconds === 'number', JSON.stringify(weekRow));
+  check('Topurile sunt limitate la 5 intrari', (top.data?.weekly || []).length <= 5 && (top.data?.rated || []).length <= 5, `w=${top.data?.weekly?.length} r=${top.data?.rated?.length}`);
 }
 
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
