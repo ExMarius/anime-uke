@@ -1,40 +1,40 @@
 #!/usr/bin/env bash
 # =====================================================================
-# cf-relay/cmd.sh — comanda pe care o ruleaza workflow-ul cloudflare-relay
-# pe runnerul GitHub la fiecare push care modifica acest fisier.
-# Fiecare comanda noua suprascrie acest fisier; istoricul git pastreaza
-# ce s-a rulat. Output-ul ajunge in cf-relay/last-output.txt.
-#
-# REPO PUBLIC: aici nu se afiseaza niciodata date de utilizatori sau
-# BATCH 1 — verificare initiala post-secret
-# valori de secrete — doar ID-uri, statusuri, numaratoari.
+# cf-relay/cmd.sh — comanda rulata de workflow-ul cloudflare-relay.
+# BATCH 2 — diagnoza permisiuni: afiseaza si erorile API, nu doar result.
+# REPO PUBLIC: doar ID-uri/statusuri, fara date de utilizatori sau secrete.
 # =====================================================================
-set -euo pipefail
+set -uo pipefail
 
-echo "── verify token ──"
-curl -sS "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  | jq '{success, status: .result.status, error: .errors[0].message}'
+api() { # api <metoda> <cale> [body]
+  local M="$1" P="$2" B="${3:-}"
+  if [ -n "$B" ]; then
+    curl -sS -X "$M" "https://api.cloudflare.com/client/v4${P}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+      -H "Content-Type: application/json" -d "$B"
+  else
+    curl -sS -X "$M" "https://api.cloudflare.com/client/v4${P}" \
+      -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+  fi
+}
 
-echo "── conturi accesibile ──"
-curl -sS "https://api.cloudflare.com/client/v4/accounts" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  | jq '.result[] | {id, name}'
+proba() { # proba <nume> <json>
+  echo "── ${1} ──"
+  echo "$2" | jq '{success, errors: [.errors[]? | {code, message}], rezumat: (
+    if .result == null then null
+    elif (.result | type) == "array" then (.result | length | tostring) + " elemente"
+    else "ok"
+    end)}'
+  echo "$2" | jq -c '.result' 2>/dev/null | head -c 2000; echo
+}
 
-echo "── baze de date D1 ──"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  | jq '.result[] | {uuid, name, version, num_tables, file_size}'
+A="/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 
-echo "── proiecte Pages ──"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  | jq '.result[] | {name, subdomain, domains}'
-
+proba "verify token"     "$(api GET /user/tokens/verify)"
+proba "cont"             "$(api GET /accounts)"
+proba "D1 — lista"       "$(api GET ${A}/d1/database?per_page=25)"
+proba "Pages — proiecte" "$(api GET ${A}/pages/projects)"
+proba "Workers — scripturi" "$(api GET ${A}/workers/scripts)"
 echo "── wrangler whoami ──"
-npx wrangler whoami 2>&1 | tail -8
-
-echo "── worker-e (DO) ──"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts" \
-  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-  | jq '.result[] | {id, created_on, modified_on}'
+npx wrangler whoami 2>&1 | tail -12
+exit 0
