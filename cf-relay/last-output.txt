@@ -1,16 +1,8 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 39c2173
+comanda: cf-relay/cmd.sh @ 6b8cd9e
 ────────────────────────────────────
-── site live ──
-homepage (guest -> redirect login)         -> HTTP 302
-sitemap.xml (public)                       -> HTTP 200
-robots.txt (public)                        -> HTTP 200
-style.css v=?v (asset)                     -> HTTP 200
-API pulse fara auth (401 asteptat)         -> HTTP 401
-worker DO sanatos (chat state)             -> HTTP 401
-── sitemap: prima linie + numar de URL-uri ──
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-URL-uri in sitemap: 4
-── login flux real (admin test) ──
-login cu user inexistent -> HTTP 401 (401 asteptat): {"error":"Email sau parolă incorecte"}
+homepage (302 = privat, ok)              -> HTTP 302
+sitemap.xml                              -> HTTP 200
+robots.txt                               -> HTTP 200
+API pulse (401 fara auth ok)             -> HTTP 401
+API series (401 fara auth ok)            -> HTTP 401
