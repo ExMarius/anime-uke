@@ -63,11 +63,19 @@ export async function onRequestPost(context) {
     return errorResponse(403, usersFullMessage(maxUsers));
   }
 
-  // --- cod de invitatie (obligatoriu dupa bootstrap) ---
+  // Modul de înregistrare: „open" (implicit) = oricine își face cont;
+  // „invite" = doar cu cod (comutatorul REGISTRATION_MODE din configurarea
+  // Pages închide din nou ușa, fără modificări de cod).
+  const inviteMode = String(env.REGISTRATION_MODE || 'open').trim().toLowerCase() === 'invite';
+
+  // --- cod de invitatie ---
+  // În modul „invite" e obligatoriu. În modul „open" e OPȚIONAL: dacă cineva
+  // totuși introduce un cod valid, îl validăm și îl consumăm (păstrează
+  // util panoul de coduri — ex. invitați VIP — și auditul rămâne corect).
   // Verificarea si rezervarea codului au loc INAINTE de PBKDF2 (~4.45 ms CPU),
   // ca un cod gresit sa nu arunce pe fereastra timpul de CPU al planului gratuit.
   let invite = null;
-  if (!isFirstUser) {
+  if (!isFirstUser && (inviteMode || body.invite_code)) {
     const found = await findUsableInvite(env, body.invite_code);
     if (!found.ok) return errorResponse(found.status, found.error);
 

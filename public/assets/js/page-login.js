@@ -101,4 +101,17 @@ function setupInviteRequest() {
 
 setupInviteRequest();
 
+// Portalul „Cere un cod" are rost doar când înregistrarea e pe invitație
+// (REGISTRATION_MODE=invite). Îl întrebăm pe server o singură dată; dacă
+// apelul pică, rămâne ascuns — înregistrarea deschisă e prezumția bună.
+(async () => {
+  try {
+    const res = await api('/auth/register-options');
+    if (res.ok && res.data?.inviteRequired) {
+      const portal = document.getElementById('cere-cod');
+      if (portal) portal.hidden = false;
+    }
+  } catch { /* rămâne ascuns */ }
+})();
+
 renderNav('/login').catch(() => { /* nav e decorativ aici */ });

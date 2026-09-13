@@ -32,6 +32,10 @@ async function setupInviteGate() {
   }
   if (banner) banner.hidden = required;
 
+  // Linkul „Cere un cod" din register are rost doar în modul invitație.
+  const cereCod = document.getElementById('cere-cod-link');
+  if (cereCod) cereCod.hidden = !required;
+
   // Plafon atins (buget 0): spunem din timp, nu doar la submit. Dezactivam
   // formularul ca userul sa nu completeze degeaba.
   if (res.ok && res.data?.capacityFull && form) {

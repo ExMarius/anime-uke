@@ -39,6 +39,13 @@ export async function onRequestPost(context) {
 
   if (!isSameOrigin(request)) return errorResponse(403, 'Cerere invalidă');
 
+  // Dacă înregistrarea e deschisă, cererile de cod nu mai au rost — spunem
+  // frumos și deviem spre /register (fără să consumăm din limita pe IP).
+  const inviteMode = String(env.REGISTRATION_MODE || 'open').trim().toLowerCase() === 'invite';
+  if (!inviteMode) {
+    return errorResponse(409, 'Înregistrarea e deschisă pentru toți — nu mai ai nevoie de cod. Creează-ți cont direct.');
+  }
+
   const ip = getClientIp(request);
   // Max 3 cereri/oră/IP: un om sincer nu are nevoie de mai multe.
   const rl = await checkRateLimit(env, `invite-req:${ip}`, 3, 60 * 60 * 1000);
