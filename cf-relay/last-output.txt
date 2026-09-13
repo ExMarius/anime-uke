@@ -1,15 +1,101 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 60fa707
+comanda: cf-relay/cmd.sh @ 2139a15
 ────────────────────────────────────
 ── tabele din anime-db ──
-curl: (3) URL rejected: No host part in the URL
+{
+  "success": true,
+  "errors": [],
+  "rows": [
+    {
+      "name": "admin_log"
+    },
+    {
+      "name": "anime_series"
+    },
+    {
+      "name": "chat_messages"
+    },
+    {
+      "name": "chest_cooldown"
+    },
+    {
+      "name": "chests_claimed"
+    },
+    {
+      "name": "comment_votes"
+    },
+    {
+      "name": "d1_migrations"
+    },
+    {
+      "name": "episode_comments"
+    },
+    {
+      "name": "episode_sources"
+    },
+    {
+      "name": "episodes"
+    },
+    {
+      "name": "invite_codes"
+    },
+    {
+      "name": "leaderboard_cache"
+    },
+    {
+      "name": "notifications"
+    },
+    {
+      "name": "rank_themes"
+    },
+    {
+      "name": "series_ratings"
+    },
+    {
+      "name": "series_reviews"
+    },
+    {
+      "name": "series_subscriptions"
+    },
+    {
+      "name": "site_meta"
+    },
+    {
+      "name": "source_reports"
+    },
+    {
+      "name": "user_badges"
+    },
+    {
+      "name": "user_items"
+    },
+    {
+      "name": "user_monthly_points"
+    },
+    {
+      "name": "user_profiles"
+    },
+    {
+      "name": "users"
+    },
+    {
+      "name": "watch_progress"
+    },
+    {
+      "name": "watched_history"
+    },
+    {
+      "name": "watchlist"
+    }
+  ]
+}
 ── numaratoare agregate ──
-users:           —
+users:           2
 series:          —
-episodes:        —
+episodes:        3
 comments:        —
-chat_messages:   —
+chat_messages:   13
 reports:         —
 invites:         —
 ── migrari aplicate ──
-(tabela d1_migrations nu exista)
+[{"name":"0001_init.sql"},{"name":"0002_invites.sql"},{"name":"0003_profiles.sql"},{"name":"0004_episode_sources.sql"},{"name":"0005_series_counters.sql"},{"name":"0006_watch_progress.sql"},{"name":"0007_chests.sql"},{"name":"0008_leaderboard_cache.sql"},{"name":"0009_subtitles.sql"},{"name":"0010_community.sql"},{"name":"0011_economy.sql"},{"name":"0012_ranks.sql"},{"name":"0013_notifications.sql"},{"name":"0014_shop_reports.sql"},{"name":"0015_community2.sql"}]
