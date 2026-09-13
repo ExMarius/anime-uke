@@ -5,12 +5,8 @@
 // Ambele sunt GROUP BY pe indexurile existente; 60 s de cache privat
 // ca să nu plătim agregarea la fiecare refresh.
 import { json } from '../../lib/http.js';
-import { requireUser } from '../../lib/session.js';
-
 export async function onRequestGet(context) {
-  const { request, env } = context;
-  const gate = await requireUser(request, env);
-  if (gate.response) return gate.response;
+  const { env } = context;
 
   const [week, rated] = await Promise.all([
     env.DB

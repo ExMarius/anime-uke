@@ -1,9 +1,16 @@
-# Robotii care indexeaza paginile publice de autentificare. Catalogul e in
-# spatele autentificarii (site privat), deci restul e dezactivat explicit,
-# nu lasat la noroc.
+# Site public: catalogul si episoadele sunt vizibile pentru toata lumea.
+# Doar zonele personale si de administrare raman in afara indexarii.
 User-agent: *
+Allow: /
+Allow: /series
+Allow: /episode
 Allow: /login
 Allow: /register
-Disallow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /shop
+Disallow: /api/
+Disallow: /chat
+Disallow: /logout
 
 Sitemap: https://anime-uke.pages.dev/sitemap.xml

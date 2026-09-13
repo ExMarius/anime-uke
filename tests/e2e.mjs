@@ -69,7 +69,7 @@ console.log('\n=== 1. VIZITATOR ===');
   check('GET /api/auth/me ca vizitator → 200 + user null', me.status === 200 && me.data.user === null, JSON.stringify(me.data));
 
   const s = await req(j, 'GET', '/api/series');
-  check('Site privat: GET /api/series fara cont → 401', s.status === 401, `status=${s.status}`);
+  check('Site public: GET /api/series fara cont → 200', s.status === 200 && Array.isArray(s.data?.series), `status=${s.status}`);
 
   const w = await req(j, 'POST', '/api/progress', { episode_id: 1, seconds: 30 });
   check('POST /api/progress fara login → 401', w.status === 401, `status=${w.status}`);
@@ -77,18 +77,15 @@ console.log('\n=== 1. VIZITATOR ===');
   const a = await req(j, 'GET', '/api/admin/stats');
   check('GET /api/admin/stats fara login → 401', a.status === 401, `status=${a.status}`);
 
-  // --- POARTA DE LOGIN: fara cont ajungi la /login ---
-  const idx = await fetch(BASE + '/', { redirect: 'manual' });
-  check('GET / fara cont → 302 către /login', idx.status === 302 && String(idx.headers.get('location')).startsWith('/login'), `status=${idx.status} loc=${idx.headers.get('location')}`);
-  check('Redirectul păstrează destinația în ?next=', /next=%2F/.test(String(idx.headers.get('location'))), idx.headers.get('location'));
-
-  for (const page of ['/series', '/episode', '/admin', '/profile']) {
+  // --- SITE PUBLIC: catalogul se vede fara cont; sistemele raman la login ---
+  for (const page of ['/', '/series', '/episode']) {
     const r = await fetch(BASE + page, { redirect: 'manual' });
-    check(`GET ${page} fara cont → 302 către /login`, r.status === 302, `status=${r.status}`);
+    check(`GET ${page} fara cont → 200 (public)`, r.status === 200, `status=${r.status}`);
   }
-  // /login?next=/series trebuie sa intoarca utilizatorul la pagina dorita
-  const withNext = await fetch(BASE + '/series', { redirect: 'manual' });
-  check('next= pointeaza la pagina ceruta', String(withNext.headers.get('location')).includes('next=%2Fseries'), withNext.headers.get('location'));
+  for (const page of ['/admin', '/profile', '/shop']) {
+    const r = await fetch(BASE + page, { redirect: 'manual' });
+    check(`GET ${page} fara cont → 302 către /login (protejat)`, r.status === 302, `status=${r.status}`);
+  }
 
   // Paginile de autentificare raman publice, altfel nimeni nu ar putea intra
   for (const page of ['/login', '/register']) {
@@ -1381,7 +1378,7 @@ console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
   check('Recenzie prea scurta → 400', rvShort.status === 400, `status=${rvShort.status}`);
   // --- topuri: saptamanal + voturi
   const anonTop = await req(jar(), 'GET', '/api/top');
-  check('Topurile anonime → 401', anonTop.status === 401, `status=${anonTop.status}`);
+  check('Topurile anonime → 200 (public)', anonTop.status === 200 && Array.isArray(anonTop.data?.weekly), `status=${anonTop.status}`);
   const top = await req(j, 'GET', '/api/top');
   const ratedRow = (top.data?.rated || []).find((r) => r.id === globalThis.seriesId);
   check('Clasamentul de voturi are media si numarul de voturi', !!ratedRow && Number(ratedRow.average) === 8 && ratedRow.votes >= 1, JSON.stringify(ratedRow));

@@ -23,18 +23,33 @@ const API_404 = { error: 'Endpoint inexistent' };
 // cu ~50 de request-uri fiecare inseamna ~50.000 de randuri citite/zi,
 // adica 1% din cota gratuita de 5.000.000.
 // =====================================================================
-const PUBLIC_PAGES = new Set(['/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml']);
+// Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
+// in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
+// comentarii de scris, ratinguri, cufere, shop, profil, admin).
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml']);
 const PUBLIC_API = new Set([
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/register-options',
   '/api/auth/logout',
   '/api/auth/me',
+  '/api/top',            // clasamente publice (agregari anonime)
+  '/api/pulse',          // doar un contor agregat („N online”), fara date personale
+  '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
+  '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
 ]);
+function isPublicApi(path) {
+  if (PUBLIC_API.has(path)) return true;
+  // Detaliul seriei (cu episoade) si sursele episodului: publice, ca sa
+  // mearga vizionarea fara cont. Nu expun decat continut de catalog.
+  if (path === '/api/series' || path.startsWith('/api/series/')) return true;
+  if (path.startsWith('/api/episodes/')) return true;
+  return false;
+}
 
 function isPublic(path) {
   if (PUBLIC_PAGES.has(path)) return true;
-  if (PUBLIC_API.has(path)) return true;
+  if (isPublicApi(path)) return true;
   if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
   // Coperțile servite de site. Nu contin date despre utilizatori, iar a le
   // tine în spatele porții ar însemna un dus-întors de cookie pentru fiecare

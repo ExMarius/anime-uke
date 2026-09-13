@@ -620,3 +620,71 @@ export function genPoster(title) {
   el.setAttribute('aria-hidden', 'true');
   return el;
 }
+
+// ---------------------------------------------------------------------
+// NUDGE — invitația blândă pentru vizitatori.
+//
+// Pe paginile publice (catalog, serie, episod), după ~45 de secunde de
+// vizionare, le amintim vizitatorilor că un cont deblochează progresul,
+// punctele și chatul. O singură dată pe sesiune de 12 ore (localStorage):
+// niciodată repede după ce a fost închisă — site-ul trebuie să pară
+// prietenos, nu insistent.
+// ---------------------------------------------------------------------
+const NUDGE_KEY = 'auk-nudge-snooze-until';
+const NUDGE_DELAY_MS = 45_000;
+const NUDGE_SNOOZE_MS = 12 * 60 * 60 * 1000;
+
+export async function startGuestNudge() {
+  const user = await getSession();
+  if (user) return;                                  // doar pentru vizitatori
+
+  try {
+    const until = Number(localStorage.getItem(NUDGE_KEY) || 0);
+    if (until && Date.now() < until) return;         // snoozed recent
+  } catch { /* localStorage poate fi blocat — continuăm fără memorie */ }
+
+  setTimeout(() => {
+    const b = document.createElement('div');
+    b.className = 'nudge';
+    b.setAttribute('role', 'dialog');
+    b.setAttribute('aria-label', 'Invitație la cont');
+
+    const text = document.createElement('div');
+    text.className = 'nudge__text';
+    const t1 = document.createElement('b');
+    t1.textContent = 'Îți place ce vezi? 👀';
+    const t2 = document.createElement('span');
+    t2.textContent = ' Un cont gratuit îți salvează progresul, îți dă puncte pentru fiecare episod și acces la chat.';
+    text.append(t1, t2);
+
+    const acts = document.createElement('div');
+    acts.className = 'nudge__acts';
+    const yes = document.createElement('a');
+    yes.className = 'btn btn--accent btn--sm';
+    yes.href = '/register';
+    yes.textContent = 'Cont gratuit';
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.className = 'btn btn--ghost btn--sm';
+    no.textContent = 'Mai târziu';
+    no.addEventListener('click', () => {
+      b.remove();
+      try { localStorage.setItem(NUDGE_KEY, String(Date.now() + NUDGE_SNOOZE_MS)); } catch {}
+    });
+    acts.append(yes, no);
+
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'nudge__x';
+    x.setAttribute('aria-label', 'Închide');
+    x.textContent = '✕';
+    x.addEventListener('click', () => {
+      b.remove();
+      try { localStorage.setItem(NUDGE_KEY, String(Date.now() + NUDGE_SNOOZE_MS)); } catch {}
+    });
+
+    b.append(text, acts, x);
+    document.body.appendChild(b);
+    requestAnimationFrame(() => b.classList.add('nudge--in'));
+  }, NUDGE_DELAY_MS);
+}

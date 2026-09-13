@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam , whenActive } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive } from './core.js';
 import { initChat } from './chat.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
@@ -399,6 +399,8 @@ function paintRating(d) {
     b.title = `Dă nota ${n}`;
     b.setAttribute('aria-label', `Nota ${n}`);
     b.addEventListener('click', async () => {
+      const meNow = await getSession();
+      if (!meNow) { toast('Nota e pentru membri — creează-ți cont gratuit.', 'warn'); return; }
       b.disabled = true;
       const r = await api('/ratings', { method: 'POST', body: { series_id: d.series.id, rating: n } });
       b.disabled = false;
@@ -414,6 +416,8 @@ function paintRating(d) {
 function paintSubscribe(d) {
   const btn = document.getElementById('sub-btn');
   if (!btn || !d.series) return;
+  // Notificările la episoade noi sunt un sistem pentru membri.
+  getSession().then((u) => { if (!u) btn.hidden = true; });
   btn.hidden = false;
   const on = !!d.subscribed;
   const cnt = d.subscriber_count ? ` · ${d.subscriber_count}` : '';
@@ -456,6 +460,7 @@ async function loadChests(seriesId) {
 
 await Promise.all([renderNav(''), load()]);
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
+startGuestNudge();
 const sid = Number(getParam('id'));
 if (sid) {
   await initWatchlist(sid);

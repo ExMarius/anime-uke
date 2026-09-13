@@ -23,9 +23,9 @@ const MIN_LEN = 4;
 
 export async function onRequestGet(context) {
   const { request, env } = context;
+  // Citirea e publica (site public); voturile proprii vin doar cu sesiune.
   const gate = await requireUser(request, env);
-  if (gate.response) return gate.response;
-  const user = gate.user;
+  const user = gate.response ? null : gate.user;
 
   const url = new URL(request.url);
   const eid = validatePositiveInt(url.searchParams.get('episode_id'), 'ID-ul episodului');
@@ -58,11 +58,13 @@ export async function onRequestGet(context) {
       .bind(...ids)
       .all();
     for (const a of agg.results || []) scores[a.comment_id] = a.s;
-    const my = await env.DB
-      .prepare(`SELECT comment_id, vote FROM comment_votes WHERE user_id = ? AND comment_id IN (${ph})`)
-      .bind(user.id, ...ids)
-      .all();
-    for (const m of my.results || []) mine[m.comment_id] = m.vote;
+    if (user) {
+      const my = await env.DB
+        .prepare(`SELECT comment_id, vote FROM comment_votes WHERE user_id = ? AND comment_id IN (${ph})`)
+        .bind(user.id, ...ids)
+        .all();
+      for (const m of my.results || []) mine[m.comment_id] = m.vote;
+    }
   }
 
   return json({
@@ -74,7 +76,7 @@ export async function onRequestGet(context) {
         created_at: r.created_at,
         username: r.username,
         avatar: r.avatar || '',
-        own: r.user_id === user.id,
+        own: !!user && r.user_id === user.id,
         parent_id: r.parent_id || null,
         score: scores[r.id] || 0,
         my_vote: mine[r.id] || 0,

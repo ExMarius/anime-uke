@@ -1655,3 +1655,37 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   line-height: 1; user-select: none;
 }
 .msg--own .msg__avatar { border-color: var(--accent); }
+
+/* ---------------------------------------------------------------------
+   Nudge — invitația blândă către vizitatori (pagini publice)
+   --------------------------------------------------------------------- */
+.nudge {
+  position: fixed;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translate(-50%, 12px);
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  max-width: min(620px, calc(100vw - 2rem));
+  padding: .8rem 1rem;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  opacity: 0;
+  transition: opacity .45s ease, transform .45s cubic-bezier(.2,.8,.2,1);
+  z-index: 60;
+}
+.nudge--in { opacity: 1; transform: translate(-50%, 0); }
+.nudge__text { font-size: .84rem; line-height: 1.45; color: var(--text); }
+.nudge__text b { color: var(--accent-hi); }
+.nudge__acts { display: flex; gap: .45rem; flex-shrink: 0; }
+.nudge__x {
+  background: none; border: 0; color: var(--dim);
+  font-size: .85rem; cursor: pointer; padding: .2rem;
+}
+.nudge__x:hover { color: var(--text); }
+@media (max-width: 560px) {
+  .nudge { flex-direction: column; align-items: flex-start; gap: .55rem; }
+}

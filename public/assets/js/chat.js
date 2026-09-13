@@ -62,6 +62,15 @@ export async function initChat() {
 
   me = await getSession();
 
+  // Vizitatorii: butonul de chat duce la cont (fără conectare eșuată).
+  if (!me) {
+    fab.addEventListener('click', () => {
+      toast('Chatul e pentru membri — creează-ți un cont gratuit 💬', 'warn');
+      setTimeout(() => { location.href = '/register'; }, 900);
+    });
+    return;
+  }
+
   document.getElementById('chat-close')?.addEventListener('click', closeChat);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeChat(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) closeChat(); });

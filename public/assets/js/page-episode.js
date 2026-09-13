@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip , whenActive } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive } from './core.js';
 import { initChat } from './chat.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
@@ -404,15 +404,20 @@ async function load() {
   initComments(Number(id));
   loadComments(Number(id)).catch(() => { /* comentariile sunt optionale */ });
 
-  watchThreshold = Number(res.data.watch_threshold) || 900;
-  watchSeconds = Number(res.data.progress_seconds) || 0;
-  watchedDone = !!res.data.watched;
-  paintProgress();
-  startHeartbeat();
+  // Vizitatorii pot viziona, dar fara progres, puncte sau numarare:
+  // acelea sunt sistemele pentru membri. In schimb, primesc nudge-ul.
+  const me = await getSession();
+  if (me) {
+    watchThreshold = Number(res.data.watch_threshold) || 900;
+    watchSeconds = Number(res.data.progress_seconds) || 0;
+    watchedDone = !!res.data.watched;
+    paintProgress();
+    startHeartbeat();
+    // Contor de vizualizari: merge in StatsDO (buffer), nu direct in D1.
+    // Fara await — nu trebuie sa incetineasca afisarea paginii.
+    api('/view', { method: 'POST', body: { episode_id: Number(id) } }).catch(() => {});
+  }
 
-  // Contor de vizualizari: merge in StatsDO (buffer), nu direct in D1.
-  // Fara await — nu trebuie sa incetineasca afisarea paginii.
-  api('/view', { method: 'POST', body: { episode_id: Number(id) } }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------
@@ -489,7 +494,7 @@ async function loadComments(episodeId) {
   }
 }
 
-function voteBox(c, episodeId) {
+function voteBox(c, episodeId, me) {
   const box = document.createElement('div');
   box.className = 'comment__vote';
   const score = document.createElement('span');
@@ -502,6 +507,7 @@ function voteBox(c, episodeId) {
     down.classList.toggle('is-on', c.my_vote === -1);
   };
   const send = async (v) => {
+    if (!me) { toast('Votul e pentru membri — creează-ți cont gratuit.', 'warn'); return; }
     const next = c.my_vote === v ? 0 : v;
     const r = await api('/comments/vote', { method: 'POST', body: { comment_id: c.id, vote: next } });
     if (!r.ok) { toast(r.data?.error || 'Votul nu a trecut.', 'err'); return; }
@@ -618,7 +624,7 @@ function commentNode(c, episodeId, me, replies, byParent) {
     main.appendChild(acts);
   }
 
-  art.append(voteBox(c, episodeId), main);
+  art.append(voteBox(c, episodeId, me), main);
 
   if (!isReply && replies.length) {
     const wrap = document.createElement('div');
@@ -629,11 +635,25 @@ function commentNode(c, episodeId, me, replies, byParent) {
   return art;
 }
 
-function initComments(episodeId) {
+async function initComments(episodeId) {
   const form = document.getElementById('comment-form');
   const input = document.getElementById('comment-body');
   const hint = document.getElementById('comment-hint');
   if (!form) return;
+
+  // Vizitatorii citesc conversatia, membrii o scriu.
+  const me = await getSession();
+  if (!me) {
+    form.innerHTML = '';
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.innerHTML = '';
+    const a = document.createElement('a');
+    a.href = '/register';
+    a.textContent = 'Creează un cont gratuit';
+    note.append('Comentariile sunt pentru membri. ', a, ' ca să te alături conversației.');
+    form.appendChild(note);
+  }
 
   input.addEventListener('input', () => {
     hint.textContent = `${input.value.trim().length}/2000`;
@@ -692,6 +712,7 @@ async function boot() {
     new Promise((done) => whenActive(async () => { await load(); done(); })),
   ]);
   whenActive(() => initChat().catch(() => { /* chat optional */ }));
+  whenActive(() => startGuestNudge());
 }
 
 // Ceas de paza: daca dupa 15s pagina e tot in starea initiala, ceva a atarnat

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -433,6 +433,7 @@ async function loadTops() {
 
 await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale */ })]);
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
+startGuestNudge();
 initHero().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
 renderContinue().catch(() => { /* randul de continuare e optional */ });
 
