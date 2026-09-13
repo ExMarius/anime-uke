@@ -320,6 +320,9 @@ async function renderHero(salt = spotSalt()) {
   img.className = 'hban__bg-img';
   img.src = cover && cover !== '#' ? cover : artUrl;
   img.alt = '';
+  // Hero-ul e elementul cel mai vizibil la incarcare (LCP): spunem browserului
+  // sa-l prioritizeze fata de restul resurselor.
+  img.fetchPriority = 'high';
   img.addEventListener('error', () => {
     // coperta seriei a picat -> arta bundled; arta bundled a picat -> poster generat
     if (img.src.endsWith(artUrl.slice(artUrl.lastIndexOf('/')))) { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
