@@ -6,6 +6,7 @@
 # ce s-a rulat. Output-ul ajunge in cf-relay/last-output.txt.
 #
 # REPO PUBLIC: aici nu se afiseaza niciodata date de utilizatori sau
+# BATCH 1 — verificare initiala post-secret
 # valori de secrete — doar ID-uri, statusuri, numaratoari.
 # =====================================================================
 set -euo pipefail
@@ -32,3 +33,8 @@ curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}
 
 echo "── wrangler whoami ──"
 npx wrangler whoami 2>&1 | tail -8
+
+echo "── worker-e (DO) ──"
+curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  | jq '.result[] | {id, created_on, modified_on}'
