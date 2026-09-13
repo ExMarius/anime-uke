@@ -477,43 +477,137 @@ async function loadComments(episodeId) {
     return;
   }
 
+  // Fire un singur nivel: parintii sus, raspunsurile grupate sub ei.
+  const byParent = {};
   for (const c of items) {
-    const art = document.createElement('article');
-    art.className = 'comment';
+    if (c.parent_id) (byParent[c.parent_id] = byParent[c.parent_id] || []).push(c);
+  }
+  for (const c of items) {
+    if (c.parent_id) continue;
+    list.appendChild(commentNode(c, episodeId, me, byParent[c.id] || [], byParent));
+  }
+}
 
-    const head = document.createElement('div');
-    head.className = 'comment__head';
-    const who = document.createElement('span');
-    who.className = 'comment__who';
-    who.textContent = c.username;
-    const when = document.createElement('span');
-    when.className = 'comment__when';
-    when.textContent = formatDate(c.created_at);
-    head.appendChild(who);
-    for (const b of [staffBadge(c.staff), rankChip(c.rank)].filter(Boolean)) head.appendChild(b);
-    head.appendChild(when);
-    if (c.own || me?.is_admin) {
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'comment__del';
-      del.textContent = '🗑';
-      del.title = c.own ? 'Șterge comentariul' : 'Șterge (admin)';
-      del.addEventListener('click', async () => {
-        if (!confirm('Ștergi comentariul?')) return;
-        const r = await api(`/comments?id=${c.id}`, { method: 'DELETE' });
-        if (!r.ok) { toast(r.data?.error || 'Nu am putut șterge', 'err'); return; }
+function voteBox(c, episodeId) {
+  const box = document.createElement('div');
+  box.className = 'comment__vote';
+  const score = document.createElement('span');
+  score.className = 'comment__score';
+  const paint = () => {
+    score.textContent = String(c.score);
+    score.classList.toggle('comment__score--plus', c.score > 0);
+    score.classList.toggle('comment__score--minus', c.score < 0);
+    up.classList.toggle('is-on', c.my_vote === 1);
+    down.classList.toggle('is-on', c.my_vote === -1);
+  };
+  const send = async (v) => {
+    const next = c.my_vote === v ? 0 : v;
+    const r = await api('/comments/vote', { method: 'POST', body: { comment_id: c.id, vote: next } });
+    if (!r.ok) { toast(r.data?.error || 'Votul nu a trecut.', 'err'); return; }
+    c.score = r.data.score;
+    c.my_vote = r.data.my_vote;
+    paint();
+  };
+  const up = document.createElement('button');
+  up.type = 'button'; up.className = 'cvote'; up.textContent = '▲'; up.title = 'Mi se pare util';
+  up.addEventListener('click', () => send(1));
+  const down = document.createElement('button');
+  down.type = 'button'; down.className = 'cvote'; down.textContent = '▼'; down.title = 'Nu mi se pare util';
+  down.addEventListener('click', () => send(-1));
+  score.textContent = String(c.score);
+  paint();
+  box.append(up, score, down);
+  return box;
+}
+
+function commentNode(c, episodeId, me, replies, byParent) {
+  const isReply = !!c.parent_id;
+  const art = document.createElement('article');
+  art.className = 'comment' + (isReply ? ' comment--reply' : '');
+
+  const main = document.createElement('div');
+  main.className = 'comment__main';
+
+  const head = document.createElement('div');
+  head.className = 'comment__head';
+  const who = document.createElement('span');
+  who.className = 'comment__who';
+  who.textContent = c.username;
+  const when = document.createElement('span');
+  when.className = 'comment__when';
+  when.textContent = formatDate(c.created_at);
+  head.appendChild(who);
+  for (const b of [staffBadge(c.staff), rankChip(c.rank)].filter(Boolean)) head.appendChild(b);
+  head.appendChild(when);
+  if (c.own || me?.is_admin) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'comment__del';
+    del.textContent = '🗑';
+    del.title = c.own ? 'Șterge comentariul' : 'Șterge (admin)';
+    del.addEventListener('click', async () => {
+      if (!confirm('Ștergi comentariul?')) return;
+      const r = await api(`/comments?id=${c.id}`, { method: 'DELETE' });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut șterge', 'err'); return; }
+      loadComments(episodeId);
+    });
+    head.appendChild(del);
+  }
+  main.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'comment__body';
+  body.innerHTML = renderCommentBody(c.body);
+  main.appendChild(body);
+
+  if (!isReply) {
+    const acts = document.createElement('div');
+    acts.className = 'comment__acts';
+    const rep = document.createElement('button');
+    rep.type = 'button';
+    rep.className = 'comment__reply-btn';
+    rep.textContent = (byParent && replies.length) ? `💬 ${replies.length} ${replies.length === 1 ? 'răspuns' : 'răspunsuri'}` : '💬 Răspunde';
+    rep.addEventListener('click', () => {
+      const existing = art.querySelector(':scope > .comment__main > .reply-form');
+      if (existing) { existing.remove(); return; }
+      const form = document.createElement('div');
+      form.className = 'reply-form';
+      const ta = document.createElement('textarea');
+      ta.className = 'input reply-form__input';
+      ta.rows = 2;
+      ta.maxLength = 2000;
+      ta.placeholder = `Răspuns pentru ${c.username}…`;
+      const send = document.createElement('button');
+      send.type = 'button';
+      send.className = 'btn btn--accent btn--sm';
+      send.textContent = 'Trimite';
+      send.addEventListener('click', async () => {
+        const text = ta.value.trim();
+        if (text.length < 4) { toast('Răspunsul e prea scurt.', 'warn'); return; }
+        send.disabled = true;
+        const r = await api('/comments', { method: 'POST', body: { episode_id: episodeId, body: text, parent_id: c.id } });
+        send.disabled = false;
+        if (!r.ok) { toast(r.data?.error || 'Nu am putut posta răspunsul', 'err'); return; }
+        toast('Răspuns postat.', 'ok');
         loadComments(episodeId);
       });
-      head.appendChild(del);
-    }
-    art.appendChild(head);
-
-    const body = document.createElement('div');
-    body.className = 'comment__body';
-    body.innerHTML = renderCommentBody(c.body);
-    art.appendChild(body);
-    list.appendChild(art);
+      form.append(ta, send);
+      main.appendChild(form);
+      ta.focus();
+    });
+    acts.appendChild(rep);
+    main.appendChild(acts);
   }
+
+  art.append(voteBox(c, episodeId), main);
+
+  if (!isReply && replies.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'comment__replies';
+    for (const r of replies) wrap.appendChild(commentNode(r, episodeId, me, [], null));
+    art.appendChild(wrap);
+  }
+  return art;
 }
 
 function initComments(episodeId) {

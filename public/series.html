@@ -68,6 +68,23 @@
     </section>
   </main>
 
+  <!-- ============ RECENZII ============ -->
+  <section class="section reviews" id="reviews-section">
+    <div class="section__head">
+      <h2 class="section__title section__title--plain">💬 Recenzii <span class="section__count" id="reviews-count"></span></h2>
+    </div>
+    <form class="review-form box" id="review-form" hidden>
+      <div class="review-form__stars" id="review-stars" role="radiogroup" aria-label="Nota ta"></div>
+      <textarea class="input review-form__body" id="review-body" rows="3" maxlength="2000"
+        placeholder="Ce părere ai de serie? Scrie fără spoilere majore… (min 10 caractere)"></textarea>
+      <div class="review-form__actions">
+        <button class="btn btn--accent btn--sm" id="review-submit" type="submit">Publică recenzia</button>
+        <span class="hint" id="review-hint"></span>
+      </div>
+    </form>
+    <div class="reviews-list" id="reviews-list"></div>
+  </section>
+
   <script type="module" src="/assets/js/page-series.js"></script>
 </body>
 </html>

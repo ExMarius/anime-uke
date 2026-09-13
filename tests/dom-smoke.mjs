@@ -345,6 +345,10 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   // Widgetul de rating: 10 butoane, media vizibila.
   const rateOn = await until(() => p.$$('#rate-stars .rate__star').length === 10);
   check('Widgetul de rating are 10 note', rateOn, `n=${p.$$('#rate-stars .rate__star').length}`);
+  const revOn = await until(() => p.$$('#reviews-list .review').length >= 0 && !!p.$('#review-form'));
+  check('Sectiunea de recenzii exista cu formular si 10 stele', revOn && p.$$('#review-stars .rate__star').length === 10, `stele=${p.$$('#review-stars .rate__star').length}`);
+  p.$$('#review-stars .rate__star')[7]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Steaua 8 se marcheaza la click', p.$$('#review-stars .rate__star')[7]?.classList.contains('rate__star--on') === true, p.$$('#review-stars .rate__star')[7]?.className);
   const subOn = await until(() => p.$('#sub-btn') && !p.$('#sub-btn').hidden);
   check('Butonul de urmărire a seriei exista', subOn, `hidden=${p.$('#sub-btn')?.hidden}`);
   p.$('#sub-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
@@ -486,6 +490,28 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // Comentariile: formular prezent, lista randata (macar starea vida).
   const comOn = await until(() => !!p.$('#comments-list')?.textContent);
   check('Sectiunea de comentarii se randeaza', comOn && !!p.$('#comment-form'), `list=${(p.$('#comments-list')?.textContent || '').slice(0, 40)}`);
+  const cInput = p.$('#comment-body');
+  if (cInput) {
+    cInput.value = 'Comentariu dom-smoke cu voturi';
+    cInput.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+    p.$('#comment-form')?.dispatchEvent(new p.window.Event('submit', { bubbles: true, cancelable: true }));
+    const cOn = await until(() => p.$$('#comments-list .comment').length > 0);
+    check('Comentariul postat apare in lista cu coloana de vot', cOn && !!p.$('#comments-list .comment .comment__vote'), `n=${p.$$('#comments-list .comment').length}`);
+    const upBtn = p.$('#comments-list .comment .cvote');
+    upBtn?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const scoreOn = await until(() => p.$('#comments-list .comment .comment__score')?.textContent === '1');
+    check('Click pe ▲ urca score-ul la 1', scoreOn, p.$('#comments-list .comment .comment__score')?.textContent);
+    p.$('#comments-list .comment .comment__reply-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const rfOn = await until(() => !!p.$('#comments-list .comment .reply-form'));
+    check('Butonul „Răspunde” deschide formularul inline', rfOn, 'lipseste reply-form');
+    const rTa = p.$('#comments-list .reply-form textarea');
+    if (rTa) {
+      rTa.value = 'Raspuns dom-smoke';
+      p.$('#comments-list .reply-form .btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+      const repOn = await until(() => p.$$('#comments-list .comment--reply').length === 1);
+      check('Raspunsul apare indentat sub parinte', repOn, `n=${p.$$('#comments-list .comment--reply').length}`);
+    }
+  }
   await p.teardown();
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }

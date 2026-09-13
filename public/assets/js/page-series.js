@@ -458,4 +458,108 @@ const sid = Number(getParam('id'));
 if (sid) {
   await initWatchlist(sid);
   loadChests(sid).catch(() => { /* cuferele sunt optionale: pagina trebuie sa mearga oricum */ });
+  loadReviews(sid).catch(() => { /* recenziile sunt optionale */ });
+}
+
+// =====================================================================
+// 💬 RECENZII: nota 1-10 + text, o recenzie per om pe serie (upsert).
+// Formularul foloseste aceeasi stea ca widgetul de rating, dar nota
+// recenziei e independenta la submit (o poti ajusta aici).
+// =====================================================================
+let reviewRating = 0;
+
+function paintReviewStars() {
+  const wrap = document.getElementById('review-stars');
+  if (!wrap) return;
+  for (const b of wrap.children) {
+    const n = Number(b.dataset.n);
+    b.classList.toggle('rate__star--on', n <= reviewRating);
+    b.setAttribute('aria-checked', String(n === reviewRating));
+  }
+}
+
+async function loadReviews(seriesId) {
+  const list = document.getElementById('reviews-list');
+  const countEl = document.getElementById('reviews-count');
+  const form = document.getElementById('review-form');
+  if (!list) return;
+
+  const me = await getSession();
+  const res = await api(`/reviews?series_id=${encodeURIComponent(seriesId)}`);
+  if (!res.ok) { list.innerHTML = '<p class="hint">Recenziile nu sunt disponibile acum.</p>'; return; }
+  const reviews = res.data.reviews || [];
+  countEl.textContent = res.data.count ? `${res.data.count}` : '';
+
+  // Formularul: doar logat; stelele + textul propriu se pre-incarca
+  if (me) {
+    form.hidden = false;
+    const stars = document.getElementById('review-stars');
+    if (!stars.children.length) {
+      for (let n = 1; n <= 10; n++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rate__star';
+        b.dataset.n = String(n);
+        b.textContent = '★';
+        b.setAttribute('role', 'radio');
+        b.addEventListener('click', () => { reviewRating = n; paintReviewStars(); });
+        stars.appendChild(b);
+      }
+    }
+    const mine = reviews.find((r) => r.own);
+    if (mine) {
+      reviewRating = mine.rating || 0;
+      document.getElementById('review-body').value = mine.body || '';
+      document.getElementById('review-submit').textContent = 'Salvează modificările';
+    }
+    paintReviewStars();
+    if (!form.dataset.wired) {
+      form.dataset.wired = '1';
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const bodyText = document.getElementById('review-body').value.trim();
+        if (!reviewRating) { toast('Alege mai întâi o notă (1-10).', 'warn'); return; }
+        if (bodyText.length < 10) { toast('Recenzia e prea scurtă (min 10 caractere).', 'warn'); return; }
+        const btn = document.getElementById('review-submit');
+        btn.disabled = true;
+        const r = await api('/reviews', { method: 'POST', body: { series_id: seriesId, rating: reviewRating, body: bodyText } });
+        btn.disabled = false;
+        if (!r.ok) { toast(r.data?.error || 'Nu am putut salva recenzia.', 'error'); return; }
+        toast(r.data.created ? 'Recenzia ta e live! Mulțumim. 💬' : 'Recenzie actualizată.', 'success');
+        loadReviews(seriesId);
+      });
+    }
+  }
+
+  list.innerHTML = '';
+  if (!reviews.length) {
+    list.innerHTML = '<p class="hint">Încă nicio recenzie — fii primul care își spune părerea.</p>';
+    return;
+  }
+  for (const r of reviews) {
+    const card = document.createElement('article');
+    card.className = 'review box';
+
+    const head = document.createElement('div');
+    head.className = 'review__head';
+    const who = document.createElement('span');
+    who.className = 'comment__who';
+    who.textContent = r.username;
+    const stars = document.createElement('span');
+    stars.className = 'review__stars';
+    stars.textContent = `★ ${r.rating}/10`;
+    const when = document.createElement('span');
+    when.className = 'comment__when';
+    when.textContent = formatDate(r.updated_at);
+    head.append(who, stars);
+    for (const b of [staffBadge(r.staff), rankChip(r.rank)].filter(Boolean)) head.appendChild(b);
+    head.appendChild(when);
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'review__body';
+    body.textContent = r.body;
+    card.appendChild(body);
+    list.appendChild(card);
+  }
 }

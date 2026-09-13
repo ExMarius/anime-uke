@@ -33,18 +33,38 @@ export async function onRequestGet(context) {
   const themes = await loadRankThemes(env);
   const rows = await env.DB
     .prepare(
-      `SELECT c.id, c.body, c.created_at, c.user_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod
+      `SELECT c.id, c.body, c.created_at, c.user_id, c.parent_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod
        FROM episode_comments c
        JOIN users u ON u.id = c.user_id
        WHERE c.episode_id = ?
        ORDER BY c.id ASC
-       LIMIT 50`
+       LIMIT 80`
     )
     .bind(eid.value)
     .all();
+  const list = rows.results || [];
+
+  // Score-urile si votul propriu: doua citiri grupate, indiferent de
+  // cat de lunga e lista (buget D1 prietenos).
+  const ids = list.map((r) => r.id);
+  let scores = {};
+  let mine = {};
+  if (ids.length) {
+    const ph = ids.map(() => '?').join(',');
+    const agg = await env.DB
+      .prepare(`SELECT comment_id, SUM(vote) AS s FROM comment_votes WHERE comment_id IN (${ph}) GROUP BY comment_id`)
+      .bind(...ids)
+      .all();
+    for (const a of agg.results || []) scores[a.comment_id] = a.s;
+    const my = await env.DB
+      .prepare(`SELECT comment_id, vote FROM comment_votes WHERE user_id = ? AND comment_id IN (${ph})`)
+      .bind(user.id, ...ids)
+      .all();
+    for (const m of my.results || []) mine[m.comment_id] = m.vote;
+  }
 
   return json({
-    comments: (rows.results || []).map((r) => {
+    comments: list.map((r) => {
       const idn = identity(r, themes);
       return {
         id: r.id,
@@ -52,6 +72,9 @@ export async function onRequestGet(context) {
         created_at: r.created_at,
         username: r.username,
         own: r.user_id === user.id,
+        parent_id: r.parent_id || null,
+        score: scores[r.id] || 0,
+        my_vote: mine[r.id] || 0,
         rank: idn.rank,
         staff: idn.staff,
       };
@@ -83,9 +106,23 @@ export async function onRequestPost(context) {
   const episode = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(eid.value).first();
   if (!episode) return errorResponse(404, 'Episodul nu există');
 
+  // Raspunsurile tin de acelasi episod si nu coboara sub un nivel: un
+  // raspuns la un raspuns se ataseaza parintelui firului.
+  let parentId = null;
+  const rawParent = validatePositiveInt(body.parent_id, 'Comentariul părinte');
+  if (body.parent_id !== undefined && body.parent_id !== null) {
+    if (!rawParent.ok) return errorResponse(400, rawParent.error);
+    const par = await env.DB
+      .prepare('SELECT id, episode_id, parent_id FROM episode_comments WHERE id = ?')
+      .bind(rawParent.value)
+      .first();
+    if (!par || par.episode_id !== eid.value) return errorResponse(404, 'Comentariul părinte nu există');
+    parentId = par.parent_id || par.id;
+  }
+
   const ins = await env.DB
-    .prepare('INSERT INTO episode_comments (episode_id, user_id, body) VALUES (?, ?, ?)')
-    .bind(eid.value, user.id, text)
+    .prepare('INSERT INTO episode_comments (episode_id, user_id, body, parent_id) VALUES (?, ?, ?, ?)')
+    .bind(eid.value, user.id, text, parentId)
     .run();
 
   // +5 XP / +5 puncte lunare pe comentariu, ca in spec.
@@ -93,7 +130,7 @@ export async function onRequestPost(context) {
   const cc = await env.DB.prepare('SELECT COUNT(*) AS n FROM episode_comments WHERE user_id = ?').bind(user.id).first();
   if ((cc?.n || 0) >= 25) await grantBadge(env, user.id, 'commenter_25');
 
-  return json({ success: true, id: ins.meta.last_row_id });
+  return json({ success: true, id: ins.meta.last_row_id, parent_id: parentId }, { status: 201 });
 }
 
 export async function onRequestDelete(context) {

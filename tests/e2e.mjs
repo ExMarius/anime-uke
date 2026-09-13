@@ -1344,6 +1344,57 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   check('Lista de raportari e doar pentru admin → 403', userReports.status === 403, `status=${userReports.status}`);
 }
 
+console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
+{
+  const j = jar();
+  await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  // --- voturi pe comentarii
+  const c1 = await req(globalThis.admin, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu de votat' });
+  check('Comentariul tinta exista', Number.isInteger(c1.data?.id), JSON.stringify(c1.data));
+  const anonV = await req(jar(), 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: 1 });
+  check('Votul anonim → 401', anonV.status === 401, `status=${anonV.status}`);
+  const xpB = (await req(j, 'GET', '/api/economy')).data?.xp ?? 0;
+  const v1 = await req(j, 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: 1 });
+  const xpA = (await req(j, 'GET', '/api/economy')).data?.xp ?? 0;
+  check('Vot +1: score 1, my_vote 1 si +1 XP (din spec)', v1.data?.score === 1 && v1.data?.my_vote === 1 && xpA === xpB + 1, JSON.stringify(v1.data) + ` xp=${xpB}->${xpA}`);
+  const v2 = await req(j, 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: -1 });
+  check('Schimbarea votului in -1 actualizeaza score', v2.data?.score === -1 && v2.data?.my_vote === -1, JSON.stringify(v2.data));
+  const v3 = await req(j, 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: 0 });
+  check('Anularea votului (0) aduce score la 0', v3.data?.score === 0 && v3.data?.my_vote === 0, JSON.stringify(v3.data));
+  const vBad = await req(j, 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: 7 });
+  check('Vot invalid → 400', vBad.status === 400, `status=${vBad.status}`);
+  const vGhost = await req(j, 'POST', '/api/comments/vote', { comment_id: 999999, vote: 1 });
+  check('Vot pe comentariu inexistent → 404', vGhost.status === 404, `status=${vGhost.status}`);
+  await req(j, 'POST', '/api/comments/vote', { comment_id: c1.data.id, vote: 1 });
+
+  // --- raspunsuri un singur nivel
+  const r1 = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Raspuns la comentariul adminului', parent_id: c1.data.id });
+  check('Raspunsul se posteaza cu parent_id', r1.status === 201 && r1.data?.parent_id === c1.data.id, JSON.stringify(r1.data));
+  const r2 = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Raspuns la raspuns (se aplatizeaza)', parent_id: r1.data.id });
+  check('Raspunsul la un raspuns se ataseaza parintelui firului', r2.data?.parent_id === c1.data.id, JSON.stringify(r2.data));
+  const badP = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'parent gresit', parent_id: 999999 });
+  check('Parinte inexistent → 404', badP.status === 404, `status=${badP.status}`);
+  const cList = await req(j, 'GET', `/api/comments?episode_id=${globalThis.epId}`);
+  const got1 = (cList.data?.comments || []).find((c) => c.id === c1.data.id);
+  check('Lista aduce score, my_vote si parent_id', got1 && typeof got1.score === 'number' && typeof got1.my_vote === 'number' && got1.parent_id === null, JSON.stringify(got1)?.slice(0, 140));
+
+  // --- recenzii
+  const anonR = await req(jar(), 'GET', `/api/reviews?series_id=${globalThis.seriesId}`);
+  check('Recenziile anonime → 401', anonR.status === 401, `status=${anonR.status}`);
+  const rv1 = await req(j, 'POST', '/api/reviews', { series_id: globalThis.seriesId, rating: 9, body: 'Seria mea preferata, animatie si poveste superbe' });
+  check('Recenzia valida → 201 cu medie calculata', rv1.status === 201 && rv1.data?.created === true && typeof rv1.data?.average === 'number', JSON.stringify(rv1.data));
+  const rv2 = await req(j, 'POST', '/api/reviews', { series_id: globalThis.seriesId, rating: 8, body: 'Recenzie editata: ramane foarte buna' });
+  check('A doua postare e UPSERT (200, created false)', rv2.status === 200 && rv2.data?.created === false, JSON.stringify(rv2.data));
+  const rvList = await req(j, 'GET', `/api/reviews?series_id=${globalThis.seriesId}`);
+  const mine = (rvList.data?.reviews || []).find((r) => r.own);
+  check('Lista recenziilor aduce nota, textul si flag-ul own', mine && mine.rating === 8 && mine.body.includes('editata') && rvList.data?.count >= 1, JSON.stringify(mine)?.slice(0, 140));
+  const rvBad = await req(j, 'POST', '/api/reviews', { series_id: globalThis.seriesId, rating: 11, body: 'nota invalida aici' });
+  check('Nota 11 → 400', rvBad.status === 400, `status=${rvBad.status}`);
+  const rvShort = await req(j, 'POST', '/api/reviews', { series_id: globalThis.seriesId, rating: 7, body: 'scurt' });
+  check('Recenzie prea scurta → 400', rvShort.status === 400, `status=${rvShort.status}`);
+}
+
 console.log('\n=== 14. PERSISTENTA MESAJE IN D1 ===');
 {
   await new Promise(r => setTimeout(r, 2500));
