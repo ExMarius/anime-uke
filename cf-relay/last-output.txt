@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 51381c0
+comanda: cf-relay/cmd.sh @ 46a386a
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,8 +15,8 @@ comanda: cf-relay/cmd.sh @ 51381c0
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=51381c0
-    [0;32m✓[0m publicat: https://f00f3afd.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=46a386a
+    [0;32m✓[0m publicat: https://181c635e.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -24,12 +24,19 @@ comanda: cf-relay/cmd.sh @ 51381c0
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-═══ CACHE FINAL ═══
-style.css CU ?v=   → public, max-age=31536000, immutable
-core.js FARA ?v=   → no-cache, no-cache
-covers/1.jpg       → public, max-age=604800
-hero-1.jpg         → public, max-age=86400
+═══ ÎNREGISTRARE DESCHISĂ (proba) ═══
+register-options: {"inviteRequired":false,"bootstrap":false,"userCount":3,"mode":"open","capacityFull":false}
+register FĂRĂ cod: {"user":{"id":20,"username":"deschis_1789323761","points":0,"is_admin":false}}
+login: OK
+POST /series cu sesiune: 200  (fără: 401)
+cerere de cod (mod deschis): "Înregistrarea e deschisă pentru toți — nu mai ai nevoie de cod. Creează-ți cont direct."
+login.html: noindex=0 (0 = gasibil pe Google)
+
+═══ CURATENIE ═══
+{"success":true}
+{"users":3}
 
 ── still alive ──
   / -> 302
   /login -> 200
+  /register -> 200
