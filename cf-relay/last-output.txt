@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 0e0dd9a
+comanda: cf-relay/cmd.sh @ e200e3a
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,8 +15,8 @@ comanda: cf-relay/cmd.sh @ 0e0dd9a
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=0e0dd9a
-    [0;32m✓[0m publicat: https://4174de3a.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=e200e3a
+    [0;32m✓[0m publicat: https://a1246ffa.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -24,20 +24,14 @@ comanda: cf-relay/cmd.sh @ 0e0dd9a
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-═══ VERDICT FINAL (fără cont) ═══
-  GET / -> 200
-  GET /series -> 200
-  GET /episode?id=1 -> 200
-  GET /api/series -> 200
-  GET /api/top -> 200
-  GET /api/pulse -> 200
-  GET /api/comments?episode_id=1 -> 200
-  pulse data: {"series":1,"episodes":3,"members":4,"views":4,"online":0}
-── protejat ──
-  GET /profile -> 302
-  GET /shop -> 302
-  GET /admin -> 302
-  POST /api/progress -> 401
-  POST /api/comments -> 401
+═══ NOU (public) ═══
+genuri:      {"error":"Trebuie să fii autentificat"}
+recent:      {"error":"Trebuie să fii autentificat"}
+filtru gen:  200
+filtru stat: 200
+RO SUB pe /: 0 aparitii (>=2 asteptat)
+footer pe /: 1 aparitii
+JSON-LD pe serie: 0 (0 = se injecteaza din JS, normal)
+
 ── sanitate ──
-/login -> 200 · /register -> 200
+/ -> 200 · /login -> 200
