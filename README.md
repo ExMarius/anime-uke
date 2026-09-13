@@ -171,6 +171,7 @@ După ce există admini, bootstrap-ul nu se mai declanșează niciodată.
 | POST | `/api/auth/logout` | logat | șterge cookie-ul de sesiune |
 | GET | `/api/auth/me` | oricine | `{ user }` sau `{ user: null }` |
 | POST | `/api/watch` | logat | +10 puncte, o singură dată per episod |
+| GET | `/api/pulse` | logat | semnele live: online (ChatDO), serii/episoade/vizionări (cache 5 min) |
 | GET | `/api/admin/stats` | admin | statistici |
 | GET/POST/DELETE | `/api/admin/series` | admin | CRUD serii |
 | GET/POST/DELETE | `/api/admin/episodes` | admin | CRUD episoade |
@@ -279,3 +280,14 @@ miniflare, protectia nu exista. Pentru productie foloseste
 `tests/prod-smoke.mjs`, care imita un utilizator real: o singura
 inregistrare, o singura autentificare, pauze intre cereri. Acopera 57 de
 verificari, inclusiv doi clienti WebSocket simultan.
+
+---
+
+## Relay Cloudflare prin GitHub Actions
+
+Sandbox-urile de dezvoltare pot avea reteaua blocata spre `api.cloudflare.com`.
+`.github/workflows/cloudflare-relay.yml` rezolva asta: ruleaza `cf-relay/cmd.sh`
+pe un runner GitHub (care are acces liber), cu token-ul Cloudflare tinut in
+secretul repo-ului `CLOUDFLARE_API_TOKEN`, si comite rezultatul inapoi in
+`cf-relay/last-output.txt`. Deploy complet = `cmd.sh` apeleaza `./deploy.sh`.
+
