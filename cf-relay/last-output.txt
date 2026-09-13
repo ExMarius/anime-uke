@@ -1,0 +1,16 @@
+exit_code: 5
+comanda: cf-relay/cmd.sh @ da51f80
+────────────────────────────────────
+── verify token ──
+{
+  "success": true,
+  "status": "active",
+  "error": null
+}
+── conturi accesibile ──
+{
+  "id": "80024736ee1b2c8800e84d668dc57154",
+  "name": "Marius7like7@gmail.com's Account"
+}
+── baze de date D1 ──
+jq: error (at <stdin>:0): Cannot iterate over null (null)
