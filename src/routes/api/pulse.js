@@ -1,5 +1,4 @@
 import { json } from '../../lib/http.js';
-import { requireUser } from '../../lib/session.js';
 
 // =====================================================================
 // GET /api/pulse — semnele „live” ale site-ului, cu cost D1 aproape zero.
@@ -19,9 +18,7 @@ const CACHE_MS = 5 * 60 * 1000;
 const cache = { at: 0, data: null };
 
 export async function onRequestGet(context) {
-  const { request, env } = context;
-  const gate = await requireUser(request, env);
-  if (gate.response) return gate.response;
+  const { env } = context;
 
   const now = Date.now();
   if (!cache.data || now - cache.at > CACHE_MS) {
