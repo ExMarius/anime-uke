@@ -1350,3 +1350,66 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
 .report-row-admin { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .7rem .9rem; flex-wrap: wrap; }
 .report-row-admin__main { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
 .report-row-admin__acts { display: flex; align-items: center; gap: .45rem; }
+
+/* ==================== PLAYER v4: cinema + navigare ==================== */
+.container-wide { width: min(1100px, 100% - 2.5rem); margin-inline: auto; }
+
+/* Mod cinema: playerul iese din container si ocupa toata latimea ecranului,
+   ca banda „cinema” de la YouTube. Restul paginii ramane centrat. */
+body.cinema .player {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  max-height: 88vh;
+}
+body.cinema .container-wide { width: min(1280px, 100% - 2.5rem); }
+
+.player-tools__toggles { display: inline-flex; gap: .4rem; }
+.ptool {
+  padding: .3rem .7rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .65); font-size: .78rem; font-weight: 700;
+}
+.ptool:hover { color: #fff; border-color: rgba(255, 255, 255, .3); }
+.ptool--on { border-color: var(--crimson, #DC143C); background: rgba(220, 20, 60, .18); color: #fff; }
+
+/* Bara de navigare intre episoade — trei butoane ca pe platformele de streaming */
+.ep-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem; flex-wrap: wrap; margin-top: 1rem;
+}
+.ep-sub-cta { display: flex; justify-content: center; margin: .9rem 0 1.2rem; }
+.ep-sub-cta .btn { font-size: .92rem; padding: .65rem 1.3rem; }
+
+/* AUTO-NEXT: overlay peste player cu numărătoare */
+.autonext {
+  position: absolute; inset: 0; z-index: 5;
+  display: grid; place-items: center;
+  background: rgba(8, 6, 8, .82); backdrop-filter: blur(3px);
+}
+.autonext[hidden] { display: none; }
+.autonext__card {
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  padding: 1.4rem 1.8rem; border-radius: 1rem;
+  background: var(--surface, #17171f); border: 1px solid var(--line, rgba(255,255,255,.08));
+  text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+}
+.autonext__title { font-size: 1.05rem; font-weight: 800; }
+.autonext__title b { color: var(--crimson, #DC143C); font-size: 1.25rem; }
+.autonext__name { color: rgba(255, 255, 255, .6); font-size: .88rem; max-width: 26rem; }
+.autonext__btns { display: flex; gap: .5rem; margin-top: .4rem; }
+
+/* MODAL „ALTE EPIZOADE” */
+.eplist-card { width: min(34rem, calc(100vw - 2rem)); max-height: 80vh; overflow-y: auto; }
+.eplist__head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .7rem; }
+.eplist__range { display: flex; align-items: center; justify-content: center; gap: .7rem; margin-bottom: .7rem; }
+.eplist__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.1rem, 1fr)); gap: .4rem; }
+.eplist__ep {
+  padding: .5rem 0; border-radius: .5rem; cursor: pointer; font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .8);
+}
+.eplist__ep:hover { border-color: var(--crimson, #DC143C); color: #fff; }
+.eplist__ep.is-on { background: var(--crimson, #DC143C); border-color: var(--crimson, #DC143C); color: #fff; }

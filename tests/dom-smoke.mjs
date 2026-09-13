@@ -403,7 +403,10 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   const sid = created?.series?.id ?? created?.id;
   await fetch(`${BASE}/api/admin/episodes`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
-    body: JSON.stringify({ series_id: sid, episodes: [{ episode_number: 1, title: 'Unu', subtitle_url: '/assets/subs/demo-ro.vtt', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] }] }),
+    body: JSON.stringify({ series_id: sid, episodes: [
+      { episode_number: 1, title: 'Unu', subtitle_url: '/assets/subs/demo-ro.vtt', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] },
+      { episode_number: 2, title: 'Doi', sources: [{ label: 'S1', kind: 'file', url: 'https://media.w3.org/2010/05/bunny/trailer.mp4' }] },
+    ] }),
   });
   const detail = await (await fetch(`${BASE}/api/series/${sid}`, { headers: { Cookie: COOKIE } })).json();
   const epId = detail?.episodes?.[0]?.id;
@@ -449,6 +452,38 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   const repChip2 = p.$$('#report-reasons .report-chip')[1];
   repChip2?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   check('Selectia motivului muta marcajul is-on', repChip2?.classList.contains('is-on') === true, repChip2?.className);
+
+  // ---- PLAYER v4: navigare jos, modal, cinema, auto-next
+  check('Bara de navigare intre episoade exista jos', !!p.$('#ep-prev') && !!p.$('#ep-list') && !!p.$('#ep-next'), 'lipseste ep-nav');
+  const navReady = await until(() => p.$('#ep-next') && !p.$('#ep-next').disabled);
+  check('Butonul „următorul” e activ când exista episod după', navReady, `disabled=${p.$('#ep-next')?.disabled}`);
+  check('Butonul „anterior” e dezactivat pe primul episod', p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
+  p.$('#ep-list')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const listOn = await until(() => p.$('#eplist-modal')?.hidden === false && p.$$('#eplist-grid .eplist__ep').length >= 1);
+  check('Modalul „Alte episoade” se deschide cu grila de episoade', listOn, `n=${p.$$('#eplist-grid .eplist__ep').length}`);
+  check('Episodul curent e marcat in grila', !!p.$('#eplist-grid .eplist__ep.is-on'), 'lipseste is-on');
+  p.$('#eplist-close')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+
+  const ctaOn = await until(() => p.$('#ep-sub-btn') && !p.$('#ep-sub-btn').hidden);
+  check('CTA-ul de abonare „Vreau să știu…” exista sub navigare', ctaOn && /Vreau să știu|Primești notificări/.test(p.$('#ep-sub-btn')?.textContent || ''), p.$('#ep-sub-btn')?.textContent);
+  const beforeTxt = p.$('#ep-sub-btn')?.textContent || '';
+  p.$('#ep-sub-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const toggled = await until(() => (p.$('#ep-sub-btn')?.textContent || '') !== beforeTxt);
+  check('Click pe CTA comută abonarea', toggled, p.$('#ep-sub-btn')?.textContent);
+  p.$('#ep-sub-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  await until(() => (p.$('#ep-sub-btn')?.textContent || '') === beforeTxt);
+
+  check('Mod cinema e pornit implicit (player lat)', p.window.document.body.classList.contains('cinema'), p.window.document.body.className);
+  p.$('#cinema-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Toggle-ul cinema scoate clasa de pe body', !p.window.document.body.classList.contains('cinema'), p.window.document.body.className);
+  p.$('#cinema-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+
+  check('Auto-next e pornit implicit si scrie asta pe buton', /pornit/.test(p.$('#autonext-btn')?.textContent || ''), p.$('#autonext-btn')?.textContent);
+  p.$('#player-video')?.dispatchEvent(new p.window.Event('ended'));
+  const anOn = await until(() => p.$('#autonext')?.hidden === false && /\d/.test(p.$('#autonext-count')?.textContent || ''));
+  check('La finalul video apare numărătoarea auto-next', anOn, `count=${p.$('#autonext-count')?.textContent}`);
+  p.$('#autonext-cancel')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('„Anulează” ascunde overlay-ul', p.$('#autonext')?.hidden === true, String(p.$('#autonext')?.hidden));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
   check('Scurtaturile degradeaza fara crash cand API-urile lipsesc', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));

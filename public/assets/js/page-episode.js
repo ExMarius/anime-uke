@@ -388,6 +388,9 @@ async function load() {
   // Playerul se incarca doar dupa ce avem URL-urile validate pe server.
   renderSources(res.data.sources || []);
 
+  // Navigare intre episoade + abonare + auto-next (nu blocam playerul pe ele)
+  initEpNav(ep.series_id, ep.episode_number).catch(() => { /* optional */ });
+
   initComments(Number(id));
   loadComments(Number(id)).catch(() => { /* comentariile sunt optionale */ });
 
@@ -653,3 +656,225 @@ function initReport() {
 }
 
 initReport();
+
+// =====================================================================
+// PLAYER v4: navigare intre episoade jos, mod cinema, auto-next.
+// =====================================================================
+let currentSeriesId = null;
+let currentNumber = 0;
+let epCtx = null;          // {list, page, pages, total, subscribed, subscriber_count}
+let prevEp = null;
+let nextEp = null;
+const EP_PER = 100;
+
+function qs(id) { return document.getElementById(id); }
+
+async function fetchEpPage(seriesId, page) {
+  const res = await api(`/series/${encodeURIComponent(seriesId)}?per_page=${EP_PER}&page=${page}`);
+  if (!res.ok) return null;
+  const d = res.data;
+  return {
+    list: (d.episodes || []).slice().sort((a, b) => a.episode_number - b.episode_number),
+    page: d.page || page,
+    pages: d.pages || 1,
+    total: d.episode_count || 0,
+    subscribed: !!d.subscribed,
+    subscriber_count: d.subscriber_count || 0,
+  };
+}
+
+/** Vecinul (+1/-1) din pagina curenta; la margini trage pagina vecina. */
+async function sibling(delta) {
+  if (!epCtx) return null;
+  const target = currentNumber + delta;
+  if (target < 1) return null;
+  const inList = epCtx.list.find((e) => e.episode_number === target);
+  if (inList) return inList;
+  const targetPage = Math.floor((target - 1) / EP_PER) + 1;
+  if (targetPage < 1 || targetPage > epCtx.pages || targetPage === epCtx.page) return null;
+  const other = await fetchEpPage(currentSeriesId, targetPage);
+  if (!other) return null;
+  return (other.list || []).find((e) => e.episode_number === target) || null;
+}
+
+function paintEpNav() {
+  const prev = qs('ep-prev');
+  const next = qs('ep-next');
+  if (prev) {
+    prev.disabled = !prevEp;
+    prev.onclick = () => { if (prevEp) location.href = `/episode?id=${prevEp.id}`; };
+  }
+  if (next) {
+    next.disabled = !nextEp;
+    next.onclick = () => { if (nextEp) location.href = `/episode?id=${nextEp.id}`; };
+  }
+}
+
+function paintSubCta() {
+  const btn = qs('ep-sub-btn');
+  if (!btn || !epCtx) return;
+  btn.hidden = false;
+  const on = epCtx.subscribed;
+  btn.textContent = on
+    ? `✅ Primești notificări la episoade noi${epCtx.subscriber_count ? ` (${epCtx.subscriber_count})` : ''}`
+    : '✉️ Vreau să știu când apare un nou episod';
+  btn.classList.toggle('btn--accent', !on);
+  btn.classList.toggle('btn--ghost', on);
+  if (btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', async () => {
+    const on = !epCtx.subscribed;
+    const r = await api('/subscribe', { method: 'POST', body: { series_id: currentSeriesId, on: on ? 1 : 0 } });
+    if (!r.ok) { toast(r.data?.error || 'Nu am putut schimba abonarea.', 'error'); return; }
+    epCtx.subscribed = on;
+    epCtx.subscriber_count = r.data.subscriber_count;
+    paintSubCta();
+    toast(on ? 'Perfect! Te anunțăm imediat ce apare un episod nou. 🔔' : 'Nu te mai anunțăm pentru seria asta.', 'success');
+  });
+}
+
+// ------------------------- MODAL „ALTE EPIZOADE” -------------------------
+function renderEpList() {
+  const grid = qs('eplist-grid');
+  const range = qs('eplist-range');
+  if (!grid || !epCtx) return;
+  grid.innerHTML = '';
+  for (const e of epCtx.list) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'eplist__ep' + (e.episode_number === currentNumber ? ' is-on' : '');
+    b.textContent = String(e.episode_number);
+    b.title = e.title || `Episodul ${e.episode_number}`;
+    b.addEventListener('click', () => {
+      qs('eplist-modal').hidden = true;
+      if (e.id !== episodeId) location.href = `/episode?id=${e.id}`;
+    });
+    grid.appendChild(b);
+  }
+  if (epCtx.pages > 1) {
+    range.hidden = false;
+    const start = (epCtx.page - 1) * EP_PER + 1;
+    const end = Math.min(epCtx.total, epCtx.page * EP_PER);
+    qs('eplist-range-label').textContent = `Episoadele ${start}–${end} din ${epCtx.total}`;
+    qs('eplist-prev').disabled = epCtx.page <= 1;
+    qs('eplist-next').disabled = epCtx.page >= epCtx.pages;
+  } else {
+    range.hidden = true;
+  }
+}
+
+async function gotoEpPage(page) {
+  const other = await fetchEpPage(currentSeriesId, page);
+  if (!other) return;
+  epCtx = { ...epCtx, ...other };
+  renderEpList();
+}
+
+function initEpListModal() {
+  const modal = qs('eplist-modal');
+  const open = qs('ep-list');
+  if (!modal || !open || open.dataset.wired) return;
+  open.dataset.wired = '1';
+  open.addEventListener('click', () => { modal.hidden = false; renderEpList(); });
+  qs('eplist-close')?.addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.hidden = true; });
+  qs('eplist-prev')?.addEventListener('click', () => { if (epCtx && epCtx.page > 1) gotoEpPage(epCtx.page - 1); });
+  qs('eplist-next')?.addEventListener('click', () => { if (epCtx && epCtx.page < epCtx.pages) gotoEpPage(epCtx.page + 1); });
+}
+
+// ------------------------------ AUTO-NEXT ------------------------------
+const autonextOn = () => localStorage.getItem('auk-autonext') !== '0';
+let autonextTimer = null;
+
+function stopAutoNext() {
+  if (autonextTimer) { clearInterval(autonextTimer); autonextTimer = null; }
+  const box = qs('autonext');
+  if (box) box.hidden = true;
+}
+
+function startAutoNext() {
+  if (!nextEp || !autonextOn()) return;
+  const box = qs('autonext');
+  const count = qs('autonext-count');
+  if (!box || !count) return;
+  qs('autonext-name').textContent =
+    `Episodul ${nextEp.episode_number}${nextEp.title ? ` — ${nextEp.title}` : ''}`;
+  let n = 10;
+  count.textContent = String(n);
+  box.hidden = false;
+  autonextTimer = setInterval(() => {
+    n -= 1;
+    count.textContent = String(Math.max(0, n));
+    if (n <= 0) {
+      stopAutoNext();
+      location.href = `/episode?id=${nextEp.id}`;
+    }
+  }, 1000);
+}
+
+function paintAutoBtn() {
+  const b = qs('autonext-btn');
+  if (!b) return;
+  b.classList.toggle('ptool--on', autonextOn());
+  b.textContent = `⏭ Auto-next: ${autonextOn() ? 'pornit' : 'oprit'}`;
+}
+
+function initAutoNext() {
+  const b = qs('autonext-btn');
+  if (b && !b.dataset.wired) {
+    b.dataset.wired = '1';
+    b.addEventListener('click', () => {
+      localStorage.setItem('auk-autonext', autonextOn() ? '0' : '1');
+      paintAutoBtn();
+      if (!autonextOn()) stopAutoNext();
+      toast(autonextOn() ? 'Auto-next pornit: la final trecem singuri la următorul episod.' : 'Auto-next oprit.', 'success');
+    });
+  }
+  paintAutoBtn();
+  qs('autonext-cancel')?.addEventListener('click', stopAutoNext);
+  qs('autonext-go')?.addEventListener('click', () => { if (nextEp) location.href = `/episode?id=${nextEp.id}`; });
+  // doar sursele de tip fisier ne spun cand s-au terminat
+  qs('player-video')?.addEventListener('ended', startAutoNext);
+}
+
+// ------------------------------ MOD CINEMA ------------------------------
+const cinemaOn = () => localStorage.getItem('auk-cinema') !== '0';
+
+function paintCinema() {
+  document.body.classList.toggle('cinema', cinemaOn());
+  const b = qs('cinema-btn');
+  if (b) b.classList.toggle('ptool--on', cinemaOn());
+}
+
+function initCinema() {
+  const b = qs('cinema-btn');
+  if (b && !b.dataset.wired) {
+    b.dataset.wired = '1';
+    b.addEventListener('click', () => {
+      localStorage.setItem('auk-cinema', cinemaOn() ? '0' : '1');
+      paintCinema();
+    });
+  }
+  paintCinema();
+}
+
+// ------------------------------- TASTA N -------------------------------
+document.addEventListener('keydown', (ev) => {
+  const tag = (ev.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if ((ev.key === 'n' || ev.key === 'N') && nextEp) location.href = `/episode?id=${nextEp.id}`;
+});
+
+async function initEpNav(seriesId, number) {
+  currentSeriesId = seriesId;
+  currentNumber = number;
+  initCinema();
+  initAutoNext();
+  initEpListModal();
+  if (!seriesId) return;
+  epCtx = await fetchEpPage(seriesId, Math.floor((number - 1) / EP_PER) + 1);
+  if (!epCtx) return;
+  [prevEp, nextEp] = await Promise.all([sibling(-1), sibling(1)]);
+  paintEpNav();
+  paintSubCta();
+}
