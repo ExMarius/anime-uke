@@ -1,25 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 52584f2
+comanda: cf-relay/cmd.sh @ 00ff282
 ────────────────────────────────────
-── deploy complet ──
-
-[1;35m==> 1/5  Baza de date D1[0m
-    [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
-    [0;32m✓[0m database_id injectat in toate configuratiile
-    [0;32m✓[0m wrangler.toml = configuratie de productie
-
-[1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m migrari aplicate
-
-[1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
-    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 12.86)
-
-[1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=52584f2
-    [0;32m✓[0m publicat: https://ec3ef635.anime-uke.pages.dev
-
-[1;35m==> 5/5  JWT_SECRET[0m
-    [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
-
-[1;32mGATA.[0m  Site: https://anime-uke.pages.dev
-exit deploy.sh: 0
+homepage (302 = privat, ok)              -> HTTP 302
+API profile (401 fara auth ok)           -> HTTP 401
+API chat state (401/200 ok)              -> HTTP 401
+sitemap                                  -> HTTP 200
