@@ -84,10 +84,20 @@ jobs:
       - name: Ruleaza comanda
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # NU mapa secretul direct pe CLOUDFLARE_ACCOUNT_ID: daca secretul
+          # nu exista, valoarea goala ar suprascrie ID-ul descoperit automat
+          # in pasul anterior (prin GITHUB_ENV). Citim dintr-un nume separat.
+          CF_ACCOUNT_ID_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
         run: |
           set -uo pipefail
+          if [ -n "${CF_ACCOUNT_ID_SECRET}" ]; then
+            export CLOUDFLARE_ACCOUNT_ID="${CF_ACCOUNT_ID_SECRET}"
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
+            echo "✗ Nu am CLOUDFLARE_ACCOUNT_ID (nici descoperit, nici din secret)."
+            exit 1
+          fi
           CMD_FILE="cf-relay/cmd.sh"
           if [ -n "${DISPATCH_CMD}" ]; then
             printf '%s\n' "${DISPATCH_CMD}" > "${CMD_FILE}"
