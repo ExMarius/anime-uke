@@ -1477,6 +1477,13 @@ console.log('\n=== Avatar (URL, GIF animat) ===');
     check('Lista online poarta avatarul', (got.online || []).some((u) => u.username === me.data.user.username && u.avatar === GIF), JSON.stringify(got.online));
     ws.close();
   }
+
+  // Link „de pagina" Tenor (ultima operatiune, ca sa nu strice assert-urile
+  // de mai sus): PATCH-ul nu trebuie sa pica; pe productie serverul il
+  // converteste la imaginea directa (og:image), local pastreaza originalul.
+  const page = await req(globalThis.admin, 'PATCH', '/api/profile', { avatar_url: 'https://tenor.com/paKwmvU0Mgf.gif' });
+  const pageUrl = page.data?.profile?.avatar_url || '';
+  check('Link pagina Tenor acceptat (valorificat sau pastrat)', page.status === 200 && !!pageUrl, `status=${page.status} url=${pageUrl}`);
 }
 
 // =====================================================================

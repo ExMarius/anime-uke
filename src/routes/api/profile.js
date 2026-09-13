@@ -1,6 +1,7 @@
 import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { getSessionUser } from '../../lib/session.js';
 import { getRank, getZodiac, formatRoDate, getAge, GENDERS } from '../../lib/rank.js';
+import { resolveAvatarUrl } from '../../lib/profile.js';
 import { validateProfilePatch } from '../../lib/profile.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
@@ -174,6 +175,13 @@ export async function onRequestPatch(context) {
       .prepare(`SELECT ${FIELDS.join(', ')} FROM user_profiles WHERE user_id = ?`)
       .bind(me.id)
       .first();
+
+    // Linkurile de pagina (ex. tenor.com/xyz.gif) devin imagini directe
+    // chiar la salvare — utilizatorul lipeste orice link, primim <img> care
+    // merge. E singurul loc cu fetch extern: doar la PATCH de profil.
+    if (patch.avatar_url) {
+      patch.avatar_url = (await resolveAvatarUrl(patch.avatar_url)).value;
+    }
 
     const merged = {};
     for (const f of FIELDS) merged[f] = f in patch ? patch[f] : (existing?.[f] ?? '');

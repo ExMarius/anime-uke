@@ -104,3 +104,45 @@ export function validateProfilePatch(body) {
 
   return { ok: true, value: out };
 }
+
+/**
+ * Linkurile „de pagina" (ex. https://tenor.com/xyz.gif deschid o pagina
+ * HTML cu GIF-ul in ea, nu fisierul) nu merg ca <img>. Rezolvatorul cauta
+ * imaginea directa:
+ *   1. urmareste redirecturile; daca raspunsul E imagine, e gata;
+ *   2. daca e HTML, extrage og:image / twitter:image / contentUrl
+ *      (pagina Tenor le are mereu, catre media1.tenor.com — hotlink-ok).
+ * Orice pica (retea, timeout, format necunoscut) pastreaza URL-ul original:
+ * clientul are oricum fallback pe initiala, deci nu se strica nimic.
+ * Ruleaza DOAR la salvarea profilului (rate-limit 30/10 min), nu la citiri.
+ */
+export async function resolveAvatarUrl(rawUrl) {
+  let res;
+  try {
+    res = await fetch(rawUrl, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(6000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; anime-uke avatar resolver)' },
+    });
+  } catch {
+    return { ok: true, value: rawUrl };
+  }
+  try {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct.startsWith('image/')) return { ok: true, value: res.url || rawUrl };
+
+    if (ct.includes('text/html')) {
+      const html = (await res.text()).slice(0, 400000);
+      const og = html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i)
+        || html.match(/<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i);
+      const cu = html.match(/"contentUrl"\s*:\s*"(https:[^"]+?\.(?:gif|png|jpe?g|webp))"/i);
+      const found = og?.[1] || cu?.[1];
+      if (found) {
+        const direct = new URL(found, res.url || rawUrl);
+        if (direct.protocol === 'https:' || direct.protocol === 'http:') return { ok: true, value: direct.href };
+      }
+    }
+  } catch { /* pastram originalul */ }
+  return { ok: true, value: rawUrl };
+}

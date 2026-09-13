@@ -129,19 +129,14 @@ function renderHead() {
 
   const badges = document.getElementById('p-badges');
   badges.innerHTML = '';
-  const rank = el('span', `rank rank--${r.key}`, `${r.icon} ${r.label}`);
-  badges.appendChild(rank);
-  // identitatea tematica: staff badge + gradul ales (Genin/Chunin/…)
+  // UN SINGUR sistem de rang: cel tematic (nivel -> Genin..Hokage), acelasi
+  // cu cel din chat/comentarii/clasament. Vechiul rang pe puncte afisa
+  // „Genin" de doua ori si contrazicea economia noua (punctele = trofeu de
+  // vizionare, nu moneda de rang).
+  badges.appendChild(el('span', 'uchip', `⬆️ Nivel ${u.level}`));
   for (const b of [staffBadge(data.identity?.staff), rankChip(data.identity?.rank)].filter(Boolean)) {
     badges.appendChild(b);
   }
-
-  document.getElementById('p-xp-fill').style.width = `${r.progress}%`;
-  const label = document.getElementById('p-xp-label');
-  label.textContent = r.next
-    ? `${r.points.toLocaleString('ro-RO')} / ${r.next.at.toLocaleString('ro-RO')} puncte până la ${r.next.icon} ${r.next.label}`
-    : `${r.points.toLocaleString('ro-RO')} puncte — rang maxim`;
-  label.title = label.textContent;
 
   document.getElementById('p-edit-btn').hidden = !data.is_self;
 }
