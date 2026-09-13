@@ -35,7 +35,6 @@ export const SHOP_ITEMS = [
   },
 ];
 
-export const COSMETIC_ITEMS = ['name_gold', 'flair_supporter'];
 
 export function findItem(id) {
   return SHOP_ITEMS.find((i) => i.id === id) || null;

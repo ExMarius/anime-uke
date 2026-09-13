@@ -1,6 +1,8 @@
 // =====================================================================
 // ChatDO — chat live prin Durable Objects.
 //
+// Validarea mesajelor vine din lib/validate.js (o singura sursa de adevar).
+//
 // DECIZII DE BUGET (plan gratuit, 1000+ utilizatori/zi):
 //
 // 1. WebSocket Hibernation API (ctx.acceptWebSocket) in loc de ws.accept().
@@ -33,6 +35,8 @@ const MAX_CONNECTIONS_PER_USER = 2;
 const RATE_MIN_INTERVAL_MS = 1500;   // minim 1.5s intre mesaje
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PER_WINDOW = 20;      // max 20 mesaje/minut
+
+import { validateChatMessage } from '../lib/validate.js';
 
 export class ChatDO {
   constructor(state, env) {
@@ -141,11 +145,9 @@ export class ChatDO {
       return;
     }
 
-    const message = String(data.message ?? '')
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
-      .trim()
-      .slice(0, 500);
-    if (!message) return;
+    const v = validateChatMessage(String(data.message ?? ''));
+    if (!v.ok) return;
+    const message = v.value;
 
     const entry = {
       user_id: att.userId,

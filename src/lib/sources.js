@@ -88,9 +88,6 @@ function hostOf(raw) {
 const DOOD_PATH = /^\/([ed])\/([A-Za-z0-9]{4,})$/;
 
 /** Intoarce true daca URL-ul arata ca un embed DoodStream pe orice gazda. */
-export function looksLikeDoodstream(url) {
-  return DOOD_PATH.test(url.pathname);
-}
 
 /** Link-ul de download (/d/xxx) nu e embed-abil; il normalizam la /e/xxx. */
 function normalizeDoodstream(url) {

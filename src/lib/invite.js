@@ -51,9 +51,6 @@ export function normalizeInviteCode(value) {
 }
 
 /** Verifica doar forma (nu si existenta in baza de date). */
-export function isValidInviteCodeFormat(value) {
-  return normalizeInviteCode(value) !== '';
-}
 
 /**
  * Cauta un cod utilizabil. Returneaza un motiv precis de respingere,
