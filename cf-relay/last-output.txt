@@ -1,16 +1,71 @@
-exit_code: 5
-comanda: cf-relay/cmd.sh @ da51f80
+exit_code: 0
+comanda: cf-relay/cmd.sh @ e01099f
 ────────────────────────────────────
 ── verify token ──
 {
   "success": true,
-  "status": "active",
-  "error": null
+  "errors": [],
+  "rezumat": "ok"
 }
-── conturi accesibile ──
+{"id":"e7207a81f1e3c3951b77549a16c4f2db","status":"active","not_before":"2026-09-13T00:00:00Z","expires_on":"2026-10-31T23:59:59Z"}
+
+── cont ──
 {
-  "id": "80024736ee1b2c8800e84d668dc57154",
-  "name": "Marius7like7@gmail.com's Account"
+  "success": true,
+  "errors": [],
+  "rezumat": "1 elemente"
 }
-── baze de date D1 ──
-jq: error (at <stdin>:0): Cannot iterate over null (null)
+[{"id":"80024736ee1b2c8800e84d668dc57154","name":"Marius7like7@gmail.com's Account","type":"standard","settings":{"enforce_twofactor":false,"api_access_enabled":null,"access_approval_expiry":null,"abuse_contact_email":null,"oauth_app_access_enabled":true},"legacy_flags":{"enterprise_zone_quota":{"maximum":0,"current":0,"available":0}},"created_on":"2024-10-20T15:59:27.978569Z"}]
+
+── D1 — lista ──
+{
+  "success": false,
+  "errors": [
+    {
+      "code": 7003,
+      "message": "Could not route to /client/v4/accounts/d1/database, perhaps your object identifier is invalid?"
+    }
+  ],
+  "rezumat": null
+}
+null
+
+── Pages — proiecte ──
+{
+  "success": false,
+  "errors": [
+    {
+      "code": 7003,
+      "message": "Could not route to /client/v4/accounts/pages/projects, perhaps your object identifier is invalid?"
+    }
+  ],
+  "rezumat": null
+}
+null
+
+── Workers — scripturi ──
+{
+  "success": false,
+  "errors": [
+    {
+      "code": 7003,
+      "message": "Could not route to /client/v4/accounts/workers/scripts, perhaps your object identifier is invalid?"
+    }
+  ],
+  "rezumat": null
+}
+null
+
+── wrangler whoami ──
+
+ ⛅️ wrangler 4.86.0
+───────────────────
+Getting User settings...
+👋 You are logged in with an User API Token. Unable to retrieve email for this user. Are you missing the `User->User Details->Read` permission?
+ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable.
+┌──────────────────────────────────┬──────────────────────────────────┐
+│ Account Name                     │ Account ID                       │
+├──────────────────────────────────┼──────────────────────────────────┤
+│ Marius7like7@gmail.com's Account │ 80024736ee1b2c8800e84d668dc57154 │
+└──────────────────────────────────┴──────────────────────────────────┘
+🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.
