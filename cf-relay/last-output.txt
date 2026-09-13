@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ e01099f
+comanda: cf-relay/cmd.sh @ ad26276
 ────────────────────────────────────
 ── verify token ──
 {
@@ -19,42 +19,26 @@ comanda: cf-relay/cmd.sh @ e01099f
 
 ── D1 — lista ──
 {
-  "success": false,
-  "errors": [
-    {
-      "code": 7003,
-      "message": "Could not route to /client/v4/accounts/d1/database, perhaps your object identifier is invalid?"
-    }
-  ],
-  "rezumat": null
+  "success": true,
+  "errors": [],
+  "rezumat": "2 elemente"
 }
-null
+[{"uuid":"7209b0bd-227b-46d0-b376-6157b56734fa","name":"anime-db","created_at":"2026-09-10T23:56:27.396Z","version":"production","num_tables":0,"file_size":344064,"jurisdiction":null},{"uuid":"b62d35da-e01d-4e57-a06a-5c543a52927f","name":"anime-auth-db","created_at":"2026-04-20T22:48:21.244Z","version":"production","num_tables":0,"file_size":49152,"jurisdiction":null}]
 
 ── Pages — proiecte ──
 {
-  "success": false,
-  "errors": [
-    {
-      "code": 7003,
-      "message": "Could not route to /client/v4/accounts/pages/projects, perhaps your object identifier is invalid?"
-    }
-  ],
-  "rezumat": null
+  "success": true,
+  "errors": [],
+  "rezumat": "2 elemente"
 }
-null
-
+[{"id":"c9073da4-ffa8-4cae-9c5a-558ce4bc8453","name":"anime-uke","subdomain":"anime-uke.pages.dev","domains":["anime-uke.pages.dev"],"source":{"type":"github","config":{"owner":"ExMarius","owner_id":"144387427","repo_name":"anime-uke","repo_id":"1109676542","production_branch":"main","pr_comments_enabled":true,"deployments_enabled":true,"production_deployments_enabled":true,"preview_deployment_setting":"all","preview_branch_includes":["*"],"preview_branch_excludes":[],"path_includes":["*"],"path_excludes":[]}},"build_config":{"build_command":"","destination_dir":"public","root_dir":"","web_analytics_tag":null,"web_analytics_token":null},"deployment_configs":{"preview":{"env_vars":{},"durable_object_namespaces":{"CHAT":{"namespace_id":"c2c3452ec4014491874d02c9ac18570b","class_name":"ChatDO","service":"anime-uke-do"},"RATE_LIMIT":{"namespace_id":"9c0a14e3250b4d0882e52dba42c52c47","class_name":"RateLimitDO","service":"anime-uke-do"},"STATS":{"namespace_id":"9456a65b078a476c92b4c90bb940da98","class_name":"StatsDO","service":"anime-uke-do"}},"d1_databases":{"DB":{"id":"7209b0bd-227b-46d0-b376-6157b56734fa"}},"fail_open":true,"always_use_latest_compatibility_date":false,"compatibility_date":"2026-05-01","compatibility_flags":[],"build_image_major_version":3,"usage_model":"standard","wrangler_config_hash":"7beab3339782633475b21756d6da914985e2b22cc1b0d8095b96885c394a854a"},"production":{"env_vars":{"JWT_SECRET":{"type":"secret_text","value":""}},"durable_object_namespaces":{"CHAT":{"namespace_id":"c2c3452ec4014491874d02c9ac18570b","class_name":"ChatDO","service":"anime-uke-do"},"RATE_LIMIT":{"namespace_id":"9c0a14e3250b4d0882e52dba42c52c47","class_name":"RateLimitDO","service":"anime-uke-do"},"STATS":{"namespace_id":"9456a65b078a476c92b4c90bb940da98","class_name":"StatsDO","service":"anime-uke-do"}},"d1_databases":{"DB":{"id":"7209b0bd-227b-46d0-b376-6157b56734fa"}},"fail_open":true,"always_use_latest_compatibility_date":false,"compatibility_date":"2026-05-01","compatibilit
 ── Workers — scripturi ──
 {
-  "success": false,
-  "errors": [
-    {
-      "code": 7003,
-      "message": "Could not route to /client/v4/accounts/workers/scripts, perhaps your object identifier is invalid?"
-    }
-  ],
-  "rezumat": null
+  "success": true,
+  "errors": [],
+  "rezumat": "1 elemente"
 }
-null
+[{"created_on":"2026-09-11T00:03:13.89804Z","modified_on":"2026-09-13T15:20:57.322752Z","id":"anime-uke-do","tag":"f5c4bc08b6f84933b443c2eb0b34c440","tags":[],"deployment_id":"","tail_consumers":null,"logpush":false,"has_assets":false,"has_modules":true,"etag":"ec2a46b2b8ca72223758e285cef8775f987b2632fc13674d8ce2f7d4eb3d0482","handlers":["fetch"],"named_handlers":[{"name":"ChatDO","handlers":["class"]},{"name":"RateLimitDO","handlers":["class"]},{"name":"StatsDO","handlers":["class"]}],"last_deployed_from":"wrangler","migration_tag":"v1","compatibility_date":"2026-05-01","usage_model":"standard","routes":null}]
 
 ── wrangler whoami ──
 
