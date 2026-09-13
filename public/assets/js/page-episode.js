@@ -355,7 +355,7 @@ function renderSources(list) {
 }
 
 async function load() {
-  const id = getParam('id');
+  const id = getParam('id') || (location.pathname.match(/^\/episod\/(\d+)/)?.[1] ?? '');
   const titleEl = document.getElementById('episode-title');
   const metaEl = document.getElementById('episode-meta');
   const crumb = document.getElementById('breadcrumb');

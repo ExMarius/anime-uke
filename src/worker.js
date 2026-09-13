@@ -27,6 +27,12 @@ const API_404 = { error: 'Endpoint inexistent' };
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
 const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml']);
+function isPublicPage(path) {
+  if (PUBLIC_PAGES.has(path)) return true;
+  // URL-urile pretty de catalog: publice (site public).
+  if (path.startsWith('/serie/') || path.startsWith('/episod/')) return true;
+  return false;
+}
 const PUBLIC_API = new Set([
   '/api/auth/login',
   '/api/auth/register',
@@ -50,7 +56,7 @@ function isPublicApi(path) {
 }
 
 function isPublic(path) {
-  if (PUBLIC_PAGES.has(path)) return true;
+  if (isPublicPage(path)) return true;
   if (isPublicApi(path)) return true;
   if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
   // Coperțile servite de site. Nu contin date despre utilizatori, iar a le
@@ -162,7 +168,9 @@ async function sitemapHandler(request, env) {
       const res = await env.DB
         .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
         .all();
-      for (const r of res.results || []) urls.push(`/series?id=${r.id}`);
+      // URL-urile pretty — cele pe care le indexam (canonical-ul din pagina
+      // pointeaza spre ele, deci sitemap-ul trebuie sa fie coerent).
+      for (const r of res.results || []) urls.push(`/serie/${r.id}`);
     } catch (e) {
       console.error('sitemap D1 esuat:', e?.message || e);
     }
@@ -204,7 +212,85 @@ const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.s
  */
 const DYNAMIC_PAGES = [
   { re: /^\/admin\/serie\/\d+\/?$/, asset: '/admin/serie' },
+  // URL-uri prietenoase pentru SEO (modelul site-urilor de anime):
+  // /serie/1014 in loc de /series?id=1014. Same pagina, adresa citibila.
+  { re: /^\/serie\/\d+\/?$/, asset: '/series' },
+  { re: /^\/episod\/\d+\/?$/, asset: '/episode' },
 ];
+
+// ---------------------------------------------------------------------
+// SSR „lite" pentru /serie/<id>: crawlerii (Google) si share-urile sociale
+// primesc HTML cu titlul, descrierea si datele structurate ale seriei,
+// fara sa depinda de rularea JS-ului. Cost: 1 citire D1 per serie, tinuta
+// in cache 5 minute in izolat — un crawler rabdator citeste o singura
+// data indiferent cate pagini acceseaza.
+// ---------------------------------------------------------------------
+const SEO_CACHE_MS = 5 * 60 * 1000;
+const seoCache = new Map();   // id -> { at, row }
+
+async function seriesForSeo(env, id) {
+  const now = Date.now();
+  const hit = seoCache.get(id);
+  if (hit && now - hit.at < SEO_CACHE_MS) return hit.row;
+  try {
+    const row = await env.DB
+      .prepare(
+        `SELECT id, title, description, cover_image, status, genre, year, episode_count
+         FROM anime_series WHERE id = ?`
+      )
+      .bind(id)
+      .first();
+    if (row) {
+      if (seoCache.size > 200) seoCache.clear();
+      seoCache.set(id, { at: now, row });
+    }
+    return row;
+  } catch {
+    return null;
+  }
+}
+
+function escAttr(v) {
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Tagurile <head> generate pe server pentru o serie. */
+function seriesSeoTags(request, series) {
+  const origin = new URL(request.url).origin;
+  const canonical = `${origin}/serie/${series.id}`;
+  const title = `${series.title} — Anime subtitrat în română online | Anime-Uke`;
+  const desc = String(series.description || '').trim().slice(0, 160)
+    || `${series.title} — anime subtitrat în română, gratuit, pe Anime-Uke.`;
+
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'TVSeries',
+    name: series.title,
+    description: String(series.description || '').slice(0, 500) || undefined,
+    image: series.cover_image || undefined,
+    genre: series.genre ? String(series.genre).split(',').map((g) => g.trim()).filter(Boolean) : undefined,
+    numberOfEpisodes: series.episode_count || undefined,
+    startDate: series.year ? String(series.year) : undefined,
+    inLanguage: 'ro',
+  };
+
+  return `  <title>${escAttr(title)}</title>
+  <meta name="description" content="${escAttr(desc)}">
+  <link rel="canonical" href="${escAttr(canonical)}">
+  <meta property="og:title" content="${escAttr(series.title)}">
+  <meta property="og:description" content="${escAttr(desc)}">
+  <meta property="og:type" content="video.tv_show">
+  <meta property="og:url" content="${escAttr(canonical)}">
+  <meta property="og:image" content="${escAttr(series.cover_image || `${origin}/assets/img/hero-1.jpg`)}">
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
+/** Injecteaza tagurile in HTML-ul paginii de serie (inlocuieste <title>). */
+function injectSeriesSeo(request, html, series) {
+  const tags = seriesSeoTags(request, series);
+  const withTitle = html.replace(/<title>.*?<\/title>/i, '');
+  return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
+}
 
 function assetPathFor(path) {
   for (const rule of DYNAMIC_PAGES) {
@@ -256,6 +342,20 @@ async function serveStatic(request, env) {
     if (assetPath && res.status >= 300 && res.status < 400) {
       const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
       return followed || jsonResponse({ error: 'Not found' }, 404);
+    }
+
+    // SSR „lite": /serie/<id> iese cu head plin (titlu, descriere, JSON-LD)
+    // generat din D1 — crawlerii nu trebuie sa ruleze JS ca sa inteleaga pagina.
+    const serieMatch = path.match(/^\/serie\/(\d+)\/?$/);
+    if (serieMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
+      const series = await seriesForSeo(env, Number(serieMatch[1]));
+      if (series) {
+        const html = await res.text();
+        const headers = new Headers(res.headers);
+        headers.delete('content-length');
+        headers.delete('etag');
+        return new Response(injectSeriesSeo(request, html, series), { status: 200, headers });
+      }
     }
 
     // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi

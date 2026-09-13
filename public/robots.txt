@@ -4,6 +4,8 @@ User-agent: *
 Allow: /
 Allow: /series
 Allow: /episode
+Allow: /serie
+Allow: /episod
 Allow: /login
 Allow: /register
 Disallow: /admin

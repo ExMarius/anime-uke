@@ -233,6 +233,22 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
     status: 'ongoing', genre: 'Acțiune, Aventură', year: 1999,
   });
   check('Adaugare serie → 201', r.status === 201, `status=${r.status} ${JSON.stringify(r.data).slice(0,150)}`);
+
+  // --- SEO SSR: /serie/<id> iese cu head plin, direct din server ---
+  const pretty = await fetch(`${BASE}/serie/${r.data?.id}`, { redirect: 'manual' });
+  check('Pretty URL /serie/:id → 200', pretty.status === 200, `status=${pretty.status}`);
+  const prettyHtml = await pretty.text();
+  check('SSR: titlul seriei e în HTML (nu „Se încarcă")', prettyHtml.includes('One Piece'), `len=${prettyHtml.length}`);
+  check('SSR: meta description injectată', prettyHtml.includes('meta name="description"'), '');
+  check('SSR: JSON-LD TVSeries injectat', prettyHtml.includes('"TVSeries"'), '');
+  check('SSR: canonical pe /serie/:id', prettyHtml.includes(`/serie/${r.data?.id}`), '');
+
+  const epPretty = await fetch(`${BASE}/episod/999999`, { redirect: 'manual' });
+  check('Pretty URL /episod/:id → 200 (pagina episodului)', epPretty.status === 200, `status=${epPretty.status}`);
+
+  const sm = await fetch(`${BASE}/sitemap.xml`);
+  const smText = await sm.text();
+  check('Sitemap folosește URL-urile pretty /serie/', smText.includes('/serie/'), smText.slice(0, 200));
   const seriesId = r.data?.id;
 
   // Campul vechi `doodstream_url` ramane acceptat ca alias: un singur URL

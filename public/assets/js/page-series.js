@@ -18,7 +18,17 @@ function setHead(series) {
   const badges = document.getElementById('series-badges');
 
   title.textContent = series.title || 'Fără titlu';
-  document.title = `${series.title || 'Serie'} • anime-uke`;
+  // Titlu optimizat pe cuvintele căutate în nișa românească.
+  document.title = `${series.title || 'Serie'} — Anime subtitrat în română online | Anime-Uke`;
+  try {
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${location.origin}/serie/${series.id}`;
+  } catch { /* nu e critic */ }
 
   // Posterul seriei. La o imagine care nu se incarca (coperta stearsa, URL
   // mort) cadem pe fallback-ul cu glifa, nu pe un icon de imagine rupta.
@@ -202,7 +212,8 @@ async function loadEpisodes(page) {
 }
 
 async function load() {
-  const id = getParam('id');
+  // Suportam ambele forme: /series?id=N si forma pretty /serie/N (SEO).
+  const id = getParam('id') || (location.pathname.match(/^\/serie\/(\d+)/)?.[1] ?? '');
   const grid = document.getElementById('episodes-grid');
 
   if (!id) { location.replace('/'); return; }
