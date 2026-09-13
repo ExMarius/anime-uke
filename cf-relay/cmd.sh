@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =====================================================================
 # cf-relay/cmd.sh — comanda rulata de workflow-ul cloudflare-relay.
-# BATCH 2 — diagnoza permisiuni: afiseaza si erorile API, nu doar result.
+# BATCH 3 — re-test cu ACCOUNT_ID reparat (GITHUB_ENV nu mai e suprascris)
 # REPO PUBLIC: doar ID-uri/statusuri, fara date de utilizatori sau secrete.
 # =====================================================================
 set -uo pipefail
