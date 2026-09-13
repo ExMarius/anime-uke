@@ -1295,22 +1295,23 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
 .chat-sticker-btn:hover { background: rgba(220,20,60,.18); transform: scale(1.08); }
 .sticker-pop {
   position: absolute; bottom: calc(100% + .5rem); left: 0; z-index: 40;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem;
   background: var(--panel, #16161f); border: 1px solid var(--line, rgba(255,255,255,.12));
-  border-radius: 14px; padding: .5rem; width: 216px;
+  border-radius: 14px; padding: .5rem; width: 248px;
+  max-height: 264px; overflow-y: auto;
   box-shadow: 0 14px 40px rgba(0,0,0,.5);
 }
 .sticker-pop__item {
-  border: 0; background: transparent; padding: .15rem; cursor: pointer; border-radius: 50%;
+  border: 0; background: transparent; padding: .1rem; cursor: pointer; border-radius: 12px;
   transition: transform .12s ease;
 }
 .sticker-pop__item:hover { transform: scale(1.15) rotate(-4deg); }
 .msg__sticker {
-  width: 76px; height: 76px; border-radius: 50%; display: block;
+  width: 84px; height: 84px; object-fit: contain; border-radius: 14px; display: block;
   filter: drop-shadow(0 4px 14px rgba(0,0,0,.45));
   animation: stickerIn .25s cubic-bezier(.2,1.6,.4,1);
 }
-.sticker-pop__item .msg__sticker { width: 62px; height: 62px; animation: none; }
+.sticker-pop__item .msg__sticker { width: 52px; height: 52px; animation: none; }
 @keyframes stickerIn { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .msg:has(.msg__sticker) { align-items: center; }
 

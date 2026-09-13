@@ -133,31 +133,56 @@ function scrollDown() {
   if (body) body.scrollTop = body.scrollHeight;
 }
 
-/** Stikerele site-ului: arta proprie, chibi decupat. Id-ul e whitelist —
- *  orice tag necunoscut din mesaj se randeaza ca text simplu, niciodata img. */
+/** Stikere: GIF-uri populare cu anime, direct de pe Tenor (media.tenor.com).
+ *  Id-ul ramane whitelist — un tag necunoscut din mesaj se randeaza ca text
+ *  simplu, niciodata img, iar URL-urile nu vin niciodata de la utilizator.
+ *  Id-urile vechi (salut/lol/love/...) sunt pastrate: sticker-ele deja
+ *  salvate in istoricul chatului continua sa se randeze ca imagine. */
 export const STICKERS = [
-  { id: 'salut', label: 'Salut' },
-  { id: 'lol', label: 'Râs' },
-  { id: 'love', label: 'Dragoste' },
-  { id: 'nervos', label: 'Nervos' },
-  { id: 'plans', label: 'Plâns' },
-  { id: 'shock', label: 'Șoc' },
-  { id: 'ok', label: 'OK' },
-  { id: 'zzz', label: 'Somn' },
-  { id: 'party', label: 'Petrecere' },
+  { id: 'salut', label: 'Salut', url: 'https://media.tenor.com/3odQw0NS2ZIAAAAm/one-piece-op.webp' },
+  { id: 'lol', label: 'Râs', url: 'https://media.tenor.com/qg8lImmxa_sAAAAm/one-piece-monkey-d-luffy.webp' },
+  { id: 'love', label: 'Dragoste', url: 'https://media.tenor.com/VZ8Csy3ooBoAAAAm/demon-slayer-kimetsu-no-yaiba.webp' },
+  { id: 'nervos', label: 'Nervos', url: 'https://media.tenor.com/K-uiOjifp90AAAAm/goku-goku-black.webp' },
+  { id: 'plans', label: 'Plâns', url: 'https://media.tenor.com/9DOXBiQspSQAAAAm/hampter-sad.webp' },
+  { id: 'shock', label: 'Șoc', url: 'https://media.tenor.com/WszXFLZ1O28AAAAm/holy-enelshock.webp' },
+  { id: 'ok', label: 'OK', url: 'https://media.tenor.com/c-w2c8qXoXYAAAAm/jujutsu-kaisen-yuji-itadori.webp' },
+  { id: 'zzz', label: 'Somn', url: 'https://media.tenor.com/seGvGe7Cp2cAAAAm/anime-bocchi.webp' },
+  { id: 'party', label: 'Petrecere', url: 'https://media.tenor.com/Oza7xqkFY2gAAAAm/buggy-buggy-dancing.webp' },
+  { id: 'luffy', label: 'Luffy sare', url: 'https://media.tenor.com/yQpfFS04RHgAAAAm/luffy-bounce.webp' },
+  { id: 'chopper', label: 'Chopper', url: 'https://media.tenor.com/2J_qowQYhkYAAAAm/pet-tony-tony-chopper.webp' },
+  { id: 'robin', label: 'Robin WTF', url: 'https://media.tenor.com/VlcpKOUOq8gAAAAm/one-piece-nico-robin.webp' },
+  { id: 'naruto', label: 'Naruto', url: 'https://media.tenor.com/4atnm_3hO-AAAAAm/naruto.webp' },
+  { id: 'pisica', label: 'Pisica ninja', url: 'https://media.tenor.com/ZVakFxhrwgUAAAAm/naruto-potatoe.webp' },
+  { id: 'kakashi', label: 'Kakashi', url: 'https://media.tenor.com/Z7JnijiEGrEAAAAm/kakashi-menor.webp' },
+  { id: 'obito', label: 'Obito', url: 'https://media.tenor.com/gWU7YwfHDkMAAAAm/obito-naruto.webp' },
+  { id: 'tobi', label: 'Tobi', url: 'https://media.tenor.com/fkryI7FLjgMAAAAm/obito-naruto.webp' },
+  { id: 'goku-dans', label: 'Goku dance', url: 'https://media.tenor.com/Y0goYxQv6FkAAAAm/goku-dance.webp' },
+  { id: 'goku-nor', label: 'Goku pe nor', url: 'https://media.tenor.com/Gie5G6h373YAAAAm/goku-dragon-ball.webp' },
+  { id: 'goku-fuge', label: 'Goku fuge', url: 'https://media.tenor.com/cJtDhl2-MP0AAAAm/goku-dragon-ball.webp' },
+  { id: 'goku-supreme', label: 'Goku Supreme', url: 'https://media.tenor.com/j0v_uKpHEVoAAAAm/dragon-ball-dragon-ball-super.webp' },
+  { id: 'nezuko', label: 'Nezuko', url: 'https://media.tenor.com/CYuL_bwVyHsAAAAm/nezuko-vitor-rossoni.webp' },
+  { id: 'mitsuri', label: 'Mitsuri', url: 'https://media.tenor.com/BopLsVA-EFEAAAAm/kanrojimitsuri.webp' },
+  { id: 'tanjiro', label: 'Tanjiro', url: 'https://media.tenor.com/wUZAKoV9vZAAAAAm/pet-tanjiro-kamado.webp' },
+  { id: 'muichiro', label: 'Muichiro', url: 'https://media.tenor.com/4euFw-Yamx4AAAAm/muichiropet.webp' },
+  { id: 'fern', label: 'Fern', url: 'https://media.tenor.com/icFr1mGPS7gAAAAm/fern-frieren.webp' },
+  { id: 'poke', label: 'Poke', url: 'https://media.tenor.com/nRgaP2XCX-wAAAAm/poke-you.webp' },
+  { id: 'trailblazer', label: 'Deal with it', url: 'https://media.tenor.com/KeqbuC5yrgUAAAAm/deal-with-it-trailblazer.webp' },
+  { id: 'waifu', label: 'Waifu dance', url: 'https://media.tenor.com/TcrzssE_SwMAAAAm/anime-waifu.webp' },
 ];
-const STICKER_IDS = new Set(STICKERS.map((x) => x.id));
+const STICKER_BY_ID = new Map(STICKERS.map((x) => [x.id, x]));
 const STICKER_RE = /^\[sticker:([a-z0-9-]{1,24})\]$/;
 
-function stickerImg(id, label) {
+function stickerImg(st, label) {
   const img = document.createElement('img');
   img.className = 'msg__sticker';
-  img.src = `/assets/img/stickers/${id}.png`;
-  img.alt = label || id;
-  img.title = label || id;
+  img.src = st.url;
+  img.alt = label || st.label;
+  img.title = label || st.label;
   img.loading = 'lazy';
+  img.referrerPolicy = 'no-referrer';
   return img;
 }
+
 
 /** Picker-ul de stikere: butonul 😄 din formular deschide grila; un click pe
  *  un sticker il trimite instant ca mesaj de sine statator. */
@@ -171,7 +196,7 @@ function initStickers() {
     b.type = 'button';
     b.className = 'sticker-pop__item';
     b.title = st.label;
-    b.appendChild(stickerImg(st.id, st.label));
+    b.appendChild(stickerImg(st, st.label));
     b.addEventListener('click', () => {
       pop.hidden = true;
       sendSticker(st.id);
@@ -185,7 +210,7 @@ function initStickers() {
 }
 
 function sendSticker(id) {
-  if (!STICKER_IDS.has(id)) return;
+  if (!STICKER_BY_ID.has(id)) return;
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     toast('Chat-ul nu e conectat încă. Încearcă din nou într-o secundă.', 'warn');
     return;
@@ -204,9 +229,9 @@ function renderMessage(m) {
   // mesajele care sunt DOAR un sticker se randeaza ca imagine mare; un tag
   // necunoscut sau amestecat cu text ramane text simplu (sigur)
   const sm = String(m.message || '').match(STICKER_RE);
-  if (sm && STICKER_IDS.has(sm[1])) {
+  if (sm && STICKER_BY_ID.has(sm[1])) {
     const who = nameEl(m);
-    row.append(who, stickerImg(sm[1]));
+    row.append(who, stickerImg(STICKER_BY_ID.get(sm[1])));
     if (m.created_at) {
       const time = document.createElement('span');
       time.className = 'msg__time';
