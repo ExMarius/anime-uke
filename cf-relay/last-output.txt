@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 17864d3
+comanda: cf-relay/cmd.sh @ 95a8879
 ────────────────────────────────────
 ── deploy ──
 
@@ -9,14 +9,14 @@ comanda: cf-relay/cmd.sh @ 17864d3
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m deja aplicata
+    [0;32m✓[0m migrari aplicate
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=17864d3
-    [0;32m✓[0m publicat: https://30680158.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=95a8879
+    [0;32m✓[0m publicat: https://cbc2465b.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -24,13 +24,25 @@ comanda: cf-relay/cmd.sh @ 17864d3
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-═══ PLAFOANE IN PRODUCTIE ═══
-register-options:
-{"inviteRequired":true,"bootstrap":false,"userCount":2,"capacityFull":false}
-contez direct in D1:
-{"users":2,"series":1,"chat":24}
-chat depaseste plafonul de 500?
-{"peste_plafon":0}
+═══ MIGRATIA 0018 (invite_requests) ═══
+{"exista":1}
+
+═══ FLUX PUBLIC: cerere de cod (cont de proba, se sterge) ═══
+POST: {"success":true,"request_code":"RQ-RGJR-H5BX"}
+GET bilet: {"status":"pending","created_at":"2026-09-13 18:12:21"}
+admin fara sesiune -> astept 401: 401
+portalul exista pe /login: 1 aparitii
+
+═══ CURATENIE: stergem cererea de proba ═══
+{"success":true,"errors":[]}
+{"ramase":0}
+
+═══ CACHE ASSETS ═══
+style.css?v=abc: 200 → public, max-age=31536000, immutable
+covers/one-piece.jpg: 200 → public, max-age=0, must-revalidate
+meta og:image pe /: 200 (login 200), og:image: 0
+
 ── still alive ──
   / -> 302
   /login -> 200
+  /register -> 200
