@@ -8,7 +8,7 @@ set -uo pipefail
 DB_UUID="7209b0bd-227b-46d0-b376-6157b56734fa"   # anime-db
 A="/accounts/${CLOUDFLARE_ACCOUNT_ID}"
 Q() { # Q <sql>  — ruleaza query pe anime-db
-  curl -sS -X POST "${A}/d1/database/${DB_UUID}/query" \
+  curl -sS -X POST "https://api.cloudflare.com/client/v4${A}/d1/database/${DB_UUID}/query" \
     -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{\"sql\": \"$1\"}" | jq '{success, errors: [.errors[]?|.message], rows: .result[0].results}'
