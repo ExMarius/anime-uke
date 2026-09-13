@@ -242,17 +242,17 @@ async function serveStatic(request, env) {
       return followed || jsonResponse({ error: 'Not found' }, 404);
     }
 
-    // Cache pe assete: JS/CSS-ul e versionat cu ?v=<commit> la fiecare deploy,
-    // deci URL-ul se schimba cand se schimba si continutul -> „immutable" e
-    // sigur si scurge zero continut vechi. Imaginile din /assets/img/ si
-    // coperțile NU au versiune in URL, deci primesc cache o saptamana:
-    // vizitatorii recurenți nu le redescarcă la fiecare navigare, iar un
-    // eventual inlocuit se propaga repede.
-    const immutable = path.startsWith('/assets/') && !path.startsWith('/assets/img/');
-    const medium = path.startsWith('/assets/img/') || path.startsWith('/covers/');
-    if ((immutable || medium) && res.status === 200) {
+    // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
+    // „immutable" 1 an. Fara ?v= (ex. importurile relative dintre modulele
+    // /assets/js) lasam regula din _headers (no-cache + ETag → 304 ieftin):
+    // asa un deploy nu lasa module vechi blocate in cache un an. Coperțile
+    // /covers/* nu au regula in _headers → o saptamana e echilibrul bun:
+    // vizitatorii recurenți nu le redescarcă, iar un inlocuit se propagă repede.
+    const versioned = path.startsWith('/assets/') && url.searchParams.has('v');
+    const covers = path.startsWith('/covers/');
+    if ((versioned || covers) && res.status === 200) {
       const headers = new Headers(res.headers);
-      headers.set('Cache-Control', immutable
+      headers.set('Cache-Control', versioned
         ? 'public, max-age=31536000, immutable'
         : 'public, max-age=604800');
       return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
