@@ -479,21 +479,6 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   check('Toggle-ul cinema scoate clasa de pe body', !p.window.document.body.classList.contains('cinema'), p.window.document.body.className);
   p.$('#cinema-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
 
-  check('Auto-next e pornit implicit si scrie asta pe buton', /pornit/.test(p.$('#autonext-btn')?.textContent || ''), p.$('#autonext-btn')?.textContent);
-  const minSel = p.$('#anext-min');
-  check('Selectorul de minute pentru embed exista cu 4 praguri', !!minSel && p.$$('#anext-min option').length === 4 && minSel.value === '24', `val=${minSel?.value} opt=${p.$$('#anext-min option').length}`);
-  if (minSel) {
-    minSel.value = '22';
-    minSel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
-    check('Pragul ales se persista in localStorage', p.window.localStorage.getItem('auk-anext-min') === '22', p.window.localStorage.getItem('auk-anext-min'));
-    minSel.value = '24';
-    minSel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
-  }
-  p.$('#player-video')?.dispatchEvent(new p.window.Event('ended'));
-  const anOn = await until(() => p.$('#autonext')?.hidden === false && /\d/.test(p.$('#autonext-count')?.textContent || ''));
-  check('La finalul video apare numărătoarea auto-next', anOn, `count=${p.$('#autonext-count')?.textContent}`);
-  p.$('#autonext-cancel')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  check('„Anulează” ascunde overlay-ul', p.$('#autonext')?.hidden === true, String(p.$('#autonext')?.hidden));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
   p.window.document.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
   check('Scurtaturile degradeaza fara crash cand API-urile lipsesc', p.errors.length === 0, p.errors.slice(0, 2).join(' | '));

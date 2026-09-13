@@ -74,19 +74,6 @@
         referrerpolicy="strict-origin-when-cross-origin"
         hidden></video>
 
-      <!-- AUTO-NEXT: numărătoare ca la YouTube după ce se termină
-           episodul (doar pentru surse de tip fișier — embed-urile terțe
-           nu ne spun când se termină video-ul din iframe). -->
-      <div class="autonext" id="autonext" hidden>
-        <div class="autonext__card">
-          <div class="autonext__title">⏭ Următorul episod în <b id="autonext-count">10</b>s</div>
-          <div class="autonext__name" id="autonext-name"></div>
-          <div class="autonext__btns">
-            <button class="btn btn--accent btn--sm" id="autonext-go" type="button">Redă acum</button>
-            <button class="btn btn--ghost btn--sm" id="autonext-cancel" type="button">Anulează</button>
-          </div>
-        </div>
-      </div>
     </div>
     <!-- Fullscreen-ul e BUTONUL SURSEI: iframe-ul are allow-fullscreen +
          allow-fullscreen in sandbox, deci playerul furnizorului (mp4upload,
@@ -97,10 +84,6 @@
       <span class="player-tools__hint">Spațiu: play/pauză · M: mute · ←/→: ±10s (doar pentru fișiere video) · N: episodul următor</span>
       <span class="player-tools__toggles">
         <button class="ptool" id="cinema-btn" type="button" title="Mod cinema: player lat cât tot ecranul">🎬 Cinema</button>
-        <button class="ptool" id="autonext-btn" type="button" title="Când se termină episodul, trece automat la următorul">⏭ Auto-next</button>
-        <label class="ptool ptool--select" title="La surse EMBED playerul terț nu ne spune când s-a terminat video-ul (e cross-origin). După câte minute vizionate declanșăm numărătoarea?">⏱
-          <select id="anext-min" aria-label="Minute până la auto-next pentru surse embed"></select> min
-        </label>
       </span>
     </div>
 

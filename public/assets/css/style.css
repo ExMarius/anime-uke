@@ -1383,23 +1383,6 @@ body.cinema .container-wide { width: min(1280px, 100% - 2.5rem); }
 .ep-sub-cta { display: flex; justify-content: center; margin: .9rem 0 1.2rem; }
 .ep-sub-cta .btn { font-size: .92rem; padding: .65rem 1.3rem; }
 
-/* AUTO-NEXT: overlay peste player cu numărătoare */
-.autonext {
-  position: absolute; inset: 0; z-index: 5;
-  display: grid; place-items: center;
-  background: rgba(8, 6, 8, .82); backdrop-filter: blur(3px);
-}
-.autonext[hidden] { display: none; }
-.autonext__card {
-  display: flex; flex-direction: column; align-items: center; gap: .5rem;
-  padding: 1.4rem 1.8rem; border-radius: 1rem;
-  background: var(--surface, #17171f); border: 1px solid var(--line, rgba(255,255,255,.08));
-  text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
-}
-.autonext__title { font-size: 1.05rem; font-weight: 800; }
-.autonext__title b { color: var(--crimson, #DC143C); font-size: 1.25rem; }
-.autonext__name { color: rgba(255, 255, 255, .6); font-size: .88rem; max-width: 26rem; }
-.autonext__btns { display: flex; gap: .5rem; margin-top: .4rem; }
 
 /* MODAL „ALTE EPIZOADE” */
 .eplist-card { width: min(34rem, calc(100vw - 2rem)); max-height: 80vh; overflow-y: auto; }
@@ -1422,9 +1405,3 @@ body.cinema .ep-hero__num { width: 44px; height: 44px; font-size: 1.15rem; borde
 body.cinema #episode-title { font-size: 1.15rem !important; }
 body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 
-.ptool--select { display: inline-flex; align-items: center; gap: .3rem; cursor: default; }
-.ptool--select select {
-  background: transparent; color: inherit; border: 0; font: inherit;
-  cursor: pointer; outline: none;
-}
-.ptool--select select option { color: #111; }
