@@ -209,7 +209,7 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
   p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   p.$('#chat-sticker-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  check('Pickerul de stikere se deschide cu setul Tenor complet', p.$$('#sticker-pop .sticker-pop__item').length >= 24, `n=${p.$$('#sticker-pop .sticker-pop__item').length}`);
+  check('Pickerul de stikere se deschide cu setul Tenor complet', p.$$('#sticker-pop .sticker-pop__item').length >= 50, `n=${p.$$('#sticker-pop .sticker-pop__item').length}`);
   p.$('#sticker-pop .sticker-pop__item')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const sentSticker = (globalThis.__fakeSocket?.sent || [])[0] || '';
   check('Click pe sticker trimite tag-ul de sticker prin socket', sentSticker.includes('[sticker:salut]'), sentSticker);
