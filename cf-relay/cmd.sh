@@ -1,51 +1,19 @@
 #!/usr/bin/env bash
 set -uo pipefail
-BASE="https://anime-uke.pages.dev"
+./deploy.sh
+echo "exit deploy: $?"
 
-echo "================ VERIFICARE SITE ================"
-echo "ora: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-echo ""
-
-# --- Pagini statice ---
-echo "── Pagini (HTTP status) ──"
-for p in "/" "/index.html" "/series.html" "/episode.html" "/login.html" "/register.html" "/admin.html"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "${BASE}${p}")
-  printf "  %-18s -> %s\n" "${p}" "${code}"
+B="https://anime-uke.pages.dev"
+echo
+echo "── verificare post-deploy ──"
+# Rutele care lipseau din router: inainte 404, acum trebuie 401 (cer login).
+for R in /api/factions /api/shop/activate; do
+  M=GET; [ "$R" = "/api/shop/activate" ] && M=POST
+  echo "  $M $R -> $(curl -s -o /dev/null -w '%{http_code}' -X $M -H "Origin: $B" "$B$R")   (asteptat 401, nu 404)"
 done
-
-echo ""
-echo "── Pagina principala ──"
-curl -s -m 20 "${BASE}/" | grep -o '<title>[^<]*</title>' || echo "  (niciun <title> gasit)"
-
-# --- Headere de securitate ---
-echo ""
-echo "── Headere securitate (de pe /) ──"
-curl -sSI -m 20 "${BASE}/" | grep -iE '^(HTTP|content-security-policy|x-frame-options|strict-transport-security|x-content-type-options|referrer-policy|permissions-policy)' || echo "  (niciun header gasit)"
-
-# --- API public ---
-echo ""
-echo "── API public ──"
-sr=$(curl -s -m 20 "${BASE}/api/series")
-echo "  /api/series: ${#sr} bytes"
-echo "  primele 120 car.: $(echo "$sr" | head -c 120)"
-me=$(curl -s -m 20 "${BASE}/api/auth/me")
-echo "  /api/auth/me: ${me}"
-
-# --- Assete ---
-echo ""
-echo "── Assete statice ──"
-for a in "/assets/css/style.css" "/assets/js/core.js" "/_worker.js"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "${BASE}${a}")
-  printf "  %-24s -> %s\n" "${a}" "${code}"
-done
-
-# --- Cai blocate (trebuie 404) ---
-echo ""
-echo "── Cai blocate (asteptam 404) ──"
-for b in "/wrangler.toml" "/schema.sql" "/.dev.vars" "/migrations/0001_init.sql"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "${BASE}${b}")
-  printf "  %-28s -> %s\n" "${b}" "${code}"
-done
-
-echo ""
-echo "================ SFARSIT VERIFICARE ================"
+# Admin episoade: fara login → 401 (inainte de fix, cu login, dadea 500).
+echo "  GET /api/admin/episodes?series_id=1019 -> $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/episodes?series_id=1019")   (asteptat 401)"
+# Codul nou a ajuns pe edge?
+JS=$(curl -s "$B/assets/js/page-profile.js")
+echo "  profile.js contine renderEconomy() in initEconomy: $(echo "$JS" | grep -c 'apelul se pierduse')"
+echo "  episode.html iframe allowfullscreen: $(curl -s "$B/episode" | grep -c 'webkitallowfullscreen')"
