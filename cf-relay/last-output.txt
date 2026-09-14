@@ -1,7 +1,10 @@
-exit_code: 0
-comanda: cf-relay/cmd.sh @ 207d146
+exit_code: 3
+comanda: cf-relay/cmd.sh @ e101b60
 ────────────────────────────────────
-hero-1.webp direct: 200 image/webp 168738B
-one-piece.webp direct: 200 image/webp
-hero-1.jpg cu Accept webp: 200 image/webp
-hero-2.jpg cu Accept webp: 200 image/webp
+── cover-urile reale din producție ──
+1014 One Piece -> https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtYmVjMy00YjRiLTkxMWUtNzZkMDNiYjZhNmViXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg
+── test weserv cu URL-ul externe (exact ca în cod) ──
+url param: 
+weserv: 400 application/json 61B
+── original direct ──
+original: 000  0B
