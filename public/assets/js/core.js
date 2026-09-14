@@ -30,18 +30,23 @@ export function getParam(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-// Coperțile externe (IMDb/TMDB etc.) ajung prin images.weserv.nl — serviciu
-// gratuit, de trading liber — care le re-comprima in WebP la latimea de care
-// avem efectiv nevoie (hero 1280, carduri 400). Le muta 195->~60 KB pe cel
-// mai gras caz. Imaginile de pe originea noastra (/covers) sunt deja
-// comprimate la deploy si raman asa. Daca weserv picade, onerror din pagini
-// intoarce oricum fallbackul existent (genPoster / arta bundled).
+// Coperțile externe de la IMDb/Amazon suportă redimensionare NATIVĂ chiar
+// în URL (sufixul _V1_..._UX<px>_) — cerem exact lățimea de care avem
+// nevoie (card 400, serie 600, hero 1000) și primești ~30-70 KB în loc de
+// 260 KB. Imaginile noastre (/covers) sunt deja WebP la deploy și rămân
+// neatinse; celelalte hosturi externe sunt lăsate ca sunt (siguranță >
+// optimizare, după lecția cu proxy-ul weserv care primea 404 de la IMDb).
 export function optimizeCover(value, w = 400) {
   if (!value || value === '#') return value;
   try {
     const u = new URL(value, location.origin);
-    if (u.origin === location.origin) return value;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(u.host + u.pathname + u.search)}&w=${w}&q=80&output=webp&fit=cover&a=top&we`;
+    if (u.origin === location.origin) return value;   // a noastră — deja optimizată
+    if (/(^|\.)media-amazon\.com$/.test(u.hostname) && /_V1_.*\.jpg/i.test(u.pathname)) {
+      const px = Math.min(w, 1000);                   // originalul e UX1000 — nu mărim
+      u.pathname = u.pathname.replace(/_V1_.*\.jpg/i, `_V1_FMjpg_UX${px}_`);
+      return u.toString();
+    }
+    return value;
   } catch {
     return value;
   }

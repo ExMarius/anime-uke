@@ -421,18 +421,27 @@ async function renderHero(salt = spotSalt()) {
   const HERO_ART = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
   const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
   img.fetchPriority = 'high';
+  let heroErr = 0;
   img.onerror = () => {
-    img.onerror = null;
-    if (img.src.includes('weserv') || (cover && img.src === optimizeCover(cover, 1280))) { img.srcset = ''; img.sizes = ''; img.src = artUrl; }
-    else { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
+    heroErr++;
+    // treapta 1: varianta redimensionata a picat -> originalul exact din DB
+    if (heroErr === 1 && cover && cover !== '#' && img.src !== cover) {
+      img.srcset = ''; img.sizes = ''; img.src = cover;
+    // treapta 2: si originalul a picat -> arta bundled
+    } else if (heroErr === 2 && img.src !== artUrl) {
+      img.src = artUrl;
+    // treapta 3: nimic nu merge -> poster generat local
+    } else {
+      img.remove(); bg.appendChild(genHeroArt(pick.title));
+    }
   };
   if (cover && cover !== '#') {
-    // srcset responsive: weserv livreaza WebP la latimea potrivita ecranului
+    // srcset responsive: IMDb livreaza la latimea potrivita ecranului
     // (telefon ~400w, tableta 800w, desktop 1280w) — nicio imagine mai mare
     // decat trebuie (auditul „Properly size images").
-    img.srcset = [400, 800, 1280].map((w) => `${optimizeCover(cover, w)} ${w}w`).join(', ');
+    img.srcset = [400, 800, 1000].map((w) => `${optimizeCover(cover, w)} ${w}w`).join(', ');
     img.sizes = '100vw';
-    img.src = optimizeCover(cover, 1280);
+    img.src = optimizeCover(cover, 1000);
   } else {
     img.srcset = '';
     img.sizes = '';
