@@ -73,6 +73,66 @@
           <label for="ed-desc">Descriere</label>
           <textarea class="input" id="ed-desc" name="description" rows="3" maxlength="2000"></textarea>
         </div>
+
+        <details class="ser-more">
+          <summary>Fișa detaliată (titluri alternative, teme, vârstă, durată, echipă…)</summary>
+          <div class="row">
+            <div class="field" style="flex:2">
+              <label for="ed-alt">Titluri alternative</label>
+              <input class="input" id="ed-alt" name="alt_titles" type="text" maxlength="300" placeholder="ex. Shingeki no Kyojin / Attack on Titan">
+            </div>
+            <div class="field">
+              <label for="ed-themes">Teme</label>
+              <input class="input" id="ed-themes" name="themes" type="text" maxlength="200" placeholder="pirați, lupte, puteri speciale">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field" style="max-width:130px">
+              <label for="ed-age">Vârsta minimă</label>
+              <select class="select" id="ed-age" name="age_rating">
+                <option value="">—</option>
+                <option value="G">G (toate)</option>
+                <option value="7+">7+</option>
+                <option value="13+">13+</option>
+                <option value="16+">16+</option>
+                <option value="18+">18+</option>
+              </select>
+            </div>
+            <div class="field" style="max-width:140px">
+              <label for="ed-dur">Durată ep. (min)</label>
+              <input class="input" id="ed-dur" name="ep_duration" type="number" min="1" max="600" placeholder="24">
+            </div>
+            <div class="field" style="max-width:170px">
+              <label for="ed-rel">Data lansării</label>
+              <input class="input" id="ed-rel" name="release_date" type="date">
+            </div>
+            <div class="field" style="max-width:160px">
+              <label for="ed-country">Țara</label>
+              <input class="input" id="ed-country" name="country" type="text" maxlength="40" placeholder="Japonia">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:2">
+              <label for="ed-next-note">Episodul următor (anunț pe pagina seriei)</label>
+              <input class="input" id="ed-next-note" name="next_ep_note" type="text" maxlength="120" placeholder="ex. Episodul 13 RoSub">
+            </div>
+            <div class="field" style="max-width:220px">
+              <label for="ed-next-at">Când apare</label>
+              <input class="input" id="ed-next-at" name="next_ep_at" type="datetime-local">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="ed-ext">Link extern (MyAnimeList / AniList)</label>
+              <input class="input" id="ed-ext" name="external_url" type="url" maxlength="300" placeholder="https://myanimelist.net/anime/…">
+            </div>
+            <div class="field">
+              <label for="ed-team">Echipa (traducere, verificare…)</label>
+              <input class="input" id="ed-team" name="team" type="text" maxlength="300" placeholder="Traducere: Ana · Verificare: Dan">
+            </div>
+          </div>
+        </details>
+
         <div class="actions">
           <button class="btn btn--accent" id="ser-edit-save" type="submit">Salvează</button>
           <button class="btn btn--ghost" id="ser-edit-cancel" type="button">Renunță</button>

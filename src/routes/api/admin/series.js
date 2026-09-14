@@ -1,6 +1,6 @@
 import { json, errorResponse, isSameOrigin } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
-import { validateSeries, validateSeriesPatch, validatePositiveInt } from '../../../lib/validate.js';
+import { validateSeries, validateSeriesPatch, validatePositiveInt, SERIES_DETAIL_FIELDS } from '../../../lib/validate.js';
 import { logAdminAction } from '../../../lib/audit.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { parsePaging, parseQuery, parseSort, sortSql, sortOptions, escapeLike, readMeta, bumpMetaStmt, counterStmts } from '../../../lib/paging.js';
@@ -37,6 +37,7 @@ export async function onRequestGet(context) {
       const row = await env.DB
         .prepare(
           `SELECT s.id, s.title, s.description, s.cover_image, s.status, s.genre, s.year,
+                  ${SERIES_DETAIL_FIELDS.map((f) => `s.${f}`).join(', ')},
                   s.episode_count, s.created_at, u.username AS created_by_name
            FROM anime_series s LEFT JOIN users u ON u.id = s.created_by
            WHERE s.id = ?`
@@ -138,10 +139,14 @@ export async function onRequestPost(context) {
 
     const res = await env.DB
       .prepare(
-        `INSERT INTO anime_series (title, description, cover_image, status, genre, year, created_by, episode_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`
+        `INSERT INTO anime_series (title, description, cover_image, status, genre, year, created_by, episode_count,
+                                   alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team,
+                                   next_ep_note, next_ep_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(v.value.title, v.value.description, v.value.cover_image, v.value.status, v.value.genre, v.value.year, admin.id)
+      .bind(v.value.title, v.value.description, v.value.cover_image, v.value.status, v.value.genre, v.value.year, admin.id,
+        v.value.alt_titles, v.value.themes, v.value.age_rating, v.value.ep_duration, v.value.release_date,
+        v.value.country, v.value.external_url, v.value.team, v.value.next_ep_note, v.value.next_ep_at)
       .run();
 
     const id = res.meta?.last_row_id;
@@ -188,7 +193,8 @@ export async function onRequestPatch(context) {
 
   try {
     const existing = await env.DB
-      .prepare('SELECT id, title, description, cover_image, status, genre, year FROM anime_series WHERE id = ?')
+      .prepare(`SELECT id, title, description, cover_image, status, genre, year, ${SERIES_DETAIL_FIELDS.join(', ')}
+                FROM anime_series WHERE id = ?`)
       .bind(id.value)
       .first();
     if (!existing) return errorResponse(404, 'Seria nu există');

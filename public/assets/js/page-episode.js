@@ -464,6 +464,24 @@ function renderCommentBody(raw) {
   return safe;
 }
 
+// Ordinea comentariilor (ca pe site-urile mari: cel mai votat / nou / vechi).
+// Se sorteaza in browser, pe lista deja primita — zero cereri in plus.
+const SORT_KEY = 'auk-comments-sort';
+let commentsCache = { episodeId: null, items: [] };
+
+function commentSort() {
+  try { return localStorage.getItem(SORT_KEY) || 'top'; } catch { return 'top'; }
+}
+
+function sortComments(items, mode) {
+  const byTime = (a, b) => String(a.created_at).localeCompare(String(b.created_at)) || a.id - b.id;
+  const arr = items.slice();
+  if (mode === 'new') return arr.sort((a, b) => byTime(b, a));
+  if (mode === 'old') return arr.sort(byTime);
+  // top: scor descrescator, la egalitate cele mai vechi primele (au avut timp sa fie votate)
+  return arr.sort((a, b) => (b.score || 0) - (a.score || 0) || byTime(a, b));
+}
+
 async function loadComments(episodeId) {
   const list = document.getElementById('comments-list');
   const count = document.getElementById('comments-count');
@@ -472,23 +490,47 @@ async function loadComments(episodeId) {
   const res = await api(`/comments?episode_id=${encodeURIComponent(episodeId)}`);
   if (!res.ok) { list.innerHTML = '<p class="hint">Comentariile nu sunt disponibile acum.</p>'; return; }
 
+  commentsCache = { episodeId, items: res.data.comments || [] };
+  await renderComments();
+}
+
+async function renderComments() {
+  const list = document.getElementById('comments-list');
+  const count = document.getElementById('comments-count');
+  const sortSel = document.getElementById('comments-sort');
+  const { episodeId, items } = commentsCache;
+  if (!list) return;
+
   const me = await getSession();
-  const items = res.data.comments || [];
   count.textContent = items.length ? `${items.length}` : '';
   list.innerHTML = '';
+
+  const roots = items.filter((c) => !c.parent_id);
+  if (sortSel) {
+    sortSel.hidden = roots.length < 2;
+    sortSel.value = commentSort();
+    if (!sortSel.dataset.bound) {
+      sortSel.dataset.bound = '1';
+      sortSel.addEventListener('change', () => {
+        try { localStorage.setItem(SORT_KEY, sortSel.value); } catch { /* privat */ }
+        renderComments();
+      });
+    }
+  }
 
   if (!items.length) {
     list.innerHTML = '<p class="hint">Fii primul care comentează episodul ăsta.</p>';
     return;
   }
 
-  // Fire un singur nivel: parintii sus, raspunsurile grupate sub ei.
+  // Fire un singur nivel: parintii sortati dupa preferinta, raspunsurile
+  // raman cronologic sub parintele lor (o conversatie se citeste in ordine).
   const byParent = {};
   for (const c of items) {
     if (c.parent_id) (byParent[c.parent_id] = byParent[c.parent_id] || []).push(c);
   }
-  for (const c of items) {
-    if (c.parent_id) continue;
+  for (const k of Object.keys(byParent)) byParent[k] = sortComments(byParent[k], 'old');
+  for (const c of sortComments(roots, commentSort())) {
     list.appendChild(commentNode(c, episodeId, me, byParent[c.id] || [], byParent));
   }
 }

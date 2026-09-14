@@ -56,6 +56,115 @@ function setHead(series) {
   if (series.year) badges.appendChild(badge(String(series.year)));
 
   desc.textContent = series.description || '';
+
+  // Titluri alternative (ex. „Shingeki no Kyojin / Attack on Titan") sub titlu.
+  const alt = document.getElementById('series-alt');
+  if (alt) {
+    alt.textContent = series.alt_titles ? `Cunoscut și ca: ${series.alt_titles}` : '';
+    alt.hidden = !series.alt_titles;
+  }
+
+  paintInfo(series);
+  paintNextEp(series);
+}
+
+/** Anuntul „Episodul urmator" cu countdown local (nu costa nicio cerere). */
+let nextEpTimer = null;
+function paintNextEp(series) {
+  const box = document.getElementById('next-ep');
+  if (!box) return;
+  clearInterval(nextEpTimer);
+  const note = String(series.next_ep_note || '').trim();
+  const at = series.next_ep_at ? new Date(series.next_ep_at) : null;
+  const atOk = at && !Number.isNaN(at.getTime());
+  if (!note && !atOk) { box.hidden = true; return; }
+
+  // Un anunt cu data trecuta de peste 2 zile a expirat: il ascundem singuri,
+  // ca sa nu ramana „episodul urmator: 12 mai" in august.
+  if (atOk && Date.now() - at.getTime() > 2 * 86400e3 && !note) { box.hidden = true; return; }
+
+  document.getElementById('next-ep-title').textContent = `Episodul următor: ${note || series.title}`;
+  const when = document.getElementById('next-ep-when');
+  const tick = () => {
+    if (!atOk) { when.textContent = ''; return; }
+    const diff = at.getTime() - Date.now();
+    const dateStr = at.toLocaleString('ro-RO', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    if (diff <= 0) { when.textContent = `${dateStr} · ar trebui să apară în curând`; clearInterval(nextEpTimer); return; }
+    const d = Math.floor(diff / 86400e3), h = Math.floor((diff % 86400e3) / 3600e3), m = Math.floor((diff % 3600e3) / 60e3);
+    const parts = d ? `${d} z ${h} h` : h ? `${h} h ${m} min` : `${m} min`;
+    when.textContent = `${dateStr} · peste ${parts}`;
+  };
+  tick();
+  if (atOk) nextEpTimer = setInterval(tick, 30e3);
+  box.hidden = false;
+}
+
+/** Fisa „Informatii despre serie" — doar randurile completate. */
+function paintInfo(series) {
+  const box = document.getElementById('series-info');
+  if (!box) return;
+  box.innerHTML = '';
+
+  const rows = [
+    ['Genuri', series.genre],
+    ['Teme', series.themes],
+    ['Episoade', series.episode_count ? String(series.episode_count) : ''],
+    ['Vârsta minimă', series.age_rating],
+    ['Durată ep.', series.ep_duration ? `${series.ep_duration} min` : ''],
+    ['Data lansării', fmtDate(series.release_date) || (series.year ? String(series.year) : '')],
+    ['Țara', series.country],
+    ['Echipa', series.team],
+  ];
+  let n = 0;
+  for (const [k, v] of rows) {
+    if (!v) continue;
+    n++;
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = v;
+    box.append(dt, dd);
+  }
+  const ext = safeUrl(series.external_url, '');
+  if (ext) {
+    n++;
+    const dt = document.createElement('dt');
+    dt.textContent = 'Link extern';
+    const dd = document.createElement('dd');
+    const a = document.createElement('a');
+    a.href = ext;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer nofollow';
+    a.textContent = extLabel(ext);
+    dd.appendChild(a);
+    box.append(dt, dd);
+  }
+  // Randurile „Genuri" si „Episoade" exista mereu; fisa merita afisata doar
+  // cand aduce ceva peste badge-urile de sus.
+  const meaningful = ['themes', 'age_rating', 'ep_duration', 'release_date', 'country', 'team', 'external_url']
+    .some((k) => series[k]);
+  box.hidden = !(n && meaningful);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const m = String(iso).match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/);
+  if (!m) return String(iso);
+  const months = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+  if (!m[2]) return m[1];
+  const mon = months[Number(m[2]) - 1] || m[2];
+  return m[3] ? `${Number(m[3])} ${mon} ${m[1]}` : `${mon} ${m[1]}`;
+}
+
+function extLabel(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, '');
+    if (/myanimelist/.test(h)) return 'MyAnimeList';
+    if (/anilist/.test(h)) return 'AniList';
+    if (/kitsu/.test(h)) return 'Kitsu';
+    if (/imdb/.test(h)) return 'IMDb';
+    return h;
+  } catch { return 'Deschide'; }
 }
 
 function episodeCard(ep) {

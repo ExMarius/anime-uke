@@ -1818,3 +1818,41 @@ body.theme-classic {
 .faction__name { font-weight: 800; }
 .faction__tiers { font-size: .72rem; color: var(--dim); }
 .faction__win { color: var(--warn); font-weight: 700; }
+
+/* ---- Fisa „Informatii despre serie" (pagina publica) ---- */
+.ser-alt { margin: -.25rem 0 .5rem; font-size: .9rem; }
+.ser-info {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .3rem 1rem;
+  margin: .75rem 0 .9rem; padding: .75rem .95rem; font-size: .9rem;
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--r-md);
+}
+.ser-info dt { color: var(--dim); font-weight: 600; text-transform: uppercase; font-size: .72rem; letter-spacing: .04em; padding-top: .15rem; }
+.ser-info dd { margin: 0; word-break: break-word; }
+.ser-info a { color: var(--accent-hi); text-decoration: none; }
+.ser-info a:hover { text-decoration: underline; }
+@media (max-width: 560px) { .ser-info { grid-template-columns: 1fr; gap: .1rem; } .ser-info dd { margin-bottom: .45rem; } }
+/* admin: sectiunea pliabila a fisei */
+.ser-more { margin: .25rem 0 .75rem; }
+.ser-more summary { cursor: pointer; color: var(--dim); font-size: .9rem; padding: .35rem 0; }
+.ser-more[open] summary { color: var(--text); margin-bottom: .5rem; }
+
+/* ---- Regulament chat (overlay peste fereastra de chat, o singura data) ---- */
+.chat-box { position: relative; }
+.chat-rules {
+  position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; gap: .7rem;
+  padding: 1.2rem 1.25rem; overflow-y: auto; background: rgba(12, 7, 9, .96); backdrop-filter: blur(6px);
+  border-radius: inherit;
+}
+.chat-rules__title { margin: 0; font-size: 1.05rem; }
+.chat-rules__list { margin: 0; padding-left: 1.2rem; font-size: .88rem; line-height: 1.55; color: var(--text); }
+.chat-rules__list li { margin-bottom: .3rem; }
+.chat-rules .btn { align-self: flex-start; margin-top: auto; }
+
+/* ---- „Episodul urmator" pe pagina seriei ---- */
+.next-ep {
+  display: flex; align-items: center; gap: .75rem; margin: 0 0 .9rem; padding: .7rem .95rem;
+  background: linear-gradient(90deg, var(--accent-soft), transparent); border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm);
+}
+.next-ep__icon { font-size: 1.35rem; }
+.next-ep__title { font-weight: 700; }

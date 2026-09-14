@@ -405,6 +405,29 @@ console.log('\n=== 5c. SCALARE: paginare, cautare, contoare, editare, postare in
   const detail = await req(j, 'GET', `/api/admin/series?id=${sid}`);
   check('Detaliul de serie include total_views', detail.status === 200 && typeof detail.data?.series?.total_views === 'number', JSON.stringify(detail.data?.series).slice(0, 140));
 
+  // --- fisa detaliata (0024): titluri alternative, teme, varsta, durata, echipa, episodul urmator ---
+  const fisa = await req(j, 'PATCH', '/api/admin/series', {
+    id: sid, alt_titles: 'Test Alt / Alt Test', themes: 'școală, supraviețuire', age_rating: '16+',
+    ep_duration: 24, release_date: '1999-10-20', country: 'Japonia',
+    external_url: 'https://myanimelist.net/anime/21/One_Piece', team: 'Traducere: Ana · Verificare: Dan',
+    next_ep_note: 'Episodul 4 RoSub', next_ep_at: '2030-01-01T18:00',
+  });
+  check('PATCH fisa detaliata salveaza toate campurile', fisa.status === 200 && fisa.data?.series?.age_rating === '16+' && fisa.data.series.ep_duration === 24 && fisa.data.series.team.includes('Ana') && fisa.data.series.next_ep_note === 'Episodul 4 RoSub', JSON.stringify(fisa.data).slice(0, 200));
+  const badAge = await req(j, 'PATCH', '/api/admin/series', { id: sid, age_rating: '99+' });
+  check('Varsta minima invalida → 400', badAge.status === 400, `status=${badAge.status}`);
+  const badDur = await req(j, 'PATCH', '/api/admin/series', { id: sid, ep_duration: 0 });
+  check('Durata 0 → 400', badDur.status === 400, `status=${badDur.status}`);
+  const badRel = await req(j, 'PATCH', '/api/admin/series', { id: sid, release_date: '20 oct 1999' });
+  check('Data lansarii in format liber → 400', badRel.status === 400, `status=${badRel.status}`);
+  const badExt = await req(j, 'PATCH', '/api/admin/series', { id: sid, external_url: 'http://insecure.example' });
+  check('Link extern fara https → 400', badExt.status === 400, `status=${badExt.status}`);
+  const pubFisa = await req(jar(), 'GET', `/api/series/${sid}`);
+  check('Pagina publica primeste fisa detaliata + episodul urmator', pubFisa.status === 200 && pubFisa.data?.series?.themes === 'școală, supraviețuire' && pubFisa.data.series.external_url.includes('myanimelist') && pubFisa.data.series.next_ep_at === '2030-01-01T18:00', JSON.stringify(pubFisa.data?.series).slice(0, 220));
+  const adminFisa = await req(j, 'GET', `/api/admin/series?id=${sid}`);
+  check('Detaliul admin include fisa (pentru pre-completarea formularului)', adminFisa.data?.series?.alt_titles === 'Test Alt / Alt Test' && adminFisa.data.series.country === 'Japonia', JSON.stringify(adminFisa.data?.series).slice(0, 200));
+  const clearFisa = await req(j, 'PATCH', '/api/admin/series', { id: sid, next_ep_note: '', next_ep_at: '' });
+  check('Golirea anuntului „episodul urmator" merge', clearFisa.status === 200 && clearFisa.data?.series?.next_ep_note === '' && clearFisa.data.series.next_ep_at === '', JSON.stringify(clearFisa.data).slice(0, 120));
+
   // --- postare in bloc ---
   const bulk = await req(j, 'POST', '/api/admin/episodes', {
     series_id: sid,

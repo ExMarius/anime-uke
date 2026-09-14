@@ -100,6 +100,65 @@ export function openChat() {
   isOpen = true;
   document.getElementById('chat-input')?.focus();
   if (!ws || ws.readyState === WebSocket.CLOSED) connect();
+  if (!rulesAccepted()) showRules();
+}
+
+// ---------------------------------------------------------------------
+// Regulamentul chat-ului: se arata o singura data, la prima deschidere,
+// peste fereastra de chat (model: site-urile mari de anime din Romania).
+// Acceptul se tine minte in localStorage; comanda „-regulament" scrisa in
+// chat il readuce oricand. Nu trece prin server — zero cost.
+// ---------------------------------------------------------------------
+const RULES_KEY = 'auk-chat-rules-v1';
+const CHAT_RULES = [
+  'Fără cuvinte, imagini sau stikere obscene.',
+  'Fără spoilere din anime — folosește [spoiler]…[/spoiler] în comentarii, nu chat-ul.',
+  'Nu-ți da datele personale (adresă, telefon, școală) și nu le cere altora.',
+  'Fără CAPS excesiv, flood sau același mesaj/emoji repetat (spam).',
+  'Fără reclamă la alte site-uri sau fansub-uri.',
+  'Glumele proaste le faci doar cu prietenii tăi — nu cu străinii din chat.',
+  'Un membru te deranjează? Raportează-l unui moderator în loc să te cerți.',
+];
+
+function rulesAccepted() {
+  try { return localStorage.getItem(RULES_KEY) === '1'; } catch { return true; }
+}
+
+export function showRules() {
+  const box = document.querySelector('#chat-modal .chat-box');
+  if (!box || box.querySelector('.chat-rules')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-rules';
+  wrap.setAttribute('role', 'dialog');
+  wrap.setAttribute('aria-label', 'Regulament chat');
+
+  const h = document.createElement('h3');
+  h.className = 'chat-rules__title';
+  h.textContent = '📜 Regulament chat';
+  const ol = document.createElement('ol');
+  ol.className = 'chat-rules__list';
+  for (const r of CHAT_RULES) {
+    const li = document.createElement('li');
+    li.textContent = r;
+    ol.appendChild(li);
+  }
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = 'Poți readuce fereastra asta oricând scriind -regulament în chat.';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn--accent btn--sm';
+  btn.textContent = 'Am citit și sunt de acord';
+  btn.addEventListener('click', () => {
+    try { localStorage.setItem(RULES_KEY, '1'); } catch { /* privat */ }
+    wrap.remove();
+    document.getElementById('chat-input')?.focus();
+  });
+
+  wrap.append(h, ol, hint, btn);
+  box.appendChild(wrap);
+  btn.focus();
 }
 
 export function closeChat() {
@@ -372,6 +431,13 @@ function sendMessage() {
 
   const text = input.value.trim();
   if (!text) return;
+
+  // Comanda locala: readuce regulamentul (nu ajunge la server).
+  if (/^[-/!]regulament$/i.test(text)) {
+    input.value = '';
+    showRules();
+    return;
+  }
 
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     toast('Chat-ul nu e conectat încă. Încearcă din nou într-o secundă.', 'warn');

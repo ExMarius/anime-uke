@@ -117,6 +117,12 @@
       <div class="section__head">
         <h2 class="section__title">💬 Comentarii</h2>
         <span class="section__count" id="comments-count"></span>
+        <label class="sr-only" for="comments-sort">Ordinea comentariilor</label>
+        <select class="select select--sm comments__sort" id="comments-sort" hidden>
+          <option value="top">Cele mai votate</option>
+          <option value="new">Cele mai noi</option>
+          <option value="old">Cele mai vechi</option>
+        </select>
       </div>
       <form id="comment-form" class="comments__form">
         <label class="sr-only" for="comment-body">Comentariu</label>

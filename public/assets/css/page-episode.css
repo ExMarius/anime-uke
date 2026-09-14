@@ -483,3 +483,6 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 /* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
    sa nu miste elementele de langa ele (CLS). */
 #genre-select { min-width: 11rem; }
+
+/* selectorul de ordine al comentariilor, aliniat in dreapta capului sectiunii */
+.comments__sort { margin-left: auto; max-width: 180px; }

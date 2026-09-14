@@ -250,7 +250,8 @@ async function seriesForSeo(env, id) {
   try {
     const row = await env.DB
       .prepare(
-        `SELECT id, title, description, cover_image, status, genre, year, episode_count
+        `SELECT id, title, description, cover_image, status, genre, year, episode_count,
+                alt_titles, release_date, country, ep_duration, age_rating, external_url
          FROM anime_series WHERE id = ?`
       )
       .bind(id)
@@ -285,8 +286,16 @@ function seriesSeoTags(env, request, series) {
     image: series.cover_image || undefined,
     genre: series.genre ? String(series.genre).split(',').map((g) => g.trim()).filter(Boolean) : undefined,
     numberOfEpisodes: series.episode_count || undefined,
-    startDate: series.year ? String(series.year) : undefined,
+    startDate: series.release_date || (series.year ? String(series.year) : undefined),
     inLanguage: 'ro',
+    // Fisa detaliata (0024): Google foloseste alternateName pentru cautari
+    // dupa titlul japonez/englez, sameAs leaga entitatea de MAL/AniList.
+    alternateName: series.alt_titles
+      ? String(series.alt_titles).split('/').map((t) => t.trim()).filter(Boolean)
+      : undefined,
+    countryOfOrigin: series.country ? { '@type': 'Country', name: series.country } : undefined,
+    contentRating: series.age_rating || undefined,
+    sameAs: series.external_url || undefined,
   };
 
   return `  <title>${escAttr(title)}</title>

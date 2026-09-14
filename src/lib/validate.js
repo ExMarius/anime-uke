@@ -74,6 +74,39 @@ export function validateSeries(input) {
     return { ok: false, error: 'URL imagine invalid (trebuie să înceapă cu http/https sau cu /)' };
   }
 
+  // --- fisa detaliata (0024), toate optionale ---
+  const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+  const epDuration = input.ep_duration === null || input.ep_duration === undefined || input.ep_duration === ''
+    ? null
+    : Number(input.ep_duration);
+  if (epDuration !== null && (!Number.isInteger(epDuration) || epDuration < 1 || epDuration > 600)) {
+    return { ok: false, error: 'Durata episodului trebuie să fie între 1 și 600 de minute' };
+  }
+
+  const ageRating = str(input.age_rating, 10);
+  if (ageRating && !ALLOWED_AGE_RATINGS.includes(ageRating)) {
+    return { ok: false, error: `Vârsta minimă invalidă (${ALLOWED_AGE_RATINGS.join(', ')})` };
+  }
+
+  // Data lansarii: ISO (2026-10-20) sau doar an-luna (2026-10). Text liber
+  // ar fi imposibil de sortat/afisat consistent.
+  const releaseDate = str(input.release_date, 10);
+  if (releaseDate && !/^\d{4}(-\d{2}(-\d{2})?)?$/.test(releaseDate)) {
+    return { ok: false, error: 'Data lansării trebuie să fie în formatul AAAA-LL-ZZ' };
+  }
+
+  // Anuntul „episodul urmator": data ca `2026-09-14T18:00` (input datetime-local).
+  const nextEpAt = str(input.next_ep_at, 16);
+  if (nextEpAt && !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(nextEpAt)) {
+    return { ok: false, error: 'Data episodului următor trebuie să fie în formatul AAAA-LL-ZZTHH:MM' };
+  }
+
+  const externalUrl = str(input.external_url, 300);
+  if (externalUrl && !/^https:\/\/[^\s]+$/i.test(externalUrl)) {
+    return { ok: false, error: 'Linkul extern trebuie să înceapă cu https://' };
+  }
+
   return {
     ok: true,
     value: {
@@ -83,11 +116,28 @@ export function validateSeries(input) {
       status,
       genre: typeof input.genre === 'string' ? input.genre.trim().slice(0, 100) : '',
       year,
+      alt_titles: str(input.alt_titles, 300),
+      themes: str(input.themes, 200),
+      age_rating: ageRating,
+      ep_duration: epDuration,
+      release_date: releaseDate,
+      country: str(input.country, 40),
+      external_url: externalUrl,
+      team: str(input.team, 300),
+      next_ep_note: str(input.next_ep_note, 120),
+      next_ep_at: nextEpAt,
     },
   };
 }
 
-const SERIES_PATCH_FIELDS = ['title', 'description', 'cover_image', 'status', 'genre', 'year'];
+export const ALLOWED_AGE_RATINGS = ['G', '7+', '13+', '16+', '18+'];
+
+export const SERIES_DETAIL_FIELDS = [
+  'alt_titles', 'themes', 'age_rating', 'ep_duration', 'release_date', 'country', 'external_url', 'team',
+  'next_ep_note', 'next_ep_at',
+];
+
+const SERIES_PATCH_FIELDS = ['title', 'description', 'cover_image', 'status', 'genre', 'year', ...SERIES_DETAIL_FIELDS];
 
 /**
  * Validare partiala pentru editarea unei serii.

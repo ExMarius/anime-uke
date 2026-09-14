@@ -1,6 +1,8 @@
 import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, genPoster } from './core.js';
 import { buildSourceRow, collectSourceRows, existingSourceRow, sourceChips, guessKind, labelFromUrl, KIND_HINTS } from './sources-ui.js';
 
+const DETAIL_FIELDS = ['alt_titles', 'themes', 'age_rating', 'ep_duration', 'release_date', 'country', 'external_url', 'team', 'next_ep_note', 'next_ep_at'];
+
 // =====================================================================
 // /admin/serie/<id> — o singura serie: episoadele ei, sursele lor si
 // postarea in bloc.
@@ -103,6 +105,19 @@ function renderSeries() {
     ['Episoade', String(series.episode_count ?? 0)],
     ['Vizionări totale', Number(series.total_views ?? 0).toLocaleString('ro-RO')],
   ];
+  // Fisa detaliata: doar campurile completate, ca sa nu umplem panoul cu „—".
+  const extra = [
+    ['Titluri alternative', series.alt_titles],
+    ['Teme', series.themes],
+    ['Vârsta minimă', series.age_rating],
+    ['Durată ep.', series.ep_duration ? `${series.ep_duration} min` : ''],
+    ['Data lansării', series.release_date],
+    ['Țara', series.country],
+    ['Link extern', series.external_url],
+    ['Echipa', series.team],
+    ['Episodul următor', [series.next_ep_note, series.next_ep_at ? series.next_ep_at.replace('T', ' ') : ''].filter(Boolean).join(' · ')],
+  ];
+  for (const [k, v] of extra) if (v) rows.push([k, String(v)]);
   for (const [k, v] of rows) {
     const row = el('div', 'info-row');
     row.append(el('dt', 'info-row__label', k), el('dd', 'info-row__value', v));
@@ -125,6 +140,7 @@ document.getElementById('ser-edit')?.addEventListener('click', () => {
   f.genre.value = series?.genre || '';
   f.cover_image.value = series?.cover_image || '';
   f.description.value = series?.description || '';
+  for (const k of DETAIL_FIELDS) if (f[k]) f[k].value = series?.[k] ?? '';
   toggle('ser-edit-panel', true);
   f.title.focus();
 });
@@ -146,6 +162,10 @@ document.getElementById('series-edit-form')?.addEventListener('submit', async (e
         genre: f.genre.value.trim(),
         cover_image: f.cover_image.value.trim(),
         description: f.description.value.trim(),
+        ...Object.fromEntries(DETAIL_FIELDS.map((k) => {
+          const v = (f[k]?.value ?? '').trim();
+          return [k, k === 'ep_duration' ? (v ? Number(v) : null) : v];
+        })),
       },
     });
     if (!res.ok) { toast(res.data?.error || 'Nu am putut salva seria', 'err', 5000); return; }

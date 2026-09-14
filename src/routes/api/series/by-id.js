@@ -42,6 +42,8 @@ export async function onRequestGet(context) {
     const [seriesRes, episodesRes] = await env.DB.batch([
       env.DB.prepare(
         `SELECT id, title, description, cover_image, status, genre, year,
+                alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team,
+                next_ep_note, next_ep_at,
                 episode_count, created_at
          FROM anime_series WHERE id = ?`
       ).bind(id.value),

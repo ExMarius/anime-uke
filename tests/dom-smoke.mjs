@@ -210,6 +210,11 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));
   check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
   p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  // Regulamentul chat-ului apare la prima deschidere si dispare dupa accept.
+  const rulesOn = await until(() => !!p.$('.chat-rules'));
+  check('Regulamentul chat-ului apare la prima deschidere', rulesOn && p.$$('.chat-rules__list li').length >= 5, `li=${p.$$('.chat-rules__list li').length}`);
+  p.$('.chat-rules .btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Dupa accept regulamentul dispare si acceptul e memorat', !p.$('.chat-rules') && p.window.localStorage.getItem('auk-chat-rules-v1') === '1', `ls=${p.window.localStorage.getItem('auk-chat-rules-v1')}`);
   p.$('#chat-sticker-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   check('Pickerul de stikere se deschide cu setul Tenor complet', p.$$('#sticker-pop .sticker-pop__item').length >= 50, `n=${p.$$('#sticker-pop .sticker-pop__item').length}`);
   p.$('#sticker-pop .sticker-pop__item')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
@@ -338,7 +343,12 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   const created = await (await fetch(`${BASE}/api/admin/series`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
-    body: JSON.stringify({ title: 'Serie lunga DOM', status: 'ongoing' }),
+    body: JSON.stringify({
+      title: 'Serie lunga DOM', status: 'ongoing',
+      alt_titles: 'Long Series / Nagai Series', themes: 'pirați, lupte', age_rating: '13+', ep_duration: 24,
+      release_date: '1999-10-20', country: 'Japonia', external_url: 'https://myanimelist.net/anime/21/One_Piece',
+      team: 'Traducere: Ana', next_ep_note: 'Episodul 151 RoSub', next_ep_at: '2030-01-01T18:00',
+    }),
   })).json();
   const sid = created?.id;
   check('Seria lunga de test a fost creata', Number.isInteger(sid), JSON.stringify(created).slice(0, 120));
@@ -378,6 +388,13 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Media de vot e afisata', (p.text('#rate-avg') || '').length > 0, p.text('#rate-avg'));
   check('Cuferele isi arata starea (blocat/deschis)', /mai ai|Deschide|Deschis/.test(p.text('#chests-row') || ''), p.text('#chests-row')?.slice(0, 60));
   check('Posterul seriei e randat (fallback cand lipseste coperta)', p.$('#series-poster')?.hidden === false && p.$$('#series-poster > *').length === 1, `hidden=${p.$('#series-poster')?.hidden} copii=${p.$$('#series-poster > *').length}`);
+  // Fisa „Informatii despre serie" + titluri alternative + episodul urmator (0024).
+  check('Titlurile alternative apar sub titlu', p.$('#series-alt')?.hidden === false && /Nagai Series/.test(p.text('#series-alt') || ''), p.text('#series-alt'));
+  check('Fisa detaliata e vizibila si are teme, varsta, durata, tara, echipa', p.$('#series-info')?.hidden === false && ['pirați, lupte', '13+', '24 min', 'Japonia', 'Traducere: Ana'].every((t) => (p.text('#series-info') || '').includes(t)), p.text('#series-info')?.slice(0, 160));
+  check('Data lansarii e formatata in romana', /20 octombrie 1999/.test(p.text('#series-info') || ''), p.text('#series-info')?.slice(0, 200));
+  const extA = p.$('#series-info a');
+  check('Linkul extern e etichetat MyAnimeList si se deschide in fila noua, cu nofollow', extA?.textContent === 'MyAnimeList' && extA.target === '_blank' && /nofollow/.test(extA.rel), extA?.outerHTML?.slice(0, 120));
+  check('Anuntul „Episodul urmator" e vizibil cu countdown', p.$('#next-ep')?.hidden === false && /Episodul 151 RoSub/.test(p.text('#next-ep-title') || '') && /peste/.test(p.text('#next-ep-when') || ''), `${p.text('#next-ep-title')} | ${p.text('#next-ep-when')}`);
   check('Selectorul de intervale e vizibil la o serie lunga', p.$('#ep-ranges')?.hidden === false, `hidden=${p.$('#ep-ranges')?.hidden}`);
   check('Selectorul are doua intervale + sageti', p.$$('#ep-ranges button').length === 4, `butoane=${p.$$('#ep-ranges button').length}`);
   check('Primul interval e etichetat corect', /1–100/.test(p.$('#ep-ranges')?.textContent || ''), p.$('#ep-ranges')?.textContent?.slice(0, 80));

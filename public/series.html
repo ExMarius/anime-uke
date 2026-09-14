@@ -25,7 +25,20 @@
       <div class="ser-facts">
         <div id="series-badges" class="badges-row"></div>
         <h1 class="hero__title title-responsive" id="series-title">Se încarcă…</h1>
+        <p class="ser-alt hint" id="series-alt" hidden></p>
         <p class="hero__sub ser-desc" id="series-desc"></p>
+        <!-- „Informații despre serie" — fișa clasică de pe site-urile de anime:
+             teme, vârstă, durată, lansare, țară, link extern, echipă. Apare
+             doar dacă adminul a completat măcar un câmp. -->
+        <dl class="ser-info" id="series-info" hidden></dl>
+        <!-- Anunțul „Episodul următor" (setat de admin, cu countdown). -->
+        <div class="next-ep" id="next-ep" hidden>
+          <span class="next-ep__icon">⏰</span>
+          <div>
+            <div class="next-ep__title" id="next-ep-title"></div>
+            <div class="next-ep__when hint" id="next-ep-when"></div>
+          </div>
+        </div>
         <div class="rate" id="rate-box" hidden>
           <span class="rate__avg" id="rate-avg">–</span>
           <div class="rate__stars" id="rate-stars" role="radiogroup" aria-label="Nota ta pentru serie"></div>
