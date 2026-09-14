@@ -1,23 +1,16 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 73dcd60
+comanda: cf-relay/cmd.sh @ 97aa168
 ────────────────────────────────────
-── 1. GET standard /sitemap.xml ──
-status=200 tip=application/xml; charset=utf-8 marime=285B
-── 2. GET ca Googlebot (UA falsificat) HTTP/1.1 ──
-status=200 tip=application/xml; charset=utf-8 marime=285B codare=application/xml; charset=utf-8
+── paginile din sitemap răspund? ──
+// -> 302 
+//series -> 302 
+//serie/1014 -> 302 
+── sitemap acum ──
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://anime-uke.pages.dev/</loc></url>
-  <url><loc>https://anime-uke.pages.dev/series<
-── 3. GET cu gzip fortat ──
-status=200 codare={"date":["Mon, 14 Sep 2026 07:45:34 GMT"],
-"content-type":["application/xml; charset=utf-8"],
-"cache-control":["public, max-age=3600"],
-"content-security-policy":["default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; con
-/tmp/sm-gz: gzip compressed data, original size modulo 2^32 285
-── 4. XML parsa cu OK corecta (ca browserul) ──
-PARSE OK — XML ireprosabil
-── 5. BOM sau caractere invizibile la inceput? ──
-00000000: 3c3f 786d 6c20 7665 7273 696f 6e3d 2231  <?xml version="1
-── 6. robots.txt ca Googlebot ──
-status=200
+  <url><loc>https://anime-uke.pages.dev/</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://anime-uke.pages.dev/login</loc><lastmod>2026-09-14</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/register</loc><lastmod>2026-09-14</lastmod><priority>0.7</priority></url>
+  <url><loc>https://anime-uke.pages.dev/series?id=1014</loc><lastmod>2026-09-14</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episode?id=4208</loc><lastmod>2026-09-14</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episode?id=4209</loc><lastmod>2026-09-14</lastmod><priority>0.8</priority></url>
