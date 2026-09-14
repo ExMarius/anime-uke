@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
+# Rulare relay fără deploy: audit read-only al sitului live + cote D1.
 set -uo pipefail
-# HEAD la momentul deploy-ului = valoarea pe care deploy.sh o pune in ?v=
-# (runner-ul va mai comite inca un commit dupa asta, cu output-ul).
-V="$(git rev-parse --short HEAD)"
-./deploy.sh
-echo "exit deploy: $?"
 
-B="https://anime-uke.pages.dev"
+echo "=== AUDIT LIVE (read-only, fără deploy) ==="
+node scripts/audit-live.mjs https://anime-uke.pages.dev
+echo "exit audit: $?"
+
 echo
-echo "── verificare live (deploy din commitul $V) ──"
-echo "  wrangler pe runner: $(npx wrangler --version 2>/dev/null | tail -1)"
-echo "  migrari neaplicate remote (trebuie 0): $(npx wrangler d1 migrations list DB --remote 2>/dev/null | grep -c '0025' || true)"
-echo "  / status: $(curl -s "$B/" -o /dev/null -w '%{http_code}')"
-echo "  ?v= din index.html live (trebuie sa contina $V): $(curl -s "$B/" | grep -oE 'assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js)\?v=[a-z0-9]+' | head -2 | tr '\n' ' ')"
-echo "  /api/auth/me (fara sesiune): $(curl -s "$B/api/auth/me" -o /dev/null -w '%{http_code}')"
-echo "  /api/admin/mods GET fara sesiune: $(curl -s "$B/api/admin/mods" -o /dev/null -w '%{http_code}') (401 = ruta exista si e protejata; 405 ar fi bug)"
-echo "  /api/leaderboard: $(curl -s "$B/api/leaderboard" -o /dev/null -w '%{http_code}')"
-echo "  /api/factions: $(curl -s "$B/api/factions" -o /dev/null -w '%{http_code}')"
-for C in ubadge--admin ubadge--mod ubadge--staff ubadge--helper; do echo "  style.css $C: $(curl -s "$B/assets/css/style.css" | grep -c "$C")"; done
-echo "  core.js staffIcon: $(curl -s "$B/assets/js/core.js" | grep -c 'staffIcon')"
-echo "  page-episode.js can_moderate: $(curl -s "$B/assets/js/page-episode.js" | grep -c 'can_moderate')"
-echo "  /serie/1019 SSR status: $(curl -s "$B/serie/1019" -o /dev/null -w '%{http_code}')"
-echo "  /sitemap.xml: $(curl -s "$B/sitemap.xml" -o /dev/null -w '%{http_code}')  /robots.txt: $(curl -s "$B/robots.txt" -o /dev/null -w '%{http_code}')"
+echo "=== cote D1 (buget 0: 100k scrieri/zi, 500 MB stocare, 5 GB citire/zi) ==="
+npx wrangler d1 execute DB --remote --json \
+  --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name != 'd1_migrations'" 2>/dev/null \
+| node -e '
+let d="";process.stdin.on("data",c=>d+=c).on("end",async()=>{
+  let tables=[];
+  try{ tables=(JSON.parse(d)[0]?.results||[]).map(r=>r.name); }catch{ }
+  if(!tables.length){ console.log("  (nu am putut lista tabelele)"); return; }
+  for(const t of tables.sort()){
+    let c="?";
+    try{
+      const out=require("child_process").execFileSync("npx",["wrangler","d1","execute","DB","--remote","--json","--command",`SELECT COUNT(*) c FROM "${t}"`],{encoding:"utf8"});
+      c=JSON.parse(out)[0]?.results?.[0]?.c ?? "?";
+    }catch(e){ c="eroare: "+(e.message||"").slice(0,60); }
+    console.log(`  ${t}: ${c} rânduri`);
+  }
+});'
+echo
+echo "=== migrări remote ==="
+npx wrangler d1 migrations list DB --remote 2>&1 | tail -8
