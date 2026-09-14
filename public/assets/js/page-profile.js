@@ -56,7 +56,6 @@ function renderInfo() {
     infoRow('Vârsta', p.age != null ? `${p.age} ani` : '—', { muted: p.age == null }),
     infoRow('Gen', p.gender_label || '—', { muted: !p.gender }),
     infoRow('Țară', p.country || '—', { muted: !p.country }),
-    infoRow('Facțiune', p.faction || '—', { muted: !p.faction }),
     infoRow('Membru din', u.member_since || '—'),
     infoRow('Utilizator', u.username),
     infoRow('Gând', motto, { muted: !p.motto })
@@ -234,13 +233,76 @@ async function removeFromWatchlist(seriesId) {
 }
 
 // ---------------------------------------------------------------- editare
+// Țara: listă completă, România prestabilită. Dacă userul are salvată o
+// valoare care nu e în listă, o păstrăm ca opțiune în plus (nu pierdem date).
+const COUNTRIES = [
+  'România', 'Africa de Sud', 'Afghanistan', 'Albania', 'Algeria', 'Andorra',
+  'Angola', 'Antigua și Barbuda', 'Arabia Saudită', 'Argentina', 'Armenia',
+  'Australia', 'Austria', 'Azerbaidjan', 'Bahamas', 'Bahrein', 'Bangladesh',
+  'Barbados', 'Belarus', 'Belgia', 'Belize', 'Benin', 'Bhutan', 'Bolivia',
+  'Bosnia și Herțegovina', 'Botswana', 'Brazilia', 'Brunei', 'Bulgaria',
+  'Burkina Faso', 'Burundi', 'Cambodgia', 'Camerun', 'Canada', 'Ciad',
+  'Chile', 'China', 'Cipru', 'Coasta de Fildeș', 'Columbia', 'Comore',
+  'Coreea de Nord', 'Coreea de Sud', 'Costa Rica', 'Croația', 'Cuba',
+  'Danemarca', 'Dominica', 'Ecuador', 'Egipt', 'El Salvador',
+  'Emiratele Arabe Unite', 'Eritreea', 'Estonia', 'Eswatini', 'Etiopia',
+  'Fiji', 'Filipine', 'Finlanda', 'Franța', 'Gabon', 'Gambia', 'Georgia',
+  'Germania', 'Ghana', 'Grecia', 'Grenada', 'Guatemala', 'Guineea',
+  'Guineea-Bissau', 'Guineea Ecuatorială', 'Guyana', 'Haiti', 'Honduras',
+  'India', 'Indonezia', 'Insulele Marshall', 'Insulele Solomon', 'Iordania',
+  'Irak', 'Iran', 'Irlanda', 'Islanda', 'Israel', 'Italia', 'Jamaica',
+  'Japonia', 'Kazahstan', 'Kenya', 'Kiribati', 'Kirghizstan', 'Kuweit',
+  'Kosovo', 'Laos', 'Lesotho', 'Letonia', 'Liban', 'Liberia', 'Libia',
+  'Liechtenstein', 'Lituania', 'Luxemburg', 'Macedonia de Nord', 'Madagascar',
+  'Malawi', 'Malaezia', 'Maldive', 'Mali', 'Malta', 'Mauritania', 'Mauritius',
+  'Mexic', 'Micronezia', 'Moldova', 'Monaco', 'Mongolia', 'Mozambic',
+  'Muntenegru', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Nicaragua', 'Niger',
+  'Nigeria', 'Norvegia', 'Noua Zeelandă', 'Olanda', 'Oman', 'Pakistan',
+  'Palau', 'Palestina', 'Panama', 'Papua Noua Guinee', 'Paraguay', 'Peru',
+  'Polonia', 'Portugalia', 'Qatar', 'Regatul Unit',
+  'Republica Centrafricană', 'Republica Cehă', 'Republica Congo',
+  'Republica Democratică Congo', 'Republica Dominicană', 'Rusia', 'Rwanda',
+  'Saint Kitts și Nevis', 'Saint Lucia', 'Saint Vincent și Grenadine',
+  'Samoa', 'San Marino', 'São Tomé și Príncipe', 'Senegal', 'Serbia',
+  'Seychelles', 'Sierra Leone', 'Singapore', 'Siria', 'Slovacia', 'Slovenia',
+  'Somalia', 'Spania', 'Sri Lanka', 'Statele Unite ale Americii', 'Sudan',
+  'Sudanul de Sud', 'Suedia', 'Surinam', 'Elveția', 'Tadjikistan',
+  'Tanzania', 'Thailanda', 'Taiwan', 'Timorul de Est', 'Togo', 'Tonga',
+  'Trinidad și Tobago', 'Tunisia', 'Turcia', 'Turkmenistan', 'Tuvalu',
+  'Ucraina', 'Uganda', 'Ungaria', 'Uruguay', 'Uzbekistan', 'Vanuatu',
+  'Vatican', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
+];
+
+function ensureCountryOptions() {
+  const input = document.getElementById('f-country');
+  if (!input || input.tagName === 'SELECT') return;
+  const sel = document.createElement('select');
+  sel.className = 'select';
+  sel.id = 'f-country';
+  sel.name = 'country';
+  for (const c of COUNTRIES) {
+    const o = document.createElement('option');
+    o.value = c;
+    o.textContent = c;
+    sel.appendChild(o);
+  }
+  input.replaceWith(sel);
+}
+ensureCountryOptions();
+
 function openEditor() {
   const p = data.profile;
   const form = document.getElementById('profile-form');
   form.birth_date.value = p.birth_date || '';
   form.gender.value = p.gender || '';
-  form.country.value = p.country || '';
-  form.faction.value = p.faction || '';
+  const savedCountry = (p.country || '').trim();
+  if (savedCountry && ![...form.country.options].some((o) => o.value === savedCountry)) {
+    const o = document.createElement('option');
+    o.value = savedCountry;
+    o.textContent = savedCountry;
+    form.country.appendChild(o);
+  }
+  form.country.value = savedCountry || 'România';
   form.motto.value = p.motto || '';
   form.mal_url.value = p.mal_url || '';
   form.avatar_url.value = p.avatar_url || '';
@@ -273,7 +335,6 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
     birth_date: form.birth_date.value,
     gender: form.gender.value,
     country: form.country.value.trim(),
-    faction: form.faction.value.trim(),
     motto: form.motto.value.trim(),
     mal_url: form.mal_url.value.trim(),
     avatar_url: form.avatar_url.value.trim(),
