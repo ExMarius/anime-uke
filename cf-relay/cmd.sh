@@ -1,29 +1,35 @@
 #!/usr/bin/env bash
-# Rulare relay fără deploy: audit read-only al sitului live + cote D1.
 set -uo pipefail
+./deploy.sh
+echo "exit deploy: $?"
 
-echo "=== AUDIT LIVE (read-only, fără deploy) ==="
+echo
+echo "=== AUDIT LIVE dupa deploy ==="
 node scripts/audit-live.mjs https://anime-uke.pages.dev
 echo "exit audit: $?"
 
+B="https://anime-uke.pages.dev"
 echo
-echo "=== cote D1 (buget 0: 100k scrieri/zi, 500 MB stocare, 5 GB citire/zi) ==="
-npx wrangler d1 execute DB --remote --json \
-  --command "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name != 'd1_migrations'" 2>/dev/null \
-| node -e '
-let d="";process.stdin.on("data",c=>d+=c).on("end",async()=>{
-  let tables=[];
-  try{ tables=(JSON.parse(d)[0]?.results||[]).map(r=>r.name); }catch{ }
-  if(!tables.length){ console.log("  (nu am putut lista tabelele)"); return; }
-  for(const t of tables.sort()){
-    let c="?";
-    try{
-      const out=require("child_process").execFileSync("npx",["wrangler","d1","execute","DB","--remote","--json","--command",`SELECT COUNT(*) c FROM "${t}"`],{encoding:"utf8"});
-      c=JSON.parse(out)[0]?.results?.[0]?.c ?? "?";
-    }catch(e){ c="eroare: "+(e.message||"").slice(0,60); }
-    console.log(`  ${t}: ${c} rânduri`);
-  }
-});'
-echo
-echo "=== migrări remote ==="
-npx wrangler d1 migrations list DB --remote 2>&1 | tail -8
+echo "=== verificari punctuale (fix-urile din audit) ==="
+echo "  /serie/99999999 → $(curl -s -o /tmp/nf.html -w '%{http_code}' "$B/serie/99999999") (trebuie 404)"
+echo "    X-Robots-Tag: $(curl -sI "$B/serie/99999999" | grep -i '^x-robots-tag' | tr -d '\r')"
+echo "    titlu: $(grep -oE '<title>[^<]*</title>' /tmp/nf.html | head -1)"
+echo "  /episod/99999999 → $(curl -s -o /dev/null -w '%{http_code}' "$B/episod/99999999") (trebuie 404)"
+echo "  /series → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/series") (trebuie 301 spre /)"
+echo "  /series?id=1014 → $(curl -s -o /dev/null -w '%{http_code}' "$B/series?id=1014") (trebuie 200)"
+echo "  /series/ → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/series/") (trebuie 301 spre /)"
+echo "  /package.json → $(curl -s -o /dev/null -w '%{http_code}' "$B/package.json") (trebuie 404, nu 302)"
+echo "  /AGENTS.md → $(curl -s -o /dev/null -w '%{http_code}' "$B/AGENTS.md") (trebuie 404)"
+echo "  /deploy.sh → $(curl -s -o /dev/null -w '%{http_code}' "$B/deploy.sh") (trebuie 404)"
+echo "  /src/worker.js → $(curl -s -o /dev/null -w '%{http_code}' "$B/src/worker.js") (trebuie 404)"
+echo "  /ruta-inexistenta → $(curl -s -o /dev/null -w '%{http_code}' "$B/ruta-inexistenta") (trebuie 404)"
+echo "  /profile (nelogat) → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/profile") (trebuie 302 spre /login)"
+echo "  /profile.html (nelogat) → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/profile.html") (302 spre /login e ok)"
+echo "  /login noindex: $(curl -s "$B/login" | grep -c 'noindex')  canonical: $(curl -s "$B/login" | grep -c 'rel="canonical"')"
+echo "  /register noindex: $(curl -s "$B/register" | grep -c 'noindex')  canonical: $(curl -s "$B/register" | grep -c 'rel="canonical"')"
+echo "  CORP header: $(curl -sI "$B/" | grep -i '^cross-origin-resource-policy' | tr -d '\r')"
+echo "  sitemap conține /series? (trebuie 0): $(curl -s "$B/sitemap.xml" | grep -c '<loc>[^<]*/series</loc>')"
+echo "  sitemap URL-uri: $(curl -s "$B/sitemap.xml" | grep -oE '<loc>[^<]*</loc>' | tr '\n' ' ')"
+echo "  /serie/1014 (serie reala) → $(curl -s -o /dev/null -w '%{http_code}' "$B/serie/1014") (trebuie 200)"
+echo "  /episod/4210 (episod real) → $(curl -s -o /dev/null -w '%{http_code}' "$B/episod/4210") (trebuie 200)"
+echo "  prima pagina → $(curl -s -o /dev/null -w '%{http_code}' "$B/")  · /api/pulse → $(curl -s "$B/api/pulse")"
