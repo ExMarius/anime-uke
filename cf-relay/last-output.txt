@@ -1,15 +1,40 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9859feb
+comanda: cf-relay/cmd.sh @ cbf685c
 ────────────────────────────────────
-── UNDE trimite /? ──
-HTTP/2 302 
-location: /login?next=%2F
-── UNDE trimite /series? ──
-HTTP/2 302 
-location: /login?next=%2Fseries
-── meta GSC mai e pe prima pagina? ──
-META GSC LIPSĂ!
-── meta GSC pe /login? ──
-LIPSĂ pe /login
-── titlul paginii / ──
-<title>Login • anime-uke</title>
+── REDEPLOY cod corect (public + GSC) ──
+
+[1;35m==> 1/5  Baza de date D1[0m
+    [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
+    [0;32m✓[0m database_id injectat in toate configuratiile
+    [0;32m✓[0m wrangler.toml = configuratie de productie
+
+[1;35m==> 2/5  Schema D1 (remote)[0m
+    [0;32m✓[0m deja aplicata
+
+[1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
+    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
+
+[1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
+    [0;32m✓[0m assete versionate ?v=cbf685c
+    [0;32m✓[0m publicat: https://7256ba3c.anime-uke.pages.dev
+
+[1;35m==> 5/5  JWT_SECRET[0m
+    [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
+
+[1;32mGATA.[0m  Site: https://anime-uke.pages.dev
+exit deploy: 0
+── verificare completă ──
+sanitate /: 200
+sanitate /series: 200
+meta GSC pe /: 1
+meta GSC pe /series: 1
+meta GSC pe /episode: 0
+meta GSC pe /login: 1
+meta GSC pe /register: 1
+── sitemap ──
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://anime-uke.pages.dev/</loc><lastmod>2026-09-14</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://anime-uke.pages.dev/login</loc><lastmod>2026-09-14</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/register</loc><lastmod>2026-09-14</lastmod><priority>0.7</priority></url>
+  <url><loc>https://anime-uke.pages.dev/series?id=1014</loc><lastmod>2026-09-14</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
