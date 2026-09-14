@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "core.js cu optimizeCover: $(curl -s "https://anime-uke.pages.dev/assets/js/core.js?cb=$RANDOM" | grep -c weserv)"
-echo "page-index cu weserv:     $(curl -s "https://anime-uke.pages.dev/assets/js/page-index.js?cb=$RANDOM" | grep -c weserv)"
-echo "hero pe deployment nou (459cf7da): $(curl -s https://459cf7da.anime-uke.pages.dev/ | grep -c modulepreload)"
+echo "── deploy final ──"
+./deploy.sh
+echo "exit deploy: $?"
+echo "── WebP negociat (Accept: image/webp) ──"
+curl -s -o /dev/null -w "jpg cerut, tip servit: %{content_type}, %{size_download}B\n" \
+  -H "Accept: image/webp" "https://anime-uke.pages.dev/covers/one-piece.jpg"
+curl -s -o /dev/null -w "fără webp:            %{content_type}, %{size_download}B\n" \
+  -H "Accept: image/jpeg" "https://anime-uke.pages.dev/covers/one-piece.jpg"
+echo "── hero inline + preload în HTML ──"
+curl -s "https://anime-uke.pages.dev/?cb=$RANDOM" | grep -c 'id="hero-bg-img"\|rel="preload"'
+echo "── un singur script JS pe index ──"
+curl -s "https://anime-uke.pages.dev/?cb=$RANDOM" | grep -o 'script type="module" src="[^"]*"' | wc -l
+echo "── cache pe imagini ──"
+curl -sI -H "Accept: image/webp" "https://anime-uke.pages.dev/covers/one-piece.jpg" | grep -i cache-control
+echo "── pagini ──"
+for u in / /series /episode /login /register; do
+  echo "$u -> $(curl -s -o /dev/null -w '%{http_code}' https://anime-uke.pages.dev$u)"
+done
