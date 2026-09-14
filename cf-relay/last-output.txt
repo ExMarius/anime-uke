@@ -1,7 +1,7 @@
-exit_code: 0
-comanda: cf-relay/cmd.sh @ 6cc93c1
+exit_code: 1
+comanda: cf-relay/cmd.sh @ 7e4e095
 ────────────────────────────────────
-── deploy ──
+── deploy admin UX ──
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,22 +15,22 @@ comanda: cf-relay/cmd.sh @ 6cc93c1
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=6cc93c1
+    [0;32m✓[0m assete versionate ?v=7e4e095
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://ca23eb8a.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://f5166c42.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-── JS servit ──
-sort=latest: sort=latest
-card__meta:  card__meta
-── CSS servit ──
-card__meta .pill-pos{position:static
-── pagini ──
-/ -> 200
-/series -> 200
+── next_number în API (login admin de probă interzis; verific doar codul servit) ──
+prefill nextEpNumber: 
+flux rapid (focus sursa): src-row input
+duplicat-hint: dup-hint
+rând clickabil: row-click
+CSS .dup-hint: .dup-hint{
+NaN fix (limit separat): 3
+── pagina admin/serii ──
