@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 55a3027
+comanda: cf-relay/cmd.sh @ 9d0145c
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 55a3027
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=55a3027
+    [0;32m✓[0m assete versionate ?v=9d0145c
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://1aa09950.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://1095418c.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -28,53 +28,53 @@ exit deploy: 0
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-14T20:17:36.793Z
+data: 2026-09-14T20:21:38.935Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (318 ms)
-  ℹ️  / → 200 · 318 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (199 ms)
+  ℹ️  / → 200 · 199 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
   ✅ / are canonical
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
-  ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 75 ms · title „Login • anime-uke” (17 car.)
+  ⚠️  / are 3 assete fără ?v= (risc de cache vechi)
+  ℹ️  /login → 200 · 134 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
   ✅ /login are canonical
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
-  ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 43 ms · title „Cont nou • anime-uke” (20 car.)
+  ⚠️  /login are 3 assete fără ?v= (risc de cache vechi)
+  ℹ️  /register → 200 · 133 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
   ✅ /register are canonical
   ℹ️  /register e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /register are lang="ro"
-  ✅ /register are toate assetele versionate (?v=)
+  ⚠️  /register are 3 assete fără ?v= (risc de cache vechi)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 146 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 193 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 131 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 96 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 94 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 115 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 124 ms
+  ℹ️  /episod/4212 → 200 · 206 ms
   ✅ /episod/4212 → 200
-  ℹ️  /episod/4211 → 200 · 95 ms
+  ℹ️  /episod/4211 → 200 · 99 ms
   ✅ /episod/4211 → 200
 
 ── 2. Protecție pagini ──
@@ -176,7 +176,7 @@ data: 2026-09-14T20:17:36.793Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=55a3027 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=audit (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -231,7 +231,7 @@ data: 2026-09-14T20:17:36.793Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 318 ms · /series 11 ms · /api/series 239 ms
+  ℹ️  timpi: / 199 ms · /series 10 ms · /api/series 242 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -249,7 +249,11 @@ data: 2026-09-14T20:17:36.793Z
   ℹ️  /series/ → 301 /
 
 ════════════ PROBLEME (prioritizate) ════════════
-  (niciuna — auditul a trecut curat)
+
+  🟡 de verificat (3):
+   • [1. Pagini + SEO] / are 3 assete fără ?v= (risc de cache vechi)
+   • [1. Pagini + SEO] /login are 3 assete fără ?v= (risc de cache vechi)
+   • [1. Pagini + SEO] /register are 3 assete fără ?v= (risc de cache vechi)
 
 ════════════ NEACOPERIT FĂRĂ CONT ════════════
   Auditul rulează fără credențiale, deci NU probează: fluxul de login real,
@@ -258,7 +262,7 @@ data: 2026-09-14T20:17:36.793Z
   Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).
 
 ════════════ TOTAL ════════════
-  ✅ 162   🟡 0   🔴 0   ℹ️ 32
+  ✅ 159   🟡 3   🔴 0   ℹ️ 32
 exit audit: 0
 
 === verificari punctuale (fix-urile din audit) ===
