@@ -1,6 +1,6 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 8dba3a8
+comanda: cf-relay/cmd.sh @ e405bb3
 ────────────────────────────────────
-[https://anime-uke.pages.dev] js taburi: 0, facțiuni: 1, țări: 1
-[https://anime-uke.pages.dev] js taburi: 0, facțiuni: 1, țări: 1
-pane css: 0
+js taburi (ptabs__btn): 1
+js pane (.ptab): 4
+css taburi (.ptab{): 1
