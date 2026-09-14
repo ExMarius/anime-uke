@@ -1815,3 +1815,10 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 #sort-select { min-width: 9.5rem; }
 #genre-select { min-width: 11rem; }
 #status-select { min-width: 8.5rem; }
+
+/* Skeleton-urile grilei: inaltimi calibrate pe cardul real (titlu + meta +
+   2 linii de descriere) ca la sosirea datelor sa nu se miste nimic. */
+.sk-line--t { height: 18px; width: 85%; }
+.sk-line--m { height: 10px; width: 45%; margin-top: -.4rem; }
+.sk-line--d { width: 92%; margin-top: -.4rem; }
+.sk-card { background: var(--surface); border: 1px solid var(--line-soft); }

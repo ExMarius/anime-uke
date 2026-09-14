@@ -26,7 +26,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
   // URL-urile pretty de catalog: publice (site public).

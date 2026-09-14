@@ -12,9 +12,7 @@
   <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
        pentru paginile fara efecte secundare la load (series/profile).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
-  <script type="speculationrules">
-  {"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/api/*","/admin/*","/logout","/assets/*","#*"]}}]},"eagerness":"moderate"}],"prerender":[{"source":"document","where":{"or":[{"href_matches":"/series*"},{"href_matches":"/profile*"}]},"eagerness":"conservative"}]}
-  </script>
+  <link rel="speculationrules" href="/speculationrules.json">
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
