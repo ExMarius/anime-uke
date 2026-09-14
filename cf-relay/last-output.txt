@@ -1,15 +1,40 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ b7934fc
+comanda: cf-relay/cmd.sh @ 55a3027
 ────────────────────────────────────
-=== AUDIT LIVE (read-only, fără deploy) ===
+
+[1;35m==> 1/5  Baza de date D1[0m
+    [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
+    [0;32m✓[0m database_id injectat in toate configuratiile
+    [0;32m✓[0m wrangler.toml = configuratie de productie
+
+[1;35m==> 2/5  Schema D1 (remote)[0m
+    [0;32m✓[0m deja aplicata
+
+[1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
+    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
+
+[1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
+    [0;32m✓[0m assete versionate ?v=55a3027
+    [0;32m✓[0m CSS purgat de reguli moarte
+    [0;32m✓[0m pagini bundle-uite: 10
+    [0;32m✓[0m assete minificate: 8 fisiere
+    [0;32m✓[0m publicat: https://1aa09950.anime-uke.pages.dev
+
+[1;35m==> 5/5  JWT_SECRET[0m
+    [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
+
+[1;32mGATA.[0m  Site: https://anime-uke.pages.dev
+exit deploy: 0
+
+=== AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-14T19:57:37.145Z
+data: 2026-09-14T20:17:36.793Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (391 ms)
-  ℹ️  / → 200 · 391 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (318 ms)
+  ℹ️  / → 200 · 318 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -17,45 +42,39 @@ data: 2026-09-14T19:57:37.145Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /series → 200 · 156 ms · title „Serie • anime-uke” (17 car.)
-  ✅ /series răspunde 200
-  ✅ /series title are lungime sănătoasă (17)
-  ⚠️  /series meta description 0 car. (recomandat ≥ 70)
-  ⚠️  /series NU are canonical
-  ⚠️  /series are doar 0 taguri og:*
-  ✅ /series are lang="ro"
-  ✅ /series are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 186 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 75 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
-  ⚠️  /login NU are canonical
-  ⚠️  /login are doar 0 taguri og:*
+  ✅ /login are canonical
+  ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 172 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 43 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
-  ⚠️  /register NU are canonical
-  ⚠️  /register are doar 0 taguri og:*
+  ✅ /register are canonical
+  ℹ️  /register e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /register are lang="ro"
   ✅ /register are toate assetele versionate (?v=)
-  ℹ️  /serie/1019 → 200 · 69 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ✅ /series → 301 către /
+  ✅ /series/ → 301 către /
+  ℹ️  /serie/1019 → 200 · 146 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 69 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 131 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 70 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 94 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 176 ms
+  ℹ️  /episod/4212 → 200 · 124 ms
   ✅ /episod/4212 → 200
-  ℹ️  /episod/4211 → 200 · 32 ms
+  ℹ️  /episod/4211 → 200 · 95 ms
   ✅ /episod/4211 → 200
 
 ── 2. Protecție pagini ──
@@ -69,27 +88,28 @@ data: 2026-09-14T19:57:37.145Z
   ✅ /.git/config → 404 (blocat corect)
   ✅ /migrations/0001_init.sql → 404 (blocat corect)
   ✅ /.dev.vars → 404 (blocat corect)
-  ⚠️  /.dev.vars.example → 302 /login?next=%2F.dev.vars.example — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
+  ✅ /.dev.vars.example → 404 (blocat corect)
   ✅ /wrangler.toml → 404 (blocat corect)
-  ⚠️  /wrangler.prod.toml → 302 /login?next=%2Fwrangler.prod.toml — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /deploy.sh → 302 /login?next=%2Fdeploy.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /dev.sh → 302 /login?next=%2Fdev.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /test.sh → 302 /login?next=%2Ftest.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /package.json → 302 /login?next=%2Fpackage.json — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /schema.sql → 302 /login?next=%2Fschema.sql — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /src/worker.js → 302 /login?next=%2Fsrc%2Fworker.js — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /AGENTS.md → 302 /login?next=%2FAGENTS.md — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /cf-relay/cmd.sh → 302 /login?next=%2Fcf-relay%2Fcmd.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-  ⚠️  /node_modules/.package-lock.json → 302 /login?next=%2Fnode_modules%2F.package-lock.json — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
+  ✅ /wrangler.prod.toml → 404 (blocat corect)
+  ✅ /deploy.sh → 404 (blocat corect)
+  ✅ /dev.sh → 404 (blocat corect)
+  ✅ /test.sh → 404 (blocat corect)
+  ✅ /package.json → 404 (blocat corect)
+  ✅ /schema.sql → 404 (blocat corect)
+  ✅ /src/worker.js → 404 (blocat corect)
+  ✅ /AGENTS.md → 404 (blocat corect)
+  ✅ /cf-relay/cmd.sh → 404 (blocat corect)
+  ✅ /node_modules/.package-lock.json → 404 (blocat corect)
 
 ── 4. SEO extern ──
   ✅ robots.txt → 200
   ✅ robots.txt declară Sitemap:
   ✅ sitemap.xml → 200 și e XML
-  ✅ sitemap are 7 URL-uri
+  ✅ sitemap are 6 URL-uri
   ✅ toate URL-urile din sitemap folosesc originea canonică
   ✅ sitemap fără duplicate
-  ℹ️  sitemap: 7 URL-uri · primele 3: https://anime-uke.pages.dev/ https://anime-uke.pages.dev/series https://anime-uke.pages.dev/serie/1019
+  ✅ sitemap nu conține /series (ruta face 301 spre /)
+  ℹ️  sitemap: 6 URL-uri · primele 3: https://anime-uke.pages.dev/ https://anime-uke.pages.dev/serie/1019 https://anime-uke.pages.dev/serie/1018
   ✅ llms.txt → 200 (557 car.)
   ✅ speculationrules.json → 200
 
@@ -148,7 +168,7 @@ data: 2026-09-14T19:57:37.145Z
   ✅ referrer-policy: strict-origin-when-cross-origin
   ✅ cross-origin-opener-policy: same-origin
   ✅ permissions-policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
-  ⚠️  lipsește Cross-Origin-Resource-Policy (nu e critic, dar izolează assetele)
+  ✅ CORP/COEP prezent
   ℹ️  logout fără sesiune → 200; Set-Cookie: token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
   ✅ cookie HttpOnly
   ✅ cookie Secure
@@ -156,7 +176,7 @@ data: 2026-09-14T19:57:37.145Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=?v=eb03ecd (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=55a3027 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -211,7 +231,7 @@ data: 2026-09-14T19:57:37.145Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 391 ms · /series 35 ms · /api/series 133 ms
+  ℹ️  timpi: / 318 ms · /series 11 ms · /api/series 239 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -221,84 +241,46 @@ data: 2026-09-14T19:57:37.145Z
   ℹ️  /chat cu Origin străin + upgrade → 0
   ✅ chat-ul nu acceptă upgrade de pe altă origine
   ✅ /favicon.ico → 200
-  ❌ /serie inexistentă → 200 (soft 404: Google indexează o pagină goală, crawlerul pierde buget)
-  ❌ /episod inexistent → 200 (soft 404)
-  ℹ️  /series/ → 302 /login?next=%2Fseries%2F
+  ✅ /login are noindex (pagină utilitară)
+  ✅ /register are noindex (pagină utilitară)
+  ✅ /serie/99999999 → 404
+  ✅ 404-ul de serie are noindex (meta + X-Robots-Tag)
+  ✅ /episod/99999999 → 404
+  ℹ️  /series/ → 301 /
 
 ════════════ PROBLEME (prioritizate) ════════════
-
-  🔴 de reparat (2):
-   • [11. Chat + diverse] /serie inexistentă → 200 (soft 404: Google indexează o pagină goală, crawlerul pierde buget)
-   • [11. Chat + diverse] /episod inexistent → 200 (soft 404)
-
-  🟡 de verificat (19):
-   • [1. Pagini + SEO] /series meta description 0 car. (recomandat ≥ 70)
-   • [1. Pagini + SEO] /series NU are canonical
-   • [1. Pagini + SEO] /series are doar 0 taguri og:*
-   • [1. Pagini + SEO] /login NU are canonical
-   • [1. Pagini + SEO] /login are doar 0 taguri og:*
-   • [1. Pagini + SEO] /register NU are canonical
-   • [1. Pagini + SEO] /register are doar 0 taguri og:*
-   • [3. Fișiere blocate] /.dev.vars.example → 302 /login?next=%2F.dev.vars.example — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /wrangler.prod.toml → 302 /login?next=%2Fwrangler.prod.toml — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /deploy.sh → 302 /login?next=%2Fdeploy.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /dev.sh → 302 /login?next=%2Fdev.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /test.sh → 302 /login?next=%2Ftest.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /package.json → 302 /login?next=%2Fpackage.json — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /schema.sql → 302 /login?next=%2Fschema.sql — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /src/worker.js → 302 /login?next=%2Fsrc%2Fworker.js — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /AGENTS.md → 302 /login?next=%2FAGENTS.md — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /cf-relay/cmd.sh → 302 /login?next=%2Fcf-relay%2Fcmd.sh — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [3. Fișiere blocate] /node_modules/.package-lock.json → 302 /login?next=%2Fnode_modules%2F.package-lock.json — nu e în BLOCKED_PATHS; conținutul nu scapă, dar un 404 ar fi mai curat
-   • [8. Securitate] lipsește Cross-Origin-Resource-Policy (nu e critic, dar izolează assetele)
+  (niciuna — auditul a trecut curat)
 
 ════════════ NEACOPERIT FĂRĂ CONT ════════════
   Auditul rulează fără credențiale, deci NU probează: fluxul de login real,
   drepturile helper/staff/moderator, cumpărăturile din shop, cuferele, misiunile,
   alegerea de facțiune, comentariile/review-urile ca user, panoul admin, chat-ul autentificat.
-  Acestea sunt acoperite local de tests/e2e.mjs (455) + dom-smoke (147) + caps (13).
+  Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).
 
 ════════════ TOTAL ════════════
-  ✅ 144   🟡 19   🔴 2   ℹ️ 31
-exit audit: 1
+  ✅ 162   🟡 0   🔴 0   ℹ️ 32
+exit audit: 0
 
-=== cote D1 (buget 0: 100k scrieri/zi, 500 MB stocare, 5 GB citire/zi) ===
-  admin_log: 53 rânduri
-  anime_series: 5 rânduri
-  chat_messages: 30 rânduri
-  chest_cooldown: 2 rânduri
-  chests_claimed: 3 rânduri
-  comment_votes: 0 rânduri
-  daily_missions: 3 rânduri
-  episode_comments: 2 rânduri
-  episode_sources: 5 rânduri
-  episodes: 5 rânduri
-  faction_leaders: 0 rânduri
-  faction_rep: 1 rânduri
-  faction_winners: 0 rânduri
-  lb_prizes: 1 rânduri
-  leaderboard_cache: 1 rânduri
-  notifications: 2 rânduri
-  rank_themes: 22 rânduri
-  series_ratings: 2 rânduri
-  series_reviews: 0 rânduri
-  series_subscriptions: 2 rânduri
-  site_meta: 2 rânduri
-  source_reports: 1 rânduri
-  user_badges: 2 rânduri
-  user_items: 0 rânduri
-  user_monthly_points: 2 rânduri
-  user_profiles: 2 rânduri
-  user_streak: 2 rânduri
-  users: 3 rânduri
-  watch_progress: 8 rânduri
-  watched_history: 5 rânduri
-  watchlist: 1 rânduri
-
-=== migrări remote ===
-
- ⛅️ wrangler 4.131.2
-────────────────────
-Resource location: remote 
-
-✅ No migrations to apply!
+=== verificari punctuale (fix-urile din audit) ===
+  /serie/99999999 → 404 (trebuie 404)
+    X-Robots-Tag: x-robots-tag: noindex, follow
+    titlu: <title>404 — Serie inexistentă • anime-uke</title>
+  /episod/99999999 → 404 (trebuie 404)
+  /series → 301 https://anime-uke.pages.dev/ (trebuie 301 spre /)
+  /series?id=1014 → 200 (trebuie 200)
+  /series/ → 301 https://anime-uke.pages.dev/ (trebuie 301 spre /)
+  /package.json → 404 (trebuie 404, nu 302)
+  /AGENTS.md → 404 (trebuie 404)
+  /deploy.sh → 404 (trebuie 404)
+  /src/worker.js → 404 (trebuie 404)
+  /ruta-inexistenta → 404 (trebuie 404)
+  /profile (nelogat) → 302 https://anime-uke.pages.dev/login?next=%2Fprofile (trebuie 302 spre /login)
+  /profile.html (nelogat) → 302 https://anime-uke.pages.dev/login?next=%2Fprofile.html (302 spre /login e ok)
+  /login noindex: 1  canonical: 1
+  /register noindex: 2  canonical: 1
+  CORP header: cross-origin-resource-policy: same-origin
+  sitemap conține /series? (trebuie 0): 0
+  sitemap URL-uri: <loc>https://anime-uke.pages.dev/</loc> <loc>https://anime-uke.pages.dev/serie/1019</loc> <loc>https://anime-uke.pages.dev/serie/1018</loc> <loc>https://anime-uke.pages.dev/serie/1017</loc> <loc>https://anime-uke.pages.dev/serie/1015</loc> <loc>https://anime-uke.pages.dev/serie/1014</loc> 
+  /serie/1014 (serie reala) → 200 (trebuie 200)
+  /episod/4210 (episod real) → 200 (trebuie 200)
+  prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":6,"online":0}
