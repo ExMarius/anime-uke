@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "── deploy facțiuni ──"
-./deploy.sh
-echo "exit deploy: $?"
-echo "── migrarea 0022 ──"
-grep -A2 "Schema D1" /tmp/nofill 2>/dev/null || true
-echo "── API facțiuni (401 anonim = OK) ──"
-curl -s -o /dev/null -w "factions: %{http_code}\n" "https://anime-uke.pages.dev/api/factions"
-echo "── codul servit ──"
-JS=$(curl -s "https://anime-uke.pages.dev/assets/js/page-profile.js?cb=$RANDOM")
-echo "panou facțiune: $(echo "$JS" | grep -o "faction__grid" | wc -l)"
-echo "alegere blocată: $(echo "$JS" | grep -o "începutul lunii următoare" | wc -l)"
-CSS=$(curl -s "https://anime-uke.pages.dev/assets/css/style.css?cb=$RANDOM")
-echo "CSS facțiune: $(echo "$CSS" | grep -o "faction__card" | wc -l)"
-echo "── tema de grades auto (workers) ──"
+D="https://107eae9b.anime-uke.pages.dev"
+JS=$(curl -s "$D/assets/js/page-profile.js")
+echo "panou facțiune (deployment): $(echo "$JS" | grep -o "faction__grid" | wc -l)"
+echo "tocmai-lunii (deployment): $(echo "$JS" | grep -o "Bun venit în" | wc -l)"
