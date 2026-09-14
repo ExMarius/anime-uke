@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9330d64
+comanda: cf-relay/cmd.sh @ 07d1088
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 9330d64
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=9330d64
+    [0;32m✓[0m assete versionate ?v=07d1088
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://e139e505.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://8c6fb604.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -26,19 +26,13 @@ comanda: cf-relay/cmd.sh @ 9330d64
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-── verificare post-deploy (migrarea 0024 + fisa detaliata) ──
-  /api/series/1019 are cheia alt_titles: 1
-  /api/series/1019 are cheia themes: 1
-  /api/series/1019 are cheia age_rating: 1
-  /api/series/1019 are cheia ep_duration: 1
-  /api/series/1019 are cheia release_date: 1
-  /api/series/1019 are cheia country: 1
-  /api/series/1019 are cheia external_url: 1
-  /api/series/1019 are cheia team: 1
-  /api/series/1019 are cheia next_ep_note: 1
-  /api/series/1019 are cheia next_ep_at: 1
-  series.html #series-info: 1
-  series.html #next-ep:     1
-  episode.html #comments-sort: 1
-  chat.js regulament: 1
-  admin/serie.html fisa: 302 (302 = protejat, normal)
+── verificare post-deploy (migrarea 0025 + grade de staff) ──
+  migrari ramase neaplicate (trebuie 0 randuri 0025):
+0
+  admin.html 'Grade de staff': 0
+  admin.html #mod-role:        0
+  admin.html 'Teme de nivel':  0
+  core.js staffIcon:           1
+  style.css ubadge--helper:    0
+  /api/admin/mods fara sesiune: 401 (401/403 = protejat, normal)
+  /api/profile/<user> status: 401 staff_role prezent: 0
