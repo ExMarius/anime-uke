@@ -288,8 +288,8 @@ async function main() {
   let jsTotal = 0;
   // Pe producție cerem assetele exact ca browserul: cu ?v=<commitul> scos din
   // HTML-ul paginii principale. Altfel am măsura alt regim de cache decât cel real.
-  const v = IS_PROD ? `?v=${(home.text.match(/assets\/js\/[A-Za-z0-9_.-]+\.js\?v=([A-Za-z0-9._-]+)/) || [, 'audit'])[1]}` : '';
-  info(S9, IS_PROD ? `cere assetele cu ?v=${v.slice(0, 20)} (versiunea din HTML-ul live)` : 'mod local: assetele se cer fără ?v= (așa le servește dev.sh)');
+  const v = IS_PROD ? `?v=${(home.text.match(/assets\/js\/[A-Za-z0-9_.-]+\.js\?v=([A-Za-z0-9._-]+)/)?.[1]) || 'audit'}` : '';
+  info(S9, IS_PROD ? `cere assetele cu ${v.slice(0, 24)} (versiunea din HTML-ul live)` : 'mod local: assetele se cer fără ?v= (așa le servește dev.sh)');
   for (const a of assets) {
     const r = await req(`${a}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
     if (r.status !== 200) { warn(S9, `${a} → ${r.status} (lipsește sau e purgat greșit)`); continue; }
