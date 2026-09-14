@@ -4,6 +4,7 @@
 import { json, errorResponse, isSameOrigin } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
 import { validateTiers, loadRankThemes, FALLBACK_BUILTIN } from '../../../lib/ranks.js';
+import { monthKey } from '../../../lib/factions.js';
 import { logAdminAction } from '../../../lib/audit.js';
 
 const BUILTIN = new Set(FALLBACK_BUILTIN.map((t) => t.slug));
@@ -49,6 +50,11 @@ export async function onRequestDelete(context) {
   const res = await env.DB.prepare('DELETE FROM rank_themes WHERE slug = ?').bind(slug).run();
   // userii ramasi pe tema stearsa cad frumos pe prima tema disponibila
   await env.DB.prepare(`UPDATE users SET rank_theme = 'naruto' WHERE rank_theme = ?`).bind(slug).run();
+  // facțiunea stearsa nu trebuie sa tina oamenii captisi pana luna viitoare:
+  // ies din ea si pot alege alta imediat; rep-ul lunar al ei dispare din
+  // clasamentul curent (istoria lunilor trecute ramane)
+  await env.DB.prepare('UPDATE users SET faction_slug = NULL, faction_month = NULL WHERE faction_slug = ?').bind(slug).run();
+  await env.DB.prepare('DELETE FROM faction_rep WHERE faction = ? AND month = ?').bind(slug, monthKey()).run();
   await logAdminAction(env, gate.user, 'delete_rank_theme', 'system', 0, slug);
   const themes = await loadRankThemes(env);
   return json({ success: true, deleted: res.meta?.changes || 0, themes });
