@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "── deploy LCP + preconnect + WAAPI ──"
-./deploy.sh
-echo "exit deploy: $?"
-echo "── modulepreload + preconnect în HTML ──"
-curl -s https://anime-uke.pages.dev/ | grep -c "modulepreload"
-curl -s https://anime-uke.pages.dev/ | grep -o 'preconnect" href="[^"]*"' | head -1
-echo "── optimizeCover în JS-ul servit ──"
-curl -s "https://anime-uke.pages.dev/assets/js/core.js" | grep -c "weserv" || true
-echo "── pagini ──"
-for u in / /series /episode /login /admin/serii; do
-  echo "$u -> $(curl -s -o /dev/null -w '%{http_code}' https://anime-uke.pages.dev$u)"
-done
+D=$(grep -oE "https://[0-9a-f]+\.anime-uke\.pages\.dev" /tmp/pages.txt | tail -1)
+echo "deployment: $D"
+echo "modulepreload pe deployment: $(curl -s "$D/" | grep -c modulepreload)"
+echo "weserv în core.js pe deployment: $(curl -s "$D/assets/js/core.js" | grep -c weserv)"
+echo "── și pe alias, cu cache-buster ──"
+echo "modulepreload alias: $(curl -s "https://anime-uke.pages.dev/?cb=$RANDOM" | grep -c modulepreload)"
