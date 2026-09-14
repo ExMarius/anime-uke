@@ -5,15 +5,15 @@ echo "exit deploy: $?"
 
 B="https://anime-uke.pages.dev"
 echo
-echo "── verificare post-deploy ──"
-# Rutele care lipseau din router: inainte 404, acum trebuie 401 (cer login).
-for R in /api/factions /api/shop/activate; do
-  M=GET; [ "$R" = "/api/shop/activate" ] && M=POST
-  echo "  $M $R -> $(curl -s -o /dev/null -w '%{http_code}' -X $M -H "Origin: $B" "$B$R")   (asteptat 401, nu 404)"
+echo "── verificare post-deploy (migrarea 0024 + fisa detaliata) ──"
+# Coloanele noi trebuie sa apara in raspunsul public al seriei (goale, dar prezente).
+S=$(curl -s "$B/api/series/1019")
+for K in alt_titles themes age_rating ep_duration release_date country external_url team next_ep_note next_ep_at; do
+  echo "  /api/series/1019 are cheia $K: $(echo "$S" | grep -c "\"$K\"")"
 done
-# Admin episoade: fara login → 401 (inainte de fix, cu login, dadea 500).
-echo "  GET /api/admin/episodes?series_id=1019 -> $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/episodes?series_id=1019")   (asteptat 401)"
-# Codul nou a ajuns pe edge?
-JS=$(curl -s "$B/assets/js/page-profile.js")
-echo "  profile.js contine renderEconomy() in initEconomy: $(echo "$JS" | grep -c 'apelul se pierduse')"
-echo "  episode.html iframe allowfullscreen: $(curl -s "$B/episode" | grep -c 'webkitallowfullscreen')"
+# Markup-ul nou a ajuns pe edge?
+echo "  series.html #series-info: $(curl -s "$B/serie/1019" | grep -c 'id="series-info"')"
+echo "  series.html #next-ep:     $(curl -s "$B/serie/1019" | grep -c 'id="next-ep"')"
+echo "  episode.html #comments-sort: $(curl -s "$B/episode" | grep -c 'id="comments-sort"')"
+echo "  chat.js regulament: $(curl -s "$B/assets/js/chat.js" | grep -c 'auk-chat-rules-v1')"
+echo "  admin/serie.html fisa: $(curl -s "$B/admin/serie/1019" -o /dev/null -w '%{http_code}') (302 = protejat, normal)"
