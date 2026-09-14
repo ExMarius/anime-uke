@@ -1,6 +1,7 @@
 import { errorResponse } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
 import { identity, loadRankThemes } from '../lib/ranks.js';
+import { leaderClassFor, monthKey } from '../lib/factions.js';
 
 // =====================================================================
 // /chat — upgrade WebSocket catre ChatDO.
@@ -65,6 +66,17 @@ export async function onRequest(context) {
     .bind(user.id)
     .first();
 
+  // Lider de facțiune? (rand scris de settler la începutul lunii) — culoare
+  // unică lângă nume, ca în spec. O citire indexată per conectare.
+  let leaderCls = '';
+  if (user.faction_slug) {
+    const lead = await env.DB
+      .prepare('SELECT 1 AS x FROM faction_leaders WHERE month = ? AND faction = ? AND user_id = ?')
+      .bind(monthKey(), user.faction_slug, user.id)
+      .first();
+    if (lead) leaderCls = `nc-${leaderClassFor(user.faction_slug)}`;
+  }
+
   const url = new URL(request.url);
   url.searchParams.set('u', JSON.stringify({
     id: user.id, username: user.username,
@@ -72,6 +84,7 @@ export async function onRequest(context) {
     flair: owned.has('flair_supporter') ? '💎' : '',
     name_gold: owned.has('name_gold') ? 1 : 0,
     name_color: meRow?.active_name_color || '',
+    leader_color: leaderCls,
     avatar: prof?.avatar_url || '',
   }));
 

@@ -3,6 +3,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { addRep, bonusFor } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
 
 // =====================================================================
@@ -110,7 +111,11 @@ export async function onRequestPost(context) {
         // lunare (spec: +10 XP), plus insignele de vizionare. Ruleaza doar
         // la prima trecere a pragului, pentru ca INSERT OR IGNORE de mai
         // sus garanteaza changes = 1 exact o data per episod.
-        await addActivity(env, user.id, POINTS_PER_EPISODE);
+        // XP-ul episodului: 1.5x pentru membrii facțiunii câștigătoare.
+        const fb = await bonusFor(env, user);
+        await addActivity(env, user.id, Math.round(POINTS_PER_EPISODE * fb));
+        // Reputația pentru facțiune (+10, nu e influențată de bonus).
+        await addRep(env, user, POINTS_PER_EPISODE);
         await grantBadge(env, user.id, 'first_watch');
         // Misiunea zilnica „vezi un episod" + streak (lib/missions.js).
         await bumpMission(env, user.id, 'watch');

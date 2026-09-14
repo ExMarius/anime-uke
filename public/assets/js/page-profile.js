@@ -449,33 +449,6 @@ function fmtRemaining(ms) {
   return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
 }
 
-/** Selectorul de tema de grade: Naruto / One Piece / Hunter x Hunter /
- *  orice tema adaugata de admin. Salvarea e un singur POST. */
-async function initThemePicker() {
-  const res = await api('/ranks');
-  if (!res.ok || !res.data?.themes?.length) return;
-  const wrap = document.getElementById('econ-theme-wrap');
-  const sel = document.getElementById('econ-theme');
-  if (!wrap || !sel) return;
-  wrap.hidden = false;
-  sel.innerHTML = '';
-  for (const t of res.data.themes) {
-    const o = document.createElement('option');
-    o.value = t.slug;
-    o.textContent = `${t.title} — ${t.tiers.map((x) => x.label).join(' → ')}`;
-    sel.appendChild(o);
-  }
-  sel.value = res.data.me?.rank?.theme || 'naruto';
-  sel.addEventListener('change', async () => {
-    const r = await api('/me/theme', { method: 'POST', body: { theme: sel.value } });
-    if (r.ok) {
-      toast(`Tema de grade: ${sel.value}`, 'success');
-      renderNav('').catch(() => {});
-    } else {
-      toast(r.data?.error || 'Nu am putut schimba tema.', 'error');
-    }
-  });
-}
 
 function renderEconomy() {
   const d = econData;
@@ -765,13 +738,170 @@ async function openChest() {
   }
 }
 
+// ---------------------------------------------------------------------
+// Facțiunea mea: alegerea (o dată pe lună), reputația, topul membriilor
+// (cu liderul 👑), clasamentul dintre facțiuni și bonusul 1.5x.
+// ---------------------------------------------------------------------
+let factionData = null;
+
+async function loadFaction() {
+  const box = document.getElementById('faction-box');
+  if (!box) return;
+  const res = await api('/factions');
+  if (!res.ok) { box.hidden = true; return; }
+  factionData = res.data;
+  paintFaction();
+}
+
+function factionPickHTML() {
+  const d = factionData;
+  const wrap = document.createElement('div');
+  wrap.className = 'faction__pick';
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.innerHTML = 'Alege o facțiune la <b>începutul lunii</b>. Episoadele, comentariile și cufărul îți aduc <b>reputație</b> pentru ea.';
+  wrap.appendChild(hint);
+
+  const grid = document.createElement('div');
+  grid.className = 'faction__grid';
+  for (const f of d.factions) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'faction__card';
+    b.innerHTML = '';
+    const icon = document.createElement('span');
+    icon.className = 'faction__icon';
+    icon.textContent = f.icon;
+    const name = document.createElement('span');
+    name.className = 'faction__name';
+    name.textContent = f.title;
+    const tiers = document.createElement('span');
+    tiers.className = 'faction__tiers';
+    tiers.textContent = f.tiers.map((x) => x.label).join(' → ');
+    b.append(icon, name, tiers);
+    b.addEventListener('click', async () => {
+      if (!confirm(`Intri în facțiunea „${f.title}"? Alegerea e blocată până la începutul lunii următoare.`)) return;
+      const r = await api('/factions', { method: 'POST', body: { faction: f.slug } });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut schimba facțiunea', 'error'); return; }
+      toast(`🏛️ Bun venit în ${f.title}! Gradele tale sunt acum pe tema ei.`, 'success', 6000);
+      await loadFaction();
+      renderNav('').catch(() => {});
+    });
+    grid.appendChild(b);
+  }
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function paintFaction() {
+  const d = factionData;
+  const sub = document.getElementById('faction-sub');
+  const body = document.getElementById('faction-body');
+  const stand = document.getElementById('faction-standings');
+  if (!sub || !body) return;
+
+  body.innerHTML = '';
+  stand.innerHTML = '';
+
+  if (!d.my_faction) {
+    sub.textContent = `Nu ești în nicio facțiune în luna ${d.month}.`;
+    body.appendChild(factionPickHTML());
+    return;
+  }
+
+  const f = d.factions.find((x) => x.slug === d.my_faction);
+  const leaderRow = (d.members || []).find((m) => m.leader);
+  sub.innerHTML = '';
+  const t1 = document.createElement('span');
+  t1.innerHTML = `${f?.icon || '🏛️'} <b>${f?.title || d.my_faction}</b> · ${d.my_rep} reputație în ${d.month}`;
+  sub.appendChild(t1);
+  if (d.prev_winner && d.prev_winner.faction === d.my_faction) {
+    const t2 = document.createElement('span');
+    t2.className = 'faction__win';
+    t2.innerHTML = ' 🏅 Facțiunea ta a CÂȘTIGAT luna trecută — primești 1.5x gold și XP!';
+    sub.appendChild(t2);
+  }
+
+  // Top membri + lider
+  const ol = document.createElement('ol');
+  ol.className = 'lb';
+  for (const m of d.members || []) {
+    const li = document.createElement('li');
+    li.className = 'lb__row' + (m.me ? ' lb__row--me' : '');
+    const rk = document.createElement('span');
+    rk.className = 'lb__rank';
+    rk.textContent = m.leader ? '👑' : '•';
+    li.appendChild(rk);
+    const nm = document.createElement('span');
+    nm.className = 'lb__main' + (m.leader ? ` nc-${f?.leader_class || 'gold'}` : '');
+    nm.textContent = m.username;
+    if (m.leader) nm.title = 'Liderul facțiunii luna aceasta';
+    li.appendChild(nm);
+    const v = document.createElement('span');
+    v.className = 'lb__pts';
+    v.textContent = `${m.rep} rep`;
+    li.appendChild(v);
+    ol.appendChild(li);
+  }
+  body.appendChild(ol);
+  if (!(d.members || []).length) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'Încă nimeni nu a strâns reputație luna asta în facțiunea ta. Fii primul: vezi un episod sau comentează!';
+    body.appendChild(p);
+  }
+
+  // Regulile, scurt
+  const rules = document.createElement('p');
+  rules.className = 'hint';
+  rules.innerHTML = d.can_change
+    ? 'Poți schimba facțiunea până la prima ta alegere din luna asta. Liderul (cea mai mare reputație) primește culoarea unică a numelui luna următoare.'
+    : 'Alegerea e blocată până la începutul lunii următoare. Liderul (cea mai mare reputație) primește culoarea unică a numelui luna următoare.';
+  body.appendChild(rules);
+
+  // Clasamentul dintre facțiuni
+  if ((d.standings || []).length) {
+    const h = document.createElement('h3');
+    h.className = 'box__title';
+    h.style.fontSize = '1.05rem';
+    h.textContent = '⚔️ Clasamentul facțiunilor';
+    stand.appendChild(h);
+    const ol2 = document.createElement('ol');
+    ol2.className = 'lb lb--muted';
+    for (const sRow of d.standings) {
+      const li = document.createElement('li');
+      li.className = 'lb__row' + (sRow.faction === d.my_faction ? ' lb__row--me' : '');
+      const i = d.standings.indexOf(sRow);
+      const rk = document.createElement('span');
+      rk.className = 'lb__rank';
+      rk.textContent = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      li.appendChild(rk);
+      const nm = document.createElement('span');
+      nm.className = 'lb__main';
+      const ff = d.factions.find((x) => x.slug === sRow.faction);
+      nm.textContent = `${ff?.icon || '🏛️'} ${ff?.title || sRow.faction}`;
+      if (d.prev_winner && d.prev_winner.faction === sRow.faction) nm.textContent += ' 🏅';
+      li.appendChild(nm);
+      const v = document.createElement('span');
+      v.className = 'lb__pts';
+      v.textContent = `${sRow.total} rep · ${sRow.members} membri`;
+      li.appendChild(v);
+      ol2.appendChild(li);
+    }
+    stand.appendChild(ol2);
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.textContent = 'Facțiunea câștigătoare a lunii dă membrilor ei 1.5x gold și XP luna următoare 🏅';
+    stand.appendChild(note);
+  }
+}
+
 async function initEconomy() {
   const res = await api('/economy');
   if (!res.ok) return;
   econData = res.data;
   document.getElementById('p-econ').hidden = false;
-  renderEconomy();
-  initThemePicker().catch(() => { /* selectorul e optional */ });
+  loadFaction().catch(() => { /* panoul e optional */ });
   loadMissions().catch(() => { /* misiunile sunt optionale */ });
 
   document.getElementById('chest-btn').addEventListener('click', () => {

@@ -15,6 +15,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { addRep } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
 
@@ -132,6 +133,7 @@ export async function onRequestPost(context) {
 
   // +5 XP / +5 puncte lunare pe comentariu, ca in spec.
   await addActivity(env, user.id, 5);
+  await addRep(env, user, 5);   // reputație pentru facțiune
   // Misiunea zilnica „scrie un comentariu" + streak.
   await bumpMission(env, user.id, 'comment');
   await streakTouch(env, user.id);

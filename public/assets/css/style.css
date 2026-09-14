@@ -1803,3 +1803,18 @@ body.theme-classic {
   color: var(--warn); white-space: nowrap;
 }
 .lb--muted { opacity: .75; }
+
+/* ===================== FACȚIUNI ===================== */
+.faction__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .6rem; margin-top: .6rem; }
+.faction__card {
+  display: flex; flex-direction: column; gap: .2rem; align-items: flex-start;
+  padding: .7rem .8rem; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--line-soft);
+  color: var(--text); cursor: pointer; text-align: left; font: inherit;
+  transition: border-color .2s, transform .2s;
+}
+.faction__card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.faction__icon { font-size: 1.3rem; }
+.faction__name { font-weight: 800; }
+.faction__tiers { font-size: .72rem; color: var(--dim); }
+.faction__win { color: var(--warn); font-weight: 700; }

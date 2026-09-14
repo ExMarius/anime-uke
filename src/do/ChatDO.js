@@ -99,6 +99,7 @@ export class ChatDO {
       rank_label: user.rank_label || '', rank_icon: user.rank_icon || '', staff_role: user.staff_role || '',
       flair: user.flair || '', name_gold: user.name_gold ? 1 : 0,
       name_color: user.name_color || '',
+      leader_color: user.leader_color || '',
       avatar: user.avatar || '',
     });
 
@@ -163,6 +164,7 @@ export class ChatDO {
       flair: att.flair || '',
       name_gold: att.name_gold ? 1 : 0,
       name_color: att.name_color || '',
+      leader_color: att.leader_color || '',
       avatar: att.avatar || '',
     };
 

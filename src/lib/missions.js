@@ -14,6 +14,7 @@
 // =====================================================================
 
 import { addActivity } from './xp.js';
+import { bonusFor } from './factions.js';
 
 export const MISSIONS = [
   {
@@ -147,10 +148,15 @@ export async function claimMission(env, userId, key) {
     .run();
   if (!upd.meta?.changes) return null; // cursa intre doua claim-uri paralele
 
+  // Bonusul de facțiune (1.5x gold + XP pentru membrii facțiunii câștigătoare)
+  const meRow = await env.DB.prepare('SELECT faction_slug FROM users WHERE id = ?').bind(userId).first();
+  const fb = await bonusFor(env, { id: userId, faction_slug: meRow?.faction_slug || '' });
+  const gold = Math.round(m.gold * fb);
+  const xp = Math.round(m.xp * fb);
   await env.DB
     .prepare('UPDATE users SET gold = gold + ? WHERE id = ?')
-    .bind(m.gold, userId)
+    .bind(gold, userId)
     .run();
-  const act = await addActivity(env, userId, m.xp);
-  return { gold: m.gold, xp: m.xp, leveledUp: act.leveledUp };
+  const act = await addActivity(env, userId, xp);
+  return { gold, xp, leveledUp: act.leveledUp, faction_bonus: fb > 1 };
 }

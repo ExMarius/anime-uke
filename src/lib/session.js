@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, rank_theme, active_name_color, active_theme';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null

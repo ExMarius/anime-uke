@@ -389,7 +389,10 @@ function nameEl(m) {
   // Culoarea numelui (shop). Validăm formatul — vine din DB-ul nostru, dar
   // aplicăm classă doar pentru id-uri cu aspect de id.
   const ncol = typeof m.name_color === 'string' && /^color_[a-z]+$/.test(m.name_color) ? m.name_color.slice(6) : '';
-  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '') + (ncol ? ` nc-${ncol}` : '');
+  // Liderul de facțiune își păstrează culoarea unică (prioritate).
+  const lead = typeof m.leader_color === 'string' && /^nc-[a-z]+$/.test(m.leader_color) ? m.leader_color : '';
+  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '') + (lead ? ` ${lead}` : ncol ? ` nc-${ncol}` : '');
+  if (lead) u.title = '👑 Liderul facțiunii sale luna aceasta';
   u.textContent = (m.flair ? m.flair + ' ' : '') + (m.username || 'Anon');
   return u;
 }

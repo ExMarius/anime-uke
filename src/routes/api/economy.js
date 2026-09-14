@@ -9,12 +9,16 @@ import { BADGES, MONTHLY_GOAL, monthKey, xpNeeded } from '../../lib/xp.js';
 import { loadRankThemes, rankForUser } from '../../lib/ranks.js';
 import { getStreak } from '../../lib/missions.js';
 import { CHEST_COOLDOWN_MS } from './chest.js';
+import { settleFactions } from '../../lib/factions.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   const gate = await requireUser(request, env);
   if (gate.response) return gate.response;
   const user = gate.user;
+
+  // Plățile lunare de facțiune (lideri + câștigătoare) — leneș, idempotent.
+  try { await settleFactions(env); } catch { /* nu blocăm panoul */ }
 
   const me = await env.DB
     .prepare('SELECT xp, level, gold FROM users WHERE id = ?')

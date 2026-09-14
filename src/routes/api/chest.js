@@ -12,6 +12,7 @@ import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
+import { addRep, bonusFor } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
 
 export const CHEST_COOLDOWN_MS = 4 * 60 * 60 * 1000;
@@ -86,17 +87,25 @@ export async function onRequestPost(context) {
   }
 
   const chosen = pickReward();
+  // Recompensa crește cu nivelul („în raport cu experiența utilizatorului")
+  // și primește 1.5x dacă facțiunea lui a câștigat luna trecută.
+  const fb = await bonusFor(env, user);
+  const lvlMul = Math.min(2, 1 + (Number(user.level) || 1) * 0.05);
+  const mul = fb * lvlMul;
   const amount = chosen.min === chosen.max && chosen.min === 0
     ? 0
-    : chosen.min + Math.floor(Math.random() * (chosen.max - chosen.min + 1));
+    : Math.max(1, Math.round((chosen.min + Math.floor(Math.random() * (chosen.max - chosen.min + 1))) * mul));
 
   if (chosen.reward === 'gold') {
     await env.DB.prepare('UPDATE users SET gold = gold + ? WHERE id = ?').bind(amount, user.id).run();
   } else if (chosen.reward === 'xp') {
     await addActivity(env, user.id, amount);
   }
-  // Deschiderea in sine valoreaza +5 XP / +5 puncte lunare, ca in spec.
-  await addActivity(env, user.id, 5);
+  // Deschiderea in sine valoreaza +5 XP / +5 puncte lunare, ca in spec
+  // (si ea primeste bonusul de facțiune).
+  await addActivity(env, user.id, Math.round(5 * fb));
+  // Cufărul dă și reputație pentru facțiune (+5).
+  await addRep(env, user, 5);
   // Misiunea zilnica „deschide cufarul" + streak.
   await bumpMission(env, user.id, 'chest');
   await streakTouch(env, user.id);
