@@ -13,13 +13,14 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 455 · dom 147 · plafoane 13), deployat.
+- **Stare:** stabil, curat, toate testele verzi (e2e 474 · dom 147 · plafoane 13), deployat.
+  Audit live: ✅ 162 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
 
 ## 1. Setup în 60 de secunde
 
 ```bash
-npm install                       # Node 22+
-cp .dev.vars.example .dev.vars    # JWT_SECRET local (orice string lung)
+npm install                       # Node 22+; wrangler ≥ 4.131.2 (altfel vezi capcana „compatibility date”)
+cp .dev.vars.example .dev.vars    # JWT_SECRET local (orice string lung; dev.sh îl generează singur dacă lipsește)
 npm run dev                       # ./dev.sh → http://localhost:8788 (aplică migrările locale)
 npm test                          # ./test.sh — bază curată, ~1 min; loguri în /tmp/e2e.log, /tmp/dom.log
 ```
@@ -36,6 +37,8 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
+   Atingi rutare/SEO/headere? Rulează și `node scripts/audit-live.mjs http://localhost:8788` — prinde soft-404,
+   redirecturi greșite, headere lipsă, sitemap incoerent (pe live se rulează tot prin relay, vezi §3).
 6. `./test.sh` verde → commit cu mesaj descriptiv (în română, ca restul istoricului).
 7. Deploy (secțiunea 3) → verifică pe live → raportează utilizatorului ce s-a schimbat, concret.
 
@@ -65,7 +68,9 @@ cat cf-relay/last-output.txt
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
-- Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl).
+- Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl), sau — mai bine,
+  pentru că acoperă zeci de probe deodată — `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh`
+  (rulează și fără `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
 - Token-ul Cloudflare stă **doar** în GitHub Secrets (`CLOUDFLARE_API_TOKEN`). **Nu-l scrie niciodată în fișiere**,
   nici în mesaje de commit, nici în `cmd.sh`.
 - Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca marker de deploy; folosește
@@ -81,6 +86,7 @@ cat cf-relay/last-output.txt
 | „no such column" în producție după deploy | migrarea nu e în `migrations/` sau are număr duplicat | verifică `last-output.txt` pasul „Schema D1" |
 | Testele pică cu „no such table"/port ocupat | un `workerd` orfan ține 8788 | `./test.sh` îl omoară singur; altfel `pkill -9 -f workerd` |
 | Register 403 local | plafonul `LIMIT_USERS` | folosește un cont existent sau `LIMIT_USERS=50 ./dev.sh` |
+| `dev.sh`/`test.sh` mor instant: „This Worker requires compatibility date \"2026-05-01\", but the newest date supported by this server binary is …” | wrangler/workerd din `package-lock.json` e mai vechi decât `compatibility_date` din configurii | `npm i -D wrangler@latest` (≥ 4.131.2) și comite `package-lock.json`. Alternativ, coboară data în toate cele 5 fișiere `.toml` |
 | `git push` pe tag → 403 | token-ul GitHub al sandbox-ului nu are drept pe tags | folosește `gh api` (refs) sau lasă tag-urile |
 
 ## 5. Modelul de date pe care trebuie să-l respecți
@@ -102,8 +108,29 @@ cat cf-relay/last-output.txt
 - Sortare comentarii (top/nou/vechi, client), regulament chat (overlay + `-regulament`).
 - Curățenie: eliminat `schema.sql`, `push.sh`, seed-uri de scară, `public/covers`, `src/lib/rank.js`; README rescris;
   branch-urile vechi șterse; `main` = starea curentă (vechiul main e tag-ul `backup/main-exemplu`).
+- Toolchain: `wrangler` urcat la 4.131.2 (workerd 1.20260911.1) — `compatibility_date = "2026-05-01"` din toate
+  configurile făcea `dev.sh`/`test.sh` să moară la pornire pe o clonă proaspătă cu wrangler 4.84.1. După upgrade:
+  455 + 147 + 13 teste verzi local, deploy prin relay reușit, toate markerele din `deploy.sh` (migrații, Worker DO,
+  URL Pages, `JWT_SECRET`) încă se regăsesc în ieșirea wrangler 4.131.2 — verificare comisă în `cf-relay/last-output.txt`.
+- Curățenie branch-uri (2): șters `arena/01a0a0f5-anime-uke` de pe remote — avea exact același commit ca `main`
+  (`3bf7f0c`), nimic pierdut.
+- Audit complet al sitelui live + reparări (detaliile și probele în **`AUDIT-LIVE.md`**):
+  - `/serie/<id>` și `/episod/<id>` inexistente → **404 real** (pagină generată în worker, `noindex` + `X-Robots-Tag`),
+    cu cache negativ 5 min în izolat; înainte răspundeau 200 = soft 404 pentru Google.
+  - `/series` fără id → **301 spre `/`** și scos din sitemap (era pagină moartă, iar JS-ul făcea `location.replace('/')`).
+    `/series?id=N` rămâne 200.
+  - Rute necunoscute (`/package.json`, `/AGENTS.md`, `/deploy.sh`, …) → **404**, nu `302 /login?next=…`: allowlist
+    `STATIC_PAGES` + `DYNAMIC_PAGES` verificat ÎNAINTE de poarta de autentificare, cu normalizare `/x/`→`/x`, `/x.html`→`/x`.
+  - `/login` și `/register`: `noindex` + canonical. Header nou `Cross-Origin-Resource-Policy: same-origin`.
+  - `tests/e2e.mjs` a crescut de la 455 la **474** de verificări (toate cazurile de mai sus).
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
+
+- Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): SSR SEO pe `/episod/<id>` (title generic azi;
+  e cea mai mare oportunitate de trafic organic — cere JSON-LD `VideoObject`/`BreadcrumbList` + cache ca la serii);
+  canonical/og hardcodate pe `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe
+  `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);
+  audit live cu sesiune (are nevoie de un cont de test).
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —

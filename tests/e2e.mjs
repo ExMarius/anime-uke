@@ -91,9 +91,23 @@ console.log('\n=== 1. VIZITATOR ===');
   check('GET /api/admin/stats fara login → 401', a.status === 401, `status=${a.status}`);
 
   // --- SITE PUBLIC: catalogul se vede fara cont; sistemele raman la login ---
-  for (const page of ['/', '/series', '/episode']) {
+  for (const page of ['/', '/episode']) {
     const r = await fetch(BASE + page, { redirect: 'manual' });
     check(`GET ${page} fara cont → 200 (public)`, r.status === 200, `status=${r.status}`);
+  }
+
+  // `/series` fără id era o pagină moartă (200 + head gol, JS-ul făcea
+  // location.replace('/')) și era declarată în sitemap → 301 spre catalog.
+  {
+    const r = await fetch(BASE + '/series', { redirect: 'manual' });
+    check('GET /series (fără id) → 301 către /', r.status === 301 && r.headers.get('location') === '/',
+      `status=${r.status} location=${r.headers.get('location')}`);
+    const withId = await fetch(BASE + '/series?id=1', { redirect: 'manual' });
+    check('GET /series?id=1 rămâne 200 (forma veche, încă folosită în linkuri)', withId.status === 200,
+      `status=${withId.status}`);
+    const trailing = await fetch(BASE + '/series/', { redirect: 'manual' });
+    check('GET /series/ (slash) → 301 către /, nu către /login', trailing.status === 301 && trailing.headers.get('location') === '/',
+      `status=${trailing.status} location=${trailing.headers.get('location')}`);
   }
   for (const page of ['/admin', '/profile', '/shop']) {
     const r = await fetch(BASE + page, { redirect: 'manual' });
@@ -113,10 +127,29 @@ console.log('\n=== 1. VIZITATOR ===');
     check(`GET ${blocked} → 404 (blocat)`, r.status === 404, `status=${r.status}`);
     check(`   ...si nu scurge cale de filesystem`, !body.includes('/home/user') && !body.includes('ENOTDIR'), body.slice(0, 100));
   }
+
+  // Rute necunoscute → 404 onest. Până acum cădeau pe poarta de autentificare și
+  // răspundeau 302 → /login?next=/package.json, adică dezvăluiau că fișierul
+  // există în repo (conținutul nu scăpa, dar nici 302 nu e răspunsul corect).
+  for (const unknown of ['/package.json', '/AGENTS.md', '/deploy.sh', '/src/worker.js', '/ruta-inexistenta', '/admin/ceva-ciudat']) {
+    const r = await fetch(BASE + unknown, { redirect: 'manual' });
+    check(`GET ${unknown} → 404 (nu 302 spre /login)`, r.status === 404, `status=${r.status} location=${r.headers.get('location') || '—'}`);
+  }
   const login = await fetch(BASE + '/login');
   check('Header CSP prezent pe pagina publica', !!login.headers.get('content-security-policy'));
   check('Header X-Content-Type-Options prezent', login.headers.get('x-content-type-options') === 'nosniff');
   check('CSP nu contine unsafe-inline', !String(login.headers.get('content-security-policy')).includes('unsafe-inline'));
+  check('Header Cross-Origin-Resource-Policy prezent', login.headers.get('cross-origin-resource-policy') === 'same-origin',
+    `corp=${login.headers.get('cross-origin-resource-policy')}`);
+
+  // Paginile utilitare nu trebuie indexate, dar au nevoie de canonical ca
+  // ?next=… să nu facă duplicate în index.
+  for (const page of ['/login', '/register']) {
+    const html = await (await fetch(BASE + page)).text();
+    check(`${page} are canonical + noindex`,
+      html.includes(`rel="canonical" href="https://anime-uke.pages.dev${page}"`) && html.includes('name="robots" content="noindex'),
+      html.slice(0, 160));
+  }
   // Assetele raman publice: fara ele pagina de login ar fi nefunctionala
   const css = await fetch(BASE + '/assets/css/style.css');
   check('GET /assets/css/style.css → 200 public', css.status === 200);
@@ -243,12 +276,31 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('SSR: JSON-LD TVSeries injectat', prettyHtml.includes('"TVSeries"'), '');
   check('SSR: canonical pe /serie/:id', prettyHtml.includes(`/serie/${r.data?.id}`), '');
 
-  const epPretty = await fetch(`${BASE}/episod/999999`, { redirect: 'manual' });
-  check('Pretty URL /episod/:id → 200 (pagina episodului)', epPretty.status === 200, `status=${epPretty.status}`);
+  // Soft 404 rezolvat: id-urile inexistente primesc status 404 real, cu noindex,
+  // ca Google să nu indexeze pagini goale și să nu ardă crawl budget.
+  {
+    const epMissing = await fetch(`${BASE}/episod/999999`, { redirect: 'manual' });
+    const epMissingHtml = await epMissing.text();
+    check('Pretty URL /episod/999999 (inexistent) → 404', epMissing.status === 404, `status=${epMissing.status}`);
+    check('   ...404 are noindex (meta + X-Robots-Tag)',
+      epMissingHtml.includes('noindex') && String(epMissing.headers.get('x-robots-tag') || '').includes('noindex'),
+      `x-robots-tag=${epMissing.headers.get('x-robots-tag')}`);
+    check('   ...404 e HTML de pagină, nu JSON gol', epMissingHtml.includes('<!DOCTYPE html>') && epMissingHtml.includes('Mergi la catalog'), epMissingHtml.slice(0, 80));
+
+    const serMissing = await fetch(`${BASE}/serie/999999`, { redirect: 'manual' });
+    const serMissingHtml = await serMissing.text();
+    check('Pretty URL /serie/999999 (inexistentă) → 404', serMissing.status === 404, `status=${serMissing.status}`);
+    check('   ...mesajul spune că seria nu există', serMissingHtml.includes('Serie inexistentă'), serMissingHtml.slice(0, 120));
+    const again = await fetch(`${BASE}/serie/999999`, { redirect: 'manual' });
+    check('   ...al doilea apel dă tot 404 (cache negativ stabil)', again.status === 404, `status=${again.status}`);
+  }
 
   const sm = await fetch(`${BASE}/sitemap.xml`);
   const smText = await sm.text();
   check('Sitemap folosește URL-urile pretty /serie/', smText.includes('/serie/'), smText.slice(0, 200));
+  check('Sitemap NU mai conține /series (face 301 spre /)',
+    !/<loc>[^<]*\/series<\/loc>/.test(smText), smText.slice(0, 200));
+  check('Sitemap conține / ca prim URL', /<loc>[^<]*\/<\/loc>/.test(smText), smText.slice(0, 120));
   const seriesId = r.data?.id;
 
   // Campul vechi `doodstream_url` ramane acceptat ca alias: un singur URL
@@ -257,6 +309,12 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('Alias vechi doodstream_url → o sursa embed normalizata /d/→/e/',
     legacy.status === 201 && legacy.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/abc123' && legacy.data.episode.sources[0].kind === 'embed',
     JSON.stringify(legacy.data).slice(0, 200));
+
+  // Contrapartea verificării de 404: un episod REAL trebuie să rămână 200.
+  {
+    const epReal = await fetch(`${BASE}/episod/${legacy.data.episode.id}`, { redirect: 'manual' });
+    check('Pretty URL /episod/:id existent → 200', epReal.status === 200, `status=${epReal.status}`);
+  }
 
   const badEp2 = await req(j, 'POST', '/api/admin/episodes', { series_id: 9999, episode_number: 2, title: 'x', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/abc123' }] });
   check('Serie inexistenta → 400', badEp2.status === 400, `status=${badEp2.status} ${badEp2.data?.error}`);
@@ -588,10 +646,16 @@ console.log('\n=== 6. PAGINI PENTRU UTILIZATORI LOGATI ===');
   // o bucla de redirecturi pe pagina autentificata trecea neobservata. Asta
   // s-a si intamplat: /profile era remapat la /profile.html, iar routerul de
   // assete Pages trimitea 308 inapoi la /profile → ERR_TOO_MANY_REDIRECTS.
-  for (const page of ['/', '/login', '/register', '/series', '/episode', '/admin', '/profile']) {
+  // `/series` fără id lipsește deliberat: face 301 spre `/` (vezi mai jos).
+  for (const page of ['/', '/login', '/register', '/episode', '/admin', '/profile']) {
     const r = await raw(j, page);
     check(`GET ${page} logat → 200 (fara redirect)`, r.status === 200, `status=${r.status} loc=${r.location}`);
   }
+
+  // /series fără id face 301 spre / și pentru utilizatorii logați.
+  const seriesRedir = await raw(j, '/series');
+  check('GET /series logat → 301 către / (pagina moartă a dispărut)', seriesRedir.status === 301 && seriesRedir.location === '/',
+    `status=${seriesRedir.status} loc=${seriesRedir.location}`);
 
   const profPage = await raw(j, '/profile');
   check('Pagina de profil serveste HTML, nu JSON', /<html/i.test(profPage.text) && /page-profile\.js/.test(profPage.text), profPage.text.slice(0, 120));

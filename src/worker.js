@@ -27,6 +27,17 @@ const API_404 = { error: 'Endpoint inexistent' };
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
 const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
+
+// Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
+// Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
+// 404 — vezi poarta din handleFetch. Fără ea, /package.json sau /AGENTS.md
+// cădeau pe poarta de autentificare și răspundeau 302 → /login?next=/package.json,
+// adică dezvăluiau că fișierul există în repo și umpleau crawl-ul de gunoi.
+const STATIC_PAGES = new Set([
+  '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
+  '/admin', '/admin/serii', '/admin/serie', '/404',
+  '/favicon.ico', '/robots.txt', '/llms.txt', '/speculationrules.json',
+]);
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
   // URL-urile pretty de catalog: publice (site public).
@@ -72,6 +83,11 @@ function redirectToLogin(url) {
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
+  // Normalizare pentru verificările de rutare: `/series/` și `/series.html` sunt
+  // aceeași pagină ca `/series`. Fără ea, `/series/` sărea peste redirectul 301
+  // și ajungea la poarta de autentificare (302 → /login), iar `/profile.html`
+  // primea 404 în loc de 308-ul de clean URL pe care îl dă routerul Pages.
+  const norm = path.length > 1 ? path.replace(/\/+$/, '').replace(/\.html$/, '') || '/' : path;
 
   let response;
   try {
@@ -81,7 +97,25 @@ export async function handleFetch(request, env, ctx) {
       return applySecurityHeaders(jsonResponse({ error: 'Not found' }, 404));
     }
 
-    if (!isPublic(path)) {
+    // `/series` fără id e pagină moartă: JS-ul făcea location.replace('/'), iar
+    // crawlerul vedea 200 + head gol (titlu generic, fără canonical/og) la un URL
+    // declarat în sitemap. Acum trimitem 301 spre catalog (care chiar e pe `/`).
+    // `/series?id=N` rămâne valabil (forma veche, folosită în linkuri).
+    if (norm === '/series' && !/^\d+$/.test(url.searchParams.get('id') || '')) {
+      return applySecurityHeaders(new Response(null, {
+        status: 301,
+        headers: { Location: '/', 'Cache-Control': 'no-store' },
+      }));
+    }
+
+    // Rute necunoscute → 404 onest, înainte de poarta de autentificare.
+    const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
+    const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
+    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
+      return applySecurityHeaders(notFoundPage());
+    }
+
+    if (!isPublic(norm)) {
       const session = await getSessionUser(request, env);
       if (!session) {
         const isApi = path === '/api' || path.startsWith('/api/') || path === '/chat';
@@ -162,7 +196,9 @@ async function sitemapHandler(request, env) {
     // In sitemap doar paginile cu valoare de indexat: prima pagina,
     // catalogul si seriile. /login si /register sunt utilitare — le lasam
     // afara ca sa nu le concureze pe cele de continut in rezultate.
-    let urls = ['/', '/series'];
+    // `/series` fără id face 301 spre `/`, deci nu mai are ce căuta aici:
+    // un URL de sitemap care redirectează la alt URL e semnal de calitate slabă.
+    let urls = ['/'];
     try {
       const res = await env.DB
         .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
@@ -237,12 +273,23 @@ function canonicalOrigin(env, request) {
   const raw = String(env.CANONICAL_ORIGIN || '').trim();
   return raw.startsWith('http') ? raw.replace(/\/+$/, '') : new URL(request.url).origin;
 }
-const seoCache = new Map();   // id -> { at, row }
+const seoCache = new Map();   // cheie -> { at, row } (row = null înseamnă „nu există”)
+
+/** Cache la nivel de izolat: scutește D1 de aceleași citiri repetate. */
+function seoCacheGet(key) {
+  const hit = seoCache.get(key);
+  if (hit && Date.now() - hit.at < SEO_CACHE_MS) return { hit: true, row: hit.row };
+  return { hit: false, row: null };
+}
+function seoCacheSet(key, row) {
+  if (seoCache.size > 200) seoCache.clear();
+  seoCache.set(key, { at: Date.now(), row });
+}
 
 async function seriesForSeo(env, id) {
-  const now = Date.now();
-  const hit = seoCache.get(id);
-  if (hit && now - hit.at < SEO_CACHE_MS) return hit.row;
+  const key = `s${id}`;
+  const cached = seoCacheGet(key);
+  if (cached.hit) return cached.row;
   try {
     const row = await env.DB
       .prepare(
@@ -252,13 +299,27 @@ async function seriesForSeo(env, id) {
       )
       .bind(id)
       .first();
-    if (row) {
-      if (seoCache.size > 200) seoCache.clear();
-      seoCache.set(id, { at: now, row });
-    }
+    // Cășuim și absența: scanerele lovesc aceleași id-uri inventate de multe ori.
+    seoCacheSet(key, row || null);
     return row;
   } catch {
     return null;
+  }
+}
+
+/** Există episodul? O citire D1 indexată pe cheia primară, cu cache. */
+async function episodeExists(env, id) {
+  const key = `e${id}`;
+  const cached = seoCacheGet(key);
+  if (cached.hit) return Boolean(cached.row);
+  try {
+    const row = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(id).first();
+    seoCacheSet(key, row || null);
+    return Boolean(row);
+  } catch {
+    // La eroare de D1 presupunem că există — mai bine o pagină care se încarcă
+    // decât un 404 fals pe un episod real.
+    return true;
   }
 }
 
@@ -317,6 +378,14 @@ function assetPathFor(path) {
     if (rule.re.test(path)) return rule.asset;
   }
   return null;
+}
+
+/**
+ * E calea o pagină pe care o avem într-adevăr? Se cheamă cu calea NORMALIZATĂ
+ * (fără slash final și fără .html), deci aici mai verificăm doar seturile.
+ */
+function isKnownPage(path) {
+  return STATIC_PAGES.has(path) || Boolean(assetPathFor(path));
 }
 
 /**
@@ -384,13 +453,22 @@ async function serveStatic(request, env) {
     const serieMatch = path.match(/^\/serie\/(\d+)\/?$/);
     if (serieMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
       const series = await seriesForSeo(env, Number(serieMatch[1]));
-      if (series) {
-        const html = await res.text();
-        const headers = new Headers(res.headers);
-        headers.delete('content-length');
-        headers.delete('etag');
-        return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
-      }
+      // Serie inexistentă → 404 REAL. Până aici răspundeam 200 cu shell-ul paginii
+      // și lăsam JS-ul să scrie „Seria nu există": pentru Google era un soft 404
+      // (pagină indexabilă, goală), iar crawl budget-ul se ducea pe id-uri inventate.
+      if (!series) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
+      const html = await res.text();
+      const headers = new Headers(res.headers);
+      headers.delete('content-length');
+      headers.delete('etag');
+      return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
+    }
+
+    // La fel pentru /episod/<id>: fără verificare, orice id întorcea 200.
+    const epMatch = path.match(/^\/episod\/(\d+)\/?$/);
+    if (epMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
+      const exists = await episodeExists(env, Number(epMatch[1]));
+      if (!exists) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
     }
 
     // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
@@ -401,7 +479,7 @@ async function serveStatic(request, env) {
     if (versioned && res.status === 200) {
       const headers = new Headers(res.headers);
       headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+      return statusOverride(res, 200, headers);
     }
 
     return res;
@@ -410,6 +488,79 @@ async function serveStatic(request, env) {
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);
     return jsonResponse({ error: 'Not found' }, 404);
   }
+}
+
+// Răspuns al cărui body l-am citit deja (ex. HTML prelucrat): trebuie să
+// reconstruim Response fără content-length/etag vechi, altfel Cloudflare
+// raportează un mismatch și browserul trunchiază pagina.
+function statusOverride(res, status, headers) {
+  const h = new Headers(headers || res.headers);
+  h.delete('content-length');
+  h.delete('etag');
+  return new Response(res.body, { status, statusText: res.statusText, headers: h });
+}
+
+/**
+ * Pagina 404 a sitului — HTML complet, generat aici, fără nicio dependință.
+ *
+ * De ce nu public/404.html + CSS + JS: o pagină de eroare trebuie să se vadă
+ * corect chiar și când assetele lipsesc (deploy greșit, purge CSS agresiv) și
+ * nu merita 3 cereri în plus. Stilul e inline în <style>, deci nu depinde de
+ * style.css și nici de safelist-ul din purge-css.
+ */
+function notFoundPage(title = 'Pagină inexistentă', message = 'Pagina cerută nu există pe anime-uke.') {
+  const html = `<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c0709">
+  <meta name="robots" content="noindex, follow">
+  <title>404 — ${title} • anime-uke</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2rem 1rem;
+           color: #f5eff1; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; line-height: 1.55; background: #0c0709; }
+    .nf { width: min(430px, 100%); padding: 2.4rem 2rem; text-align: center; border-radius: 22px;
+          border: 1px solid rgba(220,20,60,.16); background: linear-gradient(165deg, #1a1114 0%, #120b0e 100%);
+          box-shadow: 0 18px 50px -12px rgba(0,0,0,.85); position: relative; overflow: hidden; }
+    .nf::before { content: ""; position: absolute; top: 0; inset-inline: 0; height: 3px;
+                  background: linear-gradient(135deg, #dc143c 0%, #8b0a20 100%); }
+    .nf__mark { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto .9rem; border-radius: 17px;
+                font-size: 1.7rem; color: #fff; background: linear-gradient(135deg, #dc143c 0%, #8b0a20 100%);
+                box-shadow: 0 10px 30px -8px rgba(220,20,60,.38); }
+    .nf__code { margin: 0; font-size: 3rem; font-weight: 900; letter-spacing: -.04em; color: #f4284f; line-height: 1; }
+    .nf__title { margin: .45rem 0 .5rem; font-size: 1.22rem; font-weight: 800; }
+    .nf__text { margin: 0 0 1.6rem; color: #a2939a; font-size: .92rem; }
+    .nf a.btn { display: inline-block; padding: .62rem 1.05rem; border-radius: 12px; text-decoration: none;
+                font-weight: 700; font-size: .92rem; margin: .2rem; }
+    .btn--accent { background: linear-gradient(135deg, #dc143c 0%, #8b0a20 100%); color: #fff; }
+    .btn--ghost { border: 1px solid rgba(255,255,255,.07); color: #a2939a; }
+  </style>
+</head>
+<body>
+  <main class="nf">
+    <div class="nf__mark">鬼</div>
+    <p class="nf__code">404</p>
+    <h1 class="nf__title">${title}</h1>
+    <p class="nf__text">${message}</p>
+    <p>
+      <a class="btn btn--accent" href="/">Mergi la catalog</a>
+      <a class="btn btn--ghost" href="/login">Autentificare</a>
+    </p>
+  </main>
+</body>
+</html>`;
+  return new Response(html, {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      // Centură și pentru header: un 404 cu conținut nu trebuie indexat.
+      'X-Robots-Tag': 'noindex, follow',
+    },
+  });
 }
 
 function jsonResponse(data, status) {
