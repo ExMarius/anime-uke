@@ -1,6 +1,44 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ e405bb3
+comanda: cf-relay/cmd.sh @ abe828b
 ────────────────────────────────────
-js taburi (ptabs__btn): 1
-js pane (.ptab): 4
-css taburi (.ptab{): 1
+================ VERIFICARE SITE ================
+ora: 2026-09-14 15:17:01 UTC
+
+── Pagini (HTTP status) ──
+  /                  -> 200
+  /index.html        -> 302
+  /series.html       -> 302
+  /episode.html      -> 302
+  /login.html        -> 302
+  /register.html     -> 302
+  /admin.html        -> 302
+
+── Pagina principala ──
+<title>Anime-Uke — Anime Subtitrat în Română Online</title>
+
+── Headere securitate (de pe /) ──
+HTTP/2 200 
+strict-transport-security: max-age=31536000
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+permissions-policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+
+── API public ──
+  /api/series: 5018 bytes
+  primele 120 car.: {"series":[{"id":1018,"title":"DanMachi","description":"Viața în orașul plin de viață, Orario, nu este niciodată p
+  /api/auth/me: {"user":null}
+
+── Assete statice ──
+  /assets/css/style.css    -> 200
+  /assets/js/core.js       -> 200
+  /_worker.js              -> 404
+
+── Cai blocate (asteptam 404) ──
+  /wrangler.toml               -> 404
+  /schema.sql                  -> 404
+  /.dev.vars                   -> 404
+  /migrations/0001_init.sql    -> 404
+
+================ SFARSIT VERIFICARE ================
