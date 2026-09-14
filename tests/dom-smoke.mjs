@@ -201,7 +201,8 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   // server, indiferent daca baza are 1 serie sau 1000.
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
   check('Butonul „Incarca mai multe" e congruent cu has_more', p.$('#load-more-wrap')?.hidden === !meta.has_more, `hidden=${p.$('#load-more-wrap')?.hidden} has_more=${meta.has_more}`);
-  check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('script[type="speculationrules"]'), 'lipseste speculationrules');
+  // Regulile sunt externe (<link rel="speculationrules">) ca sa treaca de CSP fara unsafe-inline.
+  check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('link[rel="speculationrules"][href="/speculationrules.json"]'), 'lipseste <link rel=speculationrules>');
   const bellOn = await until(() => !!p.$('#nav-bell'));
   check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
   p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
@@ -559,8 +560,10 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Modalul de recompensa exista dar e ascuns', !!p.$('#chest-modal') && p.$('#chest-modal').hidden === true, String(p.$('#chest-modal')?.hidden));
   check('Nicio eroare de runtime in panoul de economie', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   check('Profilul arata gradul tematic ca cip langa nume', !!p.$('#p-badges .uchip'), p.$('#p-badges')?.innerHTML?.slice(0, 120));
-  const themeOn = await until(() => p.$('#econ-theme-wrap')?.hidden === false && p.$$('#econ-theme option').length >= 3);
-  check('Selectorul de teme de grade e populat pe profilul propriu', themeOn, `opt=${p.$$('#econ-theme option').length}`);
+  // Tema de grade se alege acum prin factiune (panoul #faction-box), nu
+  // printr-un <select> separat.
+  const factionOn = await until(() => !!p.$('#faction-box') && !/Se încarcă/.test(p.text('#faction-sub') || ''));
+  check('Panoul de facțiune e încărcat pe profilul propriu', factionOn, p.text('#faction-sub'));
   const missionsOn = await until(() => p.$$('#econ-missions .mission').length >= 3);
   check('Misiunile zilnice se randeaza (3 randuri)', missionsOn, `n=${p.$$('#econ-missions .mission').length}`);
   const avImg = p.$('#p-avatar img');
@@ -616,7 +619,7 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
   check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
   check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
-  check('Shop explica economia: 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length === 4, `n=${p.$$('.howto .howto__card').length}`);
+  check('Shop explica economia: cel puțin 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length >= 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
 }

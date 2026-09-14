@@ -43,6 +43,13 @@ export async function getSessionUser(request, env) {
     is_admin: !!user.is_admin,
     is_mod: !!user.is_mod,
     rank_theme: user.rank_theme || 'naruto',
+    active_name_color: user.active_name_color || null,
+    active_theme: user.active_theme || null,
+    // Factiunea lunii: /api/factions se bazeaza pe ele ca sa stie daca esti
+    // deja intr-o factiune (altfel te poti „alatura" la nesfarsit si panoul
+    // de profil nu-ti arata niciodata factiunea).
+    faction_slug: user.faction_slug || null,
+    faction_month: user.faction_month || null,
     // Necesar paginii de profil („Membru din"). Nu e informatie sensibila —
     // e afisata public pe orice profil, spre deosebire de email, care ramane
     // filtrat de publicUser() inainte sa ajunga la client.

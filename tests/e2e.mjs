@@ -689,14 +689,16 @@ console.log('\n=== 8c. CUFAR CU COMORI (timp petrecut pe serie) ===');
   check('Dupa 30 min pe serie, bronzul e deblocat', mid.data?.chests?.[0]?.unlocked === true, `total=${mid.data?.total_seconds}`);
   check('Argintul ramane blocat la 30 min', mid.data?.chests?.[1]?.unlocked === false, `total=${mid.data?.total_seconds}`);
 
-  const meBefore = await req(j, 'GET', '/api/auth/me');
+  // Cuferele dau GOLD (migrarea 0011 — economie), nu puncte: punctele raman
+  // exclusiv din vizionare, ca sa nu poata fi farmate pentru clasament.
+  const ecoBefore = await req(j, 'GET', '/api/economy');
   const open = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 1 });
-  check('Deschiderea bronzului acorda +5 puncte', open.data?.pointsAdded === 5, JSON.stringify(open.data));
-  check('Punctele cresc in cont', open.data?.points === (meBefore.data?.user?.points ?? 0) + 5, `${meBefore.data?.user?.points} → ${open.data?.points}`);
+  check('Deschiderea bronzului acorda gold (>0), nu puncte', open.data?.success === true && open.data?.goldAdded > 0 && open.data?.pointsAdded === undefined, JSON.stringify(open.data));
+  check('Goldul creste in cont cu exact goldAdded', open.data?.gold === (ecoBefore.data?.gold ?? 0) + open.data?.goldAdded, `${ecoBefore.data?.gold} → ${open.data?.gold}`);
 
   const twice = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 1 });
-  check('Al doilea clic pe acelasi cufar nu mai da puncte', twice.data?.alreadyClaimed === true && twice.data?.pointsAdded === 0, JSON.stringify(twice.data));
-  check('Totalul de puncte ramane corect dupa dubla deschidere', twice.data?.points === open.data?.points, `${open.data?.points} vs ${twice.data?.points}`);
+  check('Al doilea clic pe acelasi cufar nu mai da gold', twice.data?.alreadyClaimed === true && twice.data?.goldAdded === 0, JSON.stringify(twice.data));
+  check('Totalul de gold ramane corect dupa dubla deschidere', twice.data?.gold === open.data?.gold, `${open.data?.gold} vs ${twice.data?.gold}`);
 
   const badTier = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 99 });
   check('Treapta inexistenta → 400', badTier.status === 400, `status=${badTier.status}`);
@@ -721,9 +723,9 @@ console.log('\n=== 8c2. CUFARUL SECRET SI CLASAMENTUL ===');
   check('Cufarul secret nu poate fi fortat din client → 404/409', forceSecret.status === 404 || forceSecret.status === 409, `status=${forceSecret.status}`);
 
   const lb1 = await req(j, 'GET', '/api/leaderboard');
-  check('Clasamentul raspunde cu top si viewer', Array.isArray(lb1.data?.top) && lb1.data?.viewer?.username === 'user2@test.ro' || lb1.data?.viewer?.username != null, JSON.stringify(lb1.data?.viewer));
-  check('Viewerul isi vede punctele in clasament', Number.isFinite(lb1.data?.viewer?.points), JSON.stringify(lb1.data?.viewer));
-  check('Topul e ordonat descrescator dupa puncte', (lb1.data?.top || []).every((r, i, a) => i === 0 || a[i - 1].points >= r.points), JSON.stringify((lb1.data?.top || []).map((r) => r.points)));
+  check('Clasamentul raspunde cu weekly/alltime si viewer', Array.isArray(lb1.data?.weekly) && Array.isArray(lb1.data?.alltime) && lb1.data?.viewer?.username != null, JSON.stringify(lb1.data?.viewer));
+  check('Viewerul isi vede punctele saptamanii in clasament', Number.isFinite(lb1.data?.viewer?.week_points), JSON.stringify(lb1.data?.viewer));
+  check('Topul all-time e ordonat descrescator dupa puncte', (lb1.data?.alltime || []).every((r, i, a) => i === 0 || a[i - 1].points >= r.points), JSON.stringify((lb1.data?.alltime || []).map((r) => r.points)));
 
   const lb2 = await req(j, 'GET', '/api/leaderboard');
   check('A doua cerere serveste din cache (acelasi updated_at)', lb2.data?.updated_at === lb1.data?.updated_at, `${lb1.data?.updated_at} vs ${lb2.data?.updated_at}`);
@@ -1061,9 +1063,11 @@ console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ==
   const open1 = await req(j, 'POST', '/api/chest');
   const rewards = ['gold', 'xp', 'nothing'];
   check('Prima deschidere reuseste cu recompensa din tabelul ponderat', open1.data?.success === true && rewards.includes(open1.data?.reward) && typeof open1.data?.text === 'string', JSON.stringify(open1.data)?.slice(0, 160));
-  check('Gold-ul cade in intervalul 10-100, XP-ul in 5-50',
-    (open1.data?.reward !== 'gold' || (open1.data.amount >= 10 && open1.data.amount <= 100)) &&
-    (open1.data?.reward !== 'xp' || (open1.data.amount >= 5 && open1.data.amount <= 50)),
+  // Baza e gold 10-100 / XP 5-50, inmultita cu nivelul (max 2x) si cu bonusul
+  // de factiune (1.5x) → plafon teoretic 3x.
+  check('Gold-ul cade in intervalul 10-300, XP-ul in 5-150 (baza × nivel × facțiune)',
+    (open1.data?.reward !== 'gold' || (open1.data.amount >= 10 && open1.data.amount <= 300)) &&
+    (open1.data?.reward !== 'xp' || (open1.data.amount >= 5 && open1.data.amount <= 150)),
     JSON.stringify({ r: open1.data?.reward, a: open1.data?.amount }));
   const open2 = await req(j, 'POST', '/api/chest');
   check('A doua deschidere in cooldown → 409', open2.status === 409, `status=${open2.status}`);
@@ -1115,12 +1119,13 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
 
   // --- catalogul de teme + gradul propriu
   const r1 = await req(j, 'GET', '/api/ranks');
-  check('GET /api/ranks returneaza temele seeduite', r1.status === 200 && ['naruto', 'onepiece', 'hunter'].every((sl) => (r1.data?.themes || []).some((t) => t.slug === sl)), JSON.stringify((r1.data?.themes || []).map((t) => t.slug)));
+  // Slug-urile canonice dupa migrarea 0023 (teme = factiuni): one-piece, hunter-x-hunter.
+  check('GET /api/ranks returneaza temele seeduite', r1.status === 200 && ['naruto', 'one-piece', 'hunter-x-hunter'].every((sl) => (r1.data?.themes || []).some((t) => t.slug === sl)), JSON.stringify((r1.data?.themes || []).map((t) => t.slug)));
   check('Gradul propriu e Genin la nivel mic (tema naruto)', r1.data?.me?.rank?.label === 'Genin' && r1.data.me.rank.icon === '🍃', JSON.stringify(r1.data?.me));
 
   // --- schimbarea temei din profil
-  const sw = await req(j, 'POST', '/api/me/theme', { theme: 'onepiece' });
-  check('Schimbarea temei merge si schimba gradul', sw.data?.success === true && sw.data?.me?.rank?.label === 'Rookie', JSON.stringify(sw.data?.me));
+  const sw = await req(j, 'POST', '/api/me/theme', { theme: 'one-piece' });
+  check('Schimbarea temei merge si schimba gradul', sw.data?.success === true && sw.data?.me?.rank?.label === 'Pirat amator', JSON.stringify(sw.data?.me));
   const bad = await req(j, 'POST', '/api/me/theme', { theme: 'n-exista' });
   check('Tema inexistenta → 400', bad.status === 400, `status=${bad.status}`);
   await req(j, 'POST', '/api/me/theme', { theme: 'naruto' });
@@ -1138,7 +1143,8 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
 
   // --- clasamentul expune gradele
   const lb = await req(j, 'GET', '/api/leaderboard');
-  check('Clasamentul are grad pe randuri', (lb.data?.top || []).every((r) => r.rank?.label) && (lb.data?.top || []).length > 0, JSON.stringify(lb.data?.top?.[0])?.slice(0, 120));
+  const lbRows = [...(lb.data?.weekly || []), ...(lb.data?.alltime || [])];
+  check('Clasamentul are grad pe randuri', lbRows.every((r) => r.rank?.label) && lbRows.length > 0, JSON.stringify(lbRows[0])?.slice(0, 120));
 
   // --- admin: tema custom din „alta serie”, validare, stergere
   const mk = await req(globalThis.admin, 'POST', '/api/admin/rank-themes', {
@@ -1461,7 +1467,7 @@ console.log('\n=== Avatar (URL, GIF animat) ===');
 
   // Clasamentul la fel.
   const lb = await req(globalThis.admin, 'GET', '/api/leaderboard');
-  const lbMe = (lb.data?.top || []).find((r) => r.username === me.data.user.username);
+  const lbMe = [...(lb.data?.alltime || []), ...(lb.data?.weekly || [])].find((r) => r.username === me.data.user.username);
   check('Clasamentul poarta avatarul', !!lbMe && lbMe.avatar === GIF, JSON.stringify(lbMe?.avatar));
 
   // URL-urile non-http raman interzise (validarea existenta).
@@ -1530,6 +1536,48 @@ console.log('\n=== Misiuni zilnice + streak ===');
     check('Misiune necunoscută → 409', badKey.status === 409, `status=${badKey.status}`);
   } else {
     check('Misiuni: skip (înregistrare eșuată)', true, `register=${reg.status}`);
+  }
+}
+
+console.log('\n=== Facțiuni (alegere lunară) + shop/activate ===');
+{
+  // Rutele astea au lipsit din router la un moment dat (fisierele existau,
+  // dar nimic nu le servea -> 404 si panoul de factiune blocat pe „Se incarca…").
+  const fj = jar();
+  const reg = await req(fj, 'POST', '/api/auth/register', { username: `fac_${Date.now() % 100000}`, email: `fac${Date.now() % 100000}@test.ro`, password: 'ParolaMare123' });
+  if (reg.status === 201) {
+    const anon = await req(jar(), 'GET', '/api/factions');
+    check('GET /api/factions fara login → 401', anon.status === 401, `status=${anon.status}`);
+
+    const f0 = await req(fj, 'GET', '/api/factions');
+    check('GET /api/factions → 200 cu lista de factiuni', f0.status === 200 && Array.isArray(f0.data?.factions) && f0.data.factions.length >= 3, `status=${f0.status} n=${f0.data?.factions?.length}`);
+    check('Utilizator nou nu e in nicio factiune', f0.status === 200 && !f0.data?.my_faction, JSON.stringify(f0.data?.my_faction));
+    check('Raspunsul are luna curenta si clasamentul intre factiuni', typeof f0.data?.month === 'string' && Array.isArray(f0.data?.standings), JSON.stringify(Object.keys(f0.data || {})));
+
+    const bad = await req(fj, 'POST', '/api/factions', { faction: 'nu-exista' });
+    check('Alaturare la factiune inexistenta → 400', bad.status === 400, `status=${bad.status}`);
+
+    const pick = f0.data?.factions?.[0]?.slug;
+    const join = await req(fj, 'POST', '/api/factions', { faction: pick });
+    check('Alaturarea reuseste si seteaza tema de grade', join.status === 200 && join.data?.success === true && join.data?.rank_theme === pick, JSON.stringify(join.data));
+
+    const f1 = await req(fj, 'GET', '/api/factions');
+    check('Dupa alaturare, my_faction e factiunea aleasa', f1.data?.my_faction === pick, JSON.stringify(f1.data?.my_faction));
+    const me = await req(fj, 'GET', '/api/ranks');
+    check('Tema de grade a urmat factiunea', me.data?.me?.rank?.theme === pick, JSON.stringify(me.data?.me?.rank));
+
+    const again = await req(fj, 'POST', '/api/factions', { faction: f0.data?.factions?.[1]?.slug || pick });
+    check('A doua alegere in aceeasi luna → 409', again.status === 409, `status=${again.status}`);
+
+    // shop/activate: revenirea la standard e gratuita; un cosmetic nedetinut e refuzat
+    const std = await req(fj, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_standard' });
+    check('POST /api/shop/activate tema standard → 200', std.status === 200 && std.data?.success === true, `status=${std.status} ${JSON.stringify(std.data)}`);
+    const notOwned = await req(fj, 'POST', '/api/shop/activate', { type: 'color', id: 'color_purple' });
+    check('Activarea unei culori nedetinute → 403', notOwned.status === 403, `status=${notOwned.status}`);
+    const unknown = await req(fj, 'POST', '/api/shop/activate', { type: 'altceva', id: 'x' });
+    check('Tip necunoscut la activare → 400', unknown.status === 400, `status=${unknown.status}`);
+  } else {
+    check('Factiuni: skip (inregistrare esuata)', true, `register=${reg.status}`);
   }
 }
 

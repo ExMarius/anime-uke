@@ -100,12 +100,14 @@ export async function onRequestGet(context) {
   const where = [];
   const params = [];
   const seriesIdParam = url.searchParams.get('series_id');
+  let seriesId = null;
 
   if (seriesIdParam) {
     const sid = validatePositiveInt(seriesIdParam, 'ID-ul seriei');
     if (!sid.ok) return errorResponse(400, sid.error);
+    seriesId = sid.value;
     where.push('e.series_id = ?');
-    params.push(sid.value);
+    params.push(seriesId);
   }
 
   if (q) {
@@ -150,11 +152,14 @@ export async function onRequestGet(context) {
     // Urmatorul numar liber pentru formularul „Adauga episod": MAX+1 pe
     // seria ceruta. Un singur MAX pe indexul (series_id, episode_number),
     // deci costa aproximativ la fel ca lista deja servita.
+    // ATENTIE: legam numarul validat (seriesId), nu string-ul brut din URL —
+    // `seriesIdParam.value` era undefined si D1 arunca la bind, deci toata
+    // lista de episoade a seriei pica cu 500 („Nu am putut incarca episoadele").
     let next_number = null;
-    if (seriesIdParam) {
+    if (seriesId !== null) {
       const mx = await env.DB
         .prepare('SELECT MAX(episode_number) AS m FROM episodes WHERE series_id = ?')
-        .bind(seriesIdParam.value)
+        .bind(seriesId)
         .first();
       next_number = (mx?.m ?? 0) + 1;
     }

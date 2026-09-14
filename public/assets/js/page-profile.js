@@ -962,6 +962,10 @@ async function initEconomy() {
   if (!res.ok) return;
   econData = res.data;
   document.getElementById('p-econ').hidden = false;
+  // Fara asta panoul ramane pe valorile placeholder din HTML („Se incarca…”,
+  // „0 / 600 XP”, vitrina de insigne goala) — apelul se pierduse la
+  // refactorizarea pe factiuni.
+  renderEconomy();
   loadFaction().catch(() => { /* panoul e optional */ });
   loadMissions().catch(() => { /* misiunile sunt optionale */ });
 

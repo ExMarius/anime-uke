@@ -40,6 +40,8 @@ import * as adminModsRoute from './routes/api/admin/mods.js';
 import * as subscribeRoute from './routes/api/subscribe.js';
 import * as shopRoute from './routes/api/shop.js';
 import * as shopBuyRoute from './routes/api/shop-buy.js';
+import * as shopActivateRoute from './routes/api/shop-activate.js';
+import * as factionsRoute from './routes/api/factions.js';
 import * as reportRoute from './routes/api/report.js';
 import * as subtitleRoute from './routes/api/subtitle.js';
 import * as genresRoute from './routes/api/genres.js';
@@ -108,6 +110,11 @@ const ROUTES = [
   { method: 'POST', path: '/api/admin/reports', mod: adminReportsRoute },
   { method: 'GET', path: '/api/notifications/unread', mod: notifUnreadRoute },
   { method: 'GET', path: '/api/pulse', mod: pulseRoute },
+  // --- facțiuni (alegere lunară, reputație, clasament între facțiuni) ---
+  { method: 'GET', path: '/api/factions', mod: factionsRoute },
+  { method: 'POST', path: '/api/factions', mod: factionsRoute },
+  // Activarea unei culori de nume / teme de site deja cumpărate din shop.
+  { method: 'POST', path: '/api/shop/activate', mod: shopActivateRoute },
   { method: 'POST', path: '/api/notifications/read', mod: notificationsRoute },
   { method: 'GET', path: '/api/notifications', mod: notificationsRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
