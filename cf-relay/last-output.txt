@@ -1,6 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ d9823c2
+comanda: cf-relay/cmd.sh @ d396b81
 ────────────────────────────────────
-faction-box in /profile: 0
-tema-grades dropdown (trebuie 0): 0
-ordine: clasament -> facțiune: 
+[https://anime-uke.pages.dev] faction-box: 0, tema-dropdown: 0
+[https://9d5196e7.anime-uke.pages.dev] faction-box: 0, tema-dropdown: 0
