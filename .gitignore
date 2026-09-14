@@ -18,11 +18,7 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Raport intern de review (nu e parte din livrabil)
-REVIEW.md
+# Resturi ale scripturilor dev.sh / deploy.sh
 .wrangler.toml.prod.bak
-worker-do/.wrangler/
-
-# Secrete locale (token GitHub / Cloudflare) — in afara repo-ului oricum
-.secrets/
 wrangler.toml.bak
+worker-do/.wrangler/

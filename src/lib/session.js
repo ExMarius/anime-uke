@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, staff_role, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, staff_role, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null
@@ -41,8 +41,10 @@ export async function getSessionUser(request, env) {
     level: user.level || 1,
     gold: user.gold || 0,
     is_admin: !!user.is_admin,
-    is_mod: !!user.is_mod,
+    // Gradul de staff (badge) si dreptul derivat din el. Doar Moderator si
+    // Admin pot modera (sterge comentariile altora); Helper/Staff au doar badge.
     staff_role: user.staff_role || '',
+    can_moderate: canModerate(user),
     rank_theme: user.rank_theme || 'naruto',
     active_name_color: user.active_name_color || null,
     active_theme: user.active_theme || null,
@@ -66,8 +68,8 @@ export function publicUser(user) {
     username: user.username,
     points: user.points,
     is_admin: user.is_admin,
-    is_mod: user.is_mod || 0,
     staff_role: user.staff_role || '',
+    can_moderate: canModerate(user),
     rank_theme: user.rank_theme || 'naruto',
     // Economie: nav-ul arata nivelul si gold-ul fara o cerere in plus.
     xp: user.xp || 0,
@@ -94,6 +96,21 @@ export async function requireUser(request, env) {
     };
   }
   return { user };
+}
+
+/** Drepturile de moderare vin din gradul de staff: Admin sau Moderator. */
+export function canModerate(user) {
+  return !!(user?.is_admin || user?.staff_role === 'moderator');
+}
+
+/** Ca requireUser, dar cere drept de moderare (Admin sau Moderator). */
+export async function requireModerator(request, env) {
+  const gate = await requireUser(request, env);
+  if (gate.response) return gate;
+  if (!canModerate(gate.user)) {
+    return { response: errorResponse(403, 'Doar moderatorii și administratorii pot face asta') };
+  }
+  return gate;
 }
 
 export async function requireAdmin(request, env) {

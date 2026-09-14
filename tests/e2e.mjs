@@ -107,7 +107,7 @@ console.log('\n=== 1. VIZITATOR ===');
   }
 
   // Codul server-side si fisierele de configurare nu trebuie servite
-  for (const blocked of ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.sql', '/migrations/0001_init.sql']) {
+  for (const blocked of ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/migrations/0001_init.sql']) {
     const r = await fetch(BASE + blocked);
     const body = await r.text();
     check(`GET ${blocked} → 404 (blocat)`, r.status === 404, `status=${r.status}`);
@@ -763,7 +763,7 @@ console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
 
   const opts = await req(j, 'GET', '/api/profile/me');
   check('GET /api/profile/me → 200', opts.status === 200 && opts.data?.user?.username === 'marius', `status=${opts.status}`);
-  check('Profilul include rangul', !!opts.data?.rank?.label, JSON.stringify(opts.data?.rank));
+  check('Profilul include gradul de nivel', !!opts.data?.identity?.rank?.label, JSON.stringify(opts.data?.identity));
   check('Profilul include statisticile (structura)', typeof opts.data?.stats?.episodes_watched === 'number', JSON.stringify(opts.data?.stats));
   check('Profilul NU expune email-ul', !JSON.stringify(opts.data).includes('marius@test.ro'), '');
 
@@ -1187,47 +1187,47 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
   const delBuiltin = await req(globalThis.admin, 'DELETE', '/api/admin/rank-themes?slug=naruto');
   check('Temele builtin nu se sterg → 400', delBuiltin.status === 400, `status=${delBuiltin.status}`);
 
-  // --- moderatori: promovare/retrogradare + protectii
-  const promo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 1 });
-  const meMod = await req(j, 'GET', '/api/auth/me');
-  check('Promovarea ca moderator se vede in sesiune', promo.data?.success === true && !!meMod.data?.user?.is_mod, JSON.stringify(meMod.data?.user)?.slice(0, 120));
+  // --- grade de staff (0025): Helper / Staff / Moderator, acordate manual
   // clasamentul e cache-uit 15 minute, deci staff-ul proaspat se verifica pe
   // profil (sursa live), nu prin cache
+  const promo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'moderator' });
+  const meMod = await req(j, 'GET', '/api/auth/me');
+  check('Gradul Moderator se vede in sesiune (staff_role + can_moderate)', promo.data?.success === true && meMod.data?.user?.staff_role === 'moderator' && meMod.data?.user?.can_moderate === true, JSON.stringify(meMod.data?.user)?.slice(0, 160));
   const profMod = await req(j, 'GET', '/api/profile/user2');
   check('Profilul unui moderator arata staff=Moderator', profMod.data?.identity?.staff === 'Moderator', JSON.stringify(profMod.data?.identity));
+  // moderatorul poate sterge comentariul altcuiva; un membru simplu nu
+  const modTargetC = await req(globalThis.admin, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu de sters de moderator' });
+  const modDel = await req(j, 'DELETE', `/api/comments?id=${modTargetC.data?.id}`);
+  check('Moderatorul poate sterge comentariul altcuiva', modDel.status === 200, `status=${modDel.status} id=${modTargetC.data?.id}`);
   const adminMe = await req(globalThis.admin, 'GET', '/api/auth/me');
-  const selfPromo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: adminMe.data?.user?.username, is_mod: 1 });
+  const selfPromo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: adminMe.data?.user?.username, role: 'moderator' });
   check('Adminul nu-si poate schimba propriul rol', selfPromo.status === 400 || selfPromo.status === 404, `status=${selfPromo.status}`);
-  const demo = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 0 });
-  check('Retrogradarea merge', demo.data?.success === true && demo.data?.is_mod === 0, JSON.stringify(demo.data));
-  const modTheme = await req(j, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 1 });
-  check('Un moderator nu poate promova → 403', modTheme.status === 403, `status=${modTheme.status}`);
-  await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 0 });
-
-  // --- grade de staff acordate manual (0025): Helper / Staff / Moderator
+  const modTheme = await req(j, 'POST', '/api/admin/mods', { username: 'user2', role: 'moderator' });
+  check('Un moderator nu poate acorda grade → 403', modTheme.status === 403, `status=${modTheme.status}`);
   const gHelper = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'helper' });
   const profHelper = await req(j, 'GET', '/api/profile/user2');
   const meHelper = await req(j, 'GET', '/api/auth/me');
   check('Gradul Helper se acorda si apare pe profil', gHelper.data?.success === true && gHelper.data?.staff === 'Helper' && profHelper.data?.identity?.staff === 'Helper', JSON.stringify(profHelper.data?.identity));
-  check('Helper NU primeste drepturi de moderare (is_mod=0)', gHelper.data?.is_mod === 0 && !meHelper.data?.user?.is_mod && meHelper.data?.user?.staff_role === 'helper', JSON.stringify(meHelper.data?.user)?.slice(0, 160));
+  check('Helper NU primeste drepturi de moderare', gHelper.data?.can_moderate === false && meHelper.data?.user?.can_moderate === false && meHelper.data?.user?.staff_role === 'helper', JSON.stringify(meHelper.data?.user)?.slice(0, 160));
+  const helperTargetC = await req(globalThis.admin, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu pe care helperul nu-l poate sterge' });
+  const helperDel = await req(j, 'DELETE', `/api/comments?id=${helperTargetC.data?.id}`);
+  check('Helperul nu poate sterge comentariul altcuiva → 403', helperDel.status === 403, `status=${helperDel.status}`);
+  await req(globalThis.admin, 'DELETE', `/api/comments?id=${helperTargetC.data?.id}`);
   const gStaff = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'staff' });
   const profStaff = await req(j, 'GET', '/api/profile/user2');
   check('Gradul Staff se acorda si apare pe profil', gStaff.data?.staff === 'Staff' && profStaff.data?.identity?.staff === 'Staff', JSON.stringify(profStaff.data?.identity));
-  const gModRole = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'moderator' });
-  const meModRole = await req(j, 'GET', '/api/auth/me');
-  check('Gradul Moderator prin role= seteaza si is_mod', gModRole.data?.staff === 'Moderator' && gModRole.data?.is_mod === 1 && !!meModRole.data?.user?.is_mod, JSON.stringify(meModRole.data?.user)?.slice(0, 160));
   const gBad = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'hokage' });
   check('Grad necunoscut → 400', gBad.status === 400, `status=${gBad.status}`);
   const teamList = await req(globalThis.admin, 'GET', '/api/admin/mods');
   const teamU2 = (teamList.data?.staff || []).find((x) => x.username === 'user2');
   const teamAdmin = (teamList.data?.staff || []).find((x) => x.is_admin);
-  check('GET /api/admin/mods listeaza echipa (admin + moderatorul nou)', teamList.status === 200 && teamU2?.role === 'Moderator' && teamU2?.role_key === 'moderator' && !!teamAdmin && teamAdmin.role === 'Admin', JSON.stringify(teamList.data)?.slice(0, 200));
-  const teamAsMod = await req(j, 'GET', '/api/admin/mods');
-  check('Lista echipei nu e accesibila moderatorilor → 403', teamAsMod.status === 403, `status=${teamAsMod.status}`);
+  check('GET /api/admin/mods listeaza echipa (admin + staff)', teamList.status === 200 && teamU2?.role === 'Staff' && teamU2?.role_key === 'staff' && !!teamAdmin && teamAdmin.role === 'Admin', JSON.stringify(teamList.data)?.slice(0, 200));
+  const teamAsUser = await req(j, 'GET', '/api/admin/mods');
+  check('Lista echipei nu e accesibila non-adminilor → 403', teamAsUser.status === 403, `status=${teamAsUser.status}`);
   const gNone = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: '' });
   const profNone = await req(j, 'GET', '/api/profile/user2');
   const teamAfter = await req(globalThis.admin, 'GET', '/api/admin/mods');
-  check('Scoaterea gradului curata badge-ul, is_mod si lista', gNone.data?.success === true && gNone.data?.is_mod === 0 && profNone.data?.identity?.staff === '' && !(teamAfter.data?.staff || []).some((x) => x.username === 'user2'), JSON.stringify(profNone.data?.identity));
+  check('Scoaterea gradului curata badge-ul si lista', gNone.data?.success === true && gNone.data?.staff === '' && profNone.data?.identity?.staff === '' && !(teamAfter.data?.staff || []).some((x) => x.username === 'user2'), JSON.stringify(profNone.data?.identity));
 
   // --- chat: mesajele poarta gradul si rolul de staff din server
   await new Promise((r) => setTimeout(r, 1200));

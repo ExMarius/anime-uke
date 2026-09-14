@@ -66,7 +66,7 @@ export function validateSeries(input) {
   }
 
   const coverImage = typeof input.cover_image === 'string' ? input.cover_image.trim() : '';
-  // Acceptam fie URL absolut http(s), fie cale same-origin („/covers/x.jpg”)
+  // Acceptam fie URL absolut http(s), fie cale same-origin („/assets/img/x.jpg”)
   // pentru imaginile servite de site. `//` e respins: e URL protocol-relativ
   // si ar permite ocolirea verificarii.
   const sameOrigin = /^\/(?!\/)[^\s]+$/;

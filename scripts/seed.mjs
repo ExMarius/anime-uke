@@ -53,7 +53,9 @@ const nextVideo = () => REELS[reel++ % REELS.length];
 // lui One Piece, care are destule ca sa treaca de pragul de 100/pagina si
 // sa exercite selectorul de intervale de pe pagina seriei.
 // ---------------------------------------------------------------------
-const C = (slug) => `/covers/${slug}.jpg`;
+// Fara coperti locale in repo (site-ul foloseste URL-uri externe, ca in
+// productie); cardurile fara imagine primesc posterul procedural din core.js.
+const C = () => '';
 
 const CATALOG = [
   {

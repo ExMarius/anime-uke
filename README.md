@@ -1,25 +1,153 @@
 # 🎌 anime-uke
 
-Site de anime cu conturi, puncte pentru episoade vizionate, panou admin și chat live.
+Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel / gold / cufere / misiuni / shop), facțiuni lunare, grade, panou admin și chat live.
 
 **Stack:** Cloudflare Pages + D1 + Durable Objects + WebSockets · vanilla HTML/CSS/JS, fără framework
 **Cost:** $0/lună — rulează integral în planul gratuit Cloudflare
 **Live:** https://anime-uke.pages.dev
 
+> Acest README este harta proiectului. Dacă lucrezi la site (om sau agent), citește întâi
+> secțiunile **Structură**, **Grade și drepturi** și **Cum lucrezi** — răspund la 90% din întrebări.
+
 ---
 
-## De ce arhitectura asta
+## Structură (tot ce e în repo are un rol)
 
-Totul e gândit pentru **buget zero la 1000+ utilizatori/zi**. Limitele planului gratuit care contează:
+```
+public/                     assete statice + entrypoint
+├── _worker.js              ENTRYPOINT Pages (Advanced Mode): exportă DO-urile + fetch
+├── index.html              catalog + banner + chat
+├── series.html             fișa unei serii (+ episoade, recenzii, „Episodul următor")
+├── episode.html            player + surse + comentarii
+├── profile.html            profil public / propriu, economie, facțiune, cufăr
+├── shop.html               shop de cosmetice (gold)
+├── login.html, register.html
+├── admin.html              panou admin: Statistici · Utilizatori · Grade · Raportări · Jurnal
+├── admin/serii.html        admin: lista seriilor
+├── admin/serie.html        admin: o serie + episoadele + sursele ei  (/admin/serie/<id>)
+├── _headers                headere de securitate/cache pe assete
+├── robots.txt, llms.txt, speculationrules.json
+└── assets/
+    ├── css/style.css       nucleu; page-admin.css, page-episode.css, page-user.css per pagină
+    ├── img/hero-*.jpg|webp bannerul hero
+    ├── subs/demo-ro.vtt    subtitrare demo folosită de teste
+    └── js/
+        ├── core.js         api(), sesiune, nav, toast, badge-uri (staffBadge/rankChip), pulse
+        ├── chat.js         WebSocket + fereastra de chat + regulament + stickere
+        ├── auth.js         logica comună login/register
+        ├── sources-ui.js   editorul de surse video (admin + raportare)
+        └── page-*.js       un modul per pagină (page-index, page-series, page-episode,
+                            page-profile, page-shop, page-admin, page-admin-serii, page-admin-serie)
+src/
+├── worker.js               fetch handler: rutare API, servire statică, SEO SSR, headere
+├── router.js               TABELA DE RUTE — orice endpoint nou se înregistrează aici
+├── routes/
+│   ├── chat.js             upgrade WebSocket → ChatDO (cu identitatea userului)
+│   └── api/                un fișier per endpoint (onRequestGet/Post/Patch/Delete)
+│       ├── auth/           register, login, logout, me, register-options
+│       ├── admin/          series, episodes, episode-sources, users, mods, rank-themes, reports, stats, log
+│       ├── series/by-id.js, episodes/by-id.js
+│       └── …               comments, reviews, ratings, leaderboard, economy, chest(s), missions,
+│                           shop(-buy/-activate), factions, notifications, profile, watchlist, …
+├── do/                     Durable Objects: ChatDO, RateLimitDO, StatsDO
+└── lib/                    session (auth + drepturi), ranks (grade), crypto, jwt, http, validate,
+                            ratelimit, audit, xp, shop, missions, factions, notify, profile, sources, limits, paging
+worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
+migrations/                 schema D1 = suma migrărilor 0001…0025 (NU există alt schema.sql)
+scripts/
+├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
+└── seed.mjs                catalog de demo prin API, pe serverul local
+tests/
+├── e2e.mjs                 suita API completă (local)          ┐
+├── dom-smoke.mjs           paginile în jsdom (local)           ├─ ./test.sh le rulează pe toate
+├── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
+└── prod-smoke.mjs          verificare blândă pe producție (o singură înregistrare, pauze)
+cf-relay/                   cmd.sh = comanda rulată de GitHub Actions; last-output.txt = rezultatul
+.github/workflows/cloudflare-relay.yml
+dev.sh · test.sh · deploy.sh
+wrangler.prod.toml (șablon producție) · wrangler.local.toml (dev) · wrangler.migrate.toml (doar migrări)
+wrangler.toml               = copia ACTIVĂ; dev.sh o înlocuiește temporar cu cea locală și o restaurează la ieșire
+```
 
-| Resursă | Cotă gratuită | Cum stăm noi |
+Fișiere care **nu** există intenționat: `schema.sql` (schema = migrările), `push.sh`, seed-uri de
+scară / SQL generat, `public/covers/` (coperțile sunt URL-uri externe în DB; cardurile fără copertă
+primesc un poster procedural din `core.js`).
+
+---
+
+## Grade și drepturi (sursa unică de adevăr)
+
+Există **două sisteme complet separate**, ambele afișate lângă nume în chat, comentarii, recenzii, clasament și profil:
+
+| | Grade de **nivel** | Grade de **staff** |
 |---|---|---|
-| Pages — assete statice | **nelimitat** | HTML/CSS/JS servite static, zero cost |
-| Workers / Pages Functions | 100.000 requesturi/zi, **10 ms CPU/request** | API-ul face 1–2 interogări per cerere |
-| D1 | 5M rânduri citite/zi · 100k rânduri **scrise**/zi · 500 MB | vezi „Optimizări de buget" mai jos |
-| Durable Objects | 100.000 requesturi/zi | doar pe chat + rate limit + views |
+| Ce sunt | Genin → Chunin → … → Hokage (sau altă temă) | 🤝 Helper · ⭐ Staff · 🛠️ Moderator · 🛡️ Admin |
+| Cum se obțin | **automat**, din `users.level` (XP) | **manual**, de admin, din `/admin` → tabul „Grade" |
+| Unde stau | `rank_themes` (temele) + `users.rank_theme` (tema aleasă de user) | `users.staff_role` = `''｜helper｜staff｜moderator` și `users.is_admin` |
+| Cod | `rankForUser()` în `src/lib/ranks.js` | `staffRole()` în `src/lib/ranks.js` |
+| Randare | `rankChip()` (`.uchip`) | `staffBadge()` / `staffIcon()` (`.ubadge--admin/mod/staff/helper`) |
+| API | `GET /api/ranks`, `POST /api/me/theme`, `/api/admin/rank-themes` | `GET/POST /api/admin/mods` `{ username, role }` |
 
-> ⚠️ **Important:** din 1 septembrie 2026 depășirea cotelor D1 pe planul gratuit produce **eșec hard** (query-ul pică), nu degradare lentă. Adică un flood pe chat ți-ar da jos tot site-ul până la 00:00 UTC. De asta scrierile în D1 sunt minimizate agresiv.
+**Drepturi** (`src/lib/session.js`):
+
+- `is_admin` → tot (panou admin, `requireAdmin`). Adminii se numesc din tabul **Utilizatori** (`set_role`), nu din „Grade".
+- `canModerate(user)` = Admin **sau** `staff_role === 'moderator'` → poate șterge comentariile altora (`requireModerator` pentru rute noi de moderare). Sesiunea expune `can_moderate` clientului.
+- Helper și Staff sunt **doar badge-uri**, zero drepturi.
+- Coloana veche `users.is_mod` a fost absorbită în `staff_role` (migrarea 0025) și **nu mai e citită de cod**.
+
+Facțiunile (`src/lib/factions.js`, `/api/factions`) sunt un al treilea lucru: o alegere lunară a userului, care îi setează automat tema de grade de nivel. Nu au legătură cu staff-ul.
+
+---
+
+## Cum lucrezi
+
+```bash
+npm install                     # Node 22+
+cp .dev.vars.example .dev.vars  # JWT_SECRET local
+npm run dev                     # ./dev.sh → http://localhost:8788 (aplică migrările locale)
+npm run seed                    # opțional: catalog de demo (vezi antetul scripts/seed.mjs)
+npm test                        # ./test.sh: e2e + dom + plafoane, pe o bază curată (~1 min)
+```
+
+Reguli care evită surprize:
+
+1. **Orice schimbare de schemă = o migrare nouă** `migrations/00NN_*.sql`. `deploy.sh` le aplică automat pe D1 remote; `dev.sh`/`test.sh` local.
+2. **Orice endpoint nou** se adaugă în `src/router.js` (metoda `'*'` dacă fișierul are mai mulți handleri).
+3. **Clasele CSS construite dinamic în JS** (`'ubadge ubadge--' + x`) trebuie adăugate în safelist-ul din `scripts/purge-css.mjs`, altfel dispar din producție.
+4. **Pentru fiecare feature scrie verificări** în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). `./test.sh` trebuie să fie verde înainte de deploy.
+5. `wrangler.toml` apare modificat cât timp rulează `dev.sh` — **nu-l comite** în starea aceea (e copia locală). La `git pull --rebase` cu dev.sh pornit: `git stash && git pull --rebase && git stash pop`.
+6. Primul cont înregistrat pe o bază goală devine automat admin (bootstrap). Plafoane: 1000 useri / 1000 serii (`src/lib/limits.js`, suprascriibile prin `LIMIT_USERS`/`LIMIT_SERIES` la teste).
+
+---
+
+## Deploy
+
+```bash
+export CLOUDFLARE_API_TOKEN=...   # D1 Edit, Pages Edit, Workers Scripts Edit
+npm run deploy                    # ./deploy.sh
+```
+
+`deploy.sh` rulează în ordinea obligatorie: **D1 → migrări → Worker DO (`anime-uke-do`) → Pages → JWT_SECRET**,
+purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină și versionează assetele cu `?v=<commit>`.
+
+**Fără acces de rețea la Cloudflare** (ex. sandbox de agent): scrie comanda în `cf-relay/cmd.sh`, comite pe un
+branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-ul e în secretul
+repo-ului `CLOUDFLARE_API_TOKEN`, niciodată în cod) și comite rezultatul în `cf-relay/last-output.txt`.
+Deploy complet = `cmd.sh` apelează `./deploy.sh`.
+
+### De ce există `worker-do/`
+
+Cloudflare Pages nu poate găzdui clase Durable Object în producție. Advanced Mode (`public/_worker.js` cu
+`export { ChatDO }`) merge doar local, în miniflare. De aceea DO-urile trăiesc în Worker-ul `anime-uke-do`
+(`worker-do/`), iar Pages le leagă prin `script_name = "anime-uke-do"` (în `wrangler.prod.toml`).
+Local, `wrangler.local.toml` le rulează inline ca să nu fie nevoie de un al doilea proces.
+
+---
+
+## De ce arhitectura asta (buget zero)
+
+Limitele planului gratuit care contează: Workers 100k req/zi · 10 ms CPU; D1 5M rânduri citite / 100k **scrise** pe zi;
+DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, deci scrierile sunt minimizate agresiv.
 
 ### Optimizări de buget (toate deliberate, nu accidentale)
 
@@ -34,105 +162,9 @@ Totul e gândit pentru **buget zero la 1000+ utilizatori/zi**. Limitele planului
 
 ---
 
-## Structură
-
-```
-public/                  # assete statice (servite NELIMITAT si gratuit)
-├── _worker.js           # ENTRYPOINT — exporta clasele DO + handlerul fetch
-├── index.html           # lista seriilor + chat
-├── series.html          # detaliile unei serii + episoadele
-├── episode.html         # player DoodStream + buton puncte
-├── login.html
-├── register.html
-├── admin.html           # panou admin cu 5 taburi
-└── assets/
-    ├── css/style.css    # tema dark (albastru inchis + accent #e94560)
-    └── js/
-        ├── core.js      # api(), escapeHtml(), toast(), renderNav(), sesiune
-        ├── chat.js      # WebSocket + modal + reconectare cu backoff
-        ├── auth.js      # logica comuna login/register
-        ├── page-*.js    # un fisier per pagina
-src/
-├── worker.js            # handler fetch + serveste static + header-e securitate
-├── router.js            # tabela de rute (inlocuieste functions/)
-├── routes/              # handlerele API (semnatura identica cu Pages Functions)
-│   ├── chat.js          #   upgrade WebSocket cu autentificare
-│   └── api/
-│       ├── series.js, view.js, watch.js
-│       ├── series/by-id.js, episodes/by-id.js
-│       ├── auth/   (register, login, logout, me)
-│       └── admin/  (stats, series, episodes, users, log)
-├── do/                  # Durable Objects
-│   ├── ChatDO.js        #   chat live + buffer mesaje + lista online + rate limit
-│   ├── RateLimitDO.js   #   rate limiting shardat pe 32 bucket-uri
-│   └── StatsDO.js       #   buffer contor vizualizari
-└── lib/                 # crypto, jwt, http, session, validate, ratelimit, audit
-schema.sql               # schema D1 (documentata)
-migrations/0001_init.sql # aplicata cu `wrangler d1 migrations apply`
-tests/                   # e2e + seed (nu e in repo, vezi .gitignore)
-wrangler.toml
-```
-
-### De ce Advanced Mode (`_worker.js`) și nu directorul `functions/`
-
-**Pages Functions nu poate exporta clase Durable Object.** Am testat empiric, cu wrangler 3 și wrangler 4:
-
-```
-✘ [ERROR] Your Worker depends on the following Durable Objects,
-          which are not exported in your entrypoint file:
-          ChatDO, RateLimitDO, StatsDO
-```
-
-Variante încercate, toate eșuate: clase în `src/`, re-export în `functions/_do.js`, re-export dintr-un modul de rută (`functions/chat.js`). Singura cale funcțională pentru chat prin Durable Objects pe Pages este Advanced Mode. Acesta e și motivul pentru care chat-ul din versiunea anterioară nu a funcționat niciodată.
-
-Beneficiu colateral: controlăm explicit header-ele de securitate și pentru assetele statice.
-
 ---
 
-## Setup local
-
-```bash
-npm install
-cp .dev.vars.example .dev.vars      # si editeaza JWT_SECRET
-npx wrangler pages dev              # http://localhost:8788
-```
-
-În alt terminal, aplică schema pe D1-ul local:
-
-```bash
-npx wrangler d1 migrations apply DB --local
-```
-
-> Necesită **Node.js 22+** (wrangler 4 nu pornește pe Node 20).
-
----
-
-## Deploy în producție
-
-```bash
-# 1. creeaza baza de date (o singura data)
-npx wrangler d1 create anime-db
-#    -> copiaza database_id in wrangler.toml
-
-# 2. aplica schema pe D1-ul REMOT
-npx wrangler d1 migrations apply DB --remote
-
-# 3. seteaza secretul JWT (NICIODATA in wrangler.toml)
-npx wrangler pages secret put JWT_SECRET
-#    -> genereaza o valoare aleatoare lunga, ex:
-#       openssl rand -hex 32
-
-# 4. deploy
-npx wrangler pages deploy
-```
-
-### Primul admin
-
-La o bază de date goală, **primul utilizator înregistrat devine automat admin** (bootstrap). Acțiunea e consemnată în `admin_log`. Deci: deploy-ează, apoi înregistrează-te tu primul.
-
-După ce există admini, bootstrap-ul nu se mai declanșează niciodată.
-
----
+## Securitate
 
 ## Securitate
 
@@ -154,144 +186,42 @@ După ce există admini, bootstrap-ul nu se mai declanșează niciodată.
 
 ### Căi blocate explicit
 
-`/_worker.js`, `/.dev.vars`, `/wrangler.toml`, `/schema.sql`, `/migrations/*`, `/.git*` → 404, cu mesaje de eroare care nu scurg căi de filesystem.
+`/_worker.js`, `/.dev.vars`, `/wrangler.toml`, `/migrations/*`, `/.git*` → 404, cu mesaje de eroare care nu scurg căi de filesystem.
 
 ---
 
-## API
+## API (rezumat; lista completă și metodele exacte sunt în `src/router.js`)
 
-| Metodă | Rută | Acces | Descriere |
-|---|---|---|---|
-| GET | `/api/series` | public | lista seriilor + număr episoade |
-| GET | `/api/series/:id` | public | seria **și** episoadele ei (un singur apel) |
-| GET | `/api/episodes/:id` | public | episod + seria lui + `watched` pentru userul curent |
-| POST | `/api/view` | public | incrementează vizualizările (prin buffer DO) |
-| POST | `/api/auth/register` | public | creează cont; primul user devine admin |
-| POST | `/api/auth/login` | public | login cu email **sau** username |
-| POST | `/api/auth/logout` | logat | șterge cookie-ul de sesiune |
-| GET | `/api/auth/me` | oricine | `{ user }` sau `{ user: null }` |
-| POST | `/api/watch` | logat | +10 puncte, o singură dată per episod |
-| GET | `/api/pulse` | logat | semnele live: online (ChatDO), serii/episoade/vizionări (cache 5 min) |
-| GET/POST | `/api/missions` | logat | misiunile zilnice (3/zi) + revendicare recompensă |
-| GET | `/api/admin/stats` | admin | statistici |
-| GET/POST/DELETE | `/api/admin/series` | admin | CRUD serii |
-| GET/POST/DELETE | `/api/admin/episodes` | admin | CRUD episoade |
-| GET/POST | `/api/admin/users` | admin | listă + `set_role` / `set_ban` / `delete` |
-| GET | `/api/admin/log` | admin | jurnal audit |
-| WS | `/chat` | logat | WebSocket către `ChatDO` |
+| Zonă | Rute | Acces |
+|---|---|---|
+| Catalog | `GET /api/series`, `/api/series/:id`, `/api/episodes/:id`, `/api/genres`, `/api/recent`, `/api/top`, `/api/subtitle` | public |
+| Cont | `POST /api/auth/register|login|logout`, `GET /api/auth/me`, `GET /api/auth/register-options` | public |
+| Vizionare | `POST /api/view`, `POST /api/progress`, `GET /api/continue`, `/api/watchlist`, `POST /api/subscribe` | logat |
+| Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse` | logat / public |
+| Economie | `GET /api/economy`, `/api/chest`, `/api/chests`, `/api/missions`, `GET /api/shop`, `POST /api/shop/buy|activate`, `/api/factions` | logat |
+| Identitate | `GET /api/ranks`, `POST /api/me/theme`, `GET /api/profile/:username`, `PATCH /api/profile`, `/api/notifications*` | logat |
+| Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|mods|rank-themes|reports` | admin |
+| Chat | `WS /chat` → `ChatDO` | logat |
 
 ---
 
 ## Testare
 
-```bash
-npx wrangler pages dev              # in primul terminal
-npx wrangler d1 migrations apply DB --local
-node tests/seed.mjs                 # date de demo
-node tests/e2e.mjs                  # 105 verificari end-to-end
-```
-
-Suite-ul e2e acoperă: validări, bootstrap admin, login/logout, anti-enumerare, fluxul admin complet, puncte și race condition la dublu-click, banare cu invalidare imediată a sesiunii, protecțiile panoului admin, jurnal audit, headere de securitate, CSP fără `unsafe-inline`, căi blocate, chat WebSocket (autentificare, difuzare, rate limit, persistență în D1).
-
-**Rezultatul ultimei rulări: 105 trecute, 0 eșuate.**
+- `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/e2e.mjs`, `tests/dom-smoke.mjs`,
+  `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
+- `node tests/prod-smoke.mjs [baseUrl]`: pe producție. **Nu rula e2e.mjs pe producție** — zecile de înregistrări
+  rapide declanșează protecția anti-brute-force de la marginea Cloudflare.
 
 ---
 
 ## Întreținere
 
-Istoricul chat-ului crește nelimitat. Rulează periodic (manual sau printr-un cron trigger):
+Istoricul chat-ului crește nelimitat. Rulează periodic:
 
 ```sql
 DELETE FROM chat_messages WHERE id NOT IN
   (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 5000);
 ```
-
-## Arhitectura: de ce exista `worker-do/`
-
-Cloudflare Pages **nu poate gazdui clase Durable Object in productie**.
-Documentatia oficiala (actualizata iunie 2026) spune explicit:
-
-> "You cannot create and deploy a Durable Object within a Pages project."
-
-Advanced Mode (`public/_worker.js` cu `export { ChatDO }`) functioneaza
-**doar local**, in miniflare — de aceea `wrangler pages dev` si testele e2e
-merg, dar `wrangler pages deploy` respinge configuratia cu:
-
-```
-Configuration file for Pages projects does not support "migrations"
-Durable Objects bindings should specify a "script_name"
-```
-
-Solutia oficiala, aplicata aici:
-
-| Componenta | Unde traieste | Rol |
-|---|---|---|
-| Frontend + API | Pages `anime-uke` (`public/_worker.js`) | HTML/CSS/JS, rute REST, auth, D1 |
-| Durable Objects | Worker `anime-uke-do` (`worker-do/`) | ChatDO, RateLimitDO, StatsDO |
-
-Pages leaga DO-urile prin `script_name = "anime-uke-do"`. ChatDO face deja
-upgrade-ul WebSocket in `fetch()`, iar Pages il apeleaza cu
-`stub.fetch(request)` — patternul documentat pentru DO extern. Dupa upgrade,
-conexiunile raman atasate de DO si nu mai trec prin Pages Function.
-
-Codul DO nu a fost modificat deloc: foloseste doar `storage.getAlarm` /
-`setAlarm`, compatibile cu storage SQLite (singura optiune pentru
-namespace-uri DO noi).
-
-### Cele doua configuratii wrangler
-
-Pages citeste **doar** `wrangler.toml` din radacina si nu accepta `--config`
-cu alta cale. De aceea exista doua fisiere:
-
-- `wrangler.toml` — **productie**. Bindinguri DO cu `script_name`, fara
-  `[[migrations]]`. Este ce citeste `wrangler pages deploy`.
-- `wrangler.local.toml` — **dezvoltare**. DO inline in `_worker.js` plus
-  `[[migrations]]`, ca sa nu fie nevoie de al doilea Worker pornit local.
-
-`npm run dev` (adica `./dev.sh`) inlocuieste temporar `wrangler.toml` cu
-cel local, porneste serverul si il restaureaza la iesire.
-
-### Deploy
-
-```bash
-export CLOUDFLARE_API_TOKEN=...      # D1 Edit, Pages Edit, Workers Scripts Edit
-export CLOUDFLARE_ACCOUNT_ID=...
-npm run deploy                       # ./deploy.sh
-```
-
-`deploy.sh` ruleaza in ordinea obligatorie: D1 -> schema -> Worker DO ->
-Pages -> JWT_SECRET. DO-urile trebuie sa existe **inainte** ca Pages sa
-poata valida bindingurile cu `script_name`.
-
-Deploy-ul se face cu `--branch=main`: altfel, daca branch-ul git curent nu e
-cel de productie, Cloudflare il publica ca *preview* si
-`anime-uke.pages.dev` continua sa serveasca versiunea veche.
-
-### Testare
-
-```bash
-npm test                                          # suita e2e completa, local
-node tests/prod-smoke.mjs                         # verificare pe productie
-```
-
-`tests/e2e.mjs` nu se ruleaza pe productie: sectiunile 2-3 trag ~20 de
-`POST /api/auth/register` in cateva secunde, iar protectia anti-brute-force
-de la marginea Cloudflare blocheaza IP-ul (403 cu pagina HTML). Local, in
-miniflare, protectia nu exista. Pentru productie foloseste
-`tests/prod-smoke.mjs`, care imita un utilizator real: o singura
-inregistrare, o singura autentificare, pauze intre cereri. Acopera 57 de
-verificari, inclusiv doi clienti WebSocket simultan.
-
----
-
-## Relay Cloudflare prin GitHub Actions
-
-Sandbox-urile de dezvoltare pot avea reteaua blocata spre `api.cloudflare.com`.
-`.github/workflows/cloudflare-relay.yml` rezolva asta: ruleaza `cf-relay/cmd.sh`
-pe un runner GitHub (care are acces liber), cu token-ul Cloudflare tinut in
-secretul repo-ului `CLOUDFLARE_API_TOKEN`, si comite rezultatul inapoi in
-`cf-relay/last-output.txt`. Deploy complet = `cmd.sh` apeleaza `./deploy.sh`.
-
 
 ---
 
@@ -300,7 +230,7 @@ secretul repo-ului `CLOUDFLARE_API_TOKEN`, si comite rezultatul inapoi in
 | Valoare | De unde vine | La ce folosește |
 |---|---|---|
 | ⭐ **Puncte** | doar vizionare (+10/episod, 15 min) | clasament onest — nu pot fi cumpărate |
-| ⚔️ **XP → Nivel** | toată activitatea (vizionare, comentarii, cufere, misiuni) | îți dă **rangul** vizibil: Genin → Chunin → Jonin → Kage → Hokage |
+| ⚔️ **XP → Nivel** | toată activitatea (vizionare, comentarii, cufere, misiuni) | îți dă **gradul de nivel** vizibil (Genin → Hokage, după tema aleasă) — nu e grad de staff |
 | 🪙 **Gold** | cufăr (noroc, /4h) + misiuni zilnice (sigur) | shop: chei de cufăr, nume de aur, flair suporter |
 | 🎯 **Misiuni** | 3/zi, reset UTC: vezi un episod, comentează, deschide cufărul | gold + XP garantate pe fiecare |
 | 🔥 **Streak** | zile consecutive cu cel puțin o misiune | record personal, afișat pe profil |

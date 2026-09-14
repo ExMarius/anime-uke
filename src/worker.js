@@ -59,10 +59,6 @@ function isPublic(path) {
   if (isPublicPage(path)) return true;
   if (isPublicApi(path)) return true;
   if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
-  // Coperțile servite de site. Nu contin date despre utilizatori, iar a le
-  // tine în spatele porții ar însemna un dus-întors de cookie pentru fiecare
-  // imagine de pe pagina de login și din orice context fără sesiune.
-  if (path.startsWith('/covers/')) return true;
   return false;
 }
 
@@ -199,7 +195,7 @@ async function sitemapHandler(request, env) {
 // exclude automat `_worker.js`, dar blocam explicit ca sa nu depindem de asta
 // si ca mesajele de eroare ale serverului de assete sa nu scape catre client
 // (local, wrangler raspundea cu un 502 care includea calea absoluta pe disc).
-const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml', '/schema.sql'];
+const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml'];
 
 /**
  * Pagini al caror URL contine un parametru de cale.
@@ -367,7 +363,7 @@ async function serveStatic(request, env) {
     // (generata la deploy), o servim pe ea — ~40% mai putini bytes, aceeasi
     // imagine. Doar pentru browsere care anunta image/webp (toate moderne).
     if (res.status === 200) {
-      const m = /^\/(covers|assets\/img)\/.+\.(jpg|jpeg|png)$/i.exec(path);
+      const m = /^\/assets\/img\/.+\.(jpg|jpeg|png)$/i.exec(path);
       const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
       if (m && acceptsWebp) {
         const webpUrl = new URL(path.replace(/\.(jpg|jpeg|png)$/i, '.webp'), url.origin);
@@ -400,16 +396,11 @@ async function serveStatic(request, env) {
     // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
     // „immutable" 1 an. Fara ?v= (ex. importurile relative dintre modulele
     // /assets/js) lasam regula din _headers (no-cache + ETag → 304 ieftin):
-    // asa un deploy nu lasa module vechi blocate in cache un an. Coperțile
-    // /covers/* nu au regula in _headers → o saptamana e echilibrul bun:
-    // vizitatorii recurenți nu le redescarcă, iar un inlocuit se propagă repede.
+    // asa un deploy nu lasa module vechi blocate in cache un an.
     const versioned = path.startsWith('/assets/') && url.searchParams.has('v');
-    const covers = path.startsWith('/covers/');
-    if ((versioned || covers) && res.status === 200) {
+    if (versioned && res.status === 200) {
       const headers = new Headers(res.headers);
-      headers.set('Cache-Control', versioned
-        ? 'public, max-age=31536000, immutable'
-        : 'public, max-age=604800');
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
     }
 

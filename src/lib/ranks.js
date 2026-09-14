@@ -51,21 +51,26 @@ export function rankForUser(user, themes) {
   return { label: tier?.label || 'Membru', icon: tier?.icon || '🎗️', theme: theme.slug, theme_title: theme.title };
 }
 
-/** Gradele de staff acordate manual (0025), in ordinea ierarhiei. */
+// ---------------------------------------------------------------------
+// GRADE DE STAFF (acordate manual de admin, tabul „Grade" din /admin)
+//
+//   users.staff_role  = ''|'helper'|'staff'|'moderator'  → badge-ul afisat
+//   users.is_admin    = 1 pentru administratori           → drepturi totale
+//   drepturile de moderare = Admin sau 'moderator' (canModerate, lib/session.js)
+//   (users.is_mod e o coloana veche, migrata in 0025 si nefolosita de cod.)
+//
+// Un singur loc scrie staff_role: POST /api/admin/mods. Adminii se numesc
+// din tabul „Utilizatori" (POST /api/admin/users, set_role).
+// Gradele de NIVEL (Genin → Hokage) sunt cu totul altceva: automate, din
+// rank_themes + users.level (vezi rankForUser mai sus).
+// ---------------------------------------------------------------------
 export const STAFF_ROLES = ['helper', 'staff', 'moderator'];
+export const STAFF_LABELS = { helper: 'Helper', staff: 'Staff', moderator: 'Moderator' };
 
-const STAFF_LABELS = { moderator: 'Moderator', staff: 'Staff', helper: 'Helper' };
-
-/**
- * Rolul de staff, independent de gradul de nivel.
- * Admin > Moderator > Staff > Helper. is_mod ramane flagul de drepturi:
- * un rand vechi cu is_mod=1 dar fara staff_role e tot Moderator.
- */
+/** Eticheta de staff a unui rand de user: 'Admin' | 'Moderator' | 'Staff' | 'Helper' | ''. */
 export function staffRole(user) {
   if (user?.is_admin) return 'Admin';
-  const role = String(user?.staff_role || '').toLowerCase();
-  if (role === 'moderator' || user?.is_mod) return 'Moderator';
-  return STAFF_LABELS[role] || '';
+  return STAFF_LABELS[String(user?.staff_role || '').toLowerCase()] || '';
 }
 
 /** Pachetul complet de identitate pentru un rand de user. */

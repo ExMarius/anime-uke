@@ -174,7 +174,7 @@ async function loadUsers() {
       cell(u.username + (isSelf ? ' (tu)' : '')),
       cell(u.email),
       cell(u.points),
-      pill(staffLabel(u), u.is_admin ? 'pill--admin' : (u.staff_role || u.is_mod) ? 'pill--staff' : 'pill--user'),
+      pill(staffLabel(u), u.is_admin ? 'pill--admin' : u.staff_role ? 'pill--staff' : 'pill--user'),
       pill(u.is_banned ? 'Banat' : 'Activ', u.is_banned ? 'pill--banned' : 'pill--user'),
       actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]),
     );
@@ -186,7 +186,7 @@ async function loadUsers() {
 function staffLabel(u) {
   if (u.is_admin) return 'Admin';
   const role = String(u.staff_role || '');
-  if (role === 'moderator' || u.is_mod) return '🛠️ Moderator';
+  if (role === 'moderator') return '🛠️ Moderator';
   if (role === 'staff') return '⭐ Staff';
   if (role === 'helper') return '🤝 Helper';
   return 'User';

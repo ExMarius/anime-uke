@@ -99,7 +99,6 @@ function renderQuick() {
 
 function renderHead() {
   const u = data.user;
-  const r = data.rank;
   const p = data.profile;
 
   const nameNode = document.getElementById('p-username');

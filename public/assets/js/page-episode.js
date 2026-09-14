@@ -605,7 +605,7 @@ function commentNode(c, episodeId, me, replies, byParent) {
   head.appendChild(who);
   for (const b of [staffBadge(c.staff), rankChip(c.rank)].filter(Boolean)) head.appendChild(b);
   head.appendChild(when);
-  if (c.own || me?.is_admin) {
+  if (c.own || me?.can_moderate) {
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'comment__del';

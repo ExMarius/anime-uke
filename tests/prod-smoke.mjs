@@ -343,7 +343,7 @@ ck('PATCH /api/profile salveaza', r.status === 200 && r.data?.profile?.birth_dat
 ck('zodia se calculeaza (01.01 → Capricorn)', r.data?.profile?.zodiac === 'Capricorn', r.data?.profile?.zodiac);
 ck('data e formatata RO (01.01.2007)', r.data?.profile?.birth_date_ro === '01.01.2007', r.data?.profile?.birth_date_ro);
 ck('genul e tradus (Masculin)', r.data?.profile?.gender_label === 'Masculin', r.data?.profile?.gender_label);
-ck('rangul e prezent', !!r.data?.rank?.label, JSON.stringify(r.data?.rank));
+ck('gradul de nivel e prezent', !!r.data?.identity?.rank?.label, JSON.stringify(r.data?.identity));
 
 r = await req(A, 'PATCH', '/api/profile', { country: 'Moldova' });
 ck('patch partial nu goleste celelalte campuri',

@@ -9,9 +9,11 @@
 --   ''          — membru obisnuit
 --   'helper'    — Helper (doar badge)
 --   'staff'     — Staff (doar badge)
---   'moderator' — Moderator (badge + drepturi de moderare; is_mod ramane
---                 flagul de DREPTURI si se tine sincronizat de API)
+--   'moderator' — Moderator (badge + drepturi de moderare: canModerate())
 -- Adminii raman marcati prin is_admin (tabul Utilizatori).
+-- Vechiul users.is_mod e absorbit aici (UPDATE-ul de mai jos) si nu mai e
+-- citit de cod; SQLite/D1 nu suporta ieftin DROP COLUMN, deci coloana
+-- ramane in schema ca balast inofensiv.
 -- =====================================================================
 
 ALTER TABLE users ADD COLUMN staff_role TEXT NOT NULL DEFAULT '';

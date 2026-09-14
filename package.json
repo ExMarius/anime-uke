@@ -11,8 +11,9 @@
     "dev": "./dev.sh",
     "migrate:local": "wrangler d1 migrations apply DB --local",
     "migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "seed": "node tests/seed.mjs",
-    "test": "node tests/e2e.mjs",
+    "seed": "node scripts/seed.mjs",
+    "test": "./test.sh",
+    "test:e2e": "node tests/e2e.mjs",
     "deploy": "./deploy.sh",
     "deploy:do": "cd worker-do && npx wrangler deploy",
     "dev:pages": "npx wrangler pages dev --port=8788"

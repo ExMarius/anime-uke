@@ -1,8 +1,6 @@
 import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { getSessionUser } from '../../lib/session.js';
-import { getRank, getZodiac, formatRoDate, getAge, GENDERS } from '../../lib/rank.js';
-import { resolveAvatarUrl } from '../../lib/profile.js';
-import { validateProfilePatch } from '../../lib/profile.js';
+import { resolveAvatarUrl, validateProfilePatch, getZodiac, formatRoDate, getAge, GENDER_LABELS } from '../../lib/profile.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
 
@@ -17,7 +15,6 @@ import { identity, loadRankThemes } from '../../lib/ranks.js';
 /** Serieaza profilul pentru client. Email-ul NU pleaca niciodata de aici. */
 function present(user, profile, stats, isSelf, themes = []) {
   const birthDate = profile?.birth_date || '';
-  const rank = getRank(user.points);
 
   return {
     user: {
@@ -25,22 +22,21 @@ function present(user, profile, stats, isSelf, themes = []) {
       username: user.username,
       points: user.points,
       is_admin: !!user.is_admin,
-      is_mod: !!user.is_mod,
       staff_role: user.staff_role || '',
       level: user.level || 1,
       rank_theme: user.rank_theme || 'naruto',
       created_at: user.created_at,
       member_since: formatRoDate(user.created_at),
     },
+    // identity = { rank: gradul de NIVEL (tema aleasa), staff: gradul de staff }
     identity: identity(user, themes),
-    rank,
     profile: {
       birth_date: birthDate,
       birth_date_ro: formatRoDate(birthDate),
       zodiac: getZodiac(birthDate),
       age: getAge(birthDate),
       gender: profile?.gender || '',
-      gender_label: GENDERS[profile?.gender || ''] || GENDERS[''],
+      gender_label: GENDER_LABELS[profile?.gender || ''] || GENDER_LABELS[''],
       country: profile?.country || '',
       motto: profile?.motto || '',
       faction: profile?.faction || '',
@@ -94,7 +90,7 @@ export async function onRequestGet(context) {
     user = me;
   } else {
     user = await env.DB
-      .prepare('SELECT id, username, points, is_admin, is_mod, staff_role, level, rank_theme, created_at FROM users WHERE username = ?')
+      .prepare('SELECT id, username, points, is_admin, staff_role, level, rank_theme, created_at FROM users WHERE username = ?')
       .bind(raw)
       .first();
     if (!user) return errorResponse(404, 'Utilizatorul nu există');

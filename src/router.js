@@ -94,7 +94,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/ranks', mod: ranksRoute },
   { method: 'POST', path: '/api/me/theme', mod: meThemeRoute },
   { method: '*', path: '/api/admin/rank-themes', mod: adminRankThemesRoute },
-  { method: 'POST', path: '/api/admin/mods', mod: adminModsRoute },
+  { method: '*', path: '/api/admin/mods', mod: adminModsRoute },
   { method: 'POST', path: '/api/subscribe', mod: subscribeRoute },
   { method: 'GET', path: '/api/shop', mod: shopRoute },
   { method: 'POST', path: '/api/shop/buy', mod: shopBuyRoute },
