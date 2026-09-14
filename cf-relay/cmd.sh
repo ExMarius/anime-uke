@@ -5,15 +5,15 @@ echo "exit deploy: $?"
 
 B="https://anime-uke.pages.dev"
 echo
-echo "── verificare post-deploy (migrarea 0024 + fisa detaliata) ──"
-# Coloanele noi trebuie sa apara in raspunsul public al seriei (goale, dar prezente).
-S=$(curl -s "$B/api/series/1019")
-for K in alt_titles themes age_rating ep_duration release_date country external_url team next_ep_note next_ep_at; do
-  echo "  /api/series/1019 are cheia $K: $(echo "$S" | grep -c "\"$K\"")"
-done
-# Markup-ul nou a ajuns pe edge?
-echo "  series.html #series-info: $(curl -s "$B/serie/1019" | grep -c 'id="series-info"')"
-echo "  series.html #next-ep:     $(curl -s "$B/serie/1019" | grep -c 'id="next-ep"')"
-echo "  episode.html #comments-sort: $(curl -s "$B/episode" | grep -c 'id="comments-sort"')"
-echo "  chat.js regulament: $(curl -s "$B/assets/js/chat.js" | grep -c 'auk-chat-rules-v1')"
-echo "  admin/serie.html fisa: $(curl -s "$B/admin/serie/1019" -o /dev/null -w '%{http_code}') (302 = protejat, normal)"
+echo "── verificare post-deploy (migrarea 0025 + grade de staff) ──"
+echo "  migrari ramase neaplicate (trebuie 0 randuri 0025):"
+npx wrangler d1 migrations list DB --remote 2>/dev/null | grep -c "0025" || true
+echo "  admin.html 'Grade de staff': $(curl -s "$B/admin" | grep -c 'Grade de staff')"
+echo "  admin.html #mod-role:        $(curl -s "$B/admin" | grep -c 'id="mod-role"')"
+echo "  admin.html 'Teme de nivel':  $(curl -s "$B/admin" | grep -c 'Teme de nivel')"
+echo "  core.js staffIcon:           $(curl -s "$B/assets/js/core.js" | grep -c 'staffIcon')"
+echo "  style.css ubadge--helper:    $(curl -s "$B/assets/css/style.css" | grep -c 'ubadge--helper')"
+echo "  /api/admin/mods fara sesiune: $(curl -s "$B/api/admin/mods" -o /dev/null -w '%{http_code}') (401/403 = protejat, normal)"
+# profilul public trebuie sa raspunda 200 (SELECT-ul cu staff_role merge => coloana exista)
+P=$(curl -s "$B/api/profile/admin" -w '\n%{http_code}')
+echo "  /api/profile/<user> status: $(echo "$P" | tail -1) staff_role prezent: $(echo "$P" | head -1 | grep -c 'staff_role')"
