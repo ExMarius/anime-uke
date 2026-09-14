@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
-./deploy.sh
-echo "exit deploy: $?"
-D=$(grep -oE "https://[0-9a-f]+\.anime-uke\.pages\.dev" /tmp/depl.txt 2>/dev/null | tail -1)
-for U in "https://anime-uke.pages.dev" "$D"; do
-  [ -z "$U" ] && continue
-  CSS=$(curl -s "$U/assets/css/page-user.css")
+for U in "https://anime-uke.pages.dev" "https://anime-uke.pages.dev"; do
   JS=$(curl -s "$U/assets/js/page-profile.js")
-  echo "[$U] css taburi: $(echo "$CSS" | grep -o 'ptabs__btn' | wc -l), js taburi: $(echo "$JS" | grep -o 'initProfileTabs' | wc -l)"
+  echo "[$U] js taburi: $(echo "$JS" | grep -o 'initProfileTabs' | wc -l), facțiuni: $(echo "$JS" | grep -o 'faction__grid' | wc -l), țări: $(echo "$JS" | grep -o 'Guineea-Bissau' | wc -l)"
 done
+HTML=$(curl -s "https://anime-uke.pages.dev/assets/css/page-user.css")
+echo "pane css: $(echo "$HTML" | grep -o 'data-pane\|\.ptab ' | wc -l)"
