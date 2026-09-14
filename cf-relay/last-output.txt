@@ -1,5 +1,12 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ d396b81
+comanda: cf-relay/cmd.sh @ 3f210c9
 ────────────────────────────────────
-[https://anime-uke.pages.dev] faction-box: 0, tema-dropdown: 0
-[https://9d5196e7.anime-uke.pages.dev] faction-box: 0, tema-dropdown: 0
+HTTP/2 302 
+location: /login?next=%2Fprofile
+permissions-policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
+x-content-type-options: nosniff
+size: 0
+
+--- cu cookie anonim / follow ---
+final: https://anime-uke.pages.dev/login?next=%2Fprofile code=200
+<title>Login • anime-uke
