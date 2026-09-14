@@ -1,11 +1,5 @@
-exit_code: 0
-comanda: cf-relay/cmd.sh @ f3bcc69
+exit_code: 1
+comanda: cf-relay/cmd.sh @ 2b348a7
 ────────────────────────────────────
-── weserv cu URL-ul REAL al seriei ──
-status=404 tip=application/json bytes=79
-── weserv 400w (telefon) ──
-status=404 tip=application/json bytes=79
-/tmp/w.webp:    JSON text data
-/tmp/w400.webp: JSON text data
-── original direct (amazon) ──
-status=200 tip=image/jpeg bytes=259105
+── variante IMDb native (redimensionare în URL) ──
+cf-relay/cmd.sh: line 5: W_: unbound variable
