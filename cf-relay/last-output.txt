@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 07d1088
+comanda: cf-relay/cmd.sh @ 28cddc4
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -8,17 +8,17 @@ comanda: cf-relay/cmd.sh @ 07d1088
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m migrari aplicate
+    [0;32m✓[0m deja aplicata
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=07d1088
+    [0;32m✓[0m assete versionate ?v=28cddc4
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://8c6fb604.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://bb5de242.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,10 +29,12 @@ exit deploy: 0
 ── verificare post-deploy (migrarea 0025 + grade de staff) ──
   migrari ramase neaplicate (trebuie 0 randuri 0025):
 0
-  admin.html 'Grade de staff': 0
-  admin.html #mod-role:        0
-  admin.html 'Teme de nivel':  0
+  /admin fara sesiune: 302 (302 = protejat, normal)
+  page-admin.js setStaffRole/admin/mods: 1
   core.js staffIcon:           1
-  style.css ubadge--helper:    0
+  style.css ubadge--admin: 1
+  style.css ubadge--mod: 0
+  style.css ubadge--staff: 0
+  style.css ubadge--helper: 0
   /api/admin/mods fara sesiune: 401 (401/403 = protejat, normal)
-  /api/profile/<user> status: 401 staff_role prezent: 0
+  /api/leaderboard status: 401 (200 = SELECT-ul cu staff_role merge)
