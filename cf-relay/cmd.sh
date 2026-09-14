@@ -6,4 +6,4 @@ echo "exit deploy: $?"
 echo "sanitate: / -> $(curl -s -o /dev/null -w '%{http_code}' https://anime-uke.pages.dev/)"
 #── verificare sitemap imbunatatit ──
 echo "── /sitemap.xml ──"
-curl -s https://anime-uke.pages.dev/sitemap.xml
+curl -s "https://anime-uke.pages.dev/sitemap.xml?nocache=$RANDOM"
