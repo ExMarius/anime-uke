@@ -509,11 +509,12 @@ async function loadChests(seriesId) {
   for (const ch of d.chests) row.appendChild(chestCard(ch, d.total_seconds, seriesId));
 
   const opened = d.chests.filter((c) => c.claimed).length;
+  // frază unică, lizibilă: timp + progres cufere + regula în cuvinte simple
   document.getElementById('chests-count').textContent =
-    `${opened}/${d.chests.length} deschise` + (d.total_seconds ? ` · ${fmtWatch(d.total_seconds)} de vizionare` : '');
+    `${fmtWatch(d.total_seconds || 0)} vizionate aici · ${opened}/${d.chests.length} deschise`;
   document.getElementById('chests-hint').textContent = d.total_seconds
-    ? 'Timpul se numără cât playerul rulează cu tabul vizibil. Cuferele se deblochează singure.'
-    : 'Pornește un episod: timpul petrecut pe seria asta deblochează cuferele, rând pe rând.';
+    ? 'Cuferele se deblochează singure din minutele vizionate pe seria asta. Recompensele sunt în gold (moneda din shop).'
+    : 'Pornește un episod: minutele vizionate aici deblochează cuferele, rând pe rând.';
 }
 
 await Promise.all([renderNav(''), load()]);

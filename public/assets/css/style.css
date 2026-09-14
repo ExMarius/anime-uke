@@ -1790,3 +1790,7 @@ body.theme-classic {
   --accent: #eab308; --accent-hi: #facc15; --accent-deep: #a16207;
   --accent-glow: rgba(234, 179, 8, .35); --accent-soft: rgba(234, 179, 8, .12);
 }
+
+/* Legenda monedelor (profil) — un rand discret care explica cele 3 valori */
+.econ__legend { font-size: .82rem; line-height: 1.6; margin: 0 0 1rem; }
+.econ__legend b { color: var(--text); }

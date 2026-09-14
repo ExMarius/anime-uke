@@ -235,20 +235,20 @@ export async function renderNav(active = '') {
     const points = document.createElement('span');
     points.className = 'nav__points';
     points.textContent = `★ ${user.points}`;
-    points.title = `${user.points} puncte`;
+    points.title = 'Puncte de CLASAMENT: +10 per episod vizionat (după 15 min). Nu se cheltuie.';
     links.appendChild(points);
 
     // Economie: nivelul si gold-ul vin deja in sesiune — chipuri gratuite.
     const lvl = document.createElement('span');
     lvl.className = 'nav__points nav__points--lvl';
     lvl.textContent = `⚔️ Nv ${user.level || 1}`;
-    lvl.title = `Nivel ${user.level || 1}`;
+    lvl.title = `Nivelul ${user.level || 1}: crește singur din orice activitate (vizionat, misiuni, chat).`;
     links.appendChild(lvl);
 
     const gold = document.createElement('span');
     gold.className = 'nav__points nav__points--gold';
     gold.textContent = `🪙 ${(user.gold || 0).toLocaleString('ro-RO')}`;
-    gold.title = `${user.gold || 0} Gold`;
+    gold.title = `${(user.gold || 0).toLocaleString('ro-RO')} gold — MONEDA de cheltuit în shop: misiuni zilnice + cufere + cufărelul la 4 ore.`;
     links.appendChild(gold);
 
     add('/shop', '🛒 Shop');

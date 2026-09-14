@@ -23,10 +23,13 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 // Praguri in secunde de vizionare acumulata pe serie si punctele aferente.
 // Valorile sunt alese ca trepte simtite: o jumatate de episod lung, un
 // maraton de seara, apoi un weekend intreg pe acelasi anime.
+// Recompensele sunt în GOLD (moneda din shop) — înainte dădeau „puncte",
+// iar utilizatorii confundau cele două monede. Pragurile rămân celebre:
+// 30 min (o jumătate de episod), 2h (un maraton de seară), 6h (un weekend).
 export const CHEST_TIERS = [
-  { tier: 1, name: 'Cufăr de bronz', seconds: 1800, points: 5, icon: '🥉' },
-  { tier: 2, name: 'Cufăr de argint', seconds: 7200, points: 15, icon: '🥈' },
-  { tier: 3, name: 'Cufăr de aur', seconds: 21600, points: 40, icon: '🥇' },
+  { tier: 1, name: 'Cufăr de bronz', seconds: 1800, gold: 25, icon: '🥉' },
+  { tier: 2, name: 'Cufăr de argint', seconds: 7200, gold: 60, icon: '🥈' },
+  { tier: 3, name: 'Cufăr de aur', seconds: 21600, gold: 150, icon: '🥇' },
 ];
 
 // Cufărul secret: exista doar pe o parte din serii (hash determinist, deci
@@ -48,9 +51,9 @@ export function seriesHasSecret(seriesId) {
   return hashNum(seriesId) % 3 === 0;
 }
 
-/** Rasplata variaza per utilizator+serie (25–60 pct), determinist. */
+/** Rasplata secretului variaza per utilizator+serie (100–250 gold), determinist. */
 function secretPoints(userId, seriesId) {
-  return 25 + (hashNum(userId * 31 + seriesId) % 36);
+  return 100 + (hashNum(userId * 31 + seriesId) % 151);
 }
 
 const RATE_LIMIT = 120;
@@ -147,7 +150,7 @@ export async function onRequestPost(context) {
 
   const isSecret = tierNo.value === SECRET_TIER;
   const tierDef = isSecret
-    ? { tier: SECRET_TIER, name: 'Cufăr secret', seconds: SECRET_SECONDS, points: secretPoints(user.id, sid.value || 0), icon: '🔮' }
+    ? { tier: SECRET_TIER, name: 'Cufăr secret', seconds: SECRET_SECONDS, gold: secretPoints(user.id, sid.value || 0), icon: '🔮' }
     : CHEST_TIERS.find((t) => t.tier === tierNo.value);
   if (!tierDef) return errorResponse(400, 'Treapta nu există');
 
@@ -179,19 +182,19 @@ export async function onRequestPost(context) {
       .bind(user.id, sid.value, tierDef.tier)
       .run();
 
-    let pointsAdded = 0;
+    let goldAdded = 0;
     if (ins.meta.changes > 0) {
-      await env.DB.prepare('UPDATE users SET points = points + ? WHERE id = ?').bind(tierDef.points, user.id).run();
-      pointsAdded = tierDef.points;
+      await env.DB.prepare('UPDATE users SET gold = gold + ? WHERE id = ?').bind(tierDef.gold, user.id).run();
+      goldAdded = tierDef.gold;
     }
 
-    const me = await env.DB.prepare('SELECT points FROM users WHERE id = ?').bind(user.id).first();
+    const me = await env.DB.prepare('SELECT gold FROM users WHERE id = ?').bind(user.id).first();
 
     return json({
       success: true,
-      alreadyClaimed: pointsAdded === 0,
-      pointsAdded,
-      points: me?.points ?? 0,
+      alreadyClaimed: goldAdded === 0,
+      goldAdded,
+      gold: me?.gold ?? 0,
       total_seconds: total,
     });
   } catch (e) {

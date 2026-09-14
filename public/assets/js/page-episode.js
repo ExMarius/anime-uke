@@ -26,26 +26,25 @@ function fmtTime(total) {
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-function paintProgress() {
+// Acumularea de timp e SILEȚIOASĂ: nicio bară, niciun cronometru în fața
+// utilizatorului (era deranjant — „se vedea cum se umple"). La pragul de 15
+// minute serverul marchează episodul „vizionat" și anunțăm o singură dată.
+// Timpul continuă apoi silentios, pentru cuferele seriei.
+function paintProgress(justWatched = false) {
   const box = document.getElementById('watch-progress');
   if (!box) return;
+  if (!justWatched) { box.hidden = true; return; }
   box.hidden = false;
-  const shown = watchSeconds + pendingSeconds;
-  document.getElementById('watch-progress-fill').style.width =
-    `${Math.min(100, (shown / watchThreshold) * 100)}%`;
-  document.getElementById('watch-progress-time').textContent =
-    `${fmtTime(Math.min(shown, watchThreshold))} / ${fmtTime(watchThreshold)}`;
+  box.classList.add('watch-progress--done');
   const label = document.getElementById('watch-progress-label');
   const note = document.getElementById('watch-progress-note');
-  if (watchedDone) {
-    label.textContent = '✔ Vizionat — puncte acordate';
-    note.textContent = 'Timpul continuă să se acumuleze pentru cuferele seriei.';
-    box.classList.add('watch-progress--done');
-  } else {
-    label.textContent = '🍿 Se acumulează timp de vizionare';
-    note.textContent = `Punctele și marcajul „vizionat” vin după ${Math.round(watchThreshold / 60)} de minute de vizionare reală.`;
-    box.classList.remove('watch-progress--done');
-  }
+  const fill = document.getElementById('watch-progress-fill');
+  const time = document.getElementById('watch-progress-time');
+  if (label) label.textContent = '✔ Episod marcat ca VIZIONAT';
+  if (note) note.textContent = '+10 puncte acordate. Timpul continuă silentios pentru cuferele seriei.';
+  if (fill) fill.style.width = '100%';
+  if (time) time.textContent = '';
+  setTimeout(() => { box.hidden = true; }, 6000);
 }
 
 /**
@@ -99,9 +98,9 @@ async function flushProgress() {
   const wasDone = watchedDone;
   watchSeconds = res.data.seconds ?? watchSeconds;
   watchedDone = !!res.data.watched;
-  paintProgress();
+  paintProgress(!wasDone && watchedDone);
   if (!wasDone && watchedDone) {
-    toast(`+${res.data.pointsAdded ?? 10} puncte! Total: ${res.data.points}`, 'ok');
+    toast(`🎉 Episod marcat ca VIZIONAT · +${res.data.pointsAdded ?? 10} puncte (total ${res.data.points})`, 'ok', 6000);
     clearSession();          // forteaza recitirea punctelor in navbar
     await renderNav('');
   }
@@ -411,7 +410,7 @@ async function load() {
     watchThreshold = Number(res.data.watch_threshold) || 900;
     watchSeconds = Number(res.data.progress_seconds) || 0;
     watchedDone = !!res.data.watched;
-    paintProgress();
+    paintProgress(false);
     startHeartbeat();
     // Contor de vizualizari: merge in StatsDO (buffer), nu direct in D1.
     // Fara await — nu trebuie sa incetineasca afisarea paginii.
