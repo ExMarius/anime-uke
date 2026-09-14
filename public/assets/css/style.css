@@ -1809,3 +1809,9 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 .hero-pad-admin { padding: 2.2rem 0 .6rem; }
 .title-admin { font-size: clamp(1.9rem, 4.6vw, 2.8rem); }
 .mt-1 { margin-top: 1rem; }
+
+/* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
+   sa nu miste elementele de langa ele (CLS). */
+#sort-select { min-width: 9.5rem; }
+#genre-select { min-width: 11rem; }
+#status-select { min-width: 8.5rem; }
