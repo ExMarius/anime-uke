@@ -6,8 +6,9 @@ Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel
 **Cost:** $0/lună — rulează integral în planul gratuit Cloudflare
 **Live:** https://anime-uke.pages.dev
 
-> Acest README este harta proiectului. Dacă lucrezi la site (om sau agent), citește întâi
-> secțiunile **Structură**, **Grade și drepturi** și **Cum lucrezi** — răspund la 90% din întrebări.
+> **Lucrezi la proiect (om sau agent)?** Începe cu [`AGENTS.md`](AGENTS.md) — ghidul de predare
+> (setup, ciclul de lucru, deploy prin relay, capcane, stare curentă, backlog). Acest README este
+> harta tehnică: structură, grade și drepturi, arhitectură, API.
 
 ---
 
@@ -64,6 +65,7 @@ tests/
 └── prod-smoke.mjs          verificare blândă pe producție (o singură înregistrare, pauze)
 cf-relay/                   cmd.sh = comanda rulată de GitHub Actions; last-output.txt = rezultatul
 .github/workflows/cloudflare-relay.yml
+AGENTS.md                   ghid de predare pentru următorul care lucrează (CLAUDE.md trimite la el)
 dev.sh · test.sh · deploy.sh
 wrangler.prod.toml (șablon producție) · wrangler.local.toml (dev) · wrangler.migrate.toml (doar migrări)
 wrangler.toml               = copia ACTIVĂ; dev.sh o înlocuiește temporar cu cea locală și o restaurează la ieșire

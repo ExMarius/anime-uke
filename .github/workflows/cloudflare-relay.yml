@@ -7,7 +7,7 @@
 #      Settings → Secrets and variables → Actions → New repository secret
 #      (CLOUDFLARE_ACCOUNT_ID e optional — se descopera automat din API.)
 #   2. Comanda de rulat sta in cf-relay/cmd.sh (comis in repo).
-#   3. Declansare: orice push pe branch arena/** care modifica cmd.sh
+#   3. Declansare: orice push (pe ORICE branch) care modifica cmd.sh
 #      SAU manual prin workflow_dispatch (input "cmd").
 #   4. Output-ul e scris inapoi in cf-relay/last-output.txt pe acelasi
 #      branch (logurile de Actions nu se pot citi din sandbox).
@@ -29,7 +29,7 @@ on:
         default: ''
   push:
     branches:
-      - 'arena/**'
+      - '**'
     paths:
       - 'cf-relay/cmd.sh'
 
