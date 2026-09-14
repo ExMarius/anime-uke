@@ -57,6 +57,7 @@ worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în produc
 migrations/                 schema D1 = suma migrărilor 0001…0025 (NU există alt schema.sql)
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
+├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
@@ -66,6 +67,7 @@ tests/
 cf-relay/                   cmd.sh = comanda rulată de GitHub Actions; last-output.txt = rezultatul
 .github/workflows/cloudflare-relay.yml
 AGENTS.md                   ghid de predare pentru următorul care lucrează (CLAUDE.md trimite la el)
+AUDIT-LIVE.md               ultimul audit al producției: ce s-a verificat, ce s-a reparat, ce a rămas de decis
 dev.sh · test.sh · deploy.sh
 wrangler.prod.toml (șablon producție) · wrangler.local.toml (dev) · wrangler.migrate.toml (doar migrări)
 wrangler.toml               = copia ACTIVĂ; dev.sh o înlocuiește temporar cu cea locală și o restaurează la ieșire
@@ -117,6 +119,9 @@ Reguli care evită surprize:
 2. **Orice endpoint nou** se adaugă în `src/router.js` (metoda `'*'` dacă fișierul are mai mulți handleri).
 3. **Clasele CSS construite dinamic în JS** (`'ubadge ubadge--' + x`) trebuie adăugate în safelist-ul din `scripts/purge-css.mjs`, altfel dispar din producție.
 4. **Pentru fiecare feature scrie verificări** în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). `./test.sh` trebuie să fie verde înainte de deploy.
+5. **Pagină nouă în `public/`?** Adaug-o în `STATIC_PAGES` din `src/worker.js` — altfel ruta cade pe allowlist și primește 404.
+6. **Rute „inexistente” trebuie să dea 404 real** (nu 200 cu shell gol și nici 302 spre `/login`): așa le tratează
+   `serveStatic()` pentru `/serie/<id>` și `/episod/<id>`, iar allowlist-ul pentru orice altă cale necunoscută.
 5. `wrangler.toml` apare modificat cât timp rulează `dev.sh` — **nu-l comite** în starea aceea (e copia locală). La `git pull --rebase` cu dev.sh pornit: `git stash && git pull --rebase && git stash pop`.
 6. Primul cont înregistrat pe o bază goală devine automat admin (bootstrap). Plafoane: 1000 useri / 1000 serii (`src/lib/limits.js`, suprascriibile prin `LIMIT_USERS`/`LIMIT_SERIES` la teste).
 
@@ -213,6 +218,11 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
   `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
 - `node tests/prod-smoke.mjs [baseUrl]`: pe producție. **Nu rula e2e.mjs pe producție** — zecile de înregistrări
   rapide declanșează protecția anti-brute-force de la marginea Cloudflare.
+- `node scripts/audit-live.mjs [baseUrl]`: audit read-only — statusuri pagini, SEO (title/description/canonical/og/
+  JSON-LD/sitemap), headere de securitate și cookie, CSRF pe origine străină, rate limit la login/register,
+  rute API publice vs protejate, soft-404, compresie/cache/minificare, scanare de secrete în bundle-urile publice.
+  Fără credențiale, deci nu scrie nimic; iese cu cod 1 dacă găsește probleme 🔴. Pe local:
+  `node scripts/audit-live.mjs http://localhost:8788`. Pe producție se rulează prin relay (vezi `AGENTS.md` §3).
 
 ---
 
