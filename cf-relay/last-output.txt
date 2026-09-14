@@ -1,7 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 34fe5bd
+comanda: cf-relay/cmd.sh @ 695d94a
 ────────────────────────────────────
-── deploy optimizări CLS + llms.txt ──
+── deploy optimizări finale ──
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,21 +15,26 @@ comanda: cf-relay/cmd.sh @ 34fe5bd
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=34fe5bd
+    [0;32m✓[0m assete versionate ?v=695d94a
     [0;32m✓[0m assete minificate: 15 fisiere
-    [0;32m✓[0m publicat: https://2432a74c.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://834fdcd0.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-── llms.txt live ──
-status=200 tip=text/plain; charset=utf-8
-# Anime-Uke
-
-> Platformă gratuită de streaming cu anime subtitrat în română. Catalogul și episoadele se vizionează fără cont; contul e necesar doar pentru progres, puncte, chat și contribuții.
-── ordine secțiuni în HTML servit (serii înainte de tops) ──
-id="serii"
-id="tops-section"
-id="recent-section"
+── speculationrules.json ──
+status=302 tip=
+── toate apelurile unui vizitator anonim (trebuie toate 200) ──
+/api/me -> 401
+/api/series -> 200
+/api/top -> 200
+/api/recent -> 200
+/api/pulse -> 200
+/api/genres -> 200
+── HTML fără script inline ──
+0
+── imagini comprimate (live) ──
+one-piece.jpg: 82007B
+hero-1.jpg: 202731B
