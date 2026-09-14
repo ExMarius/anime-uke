@@ -1,15 +1,12 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9253c2b
+comanda: cf-relay/cmd.sh @ a3e7997
 ────────────────────────────────────
-── direct pe deployment-ul 7256ba3c (fără cache) ──
-/ -> 200
-/serie/1014 -> 200
-── sitemap pe deployment ──
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://7256ba3c.anime-uke.pages.dev/</loc></url>
-  <url><loc>https://7256ba3c.anime-uke.pages.dev/series</loc></url>
-  <url><loc>https://7256ba3c.anime-uke.pages.dev/serie/1014</loc></url>
-</urlset>
-── meta pe /episode (deployment) ──
+── stare finală alias public ──
+meta GSC pe /: 1
+meta GSC pe /series: 1
+meta GSC pe /episode: 1
+meta GSC pe /login: 1
+meta GSC pe /register: 1
+sitemap pe alias:
 1
+/ -> 200
