@@ -410,3 +410,37 @@ a.quick__item:hover {
 /* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
    sa nu miste elementele de langa ele (CLS). */
 #genre-select { min-width: 11rem; }
+
+/* ===== Taburi profil: fiecare secțiune are locul ei, totul respiră ===== */
+.ptabs {
+  display: flex;
+  gap: .45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 0 1.25rem;
+}
+.ptabs::-webkit-scrollbar { display: none; }
+.ptabs__btn {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--dim);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: .52rem 1rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s, background .15s, box-shadow .15s;
+}
+.ptabs__btn:hover { color: var(--text); border-color: var(--line); }
+.ptabs__btn.is-active {
+  color: #fff;
+  background: var(--grad);
+  border-color: transparent;
+  box-shadow: 0 8px 26px -12px var(--accent-glow);
+}
+.ptab { display: none; }
+.ptab.is-active { display: block; animation: ptab-in .18s ease; }
+@keyframes ptab-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }

@@ -28,102 +28,18 @@
       <div class="profile-head__info">
         <h1 class="profile-head__name" id="p-username">Se încarcă…</h1>
         <div class="profile-head__badges" id="p-badges"></div>
-        </div>
       </div>
       <button class="btn btn--accent" id="p-edit-btn" type="button" hidden>✏️ Editează</button>
     </header>
 
-    <div class="profile-grid">
-      <!-- ============ ECONOMIE (doar profilul propriu) ============ -->
-      <!-- Fiecare valoare are O singura identitate (explicabila intr-o fraza):
-           ⭐ Puncte = trofeu de vizionare · ⚔️ XP -> Nivel -> Rang
-           🪙 Gold = bani de shop (cufar + misiuni) · 🎯 Misiuni = 3/zi
-           🔥 Streak = zile consecutive cu activitate. -->
-      <section class="box econ" id="p-econ" hidden>
-                <p class="hint econ__legend">
-          <b>Cum stau monedele:</b>
-          🪙 <b>Gold</b> = singura monedă de cheltuit (shop) — din misiuni, cufere și cufărelul la 4 ore ·
-          ★ <b>Puncte</b> = doar clasamentul, +10 per episod vizionat ·
-          ⚔️ <b>Nivel</b> = crește singur din orice activitate.
-        </p>
-<h2 class="box__title">Progresul tău</h2>
-
-        <div class="econ__hero">
-          <span class="econ__rank" id="econ-rank" title="Rangul tău, după nivelul contului">🎗️ Membru</span>
-          <span class="econ__rank-next" id="econ-rank-next"></span>
-          <span class="econ__streak" id="econ-streak" title="Zile consecutive cu cel puțin o misiune făcută">🔥 —</span>
-        </div>
-
-        <div class="econ__row">
-          <span class="econ__level" id="econ-level">Nivel 1</span>
-          <div class="econ__bar"><div class="econ__fill" id="econ-xp-fill"></div></div>
-          <span class="econ__num" id="econ-xp-label">0 / 600 XP</span>
-        </div>
-
-        <div class="econ__row">
-          <span class="econ__cap">Activitate lunară</span>
-          <div class="econ__bar econ__bar--month"><div class="econ__fill" id="econ-month-fill"></div></div>
-          <span class="econ__num" id="econ-month-label">0 / 10.000 pct</span>
-        </div>
-
-        <div class="econ__stats" id="econ-stats">
-          <div class="econ__stat"><b id="econ-st-watched">0</b><span>📺 episoade</span></div>
-          <div class="econ__stat"><b id="econ-st-comments">0</b><span>💬 comentarii</span></div>
-          <div class="econ__stat"><b id="econ-st-chest">0</b><span>🎁 cufere</span></div>
-          <div class="econ__stat"><b id="econ-st-subs">0</b><span>⭐ serii urmărite</span></div>
-        </div>
-
-        <div class="econ__meta">
-          <span class="econ__gold" id="econ-gold">🪙 0 Gold</span>
-          <button class="chest-btn" id="chest-btn" type="button" title="Cufărul cu comori">
-            <span class="chest-btn__icon" id="chest-icon">🧰</span>
-            <span class="chest-btn__label" id="chest-label">Se încarcă…</span>
-          </button>
-        </div>
-
-        <!-- Misiunile zilnice: gold SIGUR, pe lângă norocul de la cufăr. -->
-        <div class="econ__missions" id="econ-missions-wrap">
-          <h3 class="econ__cap econ__cap--missions">🎯 Misiunile de azi</h3>
-          <div id="econ-missions"></div>
-        </div>
-
-        <div class="econ__badges" id="econ-badges"></div>
-
-
-      </section>
-
-      <!-- ============ INFORMATII ============ -->
-      <section class="box">
-        <h2 class="box__title">Informații</h2>
-        <dl class="info-list" id="p-info"></dl>
-      </section>
-
-      <!-- ============ ACCES RAPID ============ -->
-      <section class="box">
-        <h2 class="box__title">Acces rapid</h2>
-        <div class="quick" id="p-quick"></div>
-      </section>
-
-      <!-- ============ CLASAMENT ============ -->
-      <section class="box">
-        <h2 class="box__title">🏆 Clasament săptămânal</h2>
-        <div id="lb-prize" class="lb__prize"></div>
-        <p class="hint" id="lb-note"></p>
-        <ol class="lb" id="lb-list"></ol>
-        <div id="lb-alltime" hidden>
-          <h3 class="box__title" style="font-size:1.05rem">👑 Prestigiu (tot timpul)</h3>
-          <ol class="lb lb--muted" id="lb-alltime-list"></ol>
-        </div>
-      </section>
-
-      <!-- ============ FACȚIUNEA MEA ============ -->
-      <section class="box" id="faction-box">
-        <h2 class="box__title">🏛️ Facțiunea mea</h2>
-        <p class="hint" id="faction-sub">Se încarcă…</p>
-        <div id="faction-body"></div>
-        <div id="faction-standings"></div>
-      </section>
-    </div>
+    <!-- ============ TABURI: fiecare lucru are pagina lui ============ -->
+    <nav class="ptabs" id="p-tabs" aria-label="Secțiunile profilului">
+      <button class="ptabs__btn is-active" type="button" data-ptab="start">🏠 Prezentare</button>
+      <button class="ptabs__btn" type="button" data-ptab="progres">📈 Progres</button>
+      <button class="ptabs__btn" type="button" data-ptab="factiune">🏛️ Facțiunea</button>
+      <button class="ptabs__btn" type="button" data-ptab="top">🏆 Clasamente</button>
+      <button class="ptabs__btn" type="button" data-ptab="liste">📚 Listele mele</button>
+    </nav>
 
     <!-- ============ FORMULAR EDITARE ============ -->
     <section class="box" id="p-edit-panel" hidden>
@@ -173,23 +89,127 @@
       </form>
     </section>
 
-    <!-- ============ SERII RECOMANDATE ============ -->
-    <section class="section" id="p-reco-section" hidden>
-      <div class="section__head">
-        <h2 class="section__title">Serii recomandate</h2>
-        <span class="section__count">cele mai vizionate, nevăzute de tine</span>
-      </div>
-      <div class="grid" id="p-reco"></div>
-    </section>
+    <!-- ============ TAB: PREZENTARE ============ -->
+    <div class="ptab is-active" data-pane="start">
+      <div class="profile-grid">
+        <!-- ============ INFORMATII ============ -->
+        <section class="box">
+          <h2 class="box__title">Informații</h2>
+          <dl class="info-list" id="p-info"></dl>
+        </section>
 
-    <!-- ============ LISTA DE VIZIONAT ============ -->
-    <section class="section" id="p-watchlist-section">
-      <div class="section__head">
-        <h2 class="section__title">Serii de vizionat</h2>
-        <span class="section__count" id="p-watchlist-count"></span>
+        <!-- ============ ACCES RAPID ============ -->
+        <section class="box">
+          <h2 class="box__title">Acces rapid</h2>
+          <div class="quick" id="p-quick"></div>
+        </section>
       </div>
-      <div class="grid" id="p-watchlist"></div>
-    </section>
+
+      <!-- ============ SERII RECOMANDATE ============ -->
+      <section class="section" id="p-reco-section" hidden>
+        <div class="section__head">
+          <h2 class="section__title">Serii recomandate</h2>
+          <span class="section__count">cele mai vizionate, nevăzute de tine</span>
+        </div>
+        <div class="grid" id="p-reco"></div>
+      </section>
+    </div>
+
+    <!-- ============ TAB: PROGRES ============ -->
+    <div class="ptab" data-pane="progres">
+      <!-- ECONOMIE (doar profilul propriu) -->
+      <!-- Fiecare valoare are O singura identitate (explicabila intr-o fraza):
+           ⭐ Puncte = trofeu de vizionare · ⚔️ XP -> Nivel -> Rang
+           🪙 Gold = bani de shop (cufar + misiuni) · 🎯 Misiuni = 3/zi
+           🔥 Streak = zile consecutive cu activitate. -->
+      <section class="box econ" id="p-econ" hidden>
+        <h2 class="box__title">Progresul tău</h2>
+
+        <p class="hint econ__legend">
+          <b>Cum stau monedele:</b>
+          🪙 <b>Gold</b> = singura monedă de cheltuit (shop) — din misiuni, cufere și cufărelul la 4 ore ·
+          ★ <b>Puncte</b> = doar clasamentul, +10 per episod vizionat ·
+          ⚔️ <b>Nivel</b> = crește singur din orice activitate.
+        </p>
+
+        <div class="econ__hero">
+          <span class="econ__rank" id="econ-rank" title="Rangul tău, după nivelul contului">🎗️ Membru</span>
+          <span class="econ__rank-next" id="econ-rank-next"></span>
+          <span class="econ__streak" id="econ-streak" title="Zile consecutive cu cel puțin o misiune făcută">🔥 —</span>
+        </div>
+
+        <div class="econ__row">
+          <span class="econ__level" id="econ-level">Nivel 1</span>
+          <div class="econ__bar"><div class="econ__fill" id="econ-xp-fill"></div></div>
+          <span class="econ__num" id="econ-xp-label">0 / 600 XP</span>
+        </div>
+
+        <div class="econ__row">
+          <span class="econ__cap">Activitate lunară</span>
+          <div class="econ__bar econ__bar--month"><div class="econ__fill" id="econ-month-fill"></div></div>
+          <span class="econ__num" id="econ-month-label">0 / 10.000 pct</span>
+        </div>
+
+        <div class="econ__stats" id="econ-stats">
+          <div class="econ__stat"><b id="econ-st-watched">0</b><span>📺 episoade</span></div>
+          <div class="econ__stat"><b id="econ-st-comments">0</b><span>💬 comentarii</span></div>
+          <div class="econ__stat"><b id="econ-st-chest">0</b><span>🎁 cufere</span></div>
+          <div class="econ__stat"><b id="econ-st-subs">0</b><span>⭐ serii urmărite</span></div>
+        </div>
+
+        <div class="econ__meta">
+          <span class="econ__gold" id="econ-gold">🪙 0 Gold</span>
+          <button class="chest-btn" id="chest-btn" type="button" title="Cufărul cu comori">
+            <span class="chest-btn__icon" id="chest-icon">🧰</span>
+            <span class="chest-btn__label" id="chest-label">Se încarcă…</span>
+          </button>
+        </div>
+
+        <!-- Misiunile zilnice: gold SIGUR, pe lângă norocul de la cufăr. -->
+        <div class="econ__missions" id="econ-missions-wrap">
+          <h3 class="econ__cap econ__cap--missions">🎯 Misiunile de azi</h3>
+          <div id="econ-missions"></div>
+        </div>
+
+        <div class="econ__badges" id="econ-badges"></div>
+      </section>
+    </div>
+
+    <!-- ============ TAB: FACȚIUNEA ============ -->
+    <div class="ptab" data-pane="factiune">
+      <section class="box" id="faction-box">
+        <h2 class="box__title">🏛️ Facțiunea mea</h2>
+        <p class="hint" id="faction-sub">Se încarcă…</p>
+        <div id="faction-body"></div>
+        <div id="faction-standings"></div>
+      </section>
+    </div>
+
+    <!-- ============ TAB: CLASAMENTE ============ -->
+    <div class="ptab" data-pane="top">
+      <section class="box">
+        <h2 class="box__title">🏆 Clasament săptămânal</h2>
+        <div id="lb-prize" class="lb__prize"></div>
+        <p class="hint" id="lb-note"></p>
+        <ol class="lb" id="lb-list"></ol>
+        <div id="lb-alltime" hidden>
+          <h3 class="box__title" style="font-size:1.05rem">👑 Prestigiu (tot timpul)</h3>
+          <ol class="lb lb--muted" id="lb-alltime-list"></ol>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ TAB: LISTELE MELE ============ -->
+    <div class="ptab" data-pane="liste">
+      <!-- ============ LISTA DE VIZIONAT ============ -->
+      <section class="section" id="p-watchlist-section">
+        <div class="section__head">
+          <h2 class="section__title">Serii de vizionat</h2>
+          <span class="section__count" id="p-watchlist-count"></span>
+        </div>
+        <div class="grid" id="p-watchlist"></div>
+      </section>
+    </div>
   </main>
 
   <link rel="modulepreload" href="/assets/js/page-profile.js">

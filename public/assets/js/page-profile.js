@@ -993,3 +993,33 @@ async function initEconomy() {
 await Promise.all([renderNav(''), load()]);
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
 if (target === 'me') initEconomy().catch(() => { /* panoul e bonus, profilul merge oricum */ });
+
+// ---------------------------------------------------------------------
+// Taburi profil: fiecare secțiune are pagina ei (Prezentare / Progres /
+// Facțiunea / Clasamente / Liste). Se ține minte tabul ales; hash-ul din
+// URL (#factiune) deschide direct tabul respectiv.
+// ---------------------------------------------------------------------
+function initProfileTabs() {
+  const bar = document.getElementById('p-tabs');
+  if (!bar) return;
+  const btns = [...bar.querySelectorAll('.ptabs__btn')];
+  const panes = [...document.querySelectorAll('.ptab')];
+
+  const activate = (id, save) => {
+    if (!panes.some((p) => p.dataset.pane === id)) id = 'start';
+    btns.forEach((b) => b.classList.toggle('is-active', b.dataset.ptab === id));
+    panes.forEach((p) => p.classList.toggle('is-active', p.dataset.pane === id));
+    if (save) {
+      try { sessionStorage.setItem('ptab', id); } catch { /* privat */ }
+      history.replaceState(null, '', `#${id}`);
+    }
+  };
+
+  btns.forEach((b) => b.addEventListener('click', () => activate(b.dataset.ptab, true)));
+
+  let initial = '';
+  try { initial = sessionStorage.getItem('ptab') || ''; } catch { /* privat */ }
+  if ((location.hash || '').slice(1)) initial = location.hash.slice(1);
+  activate(initial || 'start', false);
+}
+initProfileTabs();
