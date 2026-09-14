@@ -1,5 +1,52 @@
-exit_code: 0
-comanda: cf-relay/cmd.sh @ 40375f3
+exit_code: 1
+comanda: cf-relay/cmd.sh @ bece23c
 ────────────────────────────────────
-[https://anime-uke.pages.dev] tari: 1, facțiuni: 1
-[https://c08220c9.anime-uke.pages.dev] tari: 1, facțiuni: 1
+== PAGINI PUBLICE (astept 200) ==
+/ -> 200
+/series -> 200
+/login -> 200
+/register -> 200
+/robots.txt -> 200
+/sitemap.xml -> 200
+/llms.txt -> 200
+/speculationrules.json -> 200
+== PAGINI PRIVATE (astept 302 la login) ==
+/profile -> 302
+/shop -> 302
+/admin -> 302
+== ASSETS (200) ==
+/assets/css/style.css -> 200
+/assets/css/page-user.css -> 200
+/assets/js/core.js -> 200
+/assets/js/page-index.js -> 200
+/assets/js/page-series.js -> 200
+/assets/js/page-profile.js -> 200
+/assets/js/page-episode.js -> 200
+/assets/js/page-shop.js -> 200
+/assets/js/chat.js -> 200
+/assets/js/auth.js -> 200
+== API PUBLIC (200) ==
+/api/series?limit=1 -> 200
+/api/genres -> 200
+/api/recent -> 200
+/api/top -> 200
+/api/pulse -> 200
+/api/ranks -> 401
+/api/auth/me -> 200
+== API UTILIZATOR (astept 401) ==
+/api/leaderboard -> 401
+/api/factions -> 401
+/api/economy -> 401
+/api/missions -> 401
+/api/watchlist -> 401
+/api/chest -> 401
+/api/notifications/unread -> 401
+/api/continue -> 401
+== API ADMIN (nu trebuie 200) ==
+/api/admin/stats -> 401
+/api/admin/reports -> 401
+/api/admin/log -> 401
+== SEO ==
+robots: 1 (1=are sitemap)
+sitemap serii: 6 loc-uri
+== D1 ==
