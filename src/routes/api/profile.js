@@ -131,6 +131,7 @@ export async function onRequestGet(context) {
       ...present(user, profile, stats, me?.id === user.id, await loadRankThemes(env)),
       flair: owned.has('flair_supporter') ? '💎' : '',
       name_gold: owned.has('name_gold'),
+      name_color: user.active_name_color || null,
       recommendations: recommendations?.results || [],
     }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {

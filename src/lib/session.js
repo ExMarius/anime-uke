@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, rank_theme';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, rank_theme, active_name_color, active_theme';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null
@@ -64,6 +64,9 @@ export function publicUser(user) {
     xp: user.xp || 0,
     level: user.level || 1,
     gold: user.gold || 0,
+    // Cosmetice active (shop): culoarea numelui si tema site-ului.
+    name_color: user.active_name_color || null,
+    site_theme: user.active_theme || null,
   };
 }
 

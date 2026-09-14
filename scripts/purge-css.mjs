@@ -25,6 +25,8 @@ const out = await new PurgeCSS().purge({
       /^mission/, /^is-/, /^has-/, /^rv$/, /^rv-/, /^ep-/, /^src-/,
       /^epis/, /^deep/, /^gen/, /^tops/, /^pulse/, /^streak/, /^range/,
       /^chat/, /^msg/, /^staff/, /^econ/, /^ct/, /^cp/,
+      /^nc-/,           // culorile numelui (aplicate dinamic, shop)
+      /^theme-/,        // paletele temelor de site (shop)
     ],
   },
 });

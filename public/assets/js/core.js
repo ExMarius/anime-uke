@@ -113,6 +113,16 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
  *  Cache-ul se invalideaza la orice mutatie (POST/PATCH/DELETE) si la 401,
  *  deci punctele/gold-ul din nav raman corecte dupa actiuni. */
 const ME_TTL_MS = 20 * 1000;
+/** Tema cumpărată din shop: o singură clasă pe <body>, CSS-ul face restul. */
+export function applySiteTheme(theme) {
+  try {
+    document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
+    if (theme && /^theme_[a-z]+$/.test(theme) && theme !== 'theme_standard') {
+      document.body.classList.add(`theme-${theme.slice(6)}`);
+    }
+  } catch { /* body indisponibil la momentul apelului — ignorăm */ }
+}
+
 export async function getSession(force = false) {
   if (sessionCache !== undefined && !force) return sessionCache;
   if (!force) {
@@ -122,6 +132,7 @@ export async function getSession(force = false) {
         const c = JSON.parse(raw);
         if (c && typeof c.t === 'number' && Date.now() - c.t < ME_TTL_MS) {
           sessionCache = c.user ?? null;
+          applySiteTheme(sessionCache?.site_theme || null);
           return sessionCache;
         }
       }

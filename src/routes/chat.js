@@ -50,6 +50,12 @@ export async function onRequest(context) {
     .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter')`)
     .bind(user.id)
     .all();
+  // Culoarea numelui (shop) vine din users.active_name_color, setata la
+  // conectare — la fel ca rank-urile, zero citiri per mesaj.
+  const meRow = await env.DB
+    .prepare('SELECT active_name_color FROM users WHERE id = ?')
+    .bind(user.id)
+    .first();
   const owned = new Set((items.results || []).map((r) => r.item_id));
 
   // Avatarul (URL, poate fi GIF animat) vine o data la connect, la fel ca
@@ -65,6 +71,7 @@ export async function onRequest(context) {
     rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
     flair: owned.has('flair_supporter') ? '💎' : '',
     name_gold: owned.has('name_gold') ? 1 : 0,
+    name_color: meRow?.active_name_color || '',
     avatar: prof?.avatar_url || '',
   }));
 

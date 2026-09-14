@@ -98,6 +98,7 @@ export class ChatDO {
       userId: user.id, username: user.username,
       rank_label: user.rank_label || '', rank_icon: user.rank_icon || '', staff_role: user.staff_role || '',
       flair: user.flair || '', name_gold: user.name_gold ? 1 : 0,
+      name_color: user.name_color || '',
       avatar: user.avatar || '',
     });
 
@@ -161,6 +162,7 @@ export class ChatDO {
       staff_role: att.staff_role || '',
       flair: att.flair || '',
       name_gold: att.name_gold ? 1 : 0,
+      name_color: att.name_color || '',
       avatar: att.avatar || '',
     };
 
@@ -211,7 +213,7 @@ export class ChatDO {
     if (this.history) return this.history.slice(-HISTORY_LIMIT);
     try {
       const res = await this.env.DB.prepare(
-        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, avatar
+        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar
          FROM chat_messages ORDER BY id DESC LIMIT ?`
       ).bind(HISTORY_LIMIT).all();
 
@@ -232,7 +234,7 @@ export class ChatDO {
 
     try {
       const stmt = this.env.DB.prepare(
-        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, avatar)
+        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
       // Ordinea bind-urilor TREBUIE sa fie identica cu ordinea coloanelor de
@@ -241,7 +243,7 @@ export class ChatDO {
       await this.env.DB.batch(batch.map((m) =>
         stmt.bind(m.user_id, m.username, m.message, m.created_at,
           m.rank_label || '', m.rank_icon || '', m.staff_role || '',
-          m.flair || '', m.name_gold ? 1 : 0, m.avatar || '')
+          m.flair || '', m.name_gold ? 1 : 0, m.name_color || '', m.avatar || '')
       ));
     } catch (e) {
       console.error('ChatDO flush esuat:', e?.message || e);

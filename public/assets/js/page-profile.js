@@ -106,6 +106,11 @@ function renderHead() {
   const nameNode = document.getElementById('p-username');
   nameNode.textContent = (data.flair ? data.flair + ' ' : '') + u.username;
   nameNode.classList.toggle('name--gold', !!data.name_gold);
+  // Culoarea numelui cumpărată din shop (câștigă peste „auriu").
+  nameNode.classList.remove(...[...nameNode.classList].filter((c) => c.startsWith('nc-')));
+  if (typeof data.name_color === 'string' && /^color_[a-z]+$/.test(data.name_color)) {
+    nameNode.classList.add(`nc-${data.name_color.slice(6)}`);
+  }
   document.title = `${u.username} • anime-uke`;
 
   // avatar: imagine daca exista, altfel initiala pe fond crimson

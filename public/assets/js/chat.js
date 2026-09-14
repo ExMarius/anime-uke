@@ -386,7 +386,10 @@ function sendMessage() {
  *  si stocate pe mesaj) — clientul nu le poate falsifica. */
 function nameEl(m) {
   const u = document.createElement('span');
-  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '');
+  // Culoarea numelui (shop). Validăm formatul — vine din DB-ul nostru, dar
+  // aplicăm classă doar pentru id-uri cu aspect de id.
+  const ncol = typeof m.name_color === 'string' && /^color_[a-z]+$/.test(m.name_color) ? m.name_color.slice(6) : '';
+  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '') + (ncol ? ` nc-${ncol}` : '');
   u.textContent = (m.flair ? m.flair + ' ' : '') + (m.username || 'Anon');
   return u;
 }

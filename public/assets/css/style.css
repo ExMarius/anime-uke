@@ -1707,3 +1707,86 @@ tr.row-click:hover .row-link { color: var(--accent-hi); }
   padding: .15rem 0;
 }
 .dup-hint__row:hover { color: var(--accent-hi); text-decoration: underline; }
+
+/* ===================== SHOP: culori nume + teme ===================== */
+/* Culorile numelui (chat + profil + previzualizare in shop). */
+.nc-green { color: #22c55e; }
+.nc-blue { color: #3b82f6; }
+.nc-purple { color: #a855f7; }
+.nc-orange { color: #f97316; }
+.nc-red { color: #ef4444; }
+.nc-pink { color: #ec4899; }
+.nc-cyan { color: #22d3ee; }
+.nc-teal { color: #14b8a6; }
+.nc-gold { color: #fbbf24; }
+.nc-lime { color: #a3e635; }
+.nc-magenta { color: #e879f9; }
+.nc-royal { color: #818cf8; }
+.nc-sky { color: #38bdf8; }
+.nc-violet { color: #8b5cf6; }
+.nc-imperator { color: #dc2626; }
+.nc-glow { text-shadow: 0 0 8px rgba(220, 38, 38, .65); }
+.nc-rainbow {
+  background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ef4444);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: ncrainbow 3.2s linear infinite;
+}
+@keyframes ncrainbow { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .nc-rainbow { animation: none; } }
+
+/* Gridurile din shop */
+.shop-section__title { margin: 2rem 0 .4rem; font-size: 1.5rem; }
+.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: .8rem; }
+.color-card { padding: .8rem .9rem; display: flex; flex-direction: column; gap: .6rem; }
+.color-card--active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.color-card__demo { font-size: .95rem; color: var(--dim); }
+.color-card__name { font-weight: 800; margin-left: .3rem; }
+.color-card__foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.color-card__price { font-weight: 800; font-variant-numeric: tabular-nums; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
+.theme-card { padding: .9rem; display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; }
+.theme-card--active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.theme-card__name { margin: 0; font-size: 1.05rem; }
+.theme-card__peek { background: none; border: none; color: var(--accent-hi); font: inherit; font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+.theme-card__peek:hover { color: var(--text); }
+
+/* ===================== TEME DE SITE (shop) ===================== */
+/* Fiecare tema rescrie variabilele globale: accent + fundaluri + suprafete. */
+body.theme-mizukage {
+  --bg: #060b14; --bg-2: #0a1220; --surface: #0e1826; --surface-2: #132234;
+  --surface-3: #182c42; --line: rgba(56, 189, 248, .18);
+  --accent: #38bdf8; --accent-hi: #7dd3fc; --accent-deep: #0369a1;
+  --accent-glow: rgba(56, 189, 248, .38); --accent-soft: rgba(56, 189, 248, .13);
+}
+body.theme-purple {
+  --bg: #0c0714; --bg-2: #120b1e; --surface: #180f26; --surface-2: #211531;
+  --surface-3: #2b1c3d; --line: rgba(168, 85, 247, .18);
+  --accent: #a855f7; --accent-hi: #c084fc; --accent-deep: #6b21a8;
+  --accent-glow: rgba(168, 85, 247, .38); --accent-soft: rgba(168, 85, 247, .13);
+}
+body.theme-green {
+  --bg: #060e09; --bg-2: #0a140d; --surface: #0e1a12; --surface-2: #132518;
+  --surface-3: #183020; --line: rgba(34, 197, 94, .18);
+  --accent: #22c55e; --accent-hi: #4ade80; --accent-deep: #15803d;
+  --accent-glow: rgba(34, 197, 94, .38); --accent-soft: rgba(34, 197, 94, .13);
+}
+body.theme-minimalist {
+  --bg: #0b0b0b; --bg-2: #101010; --surface: #161616; --surface-2: #1e1e1e;
+  --surface-3: #262626; --line: rgba(255, 255, 255, .12);
+  --accent: #e5e5e5; --accent-hi: #ffffff; --accent-deep: #a3a3a3;
+  --accent-glow: rgba(255, 255, 255, .25); --accent-soft: rgba(255, 255, 255, .08);
+}
+body.theme-storm {
+  --bg: #07090f; --bg-2: #0b0e16; --surface: #10131e; --surface-2: #161b2a;
+  --surface-3: #1d2436; --line: rgba(148, 163, 184, .2);
+  --accent: #94a3b8; --accent-hi: #cbd5e1; --accent-deep: #475569;
+  --accent-glow: rgba(148, 163, 184, .35); --accent-soft: rgba(148, 163, 184, .12);
+}
+body.theme-classic {
+  --bg: #0f0a05; --bg-2: #150f08; --surface: #1c1409; --surface-2: #261b0d;
+  --surface-3: #31230f; --line: rgba(234, 179, 8, .18);
+  --accent: #eab308; --accent-hi: #facc15; --accent-deep: #a16207;
+  --accent-glow: rgba(234, 179, 8, .35); --accent-soft: rgba(234, 179, 8, .12);
+}

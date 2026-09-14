@@ -1,24 +1,34 @@
 // GET /api/shop — catalogul + ce detine userul + gold, intr-o singura cerere.
 import { json } from '../../lib/http.js';
 import { requireUser } from '../../lib/session.js';
-import { SHOP_ITEMS, ownedItems } from '../../lib/shop.js';
+import { SHOP_ITEMS, NAME_COLORS, SITE_THEMES, ownedItems } from '../../lib/shop.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   const gate = await requireUser(request, env);
   if (gate.response) return gate.response;
 
-  const me = await env.DB.prepare('SELECT gold FROM users WHERE id = ?').bind(gate.user.id).first();
+  const me = await env.DB.prepare('SELECT gold, active_name_color, active_theme FROM users WHERE id = ?').bind(gate.user.id).first();
   const gold = me?.gold || 0;
   const owned = await ownedItems(env, gate.user.id);
+  const decorate = (i) => ({
+    ...i,
+    owned: (owned[i.id] || 0) > 0,
+    active: i.id === me?.active_name_color || i.id === me?.active_theme,
+    can_buy: gold >= i.price && !(owned[i.id] > 0),
+  });
 
   return json({
     gold,
+    active_name_color: me?.active_name_color || null,
+    active_theme: me?.active_theme || null,
     items: SHOP_ITEMS.map((i) => ({
       ...i,
       qty: owned[i.id] || 0,
       owned: !i.consumable && (owned[i.id] || 0) > 0,
       can_buy: gold >= i.price && (i.consumable || !(owned[i.id] > 0)),
     })),
+    colors: NAME_COLORS.map(decorate),
+    themes: SITE_THEMES.map(decorate),
   });
 }
