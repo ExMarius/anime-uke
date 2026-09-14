@@ -33,8 +33,13 @@
 
   <main class="container">
     <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
-    <a class="hban" id="hero-banner" href="#" hidden>
+    <a class="hban hban--loading" id="hero-banner" href="#">
       <div class="hban__bg" id="hero-bg" aria-hidden="true"></div>
+      <div class="hban__sk" aria-hidden="true">
+        <span class="sk sk-line sk-w30"></span>
+        <span class="sk sk-line sk-w55"></span>
+        <span class="sk sk-line sk-line--s"></span>
+      </div>
       <div class="hban__veil" aria-hidden="true"></div>
       <div class="hban__body">
         <span class="hban__tag" id="hero-tag"></span>
@@ -81,27 +86,38 @@
     </section>
 
     <!-- ============ TOPURI: saptamanal + voturi ============ -->
-    <section class="section tops" id="tops-section" hidden>
+    <section class="section tops" id="tops-section">
       <div class="tops__grid">
         <div class="box tops__col">
           <h2 class="section__title section__title--plain">🔥 Top săptămânal</h2>
           <p class="hint">Cele mai vizionate serii în ultimele 7 zile.</p>
-          <ol class="toplist" id="top-weekly"></ol>
+          <ol class="toplist" id="top-weekly">
+            <li class="sk sk-line"></li><li class="sk sk-line"></li>
+            <li class="sk sk-line"></li><li class="sk sk-line sk-line--s"></li>
+          </ol>
         </div>
         <div class="box tops__col">
           <h2 class="section__title section__title--plain">⭐ Clasament voturi</h2>
           <p class="hint">Cele mai bine notate serii de comunitate.</p>
-          <ol class="toplist" id="top-rated"></ol>
+          <ol class="toplist" id="top-rated">
+            <li class="sk sk-line"></li><li class="sk sk-line"></li>
+            <li class="sk sk-line"></li><li class="sk sk-line sk-line--s"></li>
+          </ol>
         </div>
       </div>
     </section>
 
     <!-- Ultimele episoade adăugate (public — standard pe site-urile de anime) -->
-    <section class="section" id="recent-section" hidden>
+    <section class="section" id="recent-section">
       <div class="section__head">
         <h2 class="section__title">Ultimele episoade</h2>
       </div>
-      <div class="recent-row" id="recent-row"></div>
+      <div class="recent-row" id="recent-row">
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
+      </div>
     </section>
 
     <section class="section" id="serii">
@@ -127,7 +143,16 @@
         </select>
         <button class="btn btn--ghost btn--sm" type="button" id="filter-reset" hidden>Șterge filtrele ✕</button>
       </div>
-      <div id="series-grid" class="grid" aria-live="polite"></div>
+      <div id="series-grid" class="grid" aria-live="polite">
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
+      </div>
       <!--
         „Incarca mai multe" in loc de paginare numerotata: ca sa stim numarul
         total de pagini ar trebui un COUNT(*) pe tot tabelul la fiecare

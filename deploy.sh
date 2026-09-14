@@ -100,11 +100,30 @@ sed -i -E 's#(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?#
   || die "versionarea assetelor a esuat (sed)"
 grep -q "?v=${BUILD_V}" public/index.html || die "index.html nu a primit ?v=${BUILD_V}"
 ok "assete versionate ?v=${BUILD_V}"
+
+# Minificare CSS/JS (Lighthouse: „Comprimă codul" + CSS nefolosit + TBT).
+# Esbuild din node_modules; daca lipseste, continuam neminificat (fallback
+# sigur — deploy-ul nu trebuie sa pice din pricina asta).
+ESB="$PWD/node_modules/.bin/esbuild"
+if [ -x "$ESB" ]; then
+  MIN=0
+  while IFS= read -r f; do
+    if "$ESB" --minify "$f" > "$f.min" 2>/dev/null && [ -s "$f.min" ]; then
+      mv "$f.min" "$f"; MIN=$((MIN+1))
+    else
+      rm -f "$f.min"
+    fi
+  done < <(find public/assets/js public/assets/css -type f \( -name '*.js' -o -name '*.css' \))
+  ok "assete minificate: $MIN fisiere"
+else
+  ok "esbuild lipseste — sar minificarea (fallback)"
+fi
+
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
-git checkout -- public/*.html public/admin/*.html 2>/dev/null || true
+git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------
 step "5/5  JWT_SECRET"

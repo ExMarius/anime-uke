@@ -226,7 +226,7 @@ async function loadRecent() {
 
   const res = await api('/recent');
   const items = res.ok ? res.data?.items || [] : [];
-  if (!items.length) return;
+  if (!items.length) { section.hidden = true; return; }
 
   row.innerHTML = '';
   for (const it of items) {
@@ -428,13 +428,20 @@ async function renderHero(salt = spotSalt()) {
   bg.appendChild(img);
 
   box.hidden = false;
+  box.classList.remove('hban--loading');   // la revedere, skeleton
   box.classList.remove('hban--in');
   void box.offsetWidth;
   box.classList.add('hban--in');
 }
 
 async function initHero() {
-  await renderHero();
+  try {
+    await renderHero();
+  } catch {
+    // bannerul e decorativ: la eroare il ascundem cu totul (nu lasam
+    // skeletonul afisat in eternitate peste pagina)
+    document.getElementById('hero-banner')?.setAttribute('hidden', '');
+  }
   document.getElementById('hero-shuffle')?.addEventListener('click', async (ev) => {
     // butonul sta IN anchorul-banner: nu vrem sa si navigheze la shuffle
     ev.preventDefault();
@@ -452,6 +459,12 @@ async function renderContinue() {
   const section = document.getElementById('continue-section');
   const row = document.getElementById('continue-row');
   if (!section || !row) return;
+
+  // Doar utilizatorii logati au progres: pentru anonimi nu facem deloc
+  // cererea (401-ul de altadata aparea ca eroare in consola si strica
+  // auditul „Cele mai bune practici").
+  const me = await getSession().catch(() => null);
+  if (!me) { section.hidden = true; return; }
 
   const res = await api('/continue');
   if (!res.ok || !res.data?.items?.length) { section.hidden = true; return; }
@@ -503,10 +516,10 @@ skeletons(10);
 async function loadTops() {
   const sec = document.getElementById('tops-section');
   const res = await api('/top');
-  if (!res.ok || !sec) return;
+  if (!res.ok || !sec) { if (sec) sec.hidden = true; return; }
   const week = res.data.weekly || [];
   const rated = res.data.rated || [];
-  if (!week.length && !rated.length) return;
+  if (!week.length && !rated.length) { sec.hidden = true; return; }
 
   const fill = (id, rows, meta) => {
     const ol = document.getElementById(id);

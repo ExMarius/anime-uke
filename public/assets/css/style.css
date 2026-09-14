@@ -29,7 +29,7 @@
 
   --text: #f5eff1;
   --dim:  #a2939a;
-  --dim-2:#6f6269;
+  --dim-2:#8b7e85;
 
   --ok:   #34d399;
   --warn: #fbbf24;
@@ -1143,6 +1143,17 @@ a.quick__item:hover {
   opacity: 0; transform: translateY(-8px);
 }
 .hban--in { animation: hbanIn .7s cubic-bezier(.2,.8,.3,1) forwards; }
+/* Starea de incarcare a bannerului: skeletonul rezerva inaltimea din
+   start (clamp-ul de min-height al .hban face restul), asa ca atunci cand
+   continutul real soseste nimic nu mai „sare” pe pagina (CLS 0.48 -> ~0). */
+.hban__sk { display: none; }
+.hban--loading .hban__sk {
+  display: flex; flex-direction: column; justify-content: flex-end;
+  gap: .4rem; padding: 1.6rem 1.9rem; flex: 1; position: relative; z-index: 1;
+}
+.hban--loading .hban__sk .sk-line { height: 18px; }
+.hban--loading .hban__tag, .hban--loading .hban__title,
+.hban--loading .hban__sub, .hban--loading .hban__cta { display: none; }
 @keyframes hbanIn { to { opacity: 1; transform: none; } }
 
 .hban__bg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
@@ -1778,3 +1789,23 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 }
 .site-foot p { margin: 0 0 .35rem; }
 .site-foot b { color: var(--text); }
+
+/* Contorul live din footer: latime minima ca schimbarea valorii sa nu
+   provoace layout shift pe randul de subsol. */
+#footer-online { display: inline-block; min-width: 2.5ch; text-align: center; }
+
+/* ---- clase utilitare CSP-safe (inlocuiesc atributele style="" care erau
+   blocate de style-src 'self' si generau erori in consola) ---- */
+.sk-w30 { width: 30%; }
+.sk-w55 { width: 55%; }
+.pt-1   { padding-top: 1rem; }
+.pb-3   { padding-bottom: 3rem; }
+.badges-row { display: flex; gap: .45rem; flex-wrap: wrap; }
+.title-responsive { font-size: clamp(1.9rem, 5vw, 3rem); }
+.title-1-5 { font-size: 1.5rem; }
+.title-1-05 { font-size: 1.05rem; }
+.flex-1-min200 { flex: 1; min-width: 200px; }
+
+.hero-pad-admin { padding: 2.2rem 0 .6rem; }
+.title-admin { font-size: clamp(1.9rem, 4.6vw, 2.8rem); }
+.mt-1 { margin-top: 1rem; }

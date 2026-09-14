@@ -1,3 +1,6 @@
+/*
+  Strict-Transport-Security: max-age=31536000
+
 # JS/CSS: mereu proaspete — browserul revalideaza cu ETag (304 ieftin),
 # deci dupa fiecare deploy utilizatorii primesc codul nou fara hard-refresh.
 /assets/*.js
