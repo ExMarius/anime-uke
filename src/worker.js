@@ -354,6 +354,21 @@ async function serveStatic(request, env) {
   try {
     const res = await env.ASSETS.fetch(assetRequest);
 
+    // Negociere WebP: daca exista o versiune .webp langa jpg/png-ul cerut
+    // (generata la deploy), o servim pe ea — ~40% mai putini bytes, aceeasi
+    // imagine. Doar pentru browsere care anunta image/webp (toate moderne).
+    if (res.status === 200) {
+      const m = /^\/(covers|assets\/img)\/.+\.(jpg|jpeg|png)$/i.exec(path);
+      const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
+      if (m && acceptsWebp) {
+        const webpUrl = new URL(path.replace(/\.(jpg|jpeg|png)$/i, '.webp'), url.origin);
+        const webpRes = await env.ASSETS.fetch(new Request(webpUrl.toString(), { method: 'GET', headers: request.headers }));
+        if (webpRes.status === 200 && (webpRes.headers.get('content-type') || '').includes('webp')) {
+          return webpRes;
+        }
+      }
+    }
+
     if (assetPath && res.status >= 300 && res.status < 400) {
       const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
       return followed || jsonResponse({ error: 'Not found' }, 404);

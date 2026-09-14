@@ -118,6 +118,20 @@ fi
 # sigur — deploy-ul nu trebuie sa pice din pricina asta).
 ESB="$PWD/node_modules/.bin/esbuild"
 if [ -x "$ESB" ]; then
+  # (a) Bundle: fiecare pagina primeste UN SINGUR fisier JS (core+chat+pagina
+  #     inline) — importurile relative dispar, deci TOT js-ul referentiat din
+  #     HTML ajunge versionat cu ?v= si poate fi cache 1 an immutable.
+  BUN=0
+  for entry in public/assets/js/page-*.js; do
+    if "$ESB" --bundle --minify --format=esm --outfile="$entry.b" "$entry" >/dev/null 2>&1 && [ -s "$entry.b" ]; then
+      mv "$entry.b" "$entry"; BUN=$((BUN+1))
+    else
+      rm -f "$entry.b"
+    fi
+  done
+  ok "pagini bundle-uite: $BUN"
+
+  # (b) Minificare restul (css + js rămase ne-bundle-uite).
   MIN=0
   while IFS= read -r f; do
     if "$ESB" --minify "$f" > "$f.min" 2>/dev/null && [ -s "$f.min" ]; then
@@ -125,16 +139,30 @@ if [ -x "$ESB" ]; then
     else
       rm -f "$f.min"
     fi
-  done < <(find public/assets/js public/assets/css -type f \( -name '*.js' -o -name '*.css' \))
+  done < <(find public/assets/css -type f -name '*.css'; find public/assets/js -type f -name '*.js' ! -name 'page-*.js')
   ok "assete minificate: $MIN fisiere"
 else
   ok "esbuild lipseste — sar minificarea (fallback)"
+fi
+
+# (c) Frați WebP pentru imagini (workerul le negociaza automat, vezi
+#     serveStatic). Imaginile original rămân — e ce arată URL-urile din DB.
+WEBP=0
+if command -v convert >/dev/null 2>&1; then
+  for f in public/covers/*.jpg public/assets/img/*.jpg; do
+    [ -e "$f" ] || continue
+    if convert "$f" -strip -quality 75 "${f%.jpg}.webp" 2>/dev/null && [ -s "${f%.jpg}.webp" ]; then
+      WEBP=$((WEBP+1))
+    fi
+  done
+  ok "variante WebP generate: $WEBP"
 fi
 
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
+find public/covers public/assets/img -name '*.webp' -delete 2>/dev/null || true
 git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------
