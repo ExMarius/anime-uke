@@ -6,6 +6,7 @@
 //   sticker-<id>    stickere Tenor (profil)
 //   toast-<tip>     tipuri de notificare
 //   pill-pos--ok    variante compuse în JS
+//   ubadge--<rol>   badge-urile de staff (admin/mod/staff/helper), compuse în JS
 //   sk-*            skeletonuri; hban* bannerul hero; rv reveal-la-scroll
 //   is-*/has-*      stări toggled cu classList
 import { PurgeCSS } from 'purgecss';
@@ -25,6 +26,7 @@ const out = await new PurgeCSS().purge({
       /^mission/, /^is-/, /^has-/, /^rv$/, /^rv-/, /^ep-/, /^src-/,
       /^epis/, /^deep/, /^gen/, /^tops/, /^pulse/, /^streak/, /^range/,
       /^chat/, /^msg/, /^staff/, /^econ/, /^ct/, /^cp/,
+      /^ubadge/,        // badge-urile de staff: 'ubadge ubadge--' + cls (core.js)
       /^nc-/,           // culorile numelui (aplicate dinamic, shop)
       /^theme-/,        // paletele temelor de site (shop)
     ],
