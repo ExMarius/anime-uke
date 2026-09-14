@@ -1,7 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 7b1e0bf
+comanda: cf-relay/cmd.sh @ 862cc19
 ────────────────────────────────────
-── deploy fix secret gold ──
+── deploy top saptamanal premiat ──
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -9,22 +9,27 @@ comanda: cf-relay/cmd.sh @ 7b1e0bf
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m deja aplicata
+    [0;32m✓[0m migrari aplicate
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.83)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7b1e0bf
+    [0;32m✓[0m assete versionate ?v=862cc19
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://e5d51155.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://60e01f7a.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-── chest GET (anonim=401, doar verificam ca workerul e nou) ──
-chests: 401
+── migrarea 0021 ──
+── clasamentul (401 anonim = OK; codul servit e testat mai jos) ──
+leaderboard: 401
+lb-prize în UI: 1
+premii în UI: 0
+alltime secundar: 4
+── migrarile aplicate (din deploy output) ──
