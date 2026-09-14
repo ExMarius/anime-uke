@@ -1,5 +1,6 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 56cc7b4
+comanda: cf-relay/cmd.sh @ 33b27cf
 ────────────────────────────────────
-[https://anime-uke.pages.dev] profile.html: code=302 faction-box=0 temadrop=0
-[https://9d5196e7.anime-uke.pages.dev] profile.html: code=302 faction-box=0 temadrop=0
+client facțiuni (deployment final): 1
+client chat lider: 3
+api factions: 401
