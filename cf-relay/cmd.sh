@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "── deploy final facțiuni ──"
-./deploy.sh
-echo "exit deploy: $?"
-echo "── profil servit: ordinea secțiunilor ──"
-D=$(curl -s "https://anime-uke.pages.dev/" -o /dev/null -w "%{redirect_url}")
-HTML=$(curl -s "https://anime-uke.pages.dev/profil")
-echo "faction-box in HTML: $(echo "$HTML" | grep -o 'id="faction-box"' | wc -l)"
-echo "clasament inainte de facțiune: $(echo "$HTML" | awk '/Clasament saptamanal|Clasament săptămânal/{c=1} /faction-box/{if(c)print "DA"; exit}')"
-echo "── API ──"
-curl -s -o /dev/null -w "factions anon: %{http_code}\n" "https://anime-uke.pages.dev/api/factions"
+HTML=$(curl -s "https://anime-uke.pages.dev/profile")
+echo "faction-box in /profile: $(echo "$HTML" | grep -o 'id="faction-box"' | wc -l)"
+echo "tema-grades dropdown (trebuie 0): $(echo "$HTML" | grep -o 'econ-theme-wrap' | wc -l)"
+echo "ordine: clasament -> facțiune: $(echo "$HTML" | grep -o 'Clasament săptămânal\|Facțiunea mea' | tr '\n' ' ')"
