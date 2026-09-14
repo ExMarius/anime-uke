@@ -320,7 +320,7 @@ async function load() {
 // Serverul serveste dintr-un cache de 15 minute, deci lista e „proaspata
 // destul" si ieftina oricand.
 // ---------------------------------------------------------------------
-const LB_MEDALS = ['🥇', '🥈', ''];
+const LB_MEDALS = ['🥇', '🥈', '🥉'];
 
 async function loadLeaderboard() {
   const list = document.getElementById('lb-list');
@@ -330,64 +330,105 @@ async function loadLeaderboard() {
   const res = await api('/leaderboard');
   if (!res.ok) { list.closest('.box').hidden = true; return; }
 
-  const { top, viewer } = res.data;
+  const { weekly, alltime, viewer, prize } = res.data;
+
+  // Antetul cu miza: ce castigi si pana cand.
+  const head = document.getElementById('lb-prize');
+  if (head) {
+    head.innerHTML = '';
+    const line = document.createElement('div');
+    line.className = 'lb__prize-line';
+    line.innerHTML = '';
+    const t = document.createElement('span');
+    t.innerHTML = '🏆 TOP-ul <b>săptămânii</b> — duminică se premiază: <b>🥇 500 🥈 300 🥉 200 🪙 gold</b>';
+    line.appendChild(t);
+    head.appendChild(line);
+    const sub = document.createElement('div');
+    sub.className = 'hint';
+    sub.textContent = `Punctele (+10 per episod) te clasează aici. Săptămâna a început ${prize?.week_start || ''} (UTC).`;
+    head.appendChild(sub);
+  }
+
   list.innerHTML = '';
 
-  if (!top.length) {
-    note.textContent = 'Încă nimeni nu a strâns puncte. Fii primul!';
+  if (!weekly.length) {
+    note.textContent = `Încă nimeni nu a strâns puncte săptămâna asta${viewer ? ` — ai ${viewer.week_points || 0}. Fii primul din top!` : ''}.`;
+    const at = document.getElementById('lb-alltime');
+    if (at) at.hidden = false;
+    const atList = document.getElementById('lb-alltime-list');
+    if (atList) {
+      atList.innerHTML = '';
+      for (let i = 0; i < alltime.length; i++) atList.appendChild(lbRow(alltime[i], i, viewer, false));
+    }
     return;
   }
 
-  for (let i = 0; i < top.length; i++) {
-    const row = top[i];
-    const li = document.createElement('li');
-    li.className = 'lb__row' + (viewer && row.username === viewer.username ? ' lb__row--me' : '');
-
-    const rank = document.createElement('span');
-    rank.className = 'lb__rank';
-    rank.textContent = LB_MEDALS[i] || `#${i + 1}`;
-    li.appendChild(rank);
-
-    // Avatarul din profil (PNG/JPG/WEBP/GIF animat); picat -> initiala.
-    if (row.avatar) {
-      const av = document.createElement('span');
-      av.className = 'lb__avatar';
-      const img = document.createElement('img');
-      img.src = row.avatar;
-      img.alt = '';
-      img.loading = 'lazy';
-      img.setAttribute('referrerpolicy', 'no-referrer');
-      img.addEventListener('error', () => {
-        const fb = document.createElement('span');
-        fb.className = 'lb__avatar-fb';
-        fb.textContent = (row.username || 'A')[0].toUpperCase();
-        img.replaceWith(fb);
-      }, { once: true });
-      li.appendChild(av);
-    }
-
-    const name = document.createElement('span');
-    name.className = 'lb__name';
-    name.textContent = row.username;
-    li.appendChild(name);
-    for (const b of [staffBadge(row.staff), rankChip(row.rank)].filter(Boolean)) li.appendChild(b);
-
-    const week = document.createElement('span');
-    week.className = 'lb__week';
-    week.textContent = row.week ? `${row.week} ep. săptămâna asta` : '';
-    li.appendChild(week);
-
-    const pts = document.createElement('span');
-    pts.className = 'lb__pts';
-    pts.textContent = `${Number(row.points).toLocaleString('ro-RO')} pct`;
-    li.appendChild(pts);
-
-    list.appendChild(li);
+  for (let i = 0; i < weekly.length; i++) {
+    list.appendChild(lbRow(weekly[i], i, viewer, true));
   }
 
-  note.textContent = viewer && !viewer.in_top
-    ? `Tu ai ${Number(viewer.points).toLocaleString('ro-RO')} puncte — în afara top 20. Se recalculează la 15 minute.`
-    : 'Se recalculează la 15 minute.';
+  // Prestigiul de tot timpul, mai jos, pliat
+  const at = document.getElementById('lb-alltime');
+  const atList = document.getElementById('lb-alltime-list');
+  if (at && atList) {
+    at.hidden = false;
+    atList.innerHTML = '';
+    for (let i = 0; i < alltime.length; i++) atList.appendChild(lbRow(alltime[i], i, viewer, false));
+  }
+}
+
+function lbRow(row, i, viewer, weeklyMode) {
+  const li = document.createElement('li');
+  li.className = 'lb__row' + (viewer && row.username === viewer.username ? ' lb__row--me' : '');
+
+  const rank = document.createElement('span');
+  rank.className = 'lb__rank';
+  rank.textContent = LB_MEDALS[i] || `#${i + 1}`;
+  li.appendChild(rank);
+
+  if (row.avatar) {
+    const av = document.createElement('span');
+    av.className = 'lb__avatar';
+    const img = document.createElement('img');
+    img.src = row.avatar;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.setAttribute('referrerpolicy', 'no-referrer');
+    img.addEventListener('error', () => {
+      const fb = document.createElement('span');
+      fb.className = 'lb__avatar-fb';
+      fb.textContent = (row.username || 'A')[0].toUpperCase();
+      img.replaceWith(fb);
+    }, { once: true });
+    li.appendChild(av);
+  }
+
+  const main = document.createElement('span');
+  main.className = 'lb__main';
+  const name = document.createElement('b');
+  name.textContent = row.username;
+  main.append(name, ` ${row.staff ? (row.staff === 'Admin' ? '🛡️' : '🛠️') : ''}${row.rank?.icon || ''}`);
+  li.appendChild(main);
+
+  const val = document.createElement('span');
+  val.className = 'lb__pts';
+  if (weeklyMode) {
+    val.textContent = `${(row.pts || 0).toLocaleString('ro-RO')} pct`;
+    val.title = `${row.eps || 0} episoade vizionate săptămâna asta${row.prize ? ` · la final: +${row.prize} 🪙` : ''}`;
+  } else {
+    val.textContent = `${(row.points || 0).toLocaleString('ro-RO')} pct`;
+    val.title = 'Total de tot timpul';
+  }
+  li.appendChild(val);
+
+  if (weeklyMode && row.prize) {
+    const pz = document.createElement('span');
+    pz.className = 'lb__gold';
+    pz.textContent = `+${row.prize} 🪙`;
+    pz.title = `Premiul locului ${i + 1} la finalul săptămânii`;
+    li.appendChild(pz);
+  }
+  return li;
 }
 
 // ---------------------------------------------------------------------

@@ -235,7 +235,7 @@ export async function renderNav(active = '') {
     const points = document.createElement('span');
     points.className = 'nav__points';
     points.textContent = `★ ${user.points}`;
-    points.title = 'Puncte de CLASAMENT: +10 per episod vizionat (după 15 min). Nu se cheltuie.';
+    points.title = 'Puncte: +10 per episod vizionat. Te clasează în TOP-ul SĂPTĂMÂNAL — duminică top 3 primește 500/300/200 gold.';
     links.appendChild(points);
 
     // Economie: nivelul si gold-ul vin deja in sesiune — chipuri gratuite.

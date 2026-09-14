@@ -1794,3 +1794,12 @@ body.theme-classic {
 /* Legenda monedelor (profil) — un rand discret care explica cele 3 valori */
 .econ__legend { font-size: .82rem; line-height: 1.6; margin: 0 0 1rem; }
 .econ__legend b { color: var(--text); }
+
+/* Clasament saptamanal: miza afisata + premiile de gold pe podium */
+.lb__prize { margin-bottom: .6rem; }
+.lb__prize-line { font-size: .95rem; }
+.lb__row .lb__gold {
+  margin-left: .45rem; font-size: .78rem; font-weight: 800;
+  color: var(--warn); white-space: nowrap;
+}
+.lb--muted { opacity: .75; }
