@@ -40,6 +40,10 @@ export const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
+  // CORP: alte origini nu ne pot încărca resursele în <img>/<script>/<iframe>.
+  // `same-origin` e strict și sigur aici: nu servim nimic embed-abil către terți
+  // (imaginile de coperți vin de pe CDN-urile lor, nu de la noi).
+  'Cross-Origin-Resource-Policy': 'same-origin',
 };
 
 export function json(data, { status = 200, headers = {} } = {}) {

@@ -71,7 +71,7 @@ async function main() {
   // 1. Pagini publice + SEO on-page
   // -------------------------------------------------------------------
   const S1 = '1. Pagini + SEO';
-  const publicPages = ['/', '/series', '/login', '/register'];
+  const publicPages = ['/', '/login', '/register'];
   const home = await req('/');
   if (home.error) fail(S1, `site-ul nu răspunde: ${home.error}`);
   expect(S1, home.status === 200, `/ → 200 (${home.ms} ms)`, `/ → ${home.status} (așteptat 200)`);
@@ -89,9 +89,20 @@ async function main() {
     expect(S1, title.length >= 10 && title.length <= 70, `${p} title are lungime sănătoasă (${title.length})`, `${p} title prea scurt/lung: ${title.length} car.`, 'WARN');
     expect(S1, descLen >= 70, `${p} meta description ${descLen} car.`, `${p} meta description ${descLen} car. (recomandat ≥ 70)`, 'WARN');
     expect(S1, /rel=["']canonical["']/.test(canon), `${p} are canonical`, `${p} NU are canonical`, 'WARN');
-    expect(S1, ogCount >= 3, `${p} are ${ogCount} taguri og:*`, `${p} are doar ${ogCount} taguri og:*`, 'WARN');
+    const noindex = /name=["']robots["'][^>]*noindex/i.test(r.text);
+    if (noindex) {
+      info(S1, `${p} e marcat noindex (pagină utilitară) — og:* nu sunt necesare`);
+    } else {
+      expect(S1, ogCount >= 3, `${p} are ${ogCount} taguri og:*`, `${p} are doar ${ogCount} taguri og:*`, 'WARN');
+    }
     expect(S1, /<html[^>]+lang=["']ro/i.test(r.text), `${p} are lang="ro"`, `${p} NU are lang="ro"`, 'WARN');
     expect(S1, unversioned === 0, `${p} are toate assetele versionate (?v=)`, `${p} are ${unversioned} assete fără ?v= (risc de cache vechi)`, 'WARN');
+  }
+
+  // /series fără id e pagină moartă (JS-ul trimitea pe /): trebuie 301 spre catalog.
+  for (const p of ['/series', '/series/']) {
+    const r = await req(p);
+    expect(S1, r.status === 301 && (r.headers.location || '') === '/', `${p} → 301 către /`, `${p} → ${r.status} ${r.headers.location || ''} (așteptat 301 → /)`, 'FAIL');
   }
 
   // Seriile reale: le luăm din API-ul public, apoi verificăm SSR-ul pe URL-urile pretty.
@@ -166,6 +177,8 @@ async function main() {
   expect(S4, urls.length >= 2, `sitemap are ${urls.length} URL-uri`, `sitemap are doar ${urls.length} URL-uri`, 'WARN');
   expect(S4, urls.every((u) => u.startsWith(BASE)), 'toate URL-urile din sitemap folosesc originea canonică', `sitemap conține alte origini: ${urls.filter((u) => !u.startsWith(BASE)).slice(0, 3).join(' ')}`, 'WARN');
   expect(S4, urls.length === new Set(urls).size, 'sitemap fără duplicate', `sitemap are duplicate (${urls.length} vs ${new Set(urls).size} unice)`, 'WARN');
+  expect(S4, !urls.some((u) => u.replace(/\/$/, '').endsWith('/series')),
+    'sitemap nu conține /series (ruta face 301 spre /)', `sitemap conține /series, care face 301 → / (semnal de calitate slabă): ${urls.join(' ')}`, 'FAIL');
   info(S4, `sitemap: ${urls.length} URL-uri · primele 3: ${urls.slice(0, 3).join(' ')}`);
   expect(S4, llms.status === 200 && llms.text.length > 50, `llms.txt → 200 (${llms.text.length} car.)`, `llms.txt → ${llms.status}`, 'WARN');
   const spec = await req('/speculationrules.json');
@@ -354,9 +367,15 @@ async function main() {
   expect(S11, chatCross.status !== 101, 'chat-ul nu acceptă upgrade de pe altă origine', 'chat-ul a acceptat upgrade cross-origin (101)', 'FAIL');
   const favicon = await req('/favicon.ico');
   expect(S11, favicon.status === 200 || favicon.status === 404, `/favicon.ico → ${favicon.status}`, `/favicon.ico → ${favicon.status}`, 'WARN');
+  for (const p of ['/login', '/register']) {
+    const r = await req(p);
+    expect(S11, /name=["']robots["'][^>]*noindex/i.test(r.text), `${p} are noindex (pagină utilitară)`, `${p} NU are noindex`, 'WARN');
+  }
   const missingSerie = await req('/serie/99999999');
   const missingEp = await req('/episod/99999999');
   expect(S11, missingSerie.status === 404, '/serie/99999999 → 404', `/serie inexistentă → ${missingSerie.status} (soft 404: Google indexează o pagină goală, crawlerul pierde buget)`, 'FAIL');
+  expect(S11, /noindex/i.test(missingSerie.text) && /noindex/i.test(missingSerie.headers['x-robots-tag'] || ''),
+    '404-ul de serie are noindex (meta + X-Robots-Tag)', `404-ul de serie n-are noindex (meta/X-Robots-Tag: ${missingSerie.headers['x-robots-tag'] || '—'})`, 'WARN');
   expect(S11, missingEp.status === 404, '/episod/99999999 → 404', `/episod inexistent → ${missingEp.status} (soft 404)`, 'FAIL');
   const trailingSlash = await req('/series/');
   info(S11, `/series/ → ${trailingSlash.status} ${trailingSlash.headers.location || ''}`);
@@ -389,7 +408,7 @@ async function main() {
   console.log('  Auditul rulează fără credențiale, deci NU probează: fluxul de login real,');
   console.log('  drepturile helper/staff/moderator, cumpărăturile din shop, cuferele, misiunile,');
   console.log('  alegerea de facțiune, comentariile/review-urile ca user, panoul admin, chat-ul autentificat.');
-  console.log('  Acestea sunt acoperite local de tests/e2e.mjs (455) + dom-smoke (147) + caps (13).');
+  console.log('  Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).');
 
   console.log(`\n════════════ TOTAL ════════════\n  ✅ ${counts.OK}   🟡 ${counts.WARN}   🔴 ${counts.FAIL}   ℹ️ ${counts.INFO}`);
   if (counts.FAIL > 0) process.exitCode = 1;
