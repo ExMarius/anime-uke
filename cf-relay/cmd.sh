@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
-D="https://7256ba3c.anime-uke.pages.dev"
-echo "── direct pe deployment-ul 7256ba3c (fără cache) ──"
-echo "/ -> $(curl -s -o /dev/null -w '%{http_code}' $D/)"
-echo "/serie/1014 -> $(curl -s -o /dev/null -w '%{http_code}' $D/serie/1014)"
-echo "── sitemap pe deployment ──"
-curl -s "$D/sitemap.xml" | head -8
-echo "── meta pe /episode (deployment) ──"
-curl -s "$D/episode" | grep -c 'google-site-verification'
+echo "── stare finală alias public ──"
+for p in "" series episode login register; do
+  m=$(curl -s "https://anime-uke.pages.dev/$p" | grep -c 'google-site-verification')
+  echo "meta GSC pe /$p: $m"
+done
+echo "sitemap pe alias:"
+curl -s "https://anime-uke.pages.dev/sitemap.xml" | grep -c "serie/1014"
+echo "/ -> $(curl -s -o /dev/null -w '%{http_code}' https://anime-uke.pages.dev/)"
