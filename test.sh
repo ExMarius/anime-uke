@@ -22,18 +22,60 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Ucide intreg subarborele unui PID (dev.sh -> node wrangler -> workerd).
+# Singurul kill pe PID lasa orfani: node respawn-uiasca workerd, iar
+# workerd ramane sa tina 8788 — simptome: „no such table", DO-uri moarte.
+kill_tree() {
+  local root="$1"
+  [ -z "$root" ] && return 0
+  local all children next c
+  all="$root"
+  children="$(pgrep -P "$root" 2>/dev/null || true)"
+  while [ -n "${children// /}" ]; do
+    all="$all $children"
+    next=""
+    for c in $children; do next="$next $(pgrep -P "$c" 2>/dev/null || true)"; done
+    children="$(echo $next | xargs)"
+  done
+  # shellcheck disable=SC2086
+  kill -9 $all 2>/dev/null || true
+}
+
+# Elibereaza portul testelor: ucide orice wrangler/workerd ramas in urma
+# run-urilor anterioare (supervizorul node respawn-uiasca workerd daca
+# ucizi doar workerd, de aceea le oprim pe toate).
+free_port() {
+  local i
+  # In script e sigor sa folosim literale: cmdline-ul suitei e „bash ./test.sh",
+  # textul pattern-urilor NU apare in el. (Inline prin bash -c s-ar auto-ucide!)
+  # Ordinea e critica: intai supervizorii node wrangler (ei respawn-uiesc
+  # workerd), apoi workerd; repetam pana portul e efectiv liber.
+  for i in 1 2 3 4 5 6 7 8; do
+    if ! ss -tln 2>/dev/null | grep -q ":$PORT "; then return 0; fi
+    pkill -9 -f 'wrangler-dist/cli.js' 2>/dev/null || true
+    sleep 1
+    pkill -9 -f 'workerd serve' 2>/dev/null || true
+    sleep 1
+  done
+  if ss -tln 2>/dev/null | grep -q ":$PORT "; then
+    echo "! portul $PORT a ramas ocupat — renunt, ca sa nu testez un server mort" >&2
+    return 1
+  fi
+}
+
 start_server() {
   # $@ = variabile de mediu pentru dev.sh (ex. LIMIT_USERS=3) — `env` le
   # seteaza in procesul copil, ca wrangler sa le vada ca bindinguri.
+  free_port
   echo "── pornesc dev.sh $* ──"
   env "$@" ./dev.sh > "$LOG" 2>&1 &
   DEV_PID=$!
   for _ in $(seq 1 90); do
-    grep -q "Ready on" "$LOG" 2>/dev/null && break
+    grep -qE "Ready on|updated and ready" "$LOG" 2>/dev/null && break
     kill -0 "$DEV_PID" 2>/dev/null || { echo "dev.sh a murit:"; tail -20 "$LOG"; exit 1; }
     sleep 1
   done
-  grep -q "Ready on" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG"; exit 1; }
+  grep -qE "Ready on|updated and ready" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG"; exit 1; }
 }
 
 stop_server() {

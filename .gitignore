@@ -25,3 +25,4 @@ worker-do/.wrangler/
 
 # Secrete locale (token GitHub / Cloudflare) — in afara repo-ului oricum
 .secrets/
+wrangler.toml.bak

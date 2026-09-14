@@ -39,23 +39,27 @@ if [ ! -f .dev.vars ]; then
   echo "  (am generat .dev.vars cu JWT_SECRET random pentru dezvoltare)"
 fi
 
-cp wrangler.local.toml wrangler.toml
-echo "  (folosesc configuratia locala cu DO inline)"
-
+# IMPORTANT: migrarile ruleaza INAINTE de a exista wrangler.toml in folder.
+# Simplul fapt ca un wrangler.toml de tip Pages e prezent in cwd baga
+# `d1 migrations apply` pe un cod de runtime cu bug (_cf_ALARM), chiar si
+# cand ii dam --config cu un fisier minimal. Fara el, migrarile curg OK.
 PORT="${PORT:-8788}"
 W="npx wrangler"
 [ -x ./node_modules/.bin/wrangler ] && W="./node_modules/.bin/wrangler"
 
-# Aplicam migrațiile inainte de pornire. Fara pasul asta, primul `dev.sh`
-# pe un workspace proaspat (sau dupa `rm -rf .wrangler/state`) ridica
-# serverul cu o baza goala si fiecare request pica cu „no such table: users".
-# E idempotent: wrangler tine evidenta migrațiilor aplicate in d1_migrations.
 if [ -z "${SKIP_MIGRATIONS:-}" ]; then
   echo "  (aplic migrarile locale)"
-  $W d1 migrations apply DB --local >/dev/null 2>&1 || {
-    echo "  ! nu am putut aplica migrarile; pornesc oricum" >&2
+  # Stergem orice wrangler.toml ramas (ex. cel de productie restaurat de
+  # trap-ul run-ului anterior) — prezenta lui declansa bugul de migrari.
+  rm -f wrangler.toml
+  $W d1 migrations apply DB --local --config wrangler.migrate.toml >/tmp/mig-dev.log 2>&1 || {
+    echo "  ! nu am putut aplica migrarile; vezi /tmp/mig-dev.log" >&2
+    tail -5 /tmp/mig-dev.log >&2 || true
   }
 fi
+
+cp wrangler.local.toml wrangler.toml
+echo "  (folosesc configuratia locala cu DO inline)"
 
 # NU folosim `exec`: ar inlocui shell-ul si capcana EXIT n-ar mai rula,
 # lasand wrangler.toml pe configuratia locala (adica deploy-ul urmator
@@ -65,6 +69,11 @@ fi
 # mediu pentru faza de teste care simuleaza o comunitate plina. In
 # productie variabilele nu exista, deci tavanul ramane 1000.
 set +e
+# Fara telemetrie/check de versiune: la pana de retea apelurile catre
+# Cloudflare pot criona procesul inainte sa inceapa sa asculte.
+export WRANGLER_SEND_METRICS=false
+export CI=true
+export NO_UPDATE_NOTIFIER=1
 BIND=()
 [ -n "${LIMIT_USERS:-}" ] && BIND+=(--binding "LIMIT_USERS=$LIMIT_USERS")
 [ -n "${LIMIT_SERIES:-}" ] && BIND+=(--binding "LIMIT_SERIES=$LIMIT_SERIES")

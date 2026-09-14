@@ -1,0 +1,17 @@
+# =====================================================================
+# Config MINIMALA doar pentru `d1 migrations apply --local`.
+#
+# De ce exista: wrangler 4.86+ crapă la pornirea runtime-ului cand
+# config-ul contine si Durable Objects/Pages in timpul comenzii de
+# migrari (_cf_ALARM schema mismatch). Migrarile au nevoie doar de D1,
+# deci le rulam cu config-ul asta izolat — dev.sh il foloseste.
+# State-ul local (.wrangler/state) e comun, deci Pages găsește DB-ul.
+# =====================================================================
+name = "anime-uke-migrate"
+compatibility_date = "2026-05-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "anime-db"
+database_id = "7209b0bd-227b-46d0-b376-6157b56734fa"
+migrations_dir = "migrations"
