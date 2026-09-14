@@ -3,10 +3,11 @@
 // proprietatile; cumpararea e un POST cu confirmare in doi pasi (click
 // pe card → click pe „Confirma"), ca sa nu arunci gold-ul din greseala.
 // =====================================================================
-import { api, renderNav, toast, clearSession, withBusy , whenActive } from './core.js';
+import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession } from './core.js';
 import { initChat } from './chat.js';
 
 let data = null;
+let myName = 'tunn';
 
 function paint() {
   const grid = document.getElementById('shop-grid');
@@ -87,7 +88,7 @@ function paintColors() {
     demo.className = 'color-card__demo';
     const nm = document.createElement('span');
     nm.className = 'color-card__name';
-    nm.textContent = 'mariusuke';
+    nm.textContent = myName;
     if (c.special === 'rainbow') nm.classList.add('nc-rainbow');
     else if (c.special === 'glow') { nm.classList.add(`nc-${c.id.slice(6)}`, 'nc-glow'); }
     else nm.classList.add(`nc-${c.id.slice(6)}`);
@@ -248,6 +249,8 @@ async function buy(item, btn, after) {
 
 async function load() {
   const [nav, res] = await Promise.all([renderNav('/shop'), api('/shop')]);
+  const me = await getSession().catch(() => null);
+  if (me?.username) myName = me.username;
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
   if (!nav) { location.replace('/login?next=/shop'); return; }
   if (!res.ok) {
