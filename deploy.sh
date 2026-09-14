@@ -145,18 +145,8 @@ else
   ok "esbuild lipseste — sar minificarea (fallback)"
 fi
 
-# (c) Frați WebP pentru imagini (workerul le negociaza automat, vezi
-#     serveStatic). Imaginile original rămân — e ce arată URL-urile din DB.
-WEBP=0
-if command -v convert >/dev/null 2>&1; then
-  for f in public/covers/*.jpg public/assets/img/*.jpg; do
-    [ -e "$f" ] || continue
-    if convert "$f" -strip -quality 75 "${f%.jpg}.webp" 2>/dev/null && [ -s "${f%.jpg}.webp" ]; then
-      WEBP=$((WEBP+1))
-    fi
-  done
-  ok "variante WebP generate: $WEBP"
-fi
+# Frații WebP pentru imagini sunt COMISAȚI în repo (runner-ul GitHub nu are
+# ImageMagick); workerul îi negociaza automat, vezi serveStatic.
 
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
