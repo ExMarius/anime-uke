@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 524b646
+comanda: cf-relay/cmd.sh @ 9330d64
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -8,17 +8,17 @@ comanda: cf-relay/cmd.sh @ 524b646
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m deja aplicata
+    [0;32m✓[0m migrari aplicate
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
-    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.91)
+    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=524b646
+    [0;32m✓[0m assete versionate ?v=9330d64
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://ffe0520e.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://e139e505.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -26,9 +26,19 @@ comanda: cf-relay/cmd.sh @ 524b646
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-── verificare post-deploy ──
-  GET /api/factions -> 401   (asteptat 401, nu 404)
-  POST /api/shop/activate -> 401   (asteptat 401, nu 404)
-  GET /api/admin/episodes?series_id=1019 -> 401   (asteptat 401)
-  profile.js contine renderEconomy() in initEconomy: 0
-  episode.html iframe allowfullscreen: 1
+── verificare post-deploy (migrarea 0024 + fisa detaliata) ──
+  /api/series/1019 are cheia alt_titles: 1
+  /api/series/1019 are cheia themes: 1
+  /api/series/1019 are cheia age_rating: 1
+  /api/series/1019 are cheia ep_duration: 1
+  /api/series/1019 are cheia release_date: 1
+  /api/series/1019 are cheia country: 1
+  /api/series/1019 are cheia external_url: 1
+  /api/series/1019 are cheia team: 1
+  /api/series/1019 are cheia next_ep_note: 1
+  /api/series/1019 are cheia next_ep_at: 1
+  series.html #series-info: 1
+  series.html #next-ep:     1
+  episode.html #comments-sort: 1
+  chat.js regulament: 1
+  admin/serie.html fisa: 302 (302 = protejat, normal)
