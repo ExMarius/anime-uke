@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
-for D in "https://anime-uke.pages.dev" "https://9d5196e7.anime-uke.pages.dev"; do
-  echo "[$D] profile.html: code=$(curl -s -o /tmp/x.html -w "%{http_code}" "$D/profile.html") faction-box=$(grep -o 'faction-box' /tmp/x.html | wc -l) temadrop=$(grep -o 'econ-theme-wrap' /tmp/x.html | wc -l)"
-done
+D="https://9d5196e7.anime-uke.pages.dev"
+JS=$(curl -s "$D/assets/js/page-profile.js")
+echo "client facțiuni (deployment final): $(echo "$JS" | grep -o "faction__grid" | wc -l)"
+echo "client chat lider: $(curl -s "$D/assets/js/chat.js" | grep -o "leader_color" | wc -l)"
+curl -s -o /dev/null -w "api factions: %{http_code}\n" "https://anime-uke.pages.dev/api/factions"
