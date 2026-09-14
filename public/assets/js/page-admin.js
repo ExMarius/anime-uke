@@ -65,13 +65,6 @@ async function loadStats() {
 
   const s = res.data.stats;
   // Tavanele buget-0 direct pe carduri: adminul vede pe loc cat loc mai e.
-<<<<<<< HEAD
-  const cards = [
-    ['Utilizatori', `${s.total_users} / ${s.limit_users}`],
-    ['Admini', s.total_admins],
-    ['Banați', s.total_banned],
-    ['Serii', `${s.total_series} / ${s.limit_series}`],
-=======
   // [eticheta, valoare, plafon] — plafonul e optional. Inainte mergeam cu
   // „3 / 4" prin Number() si iesea NaN pe cardurile cu plafon.
   const cards = [
@@ -79,7 +72,6 @@ async function loadStats() {
     ['Admini', s.total_admins],
     ['Banați', s.total_banned],
     ['Serii', s.total_series, s.limit_series],
->>>>>>> Admin: fix NaN pe statistici + flux rapid de adăugare episoade
     ['Episoade', s.total_episodes],
     ['Vizionări', s.total_views],
     ['Marcate ca văzute', s.total_watched],
