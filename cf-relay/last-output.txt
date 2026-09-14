@@ -1,16 +1,35 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9cd8e0b
+comanda: cf-relay/cmd.sh @ 34fe5bd
 ────────────────────────────────────
-── JS servit: mărime + sintaxă validă ──
-core.js: 13030 bytes
-  sintaxă OK
-  sintaxă OK (node)
-page-index.js: 14679 bytes
-  sintaxă OK
-  sintaxă OK (node)
-── pagini cheie ──
-/ -> 200
-/series -> 200
-/episode -> 200
-/login -> 200
-/register -> 200
+── deploy optimizări CLS + llms.txt ──
+
+[1;35m==> 1/5  Baza de date D1[0m
+    [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
+    [0;32m✓[0m database_id injectat in toate configuratiile
+    [0;32m✓[0m wrangler.toml = configuratie de productie
+
+[1;35m==> 2/5  Schema D1 (remote)[0m
+    [0;32m✓[0m deja aplicata
+
+[1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
+    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
+
+[1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
+    [0;32m✓[0m assete versionate ?v=34fe5bd
+    [0;32m✓[0m assete minificate: 15 fisiere
+    [0;32m✓[0m publicat: https://2432a74c.anime-uke.pages.dev
+
+[1;35m==> 5/5  JWT_SECRET[0m
+    [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
+
+[1;32mGATA.[0m  Site: https://anime-uke.pages.dev
+exit deploy: 0
+── llms.txt live ──
+status=200 tip=text/plain; charset=utf-8
+# Anime-Uke
+
+> Platformă gratuită de streaming cu anime subtitrat în română. Catalogul și episoadele se vizionează fără cont; contul e necesar doar pentru progres, puncte, chat și contribuții.
+── ordine secțiuni în HTML servit (serii înainte de tops) ──
+id="serii"
+id="tops-section"
+id="recent-section"
