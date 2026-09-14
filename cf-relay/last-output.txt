@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 5b08957
+comanda: cf-relay/cmd.sh @ f75fcac
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,8 +15,8 @@ comanda: cf-relay/cmd.sh @ 5b08957
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=5b08957
-    [0;32m✓[0m publicat: https://14e55427.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=f75fcac
+    [0;32m✓[0m publicat: https://31a1f82f.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -28,7 +28,6 @@ sanitate: / -> 200
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://anime-uke.pages.dev/</loc></url>
-  <url><loc>https://anime-uke.pages.dev/login</loc></url>
-  <url><loc>https://anime-uke.pages.dev/register</loc></url>
+  <url><loc>https://anime-uke.pages.dev/series</loc></url>
   <url><loc>https://anime-uke.pages.dev/serie/1014</loc></url>
 </urlset>
