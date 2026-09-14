@@ -109,7 +109,7 @@ export async function onRequestGet(context) {
       name: 'Cufăr secret',
       icon: '🔮',
       seconds: SECRET_SECONDS,
-      points: secretPoints(user.id, id.value),
+      gold: secretPoints(user.id, id.value),
       secret: true,
       claimed: claimed.has(SECRET_TIER),
       unlocked: total >= SECRET_SECONDS,
@@ -166,7 +166,7 @@ export async function onRequestPost(context) {
       .bind(user.id, sid.value)
       .first();
     if (!gold) return errorResponse(409, 'Cufărul secret se arată doar după cufărul de aur');
-    tierDef.points = secretPoints(user.id, sid.value);
+    tierDef.gold = secretPoints(user.id, sid.value);
   }
 
   // Progresul se verifica pe server, in momentul cererii. Un client care ar
