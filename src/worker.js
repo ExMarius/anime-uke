@@ -163,7 +163,10 @@ async function sitemapHandler(request, env) {
   const now = Date.now();
 
   if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    let urls = ['/', '/login', '/register'];
+    // In sitemap doar paginile cu valoare de indexat: prima pagina,
+    // catalogul si seriile. /login si /register sunt utilitare — le lasam
+    // afara ca sa nu le concureze pe cele de continut in rezultate.
+    let urls = ['/', '/series'];
     try {
       const res = await env.DB
         .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
