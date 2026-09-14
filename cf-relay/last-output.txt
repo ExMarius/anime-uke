@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 93b5fb1
+comanda: cf-relay/cmd.sh @ 6bfcda3
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 93b5fb1
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=93b5fb1
+    [0;32m✓[0m assete versionate ?v=6bfcda3
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://90bcde15.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://a548e851.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -26,12 +26,19 @@ comanda: cf-relay/cmd.sh @ 93b5fb1
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-── verificare post-deploy (curatenie + grade) ──
-  migrari neaplicate care contin 0025 (trebuie 0): 0
+── compatibilitate wrangler (upgrade 4.84.1 → 4.131.2) ──
+  wrangler pe runner: 4.131.2
+  marker 'No migrations to apply' in /tmp/mig.txt: 1
+  marker 'Uploaded anime-uke-do' sau 'Current Version ID' in /tmp/wdo.txt: 2
+  Total Upload gasit: Total Upload: 14.21
+  URL pages.dev extras din /tmp/pages.txt: https://a548e851.anime-uke.pages.dev
+  JWT_SECRET in 'pages secret list': 1
+  migrari neaplicate remote (trebuie 0): 0
+
+── verificare live ──
+  / status: 200
   /api/auth/me (fara sesiune) status: 200
   /api/admin/mods GET fara sesiune: 401 (401 = ruta exista si e protejata; 405 ar fi bug)
-  /schema.sql: 302 (404 normal)
-  /covers/naruto.jpg: 302 (404/302 normal, fisierele nu mai exista)
   style.css ubadge--admin: 1
   style.css ubadge--mod: 1
   style.css ubadge--staff: 1
@@ -39,3 +46,4 @@ exit deploy: 0
   core.js staffIcon: 1
   page-episode.js can_moderate: 1
   /serie/1019 SSR status: 200
+  versionare assete in index.html: assets/css/style.css?v=6bfcda3 assets/js/page-index.js?v=6bfcda3 
