@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
-for U in "https://anime-uke.pages.dev" "https://anime-uke.pages.dev"; do
-  JS=$(curl -s "$U/assets/js/page-profile.js")
-  echo "[$U] js taburi: $(echo "$JS" | grep -o 'initProfileTabs' | wc -l), facțiuni: $(echo "$JS" | grep -o 'faction__grid' | wc -l), țări: $(echo "$JS" | grep -o 'Guineea-Bissau' | wc -l)"
-done
-HTML=$(curl -s "https://anime-uke.pages.dev/assets/css/page-user.css")
-echo "pane css: $(echo "$HTML" | grep -o 'data-pane\|\.ptab ' | wc -l)"
+JS=$(curl -s "https://anime-uke.pages.dev/assets/js/page-profile.js")
+CSS=$(curl -s "https://anime-uke.pages.dev/assets/css/page-user.css")
+echo "js taburi (ptabs__btn): $(echo "$JS" | grep -o 'ptabs__btn' | wc -l)"
+echo "js pane (.ptab): $(echo "$JS" | grep -o '\.ptab' | wc -l)"
+echo "css taburi (.ptab{): $(echo "$CSS" | grep -o '\.ptab{' | wc -l)"
