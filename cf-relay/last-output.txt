@@ -1,9 +1,6 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ c1d420d
+comanda: cf-relay/cmd.sh @ 2087a7f
 ────────────────────────────────────
-grep: /tmp/pages.txt: No such file or directory
-deployment: 
-modulepreload pe deployment: 0
-weserv în core.js pe deployment: 0
-── și pe alias, cu cache-buster ──
-modulepreload alias: 3
+core.js cu optimizeCover: 1
+page-index cu weserv:     0
+hero pe deployment nou (459cf7da): 3
