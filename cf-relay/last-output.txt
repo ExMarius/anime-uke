@@ -1,5 +1,7 @@
-exit_code: 1
-comanda: cf-relay/cmd.sh @ 2b348a7
+exit_code: 0
+comanda: cf-relay/cmd.sh @ 4303fcf
 ────────────────────────────────────
-── variante IMDb native (redimensionare în URL) ──
-cf-relay/cmd.sh: line 5: W_: unbound variable
+── variante IMDb native ──
+UX400: 200 image/jpeg 67156B
+UX800: 200 image/jpeg 198212B
+UX1280: 200 image/jpeg 353022B
