@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ b2782de
+comanda: cf-relay/cmd.sh @ 36dba92
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,11 +15,11 @@ comanda: cf-relay/cmd.sh @ b2782de
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=b2782de
+    [0;32m✓[0m assete versionate ?v=36dba92
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://3055dff2.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://3712b09a.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -27,13 +27,7 @@ comanda: cf-relay/cmd.sh @ b2782de
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 ── WebP negociat ──
-cu Accept webp: image/jpeg 82007B
-── hero inline + preload ──
-id="hero-bg-img"
-rel="preload" as="image"
-── scripturi JS pe index ──
-1
-── pagini ──
-/ -> 200
-/series -> 200
-/episode -> 200
+cerere .jpg → servit: image/webp 71892B
+hero-1.jpg → servit:  image/jpeg 202731B
+── fără webp (fallback jpeg) ──
+Accept jpeg: image/jpeg 82007B
