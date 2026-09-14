@@ -147,9 +147,21 @@ export async function onRequestGet(context) {
       total = null; // fara cautare, lista completa nu e numarata (ar costa un scan)
     }
 
+    // Urmatorul numar liber pentru formularul „Adauga episod": MAX+1 pe
+    // seria ceruta. Un singur MAX pe indexul (series_id, episode_number),
+    // deci costa aproximativ la fel ca lista deja servita.
+    let next_number = null;
+    if (seriesIdParam) {
+      const mx = await env.DB
+        .prepare('SELECT MAX(episode_number) AS m FROM episodes WHERE series_id = ?')
+        .bind(seriesIdParam.value)
+        .first();
+      next_number = (mx?.m ?? 0) + 1;
+    }
+
     return json({
       episodes: episodes.map((e) => ({ ...e, sources: sourcesByEp.get(e.id) || [] })),
-      page, per_page: perPage, has_more: hasMore, total, q,
+      page, per_page: perPage, has_more: hasMore, total, q, next_number,
     });
   } catch (e) {
     console.error('GET /api/admin/episodes esuat:', e?.message || e);

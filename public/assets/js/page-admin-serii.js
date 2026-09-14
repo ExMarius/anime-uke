@@ -77,6 +77,12 @@ function renderTable(list) {
     a.href = `/admin/serie/${s.id}`;
     titleTd.appendChild(a);
     tr.appendChild(titleTd);
+    // Rândul întreg e clickabil (cursor din CSS): mai puțină țintă de prins.
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('a, button')) return;   // butoanele rămân ele
+      location.href = `/admin/serie/${s.id}`;
+    });
+    tr.classList.add('row-click');
 
     const st = document.createElement('td');
     st.appendChild(el('span', `pill ${s.status === 'completed' ? 'pill--ok' : 'pill--user'}`,
@@ -176,6 +182,30 @@ async function deleteSeries(s) {
   if (list.length === 1 && page > 1) page--;
   load();
 }
+
+// ---- avertisment de duplicat: cât scrii titlul, căutăm pe server și, dacă
+// ---- există ceva cu nume apropiat, îl afișăm ÎNAINTE de a crea dubluri.
+let dupTimer = null;
+document.getElementById('s-title')?.addEventListener('input', (e) => {
+  clearTimeout(dupTimer);
+  const title = e.target.value.trim();
+  const box = document.getElementById('dup-hint');
+  if (!box) return;
+  if (title.length < 3) { box.hidden = true; box.innerHTML = ''; return; }
+  dupTimer = setTimeout(async () => {
+    const res = await api(`/admin/series?q=${encodeURIComponent(title)}&per_page=5`);
+    const hits = (res.ok ? res.data?.series : []) || [];
+    const norm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9ăâîșțț]+/gi, '');
+    const same = hits.filter((h) => norm(h.title) === norm(title));
+    box.innerHTML = '';
+    for (const h of (same.length ? same : hits.slice(0, 3))) {
+      const row = el('a', 'dup-hint__row', `„${h.title}" (${h.year || '—'}) · ${h.episode_count ?? 0} EP`);
+      row.href = `/admin/serie/${h.id}`;
+      box.appendChild(row);
+    }
+    box.hidden = !hits.length;
+  }, 350);
+});
 
 document.getElementById('series-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();

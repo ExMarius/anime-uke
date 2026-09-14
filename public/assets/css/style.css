@@ -1686,3 +1686,24 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
    titlu, nu pe poster — înainte se suprapunea cu eticheta RO SUB. */
 .card__meta .pill-pos { position: static; flex: none; }
 .card__meta .pill-pos + i { opacity: .45; font-style: normal; }
+
+/* Admin: rânduri de tabel clickabile (întregul rând duce la seria) */
+tr.row-click { cursor: pointer; }
+tr.row-click:hover .row-link { color: var(--accent-hi); }
+
+/* Admin: avertisment „poate exista deja" sub câmpul de titlu */
+.dup-hint {
+  display: flex; flex-direction: column; gap: .25rem;
+  margin-top: .4rem; padding: .5rem .7rem;
+  border: 1px solid rgba(251, 191, 36, .35); border-radius: var(--r-sm);
+  background: rgba(251, 191, 36, .08);
+}
+.dup-hint::before {
+  content: "⚠ Posibil deja în catalog:";
+  font-size: .74rem; font-weight: 800; color: var(--warn);
+}
+.dup-hint__row {
+  font-size: .8rem; color: var(--text); text-decoration: none;
+  padding: .15rem 0;
+}
+.dup-hint__row:hover { color: var(--accent-hi); text-decoration: underline; }

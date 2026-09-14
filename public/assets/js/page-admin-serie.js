@@ -25,6 +25,7 @@ let epTimer = null;
 let currentSourcesEp = null;
 let currentEditEp = null;
 let bulkParsed = null;
+let nextEpNumber = null;   // prefill pentru „Adaugă episod" (MAX+1 din API)
 
 async function guard() {
   me = await getSession();
@@ -181,6 +182,7 @@ async function loadEpisodes() {
     return;
   }
 
+  if (Number.isInteger(res.data.next_number)) nextEpNumber = res.data.next_number;
   const eps = res.data.episodes || [];
   tbody.innerHTML = '';
   if (!eps.length) {
@@ -277,7 +279,11 @@ document.getElementById('e-add-source')?.addEventListener('click', () => addForm
 document.getElementById('toggle-ep-form')?.addEventListener('click', () => {
   if (toggle('ep-create-panel')) {
     addFormSourceRow({});
-    document.getElementById('e-number').focus();
+    const num = document.getElementById('e-number');
+    // Prefill: numărul următor sugerat de server, ca adminul să nu-l mai
+    // caute/numere manual. Poate oricând suprascrie.
+    if (Number.isInteger(nextEpNumber) && !num.value) num.value = nextEpNumber;
+    num.focus();
   }
 });
 document.getElementById('ep-cancel')?.addEventListener('click', () => toggle('ep-create-panel', false));
@@ -303,10 +309,16 @@ document.getElementById('episode-form')?.addEventListener('submit', async (e) =>
     });
     if (!res.ok) { toast(res.data?.error || 'Nu am putut adăuga episodul', 'err', 5000); return; }
 
-    toast(`Episodul ${f.episode_number.value} a fost adăugat`, 'ok');
-    f.reset();
+    const added = Number(f.episode_number.value);
+    toast(`Episodul ${added} a fost adăugat ✓`, 'ok');
+    // Flux rapid: formularul rămâne deschis, numărul avansează automat și
+    // cursorul așteaptă în primul câmp de sursă — adaugi episoade unul
+    // după altul fără să atingi nimic altceva.
+    f.title.value = '';
     document.getElementById('e-sources').innerHTML = '';
     addFormSourceRow({});
+    f.episode_number.value = added + 1;
+    document.querySelector('#e-sources .src-row input')?.focus();
     await Promise.all([loadEpisodes(), loadSeries()]);
   });
 });

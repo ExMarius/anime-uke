@@ -65,11 +65,21 @@ async function loadStats() {
 
   const s = res.data.stats;
   // Tavanele buget-0 direct pe carduri: adminul vede pe loc cat loc mai e.
+<<<<<<< HEAD
   const cards = [
     ['Utilizatori', `${s.total_users} / ${s.limit_users}`],
     ['Admini', s.total_admins],
     ['Banați', s.total_banned],
     ['Serii', `${s.total_series} / ${s.limit_series}`],
+=======
+  // [eticheta, valoare, plafon] — plafonul e optional. Inainte mergeam cu
+  // „3 / 4" prin Number() si iesea NaN pe cardurile cu plafon.
+  const cards = [
+    ['Utilizatori', s.total_users, s.limit_users],
+    ['Admini', s.total_admins],
+    ['Banați', s.total_banned],
+    ['Serii', s.total_series, s.limit_series],
+>>>>>>> Admin: fix NaN pe statistici + flux rapid de adăugare episoade
     ['Episoade', s.total_episodes],
     ['Vizionări', s.total_views],
     ['Marcate ca văzute', s.total_watched],
@@ -77,12 +87,13 @@ async function loadStats() {
   ];
 
   box.innerHTML = '';
-  for (const [label, value] of cards) {
+  for (const [label, value, limit] of cards) {
     const el = document.createElement('div');
     el.className = 'stat';
     const v = document.createElement('div');
     v.className = 'stat__value';
-    v.textContent = Number(value || 0).toLocaleString('ro-RO');
+    const n = Number(value || 0).toLocaleString('ro-RO');
+    v.textContent = limit != null ? `${n} / ${Number(limit).toLocaleString('ro-RO')}` : n;
     const l = document.createElement('div');
     l.className = 'stat__label';
     l.textContent = label;
