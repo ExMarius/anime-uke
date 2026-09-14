@@ -1673,7 +1673,7 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 /* Skeleton-urile grilei: inaltimi calibrate pe cardul real (titlu + meta +
    2 linii de descriere) ca la sosirea datelor sa nu se miste nimic. */
 .sk-line--t { height: 18px; width: 85%; }
-.sk-line--m { height: 10px; width: 45%; margin-top: -.4rem; }
+.sk-line--m { height: 19px; width: 45%; margin-top: -.4rem; }
 .sk-line--d { width: 92%; margin-top: -.4rem; }
 .sk-card { background: var(--surface); border: 1px solid var(--line-soft); }
 
@@ -1681,3 +1681,8 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
    .recent-card real — la sosirea datelor nu se mișcă nimic. */
 .sk-recent { flex: 0 0 150px; }
 .sk-art16 { aspect-ratio: 16 / 10; border-radius: 10px; }
+
+/* Starea seriei (În difuzare / Finalizat) trăiește în rândul de meta de sub
+   titlu, nu pe poster — înainte se suprapunea cu eticheta RO SUB. */
+.card__meta .pill-pos { position: static; flex: none; }
+.card__meta .pill-pos + i { opacity: .45; font-style: normal; }

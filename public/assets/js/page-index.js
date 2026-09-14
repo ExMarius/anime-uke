@@ -72,12 +72,9 @@ function seriesCard(s, idx = 0) {
     poster.appendChild(fallback(s.title));
   }
 
-  const status = document.createElement('span');
-  status.className = `pill-pos${s.status === 'completed' ? ' pill-pos--ok' : ''}`;
-  status.textContent = s.status === 'completed' ? 'Finalizat' : 'În difuzare';
-  poster.appendChild(status);
-
-  // Eticheta de nișă standard pe site-urile RO: subtitrat în română.
+  // Doar RO SUB + numărul de episoade rămân PE poster (colțuri opuse, fără
+  // suprapunere). Starea (În difuzare/Finalizat) e în rândul de meta, sub
+  // titlu — înainte stătea peste eticheta RO SUB (aceeași colț stânga-sus).
   const ro = document.createElement('span');
   ro.className = 'pill-ro';
   ro.textContent = 'RO SUB';
@@ -96,15 +93,21 @@ function seriesCard(s, idx = 0) {
   title.textContent = s.title || 'Fără titlu';
   body.appendChild(title);
 
+  const meta = document.createElement('p');
+  meta.className = 'card__meta';
+  const status = document.createElement('span');
+  status.className = `pill-pos${s.status === 'completed' ? ' pill-pos--ok' : ''}`;
+  status.textContent = s.status === 'completed' ? 'Finalizat' : 'În difuzare';
+  meta.appendChild(status);
   const bits = [];
   if (s.genre) bits.push(s.genre.split(',')[0].trim());
   if (s.year) bits.push(String(s.year));
   if (bits.length) {
-    const meta = document.createElement('p');
-    meta.className = 'card__meta';
-    meta.textContent = bits.join(' · ');
-    body.appendChild(meta);
+    const m = document.createElement('i');
+    m.textContent = bits.join(' · ');
+    meta.appendChild(m);
   }
+  body.appendChild(meta);
 
   if (s.description) {
     const desc = document.createElement('p');
@@ -375,14 +378,12 @@ async function pickSpotSeries(salt) {
     if (cached) return cached;
   } catch { /* ignora */ }
 
-  const first = await api('/series?per_page=24&page=1');
-  if (!first.ok || !first.data?.series?.length) return null;
-  const pages = Math.max(1, Number(first.data.pages) || 1);
-  const page = (hashStr(`spot-page-${bucket}-${salt}`) % pages) + 1;
-  const list = page === 1
-    ? first.data.series
-    : (await api(`/series?per_page=24&page=${page}`))?.data?.series || [];
-  if (!list.length) return null;
+  // Mereu din CELE MAI NOI 24 de serii: orice serie adăugată recent intră
+  // automat în rotația bannerului la fereastra următoare (sau la click pe
+  // „Alt anime"), fără niciun pas manual.
+  const res = await api('/series?per_page=24&page=1&sort=latest');
+  if (!res.ok || !res.data?.series?.length) return null;
+  const list = res.data.series;
   const pick = list[hashStr(`spot-item-${bucket}-${salt}`) % list.length];
   try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
   return pick;
