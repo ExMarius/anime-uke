@@ -1,7 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ b6d902d
+comanda: cf-relay/cmd.sh @ 80a41b6
 ────────────────────────────────────
-── deploy split CSS ──
+── deploy consolă curată ──
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,30 +15,17 @@ comanda: cf-relay/cmd.sh @ b6d902d
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=b6d902d
+    [0;32m✓[0m assete versionate ?v=80a41b6
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m assete minificate: 18 fisiere
-    [0;32m✓[0m publicat: https://234b2858.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://26340ffe.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-── foile live ──
-style.css: 200 61411B
-page-episode.css: 200 9755B
-page-admin.css: 200 8541B
-page-user.css: 200 12612B
-── index NU încarcă foile per-pagină ──
-0
-── episode/profile își încarcă foile ──
-page-episode.css
-── pagini cheie ──
-/ -> 200
-/series -> 200
-/episode -> 200
-/login -> 200
-/register -> 200
-/profile -> 302
-/shop -> 302
+── Permissions-Policy live ──
+permissions-policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
+── episode: fără allowfullscreen legacy ──
+1
