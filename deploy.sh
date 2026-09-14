@@ -101,6 +101,18 @@ sed -i -E 's#(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?#
 grep -q "?v=${BUILD_V}" public/index.html || die "index.html nu a primit ?v=${BUILD_V}"
 ok "assete versionate ?v=${BUILD_V}"
 
+# Purge: reguli CSS care nu mai apar nicăieri în HTML/JS/worker (clase
+# dinamice sunt în safelist, vezi scripts/purge-css.mjs). Rulat DOAR pe
+# style.css — foile per-pagină sunt deja fără resturi.
+if [ -f scripts/purge-css.mjs ] && command -v node >/dev/null 2>&1; then
+  if node scripts/purge-css.mjs >/dev/null 2>&1 && [ -s /tmp/purged/style.css ]; then
+    cp /tmp/purged/style.css public/assets/css/style.css
+    ok "CSS purgat de reguli moarte"
+  else
+    ok "purge CSS: sărit (script indisponibil)"
+  fi
+fi
+
 # Minificare CSS/JS (Lighthouse: „Comprimă codul" + CSS nefolosit + TBT).
 # Esbuild din node_modules; daca lipseste, continuam neminificat (fallback
 # sigur — deploy-ul nu trebuie sa pice din pricina asta).

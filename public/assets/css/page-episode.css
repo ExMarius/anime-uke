@@ -1,0 +1,485 @@
+
+
+/* ============================ HERO ============================ */
+
+/* search */
+.search { position: relative; margin: 1.6rem 0 .4rem; max-width: 420px; }
+
+
+/* ============================ FORMULARE ============================ */
+.hint { margin: .35rem 0 0; font-size: .76rem; color: var(--dim-2); line-height: 1.45; }
+
+
+/* auth */
+
+/* ============================ TOAST ============================ */
+.toast-wrap { position: fixed; z-index: 200; bottom: 1.2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .55rem; width: min(430px, calc(100% - 2rem)); pointer-events: none; }
+
+
+/* ============================ ADMIN ============================ */
+.tab { padding: .55rem 1.05rem; border: none; border-radius: 99px; background: transparent; color: var(--dim); font-weight: 750; font-size: .87rem; transition: .2s; white-space: nowrap; }
+
+
+/* ============================ RESPONSIVE ============================ */
+@media (max-width: 720px) {
+  .nav { min-height: auto; flex-wrap: wrap; padding: .6rem 1rem; gap: .5rem; }
+  .nav__links { width: 100%; margin-left: 0; gap: .3rem; overflow-x: auto; padding-bottom: .15rem; }
+  .nav__user { padding: .28rem .3rem .28rem .7rem; font-size: .8rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); gap: .85rem; }
+  .chat-fab { padding: .85rem; right: 1rem; bottom: 1rem; }
+  .chat-fab__label { display: none; }
+  .box { padding: 1rem; }
+  .ep-hero__num { width: 50px; height: 50px; font-size: 1.2rem; }
+}
+
+
+/* ===================================================================
+   Coduri de invitatie (panou admin + formular de inregistrare)
+   =================================================================== */
+
+/* Banda informativa — bootstrap / coduri proaspat generate */
+
+/* Filtru tip segmente (Toate / Active / Folosite / Revocate) */
+
+/* Codul de invitatie, ca element monospaced usor de selectat */
+
+/* Input-ul de cod din formularul de inregistrare */
+
+/* ===================================================================
+   PROFIL PUBLIC
+   =================================================================== */
+
+.avatar {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px; height: 92px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: grid; place-items: center;
+  background: linear-gradient(150deg, var(--accent), #7a0c22);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 6px 22px -12px var(--accent);
+}
+
+
+/* Grila Info + Acces rapid */
+
+/* Lista de informatii */
+
+/* Acces rapid */
+.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .6rem; }
+
+
+/* Buton de scoatere din watchlist */
+
+@media (max-width: 640px) {
+  .avatar { width: 72px; height: 72px; }
+  .avatar span { font-size: 1.9rem; }
+  .quick { grid-template-columns: 1fr 1fr; }
+}
+
+.sources__label {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .085em;
+  font-weight: 850; color: var(--dim-2); flex: none;
+}
+
+.sources__list { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+.sources__btn {
+  padding: .38rem .85rem; border-radius: 99px; cursor: pointer;
+  font-size: .8rem; font-weight: 750; white-space: nowrap;
+  background: var(--surface-2); color: var(--dim);
+  border: 1px solid var(--line-soft);
+  transition: background .16s, color .16s, border-color .16s, transform .16s;
+}
+
+.sources__btn:hover { color: var(--text); border-color: var(--line); transform: translateY(-1px); }
+
+.sources__btn--on {
+  background: var(--grad); color: #fff; border-color: transparent;
+  box-shadow: 0 8px 20px -10px var(--accent-glow);
+}
+
+.ext-inline {
+  display: inline-block; margin-top: .55rem;
+  font-size: .82rem; color: var(--dim); text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+}
+
+.ext-inline:hover { color: var(--accent); }
+
+
+/* ================== ADMIN: SERII / EPISOADE (pagini proprii) ================== */
+
+/* .filters era deja folosit pentru filtrele de invitatii (butoane intr-un
+ * rand), deci bara de cautare+sortare are clasa ei, ca sa nu se suprascrie. */
+
+/* miniatura din tabelul de serii — mult mai compacta decat un poster */
+.ep-num { font-variant-numeric: tabular-nums; font-weight: 850; color: var(--accent-hi); }
+
+
+/* --- capul paginii de detaliu a unei serii --- */
+
+/* --- postare in bloc --- */
+
+/* --- cautare + paginare pe pagina principala --- */
+
+/* --- unelte din capul sectiunii de serii (sortare + numaratoare) --- */
+
+/* --- selectorul de intervale de episoade (1–100, 101–200, …) --- */
+.rangebar { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+
+
+/* --- bara de progres pana la puncte (15 min de vizionare) --- */
+.watch-progress { margin: 1.1rem 0 .4rem; padding: .8rem 1rem; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--line-soft); }
+
+.watch-progress__head { display: flex; justify-content: space-between; gap: .8rem;
+  font-size: .84rem; font-weight: 700; margin-bottom: .5rem; flex-wrap: wrap; }
+
+.watch-progress__time { font-variant-numeric: tabular-nums; color: var(--dim); }
+
+.watch-progress__bar { height: 7px; border-radius: 99px; background: var(--surface-3, #1c1216); overflow: hidden; }
+
+.watch-progress__fill { height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent)); transition: width .5s ease; }
+
+.watch-progress__note { margin: .5rem 0 0; font-size: .76rem; color: var(--dim-2); }
+
+.watch-progress--done .watch-progress__fill { background: linear-gradient(90deg, #15803d, #22c55e); }
+
+.watch-progress--done .watch-progress__head span:first-child { color: var(--ok); }
+
+
+/* =====================================================================
+   Cufăr cu comori — recompense pentru timpul petrecut pe o serie
+   ===================================================================== */
+@keyframes chest-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
+  50% { box-shadow: 0 0 18px 0 rgba(220, 20, 60, .35); }
+}
+
+
+/* =====================================================================
+   Confetti la deschiderea cuferelor + stilul cufarului secret
+   ===================================================================== */
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+
+
+/* =====================================================================
+   Clasament (profil)
+   ===================================================================== */
+
+/* --- toolbar player (fullscreen + hint taste) --- */
+.player-tools {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .8rem; margin-top: .55rem; flex-wrap: wrap;
+}
+
+.player-tools__hint { font-size: .72rem; color: var(--dim-2, #8a7a80); }
+
+@media (max-width: 560px) { .player-tools__hint { display: none; } }
+
+
+/* =====================================================================
+   Rating 1-10 pe pagina seriei
+   ===================================================================== */
+
+/* =====================================================================
+   Comentarii pe episod
+   ===================================================================== */
+.comments { margin-top: 1.4rem; }
+
+.comments__form { margin-bottom: .9rem; }
+
+.comments__input { width: 100%; resize: vertical; font: inherit; color: var(--text); }
+
+.comments__actions { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: .45rem; }
+
+.comments__list { display: flex; flex-direction: column; gap: .6rem; }
+
+.comment__main { flex: 1; min-width: 0; }
+
+.comment__vote { display: flex; flex-direction: column; align-items: center; gap: .05rem; padding-top: .15rem; }
+
+.cvote {
+  border: 0; background: transparent; color: var(--dim-2, #8a7a80);
+  cursor: pointer; font-size: .72rem; line-height: 1.1; padding: .1rem .3rem; border-radius: 4px;
+}
+
+.cvote:hover { color: #fff; background: rgba(255, 255, 255, .07); }
+
+.cvote.is-on { color: var(--crimson, #DC143C); }
+
+.comment__score { font-size: .78rem; font-weight: 800; color: var(--dim); }
+
+.comment__score--plus { color: #6fd58a; }
+
+.comment__score--minus { color: #ff5c7a; }
+
+.comment__acts { margin-top: .35rem; }
+
+.comment__reply-btn {
+  border: 0; background: transparent; color: var(--dim); cursor: pointer;
+  font-size: .74rem; padding: .15rem .3rem; border-radius: 4px;
+}
+
+.comment__reply-btn:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+
+.comment__replies {
+  display: flex; flex-direction: column; gap: .5rem;
+  margin: .55rem 0 .2rem 2rem; padding-left: .8rem;
+  border-left: 2px solid rgba(220, 20, 60, .25);
+}
+
+.comment--reply { background: rgba(255, 255, 255, .025); }
+
+.reply-form { display: flex; flex-direction: column; gap: .4rem; margin-top: .5rem; }
+
+.reply-form__input { width: 100%; resize: vertical; font: inherit; color: var(--text); }
+
+
+/* recenzii */
+.comment__head { display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+
+.comment__del { margin-left: auto; border: 0; background: transparent; color: var(--dim); cursor: pointer; font-size: .8rem; }
+
+.comment__del:hover { color: #ff5c7a; }
+
+.comment__body { font-size: .88rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+.spoiler {
+  background: var(--surface-3, #241619); color: transparent; border-radius: 4px;
+  padding: 0 .3rem; cursor: pointer; user-select: none; text-shadow: none;
+}
+
+.spoiler--open { color: var(--text); background: rgba(220, 20, 60, .12); user-select: text; }
+
+
+/* =====================================================================
+   Randul „Continua vizionarea"
+   ===================================================================== */
+
+/* =====================================================================
+   ECONOMIE: panou profil, cufar, insigne, chipuri nav
+   ===================================================================== */
+.econ__row { display: flex; align-items: center; gap: .6rem; margin-bottom: .55rem; }
+
+
+/* --- butonul cufar --- */
+@keyframes chestShake {
+  0%, 100% { transform: rotate(0); }
+  10% { transform: rotate(-8deg) scale(1.05); }
+  25% { transform: rotate(8deg) scale(1.05); }
+  40% { transform: rotate(-10deg) scale(1.08); }
+  55% { transform: rotate(10deg) scale(1.08); }
+  70% { transform: rotate(-6deg) scale(1.05); }
+  85% { transform: rotate(6deg) scale(1.03); }
+}
+
+
+/* --- sclipici --- */
+@keyframes sparkleFly {
+  0% { transform: translate(-50%,-50%) scale(.3); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); opacity: 0; }
+}
+
+.comment__head .ubadge, .comment__head .uchip { margin: 0 .35rem; }
+
+
+/* panou admin: teme de grade */
+.rank-form { display: flex; flex-direction: column; gap: .6rem; }
+
+
+/* ============================ SHOP ============================ */
+
+/* ============ COSMETICE (nume de aur / flair suporter) ============ */
+.msg__user--gold {
+  color: #f5c542;
+  text-shadow: 0 0 10px rgba(245, 197, 66, .45);
+}
+
+
+/* ==================== RAPORTARE SURSA (episod) ==================== */
+.report-row { margin: .9rem 0; }
+
+.report-panel { display: flex; flex-direction: column; gap: .6rem; margin-top: .6rem; padding: .9rem; }
+
+.report-panel[hidden] { display: none; }
+
+.report-panel__reasons { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.report-chip {
+  padding: .35rem .7rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .75); font-size: .8rem;
+}
+
+.report-chip.is-on { border-color: var(--crimson, #DC143C); background: rgba(220, 20, 60, .16); color: #fff; }
+
+.report-panel__actions { display: flex; gap: .5rem; }
+
+
+/* ==================== RAPORTARI (panoul admin) ==================== */
+
+/* ==================== PLAYER v4: cinema + navigare ==================== */
+.container-wide { width: min(1100px, 100% - 2.5rem); margin-inline: auto; }
+
+
+/* Mod cinema: playerul iese din container si ocupa toata latimea ecranului,
+   ca banda „cinema” de la YouTube. Restul paginii ramane centrat. */
+body.cinema .player {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  max-height: 88vh;
+}
+
+body.cinema .container-wide { width: min(1280px, 100% - 2.5rem); }
+
+
+.player-tools__toggles { display: inline-flex; gap: .4rem; }
+
+.ptool {
+  padding: .3rem .7rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .65); font-size: .78rem; font-weight: 700;
+}
+
+.ptool:hover { color: #fff; border-color: rgba(255, 255, 255, .3); }
+
+.ptool--on { border-color: var(--crimson, #DC143C); background: rgba(220, 20, 60, .18); color: #fff; }
+
+
+
+/* MODAL „ALTE EPIZOADE” */
+.eplist-card { width: min(34rem, calc(100vw - 2rem)); max-height: 80vh; overflow-y: auto; }
+
+.eplist__head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .7rem; }
+
+.eplist__range { display: flex; align-items: center; justify-content: center; gap: .7rem; margin-bottom: .7rem; }
+
+.eplist__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.1rem, 1fr)); gap: .4rem; }
+
+.eplist__ep {
+  padding: .5rem 0; border-radius: .5rem; cursor: pointer; font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .8);
+}
+
+.eplist__ep:hover { border-color: var(--crimson, #DC143C); color: #fff; }
+
+.eplist__ep.is-on { background: var(--crimson, #DC143C); border-color: var(--crimson, #DC143C); color: #fff; }
+
+
+/* Cinema compact: playerul cat mai sus in ecran — antetul se strange */
+body.cinema main.container-wide { padding-top: .35rem; }
+
+body.cinema .crumb { margin: .1rem 0 .45rem; font-size: .8rem; }
+
+body.cinema .ep-hero { margin-bottom: .55rem; gap: .7rem; }
+
+body.cinema .ep-hero__num { width: 44px; height: 44px; font-size: 1.15rem; border-radius: .8rem; }
+
+body.cinema #episode-title { font-size: 1.15rem !important; }
+
+body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
+
+
+/* --- „acum 2 ore” pe cardurile de continuare ------------------------- */
+
+/* --- scroll reveal ---------------------------------------------------- */
+.rv { opacity: 0; transform: translateY(14px); }
+
+
+/* --- Respectă utilizatorii cu mișcare redusă -------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-chip__dot { animation: none; }
+  .rv { opacity: 1; transform: none; }
+  .card::after { display: none; }
+}
+
+
+/* --- cheat-sheet „cum funcționează" în shop --------------------------- */
+
+/* =====================================================================
+   AVATARE cu URL propriu (PNG/JPG/WEBP/GIF animat).
+   Apare in chat, comentarii si clasament; cade pe initiala daca linkul
+   e mort sau gazda blocheaza hotlinking (de asta si referrerpolicy).
+   ===================================================================== */
+.msg__avatar, .comment__avatar {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.55rem; height: 1.55rem;
+  border-radius: 50%; overflow: hidden;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  margin-right: .1rem;
+}
+
+.msg__avatar img, .comment__avatar img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.msg__avatar-fb, .comment__avatar-fb {
+  font-size: .72rem; font-weight: 900; color: var(--accent-hi);
+  line-height: 1; user-select: none;
+}
+
+
+/* ---------------------------------------------------------------------
+   Catalog: filtre (gen + status) — standard pe site-urile de anime
+   --------------------------------------------------------------------- */
+
+/* Badge „RO SUB" — eticheta de nișă a site-urilor românești */
+.pill-ro {
+  position: absolute;
+  top: .45rem;
+  left: .45rem;
+  padding: .14rem .4rem;
+  border-radius: 6px;
+  background: rgba(12, 7, 9, .82);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #ffd166;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  pointer-events: none;
+}
+
+
+/* „Ultimele episoade" — banda orizontală de carduri mici */
+
+/* Footer public — despre + disclaimer (standard pe site-urile de anime) */
+.site-foot {
+  margin: 2.5rem auto 0;
+  max-width: 1100px;
+  padding: 1.2rem 1rem 2rem;
+  border-top: 1px solid var(--line-soft);
+  color: var(--dim);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+
+/* Contorul live din footer: latime minima ca schimbarea valorii sa nu
+   provoace layout shift pe randul de subsol. */
+
+/* ---- clase utilitare CSP-safe (inlocuiesc atributele style="" care erau
+   blocate de style-src 'self' si generau erori in consola) ---- */
+.sk-w30 { width: 30%; }
+
+.title-1-5 { font-size: 1.5rem; }
+
+.title-1-05 { font-size: 1.05rem; }
+
+.flex-1-min200 { flex: 1; min-width: 200px; }
+
+
+/* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
+   sa nu miste elementele de langa ele (CLS). */
+#genre-select { min-width: 11rem; }

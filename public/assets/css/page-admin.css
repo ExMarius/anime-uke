@@ -1,0 +1,406 @@
+
+
+/* ============================ CARDURI / GRID ============================ */
+
+.card {
+  position: relative; display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg); overflow: hidden;
+  transition: transform .28s cubic-bezier(.2,.8,.3,1), border-color .28s, box-shadow .28s;
+}
+
+
+/* auth */
+
+/* ============================ TOAST ============================ */
+.toast-wrap { position: fixed; z-index: 200; bottom: 1.2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .55rem; width: min(430px, calc(100% - 2rem)); pointer-events: none; }
+
+
+/* ============================ ADMIN ============================ */
+.tabs { display: flex; gap: .3rem; flex-wrap: wrap; padding: .35rem; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 99px; margin: .4rem 0 1.7rem; width: fit-content; max-width: 100%; }
+
+.stat { position: relative; padding: 1.15rem 1.1rem; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); overflow: hidden; transition: .25s; }
+
+.stat::before { content: ""; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--grad); opacity: .55; transition: opacity .25s; }
+
+.stat:hover { transform: translateY(-3px); border-color: var(--line); }
+
+.stat:hover::before { opacity: 1; }
+
+.stat__value { font-size: 1.85rem; font-weight: 900; letter-spacing: -.045em; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+
+.stat__label { margin-top: .2rem; font-size: .7rem; color: var(--dim-2); text-transform: uppercase; letter-spacing: .085em; font-weight: 800; }
+
+
+.table-wrap { overflow-x: auto; border-radius: var(--r-md); }
+
+table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+
+th, td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+
+th { color: var(--dim-2); font-size: .68rem; text-transform: uppercase; letter-spacing: .085em; font-weight: 850; white-space: nowrap; background: rgba(12,7,9,.35); position: sticky; top: 0; }
+
+tbody tr { transition: background .15s; }
+
+tbody tr:hover { background: rgba(220,20,60,.045); }
+
+tbody tr:last-child td { border-bottom: none; }
+
+
+/* ============================ RESPONSIVE ============================ */
+@media (max-width: 720px) {
+  .nav { min-height: auto; flex-wrap: wrap; padding: .6rem 1rem; gap: .5rem; }
+  .nav__links { width: 100%; margin-left: 0; gap: .3rem; overflow-x: auto; padding-bottom: .15rem; }
+  .nav__user { padding: .28rem .3rem .28rem .7rem; font-size: .8rem; }
+  .hero { padding: 2.1rem 0 1.4rem; }
+  .chat-fab { padding: .85rem; right: 1rem; bottom: 1rem; }
+  .chat-fab__label { display: none; }
+  .box { padding: 1rem; }
+  .stat__value { font-size: 1.5rem; }
+  .ep-hero__num { width: 50px; height: 50px; font-size: 1.2rem; }
+}
+
+
+/* ===================================================================
+   Coduri de invitatie (panou admin + formular de inregistrare)
+   =================================================================== */
+
+/* Banda informativa — bootstrap / coduri proaspat generate */
+
+/* Filtru tip segmente (Toate / Active / Folosite / Revocate) */
+.filters {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+
+/* Codul de invitatie, ca element monospaced usor de selectat */
+
+/* Input-ul de cod din formularul de inregistrare */
+
+@media (max-width: 640px) {
+  .filters { width: 100%; }
+  .filters .btn { flex: 1 1 auto; }
+}
+
+
+/* ===================================================================
+   PROFIL PUBLIC
+   =================================================================== */
+
+.avatar {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px; height: 92px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: grid; place-items: center;
+  background: linear-gradient(150deg, var(--accent), #7a0c22);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 6px 22px -12px var(--accent);
+}
+
+
+/* Grila Info + Acces rapid */
+
+/* Lista de informatii */
+.info-row {
+  display: flex; align-items: baseline; gap: .8rem;
+  padding: .5rem .2rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+
+/* Buton de scoatere din watchlist */
+
+@media (max-width: 640px) {
+  .avatar { width: 72px; height: 72px; }
+  .avatar span { font-size: 1.9rem; }
+  .info-row { flex-direction: column; gap: .1rem; }
+  .info-row__label { flex: none; }
+  .quick { grid-template-columns: 1fr 1fr; }
+}
+
+
+.box__head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+
+.box__head .box__title { margin-bottom: .8rem; }
+
+
+/* ================== ADMIN: SERII / EPISOADE (pagini proprii) ================== */
+
+/* .filters era deja folosit pentru filtrele de invitatii (butoane intr-un
+ * rand), deci bara de cautare+sortare are clasa ei, ca sa nu se suprascrie. */
+.filterbar { display: flex; gap: .7rem; align-items: flex-end; flex-wrap: wrap; padding: .8rem 1rem; }
+
+.filterbar__search { flex: 1 1 260px; min-width: 0; margin: 0; }
+
+.filterbar__sort { flex: 0 1 200px; margin: 0; }
+
+
+.pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 1.1rem 0 2rem; flex-wrap: wrap; }
+
+.pager__info { font-size: .82rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+
+/* miniatura din tabelul de serii — mult mai compacta decat un poster */
+.thumb { width: 34px; height: 48px; border-radius: 5px; overflow: hidden; background: var(--surface-2);
+  display: grid; place-items: center; border: 1px solid var(--line-soft); }
+
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.thumb__fallback { font-size: .95rem; color: var(--accent-deep); }
+
+
+.row-link { color: var(--text); font-weight: 750; text-decoration: none; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
+
+.row-link:hover { color: var(--accent-hi); border-bottom-color: var(--accent); }
+
+
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; margin-top: 2rem; }
+
+.section-head .section__title { margin-bottom: .8rem; }
+
+
+/* --- postare in bloc --- */
+.input--mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; line-height: 1.6; }
+
+
+.bulk-report { margin-top: 1rem; border-top: 1px solid var(--line-soft); padding-top: .9rem; }
+
+.bulk-report__head { display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; margin-bottom: .7rem; font-size: .88rem; }
+
+.bulk-report__ok  { color: var(--ok); font-weight: 750; }
+
+.bulk-report__err { color: var(--warn); font-weight: 750; }
+
+
+.bulk-preview { max-height: 260px; overflow-y: auto; border: 1px solid var(--line-soft);
+  border-radius: var(--r-md); background: var(--surface-2); }
+
+.bulk-preview__row { display: grid; grid-template-columns: 70px minmax(0,1fr) minmax(0,1.4fr);
+  gap: .6rem; padding: .4rem .7rem; border-bottom: 1px solid var(--line-soft); font-size: .8rem; align-items: baseline; }
+
+.bulk-preview__row:last-child { border-bottom: 0; }
+
+.bulk-preview__num { font-weight: 850; color: var(--accent-hi); font-variant-numeric: tabular-nums; }
+
+.bulk-preview__title { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bulk-preview__src { color: var(--dim-2); font-size: .74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .bulk-preview__row { grid-template-columns: 60px minmax(0,1fr); }
+  .bulk-preview__src { grid-column: 1 / -1; }
+}
+
+
+.bulk-errors { margin-top: .7rem; max-height: 180px; overflow-y: auto; }
+
+.bulk-errors__row { padding: .3rem .6rem; font-size: .79rem; color: var(--warn);
+  border-left: 2px solid rgba(251,191,36,.45); background: rgba(251,191,36,.06); margin-bottom: .25rem; }
+
+
+/* --- cautare + paginare pe pagina principala --- */
+
+/* --- unelte din capul sectiunii de serii (sortare + numaratoare) --- */
+
+.bulk-report__warn { color: var(--warn); font-size: .8rem; }
+
+.thumb .poster__gen { font-size: 1rem; }
+
+
+/* =====================================================================
+   Cufăr cu comori — recompense pentru timpul petrecut pe o serie
+   ===================================================================== */
+@keyframes chest-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); }
+  50% { box-shadow: 0 0 18px 0 rgba(220, 20, 60, .35); }
+}
+
+
+/* =====================================================================
+   Confetti la deschiderea cuferelor + stilul cufarului secret
+   ===================================================================== */
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+
+
+/* =====================================================================
+   Clasament (profil)
+   ===================================================================== */
+
+/* --- toolbar player (fullscreen + hint taste) --- */
+.player:fullscreen { aspect-ratio: auto; width: 100%; height: 100%; border-radius: 0; }
+
+
+/* =====================================================================
+   Rating 1-10 pe pagina seriei
+   ===================================================================== */
+
+/* =====================================================================
+   Comentarii pe episod
+   ===================================================================== */
+
+/* recenzii */
+
+/* =====================================================================
+   Randul „Continua vizionarea"
+   ===================================================================== */
+
+/* =====================================================================
+   ECONOMIE: panou profil, cufar, insigne, chipuri nav
+   ===================================================================== */
+.econ__row { display: flex; align-items: center; gap: .6rem; margin-bottom: .55rem; }
+
+
+/* --- butonul cufar --- */
+@keyframes chestShake {
+  0%, 100% { transform: rotate(0); }
+  10% { transform: rotate(-8deg) scale(1.05); }
+  25% { transform: rotate(8deg) scale(1.05); }
+  40% { transform: rotate(-10deg) scale(1.08); }
+  55% { transform: rotate(10deg) scale(1.08); }
+  70% { transform: rotate(-6deg) scale(1.05); }
+  85% { transform: rotate(6deg) scale(1.03); }
+}
+
+
+/* --- sclipici --- */
+@keyframes sparkleFly {
+  0% { transform: translate(-50%,-50%) scale(.3); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); opacity: 0; }
+}
+
+
+/* panou admin: teme de grade */
+.ranks-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
+
+.ranks-row { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; padding: .5rem .7rem; border: 1px solid var(--line, rgba(255,255,255,.1)); border-radius: 10px; }
+
+.ranks-row__title { font-weight: 800; font-size: .85rem; min-width: 12rem; }
+
+.ranks-row__tiers { font-size: .78rem; color: var(--dim, #9a8f93); flex: 1; }
+
+.box__hint { font-size: .78rem; color: var(--dim, #9a8f93); margin: .2rem 0 .8rem; }
+
+.box__hint code { background: rgba(255,255,255,.08); padding: .05rem .3rem; border-radius: 4px; }
+
+
+/* ============================ SHOP ============================ */
+
+/* ============ COSMETICE (nume de aur / flair suporter) ============ */
+.msg__user--gold {
+  color: #f5c542;
+  text-shadow: 0 0 10px rgba(245, 197, 66, .45);
+}
+
+
+/* ==================== RAPORTARI (panoul admin) ==================== */
+.reports-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .8rem; }
+
+.reports-list { display: flex; flex-direction: column; gap: .5rem; }
+
+.report-row-admin { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .7rem .9rem; flex-wrap: wrap; }
+
+.report-row-admin__main { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+
+.report-row-admin__acts { display: flex; align-items: center; gap: .45rem; }
+
+
+/* ==================== PLAYER v4: cinema + navigare ==================== */
+
+/* Bara de navigare intre episoade — trei butoane ca pe platformele de streaming */
+.ep-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem; flex-wrap: wrap; margin-top: 1rem;
+}
+
+
+/* --- „acum 2 ore” pe cardurile de continuare ------------------------- */
+
+/* --- scroll reveal ---------------------------------------------------- */
+.rv { opacity: 0; transform: translateY(14px); }
+
+
+/* --- footer real ------------------------------------------------------- */
+
+/* --- Respectă utilizatorii cu mișcare redusă -------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-chip__dot { animation: none; }
+  .rv { opacity: 1; transform: none; }
+  .card::after { display: none; }
+}
+
+
+/* --- cheat-sheet „cum funcționează" în shop --------------------------- */
+
+/* =====================================================================
+   AVATARE cu URL propriu (PNG/JPG/WEBP/GIF animat).
+   Apare in chat, comentarii si clasament; cade pe initiala daca linkul
+   e mort sau gazda blocheaza hotlinking (de asta si referrerpolicy).
+   ===================================================================== */
+.msg__avatar {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.55rem; height: 1.55rem;
+  border-radius: 50%; overflow: hidden;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  margin-right: .1rem;
+}
+
+.msg__avatar img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.msg__avatar-fb {
+  font-size: .72rem; font-weight: 900; color: var(--accent-hi);
+  line-height: 1; user-select: none;
+}
+
+
+/* ---------------------------------------------------------------------
+   Catalog: filtre (gen + status) — standard pe site-urile de anime
+   --------------------------------------------------------------------- */
+
+/* Badge „RO SUB" — eticheta de nișă a site-urilor românești */
+.pill-ro {
+  position: absolute;
+  top: .45rem;
+  left: .45rem;
+  padding: .14rem .4rem;
+  border-radius: 6px;
+  background: rgba(12, 7, 9, .82);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #ffd166;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  pointer-events: none;
+}
+
+
+/* „Ultimele episoade" — banda orizontală de carduri mici */
+
+/* Footer public — despre + disclaimer (standard pe site-urile de anime) */
+
+/* Contorul live din footer: latime minima ca schimbarea valorii sa nu
+   provoace layout shift pe randul de subsol. */
+
+/* ---- clase utilitare CSP-safe (inlocuiesc atributele style="" care erau
+   blocate de style-src 'self' si generau erori in consola) ---- */
+.sk-w30 { width: 30%; }
+
+
+.hero-pad-admin { padding: 2.2rem 0 .6rem; }
+
+.title-admin { font-size: clamp(1.9rem, 4.6vw, 2.8rem); }
+
+
+/* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
+   sa nu miste elementele de langa ele (CLS). */
+#genre-select { min-width: 11rem; }

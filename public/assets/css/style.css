@@ -80,7 +80,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
 :focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; border-radius: 4px; }
 
 .container        { width: min(1240px, 100% - 2.5rem); margin-inline: auto; }
-.container-narrow { width: min(860px,  100% - 2.5rem); margin-inline: auto; }
 
 /* ============================ NAVBAR ============================ */
 .nav {
@@ -237,7 +236,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(to top, rgba(12,7,9,.94) 4%, rgba(12,7,9,.42) 34%, transparent 62%);
 }
-.poster__fallback { width: 100%; height: 100%; display: grid; place-items: center; font-size: 2.6rem; background: linear-gradient(150deg, var(--surface-2), var(--bg-2)); color: var(--accent-deep); }
 
 .pill-pos {
   position: absolute; z-index: 2; top: .55rem; left: .55rem;
@@ -503,15 +501,6 @@ td strong, td b { color: var(--text); font-weight: 700; }
   margin-bottom: 1.2rem;
   flex-wrap: wrap;
 }
-.profile-head__info { flex: 1 1 240px; min-width: 0; }
-.profile-head__name {
-  margin: 0 0 .45rem;
-  font-size: clamp(1.5rem, 4vw, 2.1rem);
-  font-weight: 800;
-  letter-spacing: -.02em;
-  word-break: break-word;
-}
-.profile-head__badges { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .8rem; }
 
 .avatar {
   position: relative;
@@ -529,17 +518,6 @@ td strong, td b { color: var(--text); font-weight: 700; }
   font-size: 2.4rem; font-weight: 800; color: #fff;
   text-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
-
-/* Grila Info + Acces rapid */
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.1rem;
-  margin-bottom: 1.6rem;
-}
-
-/* Lista de informatii */
-.info-list { margin: 0; display: flex; flex-direction: column; gap: .1rem; }
 .info-row {
   display: flex; align-items: baseline; gap: .8rem;
   padding: .5rem .2rem;
@@ -555,50 +533,9 @@ td strong, td b { color: var(--text); font-weight: 700; }
 .info-row__value { margin: 0; flex: 1; font-size: .92rem; word-break: break-word; }
 .info-row__value a { color: var(--accent-soft, #ff6b85); text-decoration: none; }
 .info-row__value a:hover { text-decoration: underline; }
-.info-row__empty { color: var(--text-dim); opacity: .75; }
 
 /* Acces rapid */
 .quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .6rem; }
-.quick__item {
-  display: flex; align-items: center; gap: .6rem;
-  padding: .7rem .75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--text) 3%, transparent);
-  text-decoration: none; color: inherit;
-  transition: border-color .18s, transform .18s, background .18s;
-}
-a.quick__item:hover {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  transform: translateY(-2px);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-.quick__icon { font-size: 1.25rem; line-height: 1; }
-.quick__body { display: flex; flex-direction: column; min-width: 0; }
-.quick__value { font-size: 1.05rem; font-weight: 800; line-height: 1.15; }
-.quick__label { font-size: .72rem; color: var(--text-dim); line-height: 1.25; }
-
-/* Buton de scoatere din watchlist */
-.poster__remove {
-  position: absolute; top: .45rem; left: .45rem;
-  width: 26px; height: 26px;
-  display: grid; place-items: center;
-  border: 0; border-radius: 50%;
-  background: rgba(0,0,0,.72); color: #fff;
-  font-size: .8rem; cursor: pointer;
-  opacity: 0; transition: opacity .18s, background .18s;
-}
-.card:hover .poster__remove { opacity: 1; }
-.poster__remove:hover { background: var(--accent); }
-
-@media (max-width: 640px) {
-  .profile-head { padding: 1.1rem; gap: .9rem; }
-  .avatar { width: 72px; height: 72px; }
-  .avatar span { font-size: 1.9rem; }
-  .info-row { flex-direction: column; gap: .1rem; }
-  .info-row__label { flex: none; }
-  .quick { grid-template-columns: 1fr 1fr; }
-}
 
 /* ======================= SURSE VIDEO ======================= */
 /*
@@ -901,27 +838,6 @@ a.quick__item:hover {
   50% { box-shadow: 0 0 22px 0 rgba(147, 51, 234, .45); }
 }
 
-/* =====================================================================
-   Clasament (profil)
-   ===================================================================== */
-.lb { list-style: none; margin: .4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
-.lb__row {
-  display: grid; grid-template-columns: 2.1rem 1fr auto auto;
-  align-items: center; gap: .6rem;
-  padding: .42rem .6rem; border-radius: var(--r-md);
-  background: var(--surface-3, #1c1216);
-  font-size: .86rem;
-}
-.lb__row--me {
-  outline: 1px solid rgba(220, 20, 60, .55);
-  background: linear-gradient(90deg, rgba(220, 20, 60, .16), var(--surface-3, #1c1216));
-}
-.lb__rank { font-size: .95rem; text-align: center; }
-.lb__name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb__week { font-size: .72rem; color: var(--dim); }
-.lb__pts { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 800; }
-@media (max-width: 480px) { .lb__week { display: none; } }
-
 /* --- toolbar player (fullscreen + hint taste) --- */
 .player-tools {
   display: flex; align-items: center; justify-content: space-between;
@@ -1050,28 +966,11 @@ a.quick__item:hover {
 
 .econ__meta { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin: .7rem 0; flex-wrap: wrap; }
 .econ__gold { font-weight: 800; color: #f0c040; font-size: .95rem; border-radius: 8px; padding: .15rem .4rem; }
-
-.gold-pulse { animation: goldPulse 1.5s ease; }
 @keyframes goldPulse {
   0%, 100% { text-shadow: none; transform: scale(1); }
   30% { text-shadow: 0 0 14px rgba(240,192,64,.9); transform: scale(1.25); }
   60% { text-shadow: 0 0 8px rgba(240,192,64,.6); transform: scale(1.1); }
 }
-
-/* --- butonul cufar --- */
-.chest-btn {
-  position: relative; display: inline-flex; align-items: center; gap: .5rem;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
-  background: rgba(255,255,255,.05); color: inherit;
-  padding: .45rem .9rem; cursor: pointer; font-size: .85rem; font-weight: 700;
-  transition: border-color .2s, background .2s;
-}
-.chest-btn--ready { border-color: rgba(220,20,60,.6); background: rgba(220,20,60,.12); }
-.chest-btn--ready:hover { background: rgba(220,20,60,.22); }
-.chest-btn--wait { opacity: .65; cursor: not-allowed; }
-.chest-btn__icon { font-size: 1.2rem; display: inline-block; }
-
-.chest-shake { animation: chestShake .8s ease; }
 @keyframes chestShake {
   0%, 100% { transform: rotate(0); }
   10% { transform: rotate(-8deg) scale(1.05); }
@@ -1081,17 +980,10 @@ a.quick__item:hover {
   70% { transform: rotate(-6deg) scale(1.05); }
   85% { transform: rotate(6deg) scale(1.03); }
 }
-.chest-pop { animation: chestPop .5s cubic-bezier(.2,1.6,.4,1); }
 @keyframes chestPop {
   0% { transform: scale(1); }
   50% { transform: scale(1.9) rotate(6deg); filter: drop-shadow(0 0 10px rgba(240,192,64,.8)); }
   100% { transform: scale(1.15); }
-}
-
-/* --- sclipici --- */
-.sparkle {
-  position: absolute; left: 50%; top: 50%; font-size: .8rem; pointer-events: none;
-  animation: sparkleFly .8s ease-out forwards; z-index: 5;
 }
 @keyframes sparkleFly {
   0% { transform: translate(-50%,-50%) scale(.3); opacity: 1; }
@@ -1231,7 +1123,6 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
 }
 .msg .ubadge, .msg .uchip { margin-right: .3rem; }
 .comment__head .ubadge, .comment__head .uchip { margin: 0 .35rem; }
-.lb__row .ubadge, .lb__row .uchip { margin: 0 .3rem; }
 
 /* panou admin: teme de grade */
 .ranks-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
@@ -1316,30 +1207,6 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
   font-size: .78rem; cursor: pointer;
 }
 .notif-pop__all:hover { background: rgba(220, 20, 60, .18); color: #fff; }
-
-/* ============================ SHOP ============================ */
-.shop-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-.shop-head__gold {
-  font-size: 1.25rem; font-weight: 800; color: #f5c542; white-space: nowrap;
-  background: rgba(245, 197, 66, .08); border: 1px solid rgba(245, 197, 66, .25);
-  border-radius: .8rem; padding: .5rem .9rem;
-}
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .9rem; }
-.shop-card { display: flex; flex-direction: column; gap: .55rem; padding: 1.1rem; position: relative; transition: transform .12s ease, border-color .12s ease; }
-.shop-card:hover { transform: translateY(-2px); border-color: rgba(220, 20, 60, .45); }
-.shop-card--owned { border-color: rgba(80, 200, 120, .35); }
-.shop-card__icon { font-size: 2rem; }
-.shop-card__name { margin: 0; font-size: 1.02rem; }
-.shop-card__desc { margin: 0; color: rgba(255, 255, 255, .55); font-size: .84rem; line-height: 1.45; flex: 1; }
-.shop-card__foot { display: flex; align-items: center; gap: .6rem; justify-content: space-between; margin-top: .3rem; }
-.shop-card__price { font-weight: 800; color: #f5c542; }
-.shop-card__qty { font-size: .75rem; color: rgba(255, 255, 255, .5); }
-
-/* ============ COSMETICE (nume de aur / flair suporter) ============ */
-.msg__user--gold, .name--gold {
-  color: #f5c542;
-  text-shadow: 0 0 10px rgba(245, 197, 66, .45);
-}
 
 /* ==================== RAPORTARE SURSA (episod) ==================== */
 .report-row { margin: .9rem 0; }
@@ -1633,17 +1500,6 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 .mission__state { font-size: .74rem; color: var(--dim-2); }
 .mission--done .mission__state { color: var(--ok); font-weight: 800; }
 
-/* --- cheat-sheet „cum funcționează" în shop --------------------------- */
-.howto { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-bottom: 1.6rem; }
-.howto__card {
-  padding: .9rem 1rem; border-radius: var(--r-md);
-  background: var(--surface); border: 1px solid var(--line-soft);
-}
-.howto__card h3 { margin: 0 0 .25rem; font-size: .86rem; }
-.howto__card p { margin: 0; font-size: .76rem; color: var(--dim); line-height: 1.45; }
-@media (max-width: 900px) { .howto { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .howto { grid-template-columns: 1fr; } }
-
 /* =====================================================================
    AVATARE cu URL propriu (PNG/JPG/WEBP/GIF animat).
    Apare in chat, comentarii si clasament; cade pe initiala daca linkul
@@ -1657,7 +1513,6 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   border: 1px solid var(--line);
   margin-right: .1rem;
 }
-.lb__avatar { width: 1.8rem; height: 1.8rem; }
 .msg__avatar img, .comment__avatar img, .lb__avatar img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
@@ -1808,7 +1663,6 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 
 .hero-pad-admin { padding: 2.2rem 0 .6rem; }
 .title-admin { font-size: clamp(1.9rem, 4.6vw, 2.8rem); }
-.mt-1 { margin-top: 1rem; }
 
 /* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
    sa nu miste elementele de langa ele (CLS). */
