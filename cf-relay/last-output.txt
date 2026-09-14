@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ cee2292
+comanda: cf-relay/cmd.sh @ 7941714
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,8 +15,8 @@ comanda: cf-relay/cmd.sh @ cee2292
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=cee2292
-    [0;32m✓[0m publicat: https://0b37f01d.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=7941714
+    [0;32m✓[0m publicat: https://417cd831.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -25,3 +25,8 @@ comanda: cf-relay/cmd.sh @ cee2292
 exit deploy: 0
 sanitate: / -> 200
 marcaj: GSC meta v1
+meta GSC pe /: google-site-verification
+meta GSC pe /series: google-site-verification
+meta GSC pe /episode: google-site-verification
+meta GSC pe /login: google-site-verification
+meta GSC pe /register: google-site-verification
