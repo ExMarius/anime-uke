@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -62,7 +62,7 @@ function seriesCard(s, idx = 0) {
 
   if (s.cover_image) {
     const img = document.createElement('img');
-    img.src = safeUrl(s.cover_image, '');
+    img.src = optimizeCover(safeUrl(s.cover_image, ''), 400);
     img.alt = s.title || 'Poster';
     img.loading = 'lazy';
     img.decoding = 'async';
@@ -238,7 +238,7 @@ async function loadRecent() {
     art.className = 'recent-card__art';
     if (it.cover_image) {
       const img = document.createElement('img');
-      img.src = safeUrl(it.cover_image, '');
+      img.src = optimizeCover(safeUrl(it.cover_image, ''), 400);
       img.alt = '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -415,7 +415,8 @@ async function renderHero(salt = spotSalt()) {
   const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
   const img = document.createElement('img');
   img.className = 'hban__bg-img';
-  img.src = cover && cover !== '#' ? cover : artUrl;
+  const optimized = optimizeCover(cover, 1280);
+  img.src = cover && cover !== '#' ? optimized : artUrl;
   img.alt = '';
   // Hero-ul e elementul cel mai vizibil la incarcare (LCP): spunem browserului
   // sa-l prioritizeze fata de restul resurselor.
@@ -429,9 +430,12 @@ async function renderHero(salt = spotSalt()) {
 
   box.hidden = false;
   box.classList.remove('hban--loading');   // la revedere, skeleton
-  box.classList.remove('hban--in');
-  void box.offsetWidth;
-  box.classList.add('hban--in');
+  // Intrarea prin Web Animations API: restart natural la fiecare apel si
+  // zero reflow fortat (vechiul truc cu offsetWidth costa ~74ms de layout).
+  box.animate(
+    [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
+    { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }
+  );
 }
 
 async function initHero() {

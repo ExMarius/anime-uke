@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, optimizeCover } from './core.js';
 import { initChat } from './chat.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
@@ -36,7 +36,7 @@ function setHead(series) {
   poster.innerHTML = '';
   if (series.cover_image) {
     const img = document.createElement('img');
-    img.src = safeUrl(series.cover_image, '');
+    img.src = optimizeCover(safeUrl(series.cover_image, ''), 600);
     img.alt = series.title || 'Poster';
     img.loading = 'eager';
     img.decoding = 'async';

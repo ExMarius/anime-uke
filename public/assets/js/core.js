@@ -30,6 +30,23 @@ export function getParam(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
+// Coperțile externe (IMDb/TMDB etc.) ajung prin images.weserv.nl — serviciu
+// gratuit, de trading liber — care le re-comprima in WebP la latimea de care
+// avem efectiv nevoie (hero 1280, carduri 400). Le muta 195->~60 KB pe cel
+// mai gras caz. Imaginile de pe originea noastra (/covers) sunt deja
+// comprimate la deploy si raman asa. Daca weserv picade, onerror din pagini
+// intoarce oricum fallbackul existent (genPoster / arta bundled).
+export function optimizeCover(value, w = 400) {
+  if (!value || value === '#') return value;
+  try {
+    const u = new URL(value, location.origin);
+    if (u.origin === location.origin) return value;
+    return `https://images.weserv.nl/?url=${encodeURIComponent(u.host + u.pathname + u.search)}&w=${w}&q=80&output=webp&fit=cover&a=top&we`;
+  } catch {
+    return value;
+  }
+}
+
 export function safeUrl(value, fallback = '#') {
   const v = String(value || '').trim();
   if (!v) return fallback;
