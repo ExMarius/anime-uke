@@ -1,10 +1,11 @@
-exit_code: 3
-comanda: cf-relay/cmd.sh @ e101b60
+exit_code: 0
+comanda: cf-relay/cmd.sh @ f3bcc69
 ────────────────────────────────────
-── cover-urile reale din producție ──
-1014 One Piece -> https://m.media-amazon.com/images/M/MV5BMTNjNGU4NTUtYmVjMy00YjRiLTkxMWUtNzZkMDNiYjZhNmViXkEyXkFqcGc@._V1_FMjpg_UX1000_.jpg
-── test weserv cu URL-ul externe (exact ca în cod) ──
-url param: 
-weserv: 400 application/json 61B
-── original direct ──
-original: 000  0B
+── weserv cu URL-ul REAL al seriei ──
+status=404 tip=application/json bytes=79
+── weserv 400w (telefon) ──
+status=404 tip=application/json bytes=79
+/tmp/w.webp:    JSON text data
+/tmp/w400.webp: JSON text data
+── original direct (amazon) ──
+status=200 tip=image/jpeg bytes=259105
