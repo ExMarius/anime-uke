@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
-D="https://9d5196e7.anime-uke.pages.dev"
-JS=$(curl -s "$D/assets/js/page-profile.js")
-echo "client facțiuni (deployment final): $(echo "$JS" | grep -o "faction__grid" | wc -l)"
-echo "client chat lider: $(curl -s "$D/assets/js/chat.js" | grep -o "leader_color" | wc -l)"
-curl -s -o /dev/null -w "api factions: %{http_code}\n" "https://anime-uke.pages.dev/api/factions"
+cd "$(dirname "$0")/.."
+W="$PWD/node_modules/.bin/wrangler"
+[ -x "$W" ] || W="npx wrangler"
+echo "── rank_themes (sursa facțiunilor) ──"
+$W d1 execute anime-db --remote --json --command "SELECT slug, substr(title,1,30) AS t, length(tiers) AS tl FROM rank_themes ORDER BY slug" 2>/dev/null | tail -40
+echo "── coloane faction pe users ──"
+$W d1 execute anime-db --remote --json --command "SELECT name FROM pragma_table_info('users') WHERE name LIKE 'faction%'" 2>/dev/null | tail -15
