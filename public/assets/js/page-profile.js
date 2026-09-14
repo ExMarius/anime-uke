@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, safeUrl, staffBadge, rankChip , whenActive } from './core.js';
+import { api, renderNav, toast, withBusy, safeUrl, staffBadge, staffIcon, rankChip, whenActive } from './core.js';
 import { initChat } from './chat.js';
 
 // =====================================================================
@@ -468,7 +468,7 @@ function lbRow(row, i, viewer, weeklyMode) {
   main.className = 'lb__main';
   const name = document.createElement('b');
   name.textContent = row.username;
-  main.append(name, ` ${row.staff ? (row.staff === 'Admin' ? '🛡️' : '🛠️') : ''}${row.rank?.icon || ''}`);
+  main.append(name, ` ${staffIcon(row.staff)}${row.rank?.icon || ''}`);
   li.appendChild(main);
 
   const val = document.createElement('span');

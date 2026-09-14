@@ -1204,6 +1204,31 @@ console.log('\n=== 13f. GRADE TEMATICE, STAFF, TEME ADMIN ===');
   check('Un moderator nu poate promova → 403', modTheme.status === 403, `status=${modTheme.status}`);
   await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', is_mod: 0 });
 
+  // --- grade de staff acordate manual (0025): Helper / Staff / Moderator
+  const gHelper = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'helper' });
+  const profHelper = await req(j, 'GET', '/api/profile/user2');
+  const meHelper = await req(j, 'GET', '/api/auth/me');
+  check('Gradul Helper se acorda si apare pe profil', gHelper.data?.success === true && gHelper.data?.staff === 'Helper' && profHelper.data?.identity?.staff === 'Helper', JSON.stringify(profHelper.data?.identity));
+  check('Helper NU primeste drepturi de moderare (is_mod=0)', gHelper.data?.is_mod === 0 && !meHelper.data?.user?.is_mod && meHelper.data?.user?.staff_role === 'helper', JSON.stringify(meHelper.data?.user)?.slice(0, 160));
+  const gStaff = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'staff' });
+  const profStaff = await req(j, 'GET', '/api/profile/user2');
+  check('Gradul Staff se acorda si apare pe profil', gStaff.data?.staff === 'Staff' && profStaff.data?.identity?.staff === 'Staff', JSON.stringify(profStaff.data?.identity));
+  const gModRole = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'moderator' });
+  const meModRole = await req(j, 'GET', '/api/auth/me');
+  check('Gradul Moderator prin role= seteaza si is_mod', gModRole.data?.staff === 'Moderator' && gModRole.data?.is_mod === 1 && !!meModRole.data?.user?.is_mod, JSON.stringify(meModRole.data?.user)?.slice(0, 160));
+  const gBad = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: 'hokage' });
+  check('Grad necunoscut → 400', gBad.status === 400, `status=${gBad.status}`);
+  const teamList = await req(globalThis.admin, 'GET', '/api/admin/mods');
+  const teamU2 = (teamList.data?.staff || []).find((x) => x.username === 'user2');
+  const teamAdmin = (teamList.data?.staff || []).find((x) => x.is_admin);
+  check('GET /api/admin/mods listeaza echipa (admin + moderatorul nou)', teamList.status === 200 && teamU2?.role === 'Moderator' && teamU2?.role_key === 'moderator' && !!teamAdmin && teamAdmin.role === 'Admin', JSON.stringify(teamList.data)?.slice(0, 200));
+  const teamAsMod = await req(j, 'GET', '/api/admin/mods');
+  check('Lista echipei nu e accesibila moderatorilor → 403', teamAsMod.status === 403, `status=${teamAsMod.status}`);
+  const gNone = await req(globalThis.admin, 'POST', '/api/admin/mods', { username: 'user2', role: '' });
+  const profNone = await req(j, 'GET', '/api/profile/user2');
+  const teamAfter = await req(globalThis.admin, 'GET', '/api/admin/mods');
+  check('Scoaterea gradului curata badge-ul, is_mod si lista', gNone.data?.success === true && gNone.data?.is_mod === 0 && profNone.data?.identity?.staff === '' && !(teamAfter.data?.staff || []).some((x) => x.username === 'user2'), JSON.stringify(profNone.data?.identity));
+
   // --- chat: mesajele poarta gradul si rolul de staff din server
   await new Promise((r) => setTimeout(r, 1200));
   const ws1 = new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } });

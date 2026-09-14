@@ -104,7 +104,7 @@ export async function onRequestGet(context) {
     // TOP-ul saptamanii curente (cel care se premiaza duminica)
     const weekly = await env.DB
       .prepare(
-        `SELECT u.username, u.level, u.rank_theme, u.is_admin, u.is_mod, up.avatar_url AS avatar,
+        `SELECT u.username, u.level, u.rank_theme, u.is_admin, u.is_mod, u.staff_role, up.avatar_url AS avatar,
                 SUM(w.points) AS pts, COUNT(*) AS eps
          FROM watched_history w
          JOIN users u ON u.id = w.user_id
@@ -120,7 +120,7 @@ export async function onRequestGet(context) {
     // Prestigiul de tot timpul, secundar
     const alltime = await env.DB
       .prepare(
-        `SELECT u.username, u.points, u.level, u.rank_theme, u.is_admin, u.is_mod, up.avatar_url AS avatar
+        `SELECT u.username, u.points, u.level, u.rank_theme, u.is_admin, u.is_mod, u.staff_role, up.avatar_url AS avatar
          FROM users u
          LEFT JOIN user_profiles up ON up.user_id = u.id
          WHERE u.is_banned = 0

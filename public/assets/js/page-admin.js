@@ -174,12 +174,22 @@ async function loadUsers() {
       cell(u.username + (isSelf ? ' (tu)' : '')),
       cell(u.email),
       cell(u.points),
-      pill(u.is_admin ? 'Admin' : 'User', u.is_admin ? 'pill--admin' : 'pill--user'),
+      pill(staffLabel(u), u.is_admin ? 'pill--admin' : (u.staff_role || u.is_mod) ? 'pill--staff' : 'pill--user'),
       pill(u.is_banned ? 'Banat' : 'Activ', u.is_banned ? 'pill--banned' : 'pill--user'),
       actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]),
     );
     tbody.appendChild(tr);
   }
+}
+
+/** Eticheta de rol din tabelul de utilizatori: Admin / grad de staff / User. */
+function staffLabel(u) {
+  if (u.is_admin) return 'Admin';
+  const role = String(u.staff_role || '');
+  if (role === 'moderator' || u.is_mod) return '🛠️ Moderator';
+  if (role === 'staff') return '⭐ Staff';
+  if (role === 'helper') return '🤝 Helper';
+  return 'User';
 }
 
 async function userAction(action, user, value) {
@@ -205,9 +215,62 @@ async function deleteUser(user) {
   loadStats();
 }
 
-// GRADE & STAFF: teme de grade (din orice serie) + moderatori
+// GRADE: grade de staff (acordate manual) + teme de nivel (automate)
 // ---------------------------------------------------------------------
+const STAFF_ICONS = { Admin: '🛡️', Moderator: '🛠️', Staff: '⭐', Helper: '🤝' };
+
 async function loadRanks() {
+  await Promise.all([loadStaff(), loadRankThemes()]);
+}
+
+async function loadStaff() {
+  const box = document.getElementById('staff-list');
+  if (!box) return;
+  const res = await api('/admin/mods');
+  box.innerHTML = '';
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca echipa.'; return; }
+  const staff = res.data.staff || [];
+  if (!staff.length) { box.textContent = 'Nimeni nu are încă un grad.'; return; }
+  const meId = me?.id;
+  for (const u of staff) {
+    const row = document.createElement('div');
+    row.className = 'ranks-row staff-row';
+    const name = document.createElement('span');
+    name.className = 'ranks-row__title';
+    name.textContent = u.username + (u.id === meId ? ' (tu)' : '');
+    const badge = document.createElement('span');
+    badge.className = 'ubadge ubadge--' + (u.is_admin ? 'admin' : u.role === 'Moderator' ? 'mod' : u.role === 'Staff' ? 'staff' : 'helper');
+    badge.textContent = `${STAFF_ICONS[u.role] || '🎖️'} ${u.role}`;
+    row.append(name, badge);
+    if (!u.is_admin && u.id !== meId) {
+      const sel = document.createElement('select');
+      sel.className = 'input input--sm staff-row__role';
+      sel.setAttribute('aria-label', `Gradul lui ${u.username}`);
+      for (const [val, label] of [['helper', '🤝 Helper'], ['staff', '⭐ Staff'], ['moderator', '🛠️ Moderator'], ['', '— fără grad']]) {
+        const o = document.createElement('option');
+        o.value = val; o.textContent = label;
+        if (val === u.role_key) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => setStaffRole(u.username, sel.value));
+      row.appendChild(sel);
+    }
+    box.appendChild(row);
+  }
+}
+
+async function setStaffRole(username, role) {
+  const r = await api('/admin/mods', { method: 'POST', body: { username, role } });
+  if (r.ok) {
+    toast(r.data.staff ? `${r.data.username} este acum ${r.data.staff}` : `${r.data.username} nu mai are grad`, 'success');
+  } else {
+    toast(r.data?.error || 'Eroare', 'error');
+  }
+  loadStaff();
+  return r;
+}
+
+async function loadRankThemes() {
   const res = await api('/ranks');
   const box = document.getElementById('ranks-list');
   if (!box) return;
@@ -231,7 +294,7 @@ async function loadRanks() {
       del.addEventListener('click', async () => {
         const r = await api(`/admin/rank-themes?slug=${encodeURIComponent(t.slug)}`, { method: 'DELETE' });
         toast(r.ok ? 'Temă ștearsă' : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
-        if (r.ok) loadRanks();
+        if (r.ok) loadRankThemes();
       });
       row.appendChild(del);
     }
@@ -253,16 +316,15 @@ function initRanks() {
       body: { slug: document.getElementById('rt-slug').value, title: document.getElementById('rt-title').value, tiers },
     });
     toast(r.ok ? 'Temă salvată' : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
-    if (r.ok) { ev.target.reset(); loadRanks(); }
+    if (r.ok) { ev.target.reset(); loadRankThemes(); }
   });
   document.getElementById('mod-form')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const btn = ev.submitter;
-    const r = await api('/admin/mods', {
-      method: 'POST',
-      body: { username: document.getElementById('mod-username').value, is_mod: btn?.dataset?.mod === '1' ? 1 : 0 },
-    });
-    toast(r.ok ? (r.data.is_mod ? 'Moderator promovat' : 'Retrogradat') : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
+    const remove = btn?.dataset?.mod === '0';
+    const role = remove ? '' : (document.getElementById('mod-role')?.value || 'helper');
+    const r = await setStaffRole(document.getElementById('mod-username').value.trim(), role);
+    if (r.ok) document.getElementById('mod-username').value = '';
   });
 }
 initRanks();

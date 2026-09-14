@@ -29,7 +29,7 @@ export async function onRequestGet(context) {
     // sa paraseasca baza de date. (In v1 /api/admin returna si emailurile
     // catre un tabel care nici macar nu le afisa.)
     const res = await env.DB.prepare(
-      `SELECT id, username, email, points, is_admin, is_banned, created_at, last_login_at
+      `SELECT id, username, email, points, is_admin, is_mod, staff_role, is_banned, created_at, last_login_at
        FROM users ORDER BY id ASC LIMIT 1000`
     ).all();
     return json({ users: res.results || [], you: gate.user.id });

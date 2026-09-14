@@ -290,6 +290,18 @@ tbody tr:last-child td { border-bottom: none; }
 
 .box__hint code { background: rgba(255,255,255,.08); padding: .05rem .3rem; border-radius: 4px; }
 
+/* panou admin: grade de staff (acordate manual) */
+.box__subtitle { font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--dim, #9a8f93); margin: 1.2rem 0 .5rem; }
+.staff-form { display: grid; grid-template-columns: minmax(10rem, 1.4fr) minmax(9rem, 1fr) auto; gap: .6rem; align-items: center; }
+@media (max-width: 640px) { .staff-form { grid-template-columns: 1fr; } }
+.staff-list { display: flex; flex-direction: column; gap: .5rem; }
+.staff-row { justify-content: space-between; }
+.staff-row .ranks-row__title { min-width: 8rem; flex: 1; }
+.staff-row__role { max-width: 11rem; padding: .3rem .5rem; font-size: .8rem; }
+.box--muted { opacity: .92; border-style: dashed; }
+.ranks-details > summary { cursor: pointer; font-weight: 700; font-size: .85rem; color: var(--dim, #9a8f93); margin-bottom: .8rem; }
+.ranks-details > summary:hover { color: inherit; }
+
 
 /* ============================ SHOP ============================ */
 

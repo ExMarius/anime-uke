@@ -69,32 +69,43 @@
 
     <!-- ============ JURNAL ============ -->
     <!-- ===================== INVITATII ===================== -->
-    <!-- ===================== GRADE & STAFF ===================== -->
+    <!-- ===================== GRADE (STAFF) ===================== -->
     <section class="panel" id="panel-ranks" role="tabpanel" aria-labelledby="tab-ranks" hidden>
       <div class="box">
-        <h2 class="box__title">Teme de grade</h2>
-        <p class="box__hint">Gradele cresc din nivelul contului. Adaugă teme din orice serie: fiecare treaptă pe un rând, formatul <code>min | Label | icon</code>.</p>
-        <div class="ranks-list" id="ranks-list"></div>
-        <form id="rank-theme-form" class="rank-form">
-          <div class="rank-form__grid">
-            <input class="input" id="rt-slug" placeholder="slug (ex. bleach)" required maxlength="40">
-            <input class="input" id="rt-title" placeholder="Titlu (ex. Bleach — Soul Society)" required maxlength="60">
-          </div>
-          <textarea class="input rank-form__tiers" id="rt-tiers" rows="5" required
-            placeholder="1 | Elev | 🗡️&#10;6 | Shinigami | ⚔️&#10;14 | Căpitan | 👑"></textarea>
-          <button class="btn btn--accent" type="submit">Salvează tema</button>
-        </form>
-      </div>
-      <div class="box">
-        <h2 class="box__title">Moderatori</h2>
-        <p class="box__hint">Moderatorii primesc badge 🛠️ în chat, comentarii și clasament, plus drepturi de moderare.</p>
-        <form id="mod-form" class="rank-form__grid">
-          <input class="input" id="mod-username" placeholder="username" required>
+        <h2 class="box__title">Grade de staff</h2>
+        <p class="box__hint">Gradele se acordă manual, de aici. <b>🤝 Helper</b> și <b>⭐ Staff</b> primesc doar badge-ul (chat, comentarii, clasament, profil); <b>🛠️ Moderator</b> primește badge + drepturi de moderare. Adminii se fac din tabul „Utilizatori”.</p>
+        <form id="mod-form" class="staff-form">
+          <input class="input" id="mod-username" placeholder="username" required maxlength="20" autocomplete="off">
+          <select class="input" id="mod-role" aria-label="Grad">
+            <option value="helper">🤝 Helper</option>
+            <option value="staff">⭐ Staff</option>
+            <option value="moderator">🛠️ Moderator</option>
+          </select>
           <div class="rank-form__btns">
-            <button class="btn btn--accent btn--sm" type="submit" data-mod="1">Promovează</button>
-            <button class="btn btn--ghost btn--sm" type="submit" data-mod="0">Retrogradează</button>
+            <button class="btn btn--accent btn--sm" type="submit" data-mod="1">Acordă gradul</button>
+            <button class="btn btn--ghost btn--sm" type="submit" data-mod="0">Scoate gradul</button>
           </div>
         </form>
+        <h3 class="box__subtitle">Echipa curentă</h3>
+        <div class="staff-list" id="staff-list"><div class="loading"><div class="spinner"></div>Se încarcă…</div></div>
+      </div>
+
+      <div class="box box--muted">
+        <h2 class="box__title">Teme de nivel <span class="hint">(automate — nu se acordă)</span></h2>
+        <p class="box__hint">Acestea <b>nu sunt grade de staff</b>: treptele (ex. Genin → Hokage) vin singure din nivelul contului, iar fiecare user își alege tema din profil. Aici doar adaugi teme noi din alte serii: fiecare treaptă pe un rând, formatul <code>min | Label | icon</code>.</p>
+        <details class="ranks-details">
+          <summary>Vezi temele și adaugă una nouă</summary>
+          <div class="ranks-list" id="ranks-list"></div>
+          <form id="rank-theme-form" class="rank-form">
+            <div class="rank-form__grid">
+              <input class="input" id="rt-slug" placeholder="slug (ex. bleach)" required maxlength="40">
+              <input class="input" id="rt-title" placeholder="Titlu (ex. Bleach — Soul Society)" required maxlength="60">
+            </div>
+            <textarea class="input rank-form__tiers" id="rt-tiers" rows="5" required
+              placeholder="1 | Elev | 🗡️&#10;6 | Shinigami | ⚔️&#10;14 | Căpitan | 👑"></textarea>
+            <button class="btn btn--accent" type="submit">Salvează tema</button>
+          </form>
+        </details>
       </div>
     </section>
 

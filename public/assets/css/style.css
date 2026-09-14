@@ -402,6 +402,7 @@ td strong, td b { color: var(--text); font-weight: 700; }
 .pill { display: inline-block; padding: .17rem .58rem; border-radius: 99px; font-size: .68rem; font-weight: 850; letter-spacing: .02em; white-space: nowrap; }
 .pill--admin  { background: rgba(251,191,36,.14); color: var(--warn); border: 1px solid rgba(251,191,36,.28); }
 .pill--user   { background: rgba(255,255,255,.06); color: var(--dim); border: 1px solid var(--line-soft); }
+.pill--staff  { background: rgba(47,123,217,.14); color: #8fbcf5; border: 1px solid rgba(47,123,217,.3); }
 .pill--banned { background: var(--accent-soft); color: var(--accent-hi); border: 1px solid var(--line); }
 .pill--ok     { background: rgba(52,211,153,.13); color: var(--ok); border: 1px solid rgba(52,211,153,.28); }
 .actions { display: flex; gap: .32rem; flex-wrap: wrap; }
@@ -1115,6 +1116,8 @@ a.hban:hover .hban__title { color: var(--accent, #DC143C); }
 }
 .ubadge--admin { background: linear-gradient(135deg, #DC143C, #8e0f28); color: #fff; box-shadow: 0 2px 10px rgba(220,20,60,.4); }
 .ubadge--mod   { background: linear-gradient(135deg, #2f7bd9, #1b4d8a); color: #fff; box-shadow: 0 2px 10px rgba(47,123,217,.35); }
+.ubadge--staff  { background: linear-gradient(135deg, #f0b429, #b3741a); color: #1a1208; box-shadow: 0 2px 10px rgba(240,180,41,.35); }
+.ubadge--helper { background: linear-gradient(135deg, #2fb37a, #1b6b48); color: #fff; box-shadow: 0 2px 10px rgba(47,179,122,.35); }
 .uchip {
   display: inline-flex; align-items: center; gap: .22rem;
   font-size: .66rem; font-weight: 800; color: #ffd7de;

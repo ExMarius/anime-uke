@@ -30,7 +30,7 @@ export async function onRequestGet(context) {
   const themes = await loadRankThemes(env);
   const rows = await env.DB
     .prepare(
-      `SELECT r.body, r.updated_at, r.user_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod,
+      `SELECT r.body, r.updated_at, r.user_id, u.username, u.level, u.rank_theme, u.is_admin, u.is_mod, u.staff_role,
               rt.rating
        FROM series_reviews r
        JOIN users u ON u.id = r.user_id

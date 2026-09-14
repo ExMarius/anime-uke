@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, is_mod, staff_role, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null
@@ -42,6 +42,7 @@ export async function getSessionUser(request, env) {
     gold: user.gold || 0,
     is_admin: !!user.is_admin,
     is_mod: !!user.is_mod,
+    staff_role: user.staff_role || '',
     rank_theme: user.rank_theme || 'naruto',
     active_name_color: user.active_name_color || null,
     active_theme: user.active_theme || null,
@@ -66,6 +67,7 @@ export function publicUser(user) {
     points: user.points,
     is_admin: user.is_admin,
     is_mod: user.is_mod || 0,
+    staff_role: user.staff_role || '',
     rank_theme: user.rank_theme || 'naruto',
     // Economie: nav-ul arata nivelul si gold-ul fara o cerere in plus.
     xp: user.xp || 0,

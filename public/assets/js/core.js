@@ -616,12 +616,26 @@ export function observeReveals(root = document) {
  * stricat; o nuanta derivata din titlu face catalogul variat si citibil,
  * fara sa coste vreo imagine si fara vreo cerere in plus.
  */
-/** Badge de staff (Admin/Moderator) — ierarhia de moderare, vizibila. */
+/** Gradele de staff (acordate manual de admin), cu icon + clasa CSS. */
+export const STAFF_META = {
+  Admin:     { icon: '🛡️', cls: 'admin' },
+  Moderator: { icon: '🛠️', cls: 'mod' },
+  Staff:     { icon: '⭐', cls: 'staff' },
+  Helper:    { icon: '🤝', cls: 'helper' },
+};
+
+/** Iconul de staff (pentru liste compacte: online, clasament). */
+export function staffIcon(staff) {
+  return staff ? (STAFF_META[staff]?.icon || '🎖️') : '';
+}
+
+/** Badge de staff (Admin/Moderator/Staff/Helper) — ierarhia echipei, vizibila. */
 export function staffBadge(staff) {
   if (!staff) return null;
+  const meta = STAFF_META[staff] || { icon: '🎖️', cls: 'staff' };
   const s = document.createElement('span');
-  s.className = 'ubadge ubadge--' + (staff === 'Admin' ? 'admin' : staff === 'Moderator' ? 'mod' : 'staff');
-  s.textContent = staff === 'Admin' ? '🛡️ Admin' : staff === 'Moderator' ? '🛠️ Moderator' : staff;
+  s.className = 'ubadge ubadge--' + meta.cls;
+  s.textContent = `${meta.icon} ${staff}`;
   s.title = `Echipa de staff: ${staff}`;
   return s;
 }

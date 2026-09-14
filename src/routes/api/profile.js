@@ -26,6 +26,7 @@ function present(user, profile, stats, isSelf, themes = []) {
       points: user.points,
       is_admin: !!user.is_admin,
       is_mod: !!user.is_mod,
+      staff_role: user.staff_role || '',
       level: user.level || 1,
       rank_theme: user.rank_theme || 'naruto',
       created_at: user.created_at,
@@ -93,7 +94,7 @@ export async function onRequestGet(context) {
     user = me;
   } else {
     user = await env.DB
-      .prepare('SELECT id, username, points, is_admin, is_mod, level, rank_theme, created_at FROM users WHERE username = ?')
+      .prepare('SELECT id, username, points, is_admin, is_mod, staff_role, level, rank_theme, created_at FROM users WHERE username = ?')
       .bind(raw)
       .first();
     if (!user) return errorResponse(404, 'Utilizatorul nu există');

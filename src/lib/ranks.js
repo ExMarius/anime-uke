@@ -51,11 +51,21 @@ export function rankForUser(user, themes) {
   return { label: tier?.label || 'Membru', icon: tier?.icon || '🎗️', theme: theme.slug, theme_title: theme.title };
 }
 
-/** Rolul de staff, independent de gradul de nivel. */
+/** Gradele de staff acordate manual (0025), in ordinea ierarhiei. */
+export const STAFF_ROLES = ['helper', 'staff', 'moderator'];
+
+const STAFF_LABELS = { moderator: 'Moderator', staff: 'Staff', helper: 'Helper' };
+
+/**
+ * Rolul de staff, independent de gradul de nivel.
+ * Admin > Moderator > Staff > Helper. is_mod ramane flagul de drepturi:
+ * un rand vechi cu is_mod=1 dar fara staff_role e tot Moderator.
+ */
 export function staffRole(user) {
   if (user?.is_admin) return 'Admin';
-  if (user?.is_mod) return 'Moderator';
-  return '';
+  const role = String(user?.staff_role || '').toLowerCase();
+  if (role === 'moderator' || user?.is_mod) return 'Moderator';
+  return STAFF_LABELS[role] || '';
 }
 
 /** Pachetul complet de identitate pentru un rand de user. */

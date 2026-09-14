@@ -9,7 +9,7 @@
 // nici macar handler de onclose).
 // =====================================================================
 
-import { escapeHtml, getSession, toast , staffBadge, rankChip } from './core.js';
+import { escapeHtml, getSession, toast , staffBadge, staffIcon, rankChip } from './core.js';
 
 let ws = null;
 let me = null;
@@ -236,7 +236,7 @@ function renderOnline(list) {
   const box = document.getElementById('chat-online');
   if (!box) return;
   box.textContent = list.length
-    ? 'Online: ' + list.map((u) => `${u.staff_role ? (u.staff_role === 'Admin' ? '🛡️' : '🛠️') : ''}${u.rank_icon || ''} ${u.username}`.trim()).join(', ')
+    ? 'Online: ' + list.map((u) => `${staffIcon(u.staff_role)}${u.rank_icon || ''} ${u.username}`.trim()).join(', ')
     : 'Nimeni online momentan';
 }
 
