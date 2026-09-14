@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 7941714
+comanda: cf-relay/cmd.sh @ 842ad3b
 ────────────────────────────────────
 ── deploy ──
 
@@ -15,8 +15,8 @@ comanda: cf-relay/cmd.sh @ 7941714
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 13.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7941714
-    [0;32m✓[0m publicat: https://417cd831.anime-uke.pages.dev
+    [0;32m✓[0m assete versionate ?v=842ad3b
+    [0;32m✓[0m publicat: https://9ed12fe4.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -24,9 +24,49 @@ comanda: cf-relay/cmd.sh @ 7941714
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 sanitate: / -> 200
-marcaj: GSC meta v1
-meta GSC pe /: google-site-verification
-meta GSC pe /series: google-site-verification
-meta GSC pe /episode: google-site-verification
-meta GSC pe /login: google-site-verification
-meta GSC pe /register: google-site-verification
+── HEADERS /sitemap.xml ──
+HTTP/2 200 
+date: Mon, 14 Sep 2026 07:36:17 GMT
+content-type: application/xml; charset=utf-8
+cache-control: public, max-age=3600
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+cross-origin-opener-policy: same-origin
+permissions-policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+x-frame-options: DENY
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=gGzLlERlIq6UWm2V%2F6wU%2B1xGyPj006riVF6oCKakCwC75d573WIn1DgRlm2qJ8%2FPu4asMNNzrGYMi2BWJ%2FUegC5QWnDiWvDJsalpR2uOKQJ5EXsxEWimHbqV2wWbjiDRJ7zThc0D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+── BODY /sitemap.xml (primele 25 linii) ──
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://anime-uke.pages.dev/</loc></url>
+  <url><loc>https://anime-uke.pages.dev/login</loc></url>
+  <url><loc>https://anime-uke.pages.dev/register</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1014</loc></url>
+</urlset>
+── robots.txt ──
+# Site public: catalogul si episoadele sunt vizibile pentru toata lumea.
+# Doar zonele personale si de administrare raman in afara indexarii.
+User-agent: *
+Allow: /
+Allow: /series
+Allow: /episode
+Allow: /serie
+Allow: /episod
+Allow: /login
+Allow: /register
+Disallow: /admin
+Disallow: /profile
+Disallow: /shop
+Disallow: /api/
+Disallow: /chat
+Disallow: /logout
+
+Sitemap: https://anime-uke.pages.dev/sitemap.xml
+── validare XML ──
+XML VALID, 4 URL-uri in sitemap
+  - https://anime-uke.pages.dev/
+  - https://anime-uke.pages.dev/login
+  - https://anime-uke.pages.dev/register
+  - https://anime-uke.pages.dev/serie/1014
