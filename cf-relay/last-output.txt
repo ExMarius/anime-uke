@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 5cb4ba7
+comanda: cf-relay/cmd.sh @ 40375f3
 ────────────────────────────────────
-[https://anime-uke.pages.dev] tari: 0, facțiuni: 1
-[https://c08220c9.anime-uke.pages.dev] tari: 0, facțiuni: 1
+[https://anime-uke.pages.dev] tari: 1, facțiuni: 1
+[https://c08220c9.anime-uke.pages.dev] tari: 1, facțiuni: 1
