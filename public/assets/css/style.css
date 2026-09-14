@@ -1676,3 +1676,8 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 .sk-line--m { height: 10px; width: 45%; margin-top: -.4rem; }
 .sk-line--d { width: 92%; margin-top: -.4rem; }
 .sk-card { background: var(--surface); border: 1px solid var(--line-soft); }
+
+/* Skeleton „Ultimele episoade": card 150px cu artă 16/10, exact ca
+   .recent-card real — la sosirea datelor nu se mișcă nimic. */
+.sk-recent { flex: 0 0 150px; }
+.sk-art16 { aspect-ratio: 16 / 10; border-radius: 10px; }

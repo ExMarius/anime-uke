@@ -406,21 +406,39 @@ async function renderHero(salt = spotSalt()) {
       .filter(Boolean).join(' · ');
 
   const bg = document.getElementById('hero-bg');
-  bg.innerHTML = '';
+  // Refolosim imaginea INLINE din HTML (first paint = arta bundled, LCP
+  // descoperibil instant): ii schimbam doar sursa, nu o recreem.
+  let img = document.getElementById('hero-bg-img');
+  if (!img) {
+    img = document.createElement('img');
+    img.id = 'hero-bg-img';
+    img.className = 'hban__bg-img';
+  }
   const cover = safeUrl(pick.cover_image, '');
   // Fara coperta proprie: una din imaginile anime bundled (arta originala),
   // aleasa determinist din aceeasi sare ca si seria — bannerul arata mereu
   // „cu totul”, nu ca un placeholder.
   const HERO_ART = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
   const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
-  const img = document.createElement('img');
-  img.className = 'hban__bg-img';
-  const optimized = optimizeCover(cover, 1280);
-  img.src = cover && cover !== '#' ? optimized : artUrl;
-  img.alt = '';
-  // Hero-ul e elementul cel mai vizibil la incarcare (LCP): spunem browserului
-  // sa-l prioritizeze fata de restul resurselor.
   img.fetchPriority = 'high';
+  img.onerror = () => {
+    img.onerror = null;
+    if (img.src.includes('weserv') || (cover && img.src === optimizeCover(cover, 1280))) { img.srcset = ''; img.sizes = ''; img.src = artUrl; }
+    else { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
+  };
+  if (cover && cover !== '#') {
+    // srcset responsive: weserv livreaza WebP la latimea potrivita ecranului
+    // (telefon ~400w, tableta 800w, desktop 1280w) — nicio imagine mai mare
+    // decat trebuie (auditul „Properly size images").
+    img.srcset = [400, 800, 1280].map((w) => `${optimizeCover(cover, w)} ${w}w`).join(', ');
+    img.sizes = '100vw';
+    img.src = optimizeCover(cover, 1280);
+  } else {
+    img.srcset = '';
+    img.sizes = '';
+    img.src = artUrl;
+  }
+  if (img.parentNode !== bg) bg.appendChild(img);
   img.addEventListener('error', () => {
     // coperta seriei a picat -> arta bundled; arta bundled a picat -> poster generat
     if (img.src.endsWith(artUrl.slice(artUrl.lastIndexOf('/')))) { img.remove(); bg.appendChild(genHeroArt(pick.title)); }

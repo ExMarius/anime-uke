@@ -32,7 +32,10 @@
   <main class="container">
     <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
     <a class="hban hban--loading" id="hero-banner" href="#">
-      <div class="hban__bg" id="hero-bg" aria-hidden="true"></div>
+      <div class="hban__bg" id="hero-bg" aria-hidden="true">
+        <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
+             alt="" fetchpriority="high">
+      </div>
       <div class="hban__sk" aria-hidden="true">
         <span class="sk sk-line sk-w30"></span>
         <span class="sk sk-line sk-w55"></span>
@@ -157,10 +160,10 @@
         <h2 class="section__title">Ultimele episoade</h2>
       </div>
       <div class="recent-row" id="recent-row">
-        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
-        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
-        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
-        <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-recent"><div class="sk sk-art16"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-recent"><div class="sk sk-art16"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-recent"><div class="sk sk-art16"></div><div class="sk sk-line"></div></div>
+        <div class="sk sk-recent"><div class="sk sk-art16"></div><div class="sk sk-line"></div></div>
       </div>
     </section>
   </main>
@@ -232,10 +235,9 @@
     <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 
-  <link rel="modulepreload" href="/assets/js/core.js">
-  <link rel="modulepreload" href="/assets/js/chat.js">
   <link rel="modulepreload" href="/assets/js/page-index.js">
   <link rel="preconnect" href="https://images.weserv.nl">
+  <link rel="preload" as="image" href="/assets/img/hero-1.jpg" fetchpriority="high">
   <script type="module" src="/assets/js/page-index.js"></script>
 </body>
 </html>

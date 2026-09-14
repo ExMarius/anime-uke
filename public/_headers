@@ -17,4 +17,9 @@
 
 # Imagini/fonturi: cache lung (nu se schimba la deploy)
 /assets/img/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=2592000, immutable
+
+# Coperțile: numele se poate refolosi (adminul înlocuiește imaginea), deci
+# o săptămână — propagarea unei înlocuiri rămâne rezonabil de rapidă.
+/covers/*
+  Cache-Control: public, max-age=604800
