@@ -1,22 +1,19 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "── probă reală: login + catalog shop ──"
-J=/tmp/probe-cookies.txt
-rm -f $J
-LOGIN=$(curl -s -c $J -X POST https://anime-uke.pages.dev/api/auth/login \
-  -H "Content-Type: application/json" \
-  -H "Origin: https://anime-uke.pages.dev" \
-  -d "{\"username\":\"$PROBE_USER\",\"password\":\"$PROBE_PASS\"}")
-echo "login: $(echo "$LOGIN" | head -c 80)"
-curl -s -b $J https://anime-uke.pages.dev/api/shop | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-print('gold:', d.get('gold'))
-print('culori în catalog:', len(d.get('colors',[])), '| teme:', len(d.get('themes',[])))
-print('primele 3 culori:', [(c['id'],c['price']) for c in d.get('colors',[])[:3]])
-print('teme:', [(t['id'],t['price']) for t in d.get('themes',[])])
-"
-echo "── activez culoarea verde (probe) apoi revin ──"
-curl -s -b $J -X POST https://anime-uke.pages.dev/api/shop/activate -H "Content-Type: application/json" -H "Origin: https://anime-uke.pages.dev" -d '{"type":"color","id":"color_green"}' | head -c 120; echo
-curl -s -b $J -X POST https://anime-uke.pages.dev/api/shop/activate -H "Content-Type: application/json" -H "Origin: https://anime-uke.pages.dev" -d '{"type":"color","id":""}' | head -c 120; echo
-rm -f $J
+echo "── deploy economie clara ──"
+./deploy.sh
+echo "exit deploy: $?"
+echo "── server: cufere în gold ──"
+curl -s "https://anime-uke.pages.dev/api/chests?series_id=1014" -o /dev/null -w "chests (401 anonim OK): %{http_code}\n"
+echo "── client episod: paintProgress silentios ──"
+JS=$(curl -s "https://anime-uke.pages.dev/assets/js/page-episode.js?cb=$RANDOM")
+echo "justWatched: $(echo "$JS" | grep -o "justWatched" | wc -l)"
+echo "toast VIZIONAT: $(echo "$JS" | grep -o "VIZIONAT" | wc -l)"
+echo "── client serie: gold în cufere ──"
+JS2=$(curl -s "https://anime-uke.pages.dev/assets/js/page-series.js?cb=$RANDOM")
+echo "🪙 gold în chestCard: $(echo "$JS2" | grep -o "primite" | wc -l)"
+echo "── legende ──"
+curl -s "https://anime-uke.pages.dev/profile?cb=$RANDOM" | grep -o "econ__legend" | head -1
+curl -s "https://anime-uke.pages.dev/shop?cb=$RANDOM" | grep -o "Puncte ≠ Gold" | head -1
+echo "── pagini ──"
+for u in / /serie/1014 /shop; do echo "$u -> $(curl -s -o /dev/null -w '%{http_code}' https://anime-uke.pages.dev$u)"; done
