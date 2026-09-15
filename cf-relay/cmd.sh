@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "=== Sitemap static + no-store pentru GSC ==="
+echo "=== Fix double slash //sitemap.xml pentru GSC ==="
 ./deploy.sh
 echo "exit deploy: $?"
 B="https://anime-uke.pages.dev"
-echo "--- xml headers ---"
-curl -s -I "$B/sitemap.xml" | grep -i -E "content-type|cache|access|cf-ray"
-echo "--- xml body ---"
-curl -s "$B/sitemap.xml"
-echo "--- txt ---"
-curl -s "$B/sitemap.txt"
-echo "--- robots ---"
-curl -s "$B/robots.txt"
+echo "test single slash:"
+curl -s -I "$B/sitemap.xml" | head -5
+echo "test double slash (GSC bug):"
+curl -s -I "$B//sitemap.xml" | head -5
+curl -s "$B//sitemap.xml" | head -5

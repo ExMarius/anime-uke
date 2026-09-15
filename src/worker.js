@@ -51,7 +51,9 @@ function redirectToLogin(url) {
 
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
-  const path = url.pathname;
+  let path = url.pathname;
+  // Normalizeaza //sitemap.xml -> /sitemap.xml (Google Search Console adauga / in fata cand prefixul deja are /)
+  path = path.replace(/\/+/g, '/');
   const norm = path.length > 1 ? path.replace(/\/+$/, '').replace(/\.html$/, '') || '/' : path;
 
   let response;
