@@ -1859,3 +1859,33 @@ body.theme-classic {
 }
 .next-ep__icon { font-size: 1.35rem; }
 .next-ep__title { font-weight: 700; }
+
+/* ---- Monetizare: sloturile de reclame (configurate din admin, /api/ads) ----
+   Containerele stau `hidden` in HTML si devin vizibile DOAR daca /api/ads
+   raspunde cu un slot activ — site-ul fara reclame arata identic cu inainte. */
+.ad-box {
+  display: flex; flex-direction: column; align-items: center; gap: .35rem;
+  margin: 1.2rem auto; max-width: 100%;
+}
+.ad-box__tag {
+  font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--dim, #9a8f93); user-select: none;
+}
+.ad-box__frame { border: 0; max-width: 100%; border-radius: 10px; background: rgba(255,255,255,.03); }
+.ad-box__link {
+  display: flex; flex-direction: column; gap: .25rem; text-decoration: none; text-align: center;
+  padding: .9rem 1.2rem; border-radius: 12px; max-width: 100%;
+  border: 1px dashed rgba(220, 20, 60, .35); background: rgba(220, 20, 60, .06); color: var(--text, #f5eff1);
+}
+.ad-box__link:hover { background: rgba(220, 20, 60, .12); }
+.ad-box__link b { font-size: .95rem; }
+.ad-box__hint { font-size: .78rem; color: var(--dim, #9a8f93); }
+
+/* admin: tabul Monetizare */
+.ads-slot { border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: .8rem .9rem; margin-bottom: .7rem; }
+.ads-slot__head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .55rem; }
+.ads-slot__name { font-weight: 700; }
+.ads-slot__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .5rem; }
+.ads-slot__grid .input { width: 100%; }
+.ads-slot__url { grid-column: 1 / -1; }
+.ads-toggle { display: inline-flex; align-items: center; gap: .4rem; font-size: .88rem; cursor: pointer; }

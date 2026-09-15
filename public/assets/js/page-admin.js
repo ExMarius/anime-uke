@@ -37,6 +37,7 @@ const LOADERS = {
   users: loadUsers,
   ranks: loadRanks,
   reports: loadReports,
+  ads: loadAds,
   log: loadLog,
 };
 
@@ -301,6 +302,125 @@ async function loadRankThemes() {
     box.appendChild(row);
   }
 }
+
+// ---------------------------------------------------------------------
+// MONETIZARE — sloturile de reclame (GET/POST /api/admin/ads).
+// Formularul e construit din răspunsul serverului (lista de sloturi și
+// tipuri vine de acolo), deci un slot nou adăugat în backend apare aici
+// fără modificări. Totul cu createElement — regula anti-XSS a panoului.
+// ---------------------------------------------------------------------
+const AD_SLOT_LABELS = {
+  index: '🏠 Prima pagină (sub „Ultimele episoade")',
+  series: '📺 Pagina seriei (sub lista de episoade)',
+  episode: '▶️ Pagina episodului (sub player)',
+};
+
+async function loadAds() {
+  const box = document.getElementById('ads-slots');
+  if (!box) return;
+  const res = await api('/admin/ads');
+  box.innerHTML = '';
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca monetizarea.'; return; }
+
+  const cfg = res.data.config;
+  document.getElementById('ads-enabled').checked = !!cfg.enabled;
+  document.getElementById('ads-hide-staff').checked = cfg.hide_for_staff !== false;
+
+  for (const name of res.data.slots || []) {
+    const s = cfg.slots?.[name] || {};
+    const card = document.createElement('div');
+    card.className = 'ads-slot';
+    card.dataset.slot = name;
+
+    const head = document.createElement('div');
+    head.className = 'ads-slot__head';
+    const title = document.createElement('span');
+    title.className = 'ads-slot__name';
+    title.textContent = AD_SLOT_LABELS[name] || name;
+    const onLabel = document.createElement('label');
+    onLabel.className = 'ads-toggle';
+    const on = document.createElement('input');
+    on.type = 'checkbox';
+    on.className = 'ads-slot-enabled';
+    on.checked = !!s.enabled;
+    onLabel.append(on, document.createTextNode(' activ'));
+    head.append(title, onLabel);
+
+    const grid = document.createElement('div');
+    grid.className = 'ads-slot__grid';
+
+    const type = document.createElement('select');
+    type.className = 'input ads-slot-type';
+    type.setAttribute('aria-label', `Tipul reclamei pentru ${name}`);
+    for (const [val, label] of [['iframe', 'Iframe (banner de rețea, ex. A-ADS)'], ['link', 'Link direct (ex. Adsterra Direct Link)']]) {
+      const o = document.createElement('option');
+      o.value = val; o.textContent = label;
+      if (val === (s.type || 'iframe')) o.selected = true;
+      type.appendChild(o);
+    }
+
+    const url = document.createElement('input');
+    url.className = 'input ads-slot-url ads-slot__url';
+    url.placeholder = 'https://… (URL-ul iframe-ului sau linkul direct al rețelei)';
+    url.maxLength = 500;
+    url.value = s.url || '';
+
+    const w = document.createElement('input');
+    w.className = 'input ads-slot-w';
+    w.type = 'number'; w.min = '40'; w.max = '1000';
+    w.placeholder = 'lățime (px)';
+    w.value = s.width ?? 728;
+    w.setAttribute('aria-label', `Lățimea reclamei pentru ${name}`);
+
+    const h = document.createElement('input');
+    h.className = 'input ads-slot-h';
+    h.type = 'number'; h.min = '20'; h.max = '800';
+    h.placeholder = 'înălțime (px)';
+    h.value = s.height ?? 90;
+    h.setAttribute('aria-label', `Înălțimea reclamei pentru ${name}`);
+
+    const label = document.createElement('input');
+    label.className = 'input ads-slot-label';
+    label.placeholder = 'text afișat (doar la tip link)';
+    label.maxLength = 60;
+    label.value = s.label || '';
+    label.setAttribute('aria-label', `Textul reclamei pentru ${name}`);
+
+    grid.append(url, type, w, h, label);
+    card.append(head, grid);
+    box.appendChild(card);
+  }
+}
+
+function readAdsForm() {
+  const slots = {};
+  for (const card of document.querySelectorAll('.ads-slot')) {
+    slots[card.dataset.slot] = {
+      enabled: card.querySelector('.ads-slot-enabled').checked,
+      type: card.querySelector('.ads-slot-type').value,
+      url: card.querySelector('.ads-slot-url').value.trim(),
+      width: Number(card.querySelector('.ads-slot-w').value),
+      height: Number(card.querySelector('.ads-slot-h').value),
+      label: card.querySelector('.ads-slot-label').value.trim(),
+    };
+  }
+  return {
+    enabled: document.getElementById('ads-enabled').checked,
+    hide_for_staff: document.getElementById('ads-hide-staff').checked,
+    slots,
+  };
+}
+
+function initAdsPanel() {
+  document.getElementById('ads-save')?.addEventListener('click', async (ev) => {
+    const r = await withBusy(ev.currentTarget, () =>
+      api('/admin/ads', { method: 'POST', body: { config: readAdsForm() } })
+    );
+    toast(r.ok ? 'Monetizare salvată' : (r.data?.error || 'Eroare'), r.ok ? 'success' : 'error');
+    if (r.ok) loadAds();
+  });
+}
+initAdsPanel();
 
 function initRanks() {
   document.getElementById('rank-theme-form')?.addEventListener('submit', async (ev) => {

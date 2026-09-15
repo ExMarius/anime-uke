@@ -40,6 +40,7 @@
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
       <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
       <button class="tab" role="tab" id="tab-reports"  aria-controls="panel-reports"  aria-selected="false" type="button">🚩 Raportări</button>
+      <button class="tab" role="tab" id="tab-ads"      aria-controls="panel-ads"      aria-selected="false" type="button">💰 Monetizare</button>
       <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
     </div>
 
@@ -122,6 +123,25 @@
         <div class="reports-list" id="reports-list">
           <div class="loading"><div class="spinner"></div>Se încarcă…</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ===================== MONETIZARE ===================== -->
+    <section class="panel" id="panel-ads" role="tabpanel" aria-labelledby="tab-ads" hidden>
+      <div class="box">
+        <h2 class="box__title">Reclame</h2>
+        <p class="box__hint">
+          Sloturile se salvează în baza de date — schimbi reclama fără deploy. Merg rețelele care oferă
+          <b>iframe pur</b> (ex. A-ADS) sau <b>link direct</b> (ex. Adsterra Direct Link); codurile cu
+          <code>&lt;script&gt;</code> nu sunt suportate (CSP-ul sitului le blochează oricum).
+          URL-urile trebuie să fie <code>https:</code>.
+        </p>
+        <div class="ads-slot__head">
+          <label class="ads-toggle"><input type="checkbox" id="ads-enabled"> Reclame pornite (comutatorul general)</label>
+          <label class="ads-toggle"><input type="checkbox" id="ads-hide-staff" checked> Ascunde pentru staff/admin (recomandat — auto-clickurile duc la ban)</label>
+        </div>
+        <div id="ads-slots"><div class="loading"><div class="spinner"></div>Se încarcă…</div></div>
+        <button class="btn btn--accent" id="ads-save" type="button">Salvează monetizarea</button>
       </div>
     </section>
 

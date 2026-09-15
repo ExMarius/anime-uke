@@ -1693,6 +1693,76 @@ console.log('\n=== Facțiuni (alegere lunară) + shop/activate ===');
   }
 }
 
+console.log('\n=== Monetizare (sloturi de reclame configurate din admin) ===');
+{
+  const j = globalThis.admin;
+
+  // Implicit: monetizarea e oprită — vizitatorii nu primesc nimic.
+  const off = await req(jar(), 'GET', '/api/ads');
+  check('GET /api/ads ca vizitator → 200 (endpoint public)', off.status === 200, `status=${off.status}`);
+  check('Implicit: reclame oprite, zero sloturi', off.data?.enabled === false && Array.isArray(off.data?.slots) && off.data.slots.length === 0, JSON.stringify(off.data));
+
+  // Doar adminul poate citi/scrie configurația.
+  const anonCfg = await req(jar(), 'GET', '/api/admin/ads');
+  check('GET /api/admin/ads fara login → 401', anonCfg.status === 401, `status=${anonCfg.status}`);
+  const uj = jar();
+  await req(uj, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const userCfg = await req(uj, 'GET', '/api/admin/ads');
+  check('GET /api/admin/ads ca user simplu → 403', userCfg.status === 403, `status=${userCfg.status}`);
+
+  const cfg0 = await req(j, 'GET', '/api/admin/ads');
+  check('GET /api/admin/ads ca admin → 200 cu toate sloturile', cfg0.status === 200 && cfg0.data?.config && Array.isArray(cfg0.data?.slots) && cfg0.data.slots.length >= 3, JSON.stringify(cfg0.data?.slots));
+
+  // Validare: slot activ fără URL → 400; URL http: → 400; URL invalid → 400.
+  const mk = (slotPatch) => ({ config: { enabled: true, hide_for_staff: true, slots: { index: { enabled: true, type: 'iframe', url: 'https://ad.a-ads.com/12345?size=728x90', width: 728, height: 90 }, ...slotPatch } } });
+  const noUrl = await req(j, 'POST', '/api/admin/ads', { config: { enabled: true, slots: { index: { enabled: true, type: 'iframe', url: '' } } } });
+  check('Slot activ fara URL → 400', noUrl.status === 400, `status=${noUrl.status} ${JSON.stringify(noUrl.data)}`);
+  const httpUrl = await req(j, 'POST', '/api/admin/ads', { config: { enabled: true, slots: { index: { enabled: true, type: 'iframe', url: 'http://nesigur.example/ad' } } } });
+  check('URL http: (nesigur) → 400', httpUrl.status === 400, `status=${httpUrl.status}`);
+  const badUrl = await req(j, 'POST', '/api/admin/ads', { config: { enabled: true, slots: { index: { enabled: true, type: 'iframe', url: 'javascript:alert(1)' } } } });
+  check('URL non-https (javascript:) → 400', badUrl.status === 400, `status=${badUrl.status}`);
+
+  // Configurare validă: iframe pe index + link direct pe episode.
+  const save = await req(j, 'POST', '/api/admin/ads', mk({
+    episode: { enabled: true, type: 'link', url: 'https://exemplu-adsterra.com/directlink/abc', label: 'Ofertă parteneră' },
+  }));
+  check('POST /api/admin/ads cu config valid → 200', save.status === 200 && save.data?.success === true, JSON.stringify(save.data)?.slice(0, 160));
+  check('Config salvat normalizat (width clamp, tip pastrat)', save.data?.config?.slots?.index?.width === 728 && save.data?.config?.slots?.episode?.type === 'link', JSON.stringify(save.data?.config?.slots?.episode));
+
+  // Vizitatorii primesc DOAR sloturile active, cu campurile de randare.
+  const pub = await req(jar(), 'GET', '/api/ads');
+  check('Dupa activare: vizitatorul vede sloturile active', pub.status === 200 && pub.data?.enabled === true && pub.data.slots.length === 2, JSON.stringify(pub.data?.slots?.map((s) => s.name)));
+  const idx = (pub.data?.slots || []).find((s) => s.name === 'index');
+  check('Slotul index are url/tip/dimensiuni pentru randare', idx && idx.type === 'iframe' && idx.url.startsWith('https://') && idx.width === 728 && idx.height === 90, JSON.stringify(idx));
+
+  // hide_for_staff: adminul NU vede reclame (protectie anti-auto-click).
+  const staffView = await req(j, 'GET', '/api/ads');
+  check('Adminul nu primeste reclame (hide_for_staff)', staffView.status === 200 && staffView.data?.enabled === false, JSON.stringify(staffView.data));
+
+  // Userul simplu (fara grad) le vede.
+  const userView = await req(uj, 'GET', '/api/ads');
+  check('Userul simplu primeste reclamele', userView.status === 200 && userView.data?.enabled === true, JSON.stringify(userView.data)?.slice(0, 120));
+
+  // CSRF: POST cu Origin strain → 403.
+  const csrf = await fetch(BASE + '/api/admin/ads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: 'https://atacator.example', Cookie: j.cookie },
+    body: JSON.stringify(mk({})),
+  });
+  check('POST /api/admin/ads cu Origin strain → 403 (CSRF)', csrf.status === 403, `status=${csrf.status}`);
+
+  // Jurnal: actiunea apare in admin_log.
+  const log = await req(j, 'GET', '/api/admin/log');
+  const logged = (log.data?.log || log.data?.entries || []).some?.((e) => e.action === 'update_ads');
+  check('update_ads apare in jurnalul admin', log.status === 200 && logged === true, JSON.stringify((log.data?.log || log.data?.entries || [])[0]));
+
+  // Oprire: /api/ads revine la gol si pentru useri.
+  const offAgain = await req(j, 'POST', '/api/admin/ads', { config: { enabled: false, slots: {} } });
+  check('Oprirea monetizarii → 200', offAgain.status === 200 && offAgain.data?.config?.enabled === false, JSON.stringify(offAgain.data?.config?.enabled));
+  const pub2 = await req(uj, 'GET', '/api/ads');
+  check('Dupa oprire: userul nu mai primeste sloturi', pub2.status === 200 && pub2.data?.enabled === false && pub2.data.slots.length === 0, JSON.stringify(pub2.data));
+}
+
 console.log('\n' + '='.repeat(56));
 console.log(`REZULTAT: ${pass} trecute, ${fail} esuate`);
 if (fail) { console.log('\nEsuate:'); failures.forEach(f => console.log('  • ' + f)); }

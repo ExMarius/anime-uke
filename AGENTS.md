@@ -33,7 +33,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0026**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0027**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -103,6 +103,15 @@ cat cf-relay/last-output.txt
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
 
+- **Monetizare prin reclame (0026)**: tab „💰 Monetizare" în admin — sloturi de reclame pe
+  index/serie/episod, configurabile din DB (tabela `site_settings`, `src/lib/settings.js`) fără deploy.
+  Două tipuri: `iframe` (rețele cu embed pur, ex. A-ADS — acceptă site-uri fără domeniu propriu) și
+  `link` (Adsterra Direct Link etc.). **Fără HTML liber și fără `<script>`-uri terțe** — CSP-ul strict
+  le-ar bloca oricum, iar HTML din admin ar fi XSS stocat. Iframe-ul e sandboxat, URL-urile doar https:.
+  `GET /api/ads` (public) servește doar sloturile active; `hide_for_staff` ascunde reclamele pentru
+  admin/staff (anti-auto-click). Randare în `public/assets/js/ads.js` (containere `[data-ad-slot]`,
+  ascunse când monetizarea e oprită). Footerul nu mai promite „fără reclame". Owner-ul încă NU are cont
+  la vreo rețea — vezi backlog.
 - Grade de staff Helper/Staff/Moderator + tab „Grade" refăcut în admin (0025).
 - Fișa detaliată a seriei + „Episodul următor" cu countdown + JSON-LD SEO (0024).
 - Sortare comentarii (top/nou/vechi, client), regulament chat (overlay + `-regulament`).
@@ -132,6 +141,11 @@ cat cf-relay/last-output.txt
   `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);
   audit live cu sesiune (are nevoie de un cont de test).
 
+- **Monetizare — pașii rămași la owner**: să-și facă un cont la o rețea care acceptă subdomenii
+  `.pages.dev` și conținut de streaming (recomandat pornit cu **A-ADS** — iframe pur, fără aprobare de
+  domeniu, plăți în crypto — și/sau **Adsterra** — Direct Link/banner, plăți PayPal/Paxum de la $5;
+  AdSense NU acceptă nici .pages.dev, nici streaming). Apoi: admin → Monetizare → lipește URL-ul
+  slotului → Salvează. Donațiile (Ko-fi etc.) au fost amânate explicit de owner „pe ultima dată".
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —
   vezi `src/routes/api/episodes/by-id.js`), buton „mulțumesc", link „Ultima vizionare", panou notificări extins,

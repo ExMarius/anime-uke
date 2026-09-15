@@ -27,6 +27,7 @@ const out = await new PurgeCSS().purge({
       /^epis/, /^deep/, /^gen/, /^tops/, /^pulse/, /^streak/, /^range/,
       /^chat/, /^msg/, /^staff/, /^econ/, /^ct/, /^cp/,
       /^ubadge/,        // badge-urile de staff: 'ubadge ubadge--' + cls (core.js)
+      /^ad-box/, /^ads-/, // sloturile de reclame (ads.js + tabul Monetizare, construite in JS)
       /^nc-/,           // culorile numelui (aplicate dinamic, shop)
       /^theme-/,        // paletele temelor de site (shop)
     ],

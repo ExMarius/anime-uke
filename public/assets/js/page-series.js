@@ -1,5 +1,6 @@
 import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, optimizeCover } from './core.js';
 import { initChat } from './chat.js';
+import { initAds } from './ads.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -628,6 +629,7 @@ async function loadChests(seriesId) {
 
 await Promise.all([renderNav(''), load()]);
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
+initAds().catch(() => { /* reclamele sunt optionale */ });
 startGuestNudge();
 const sid = Number(getParam('id'));
 if (sid) {

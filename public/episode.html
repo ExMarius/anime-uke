@@ -156,6 +156,10 @@
     <div class="ep-actions">
       <button class="btn btn--ghost" id="back-btn" type="button">← Înapoi</button>
     </div>
+
+    <!-- Slot de reclamă (monetizare): populat de /api/ads doar dacă e activ.
+         Sub player și acțiuni, ca să nu împingă conținutul principal. -->
+    <div data-ad-slot="episode" hidden></div>
   </main>
 
   <!-- ============ MODAL „ALTE EPIZOADE” ============ -->
@@ -176,7 +180,7 @@
 
 
   <footer class="site-foot">
-    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit, fără reclame.</p>
+    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit.</p>
     <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 

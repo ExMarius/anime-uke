@@ -237,6 +237,9 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Hero bannerul e prima sectiune din main (sus de tot)', p.$('main')?.firstElementChild?.id === 'hero-banner', p.$('main')?.firstElementChild?.id);
   check('Butonul de shuffle „Alt anime” exista', !!p.$('#hero-shuffle'), 'lipseste #hero-shuffle');
   check('Randul „Continua vizionarea” exista in DOM', !!p.$('#continue-section'), 'lipseste #continue-section');
+  // Monetizare: containerul de reclama exista, dar ramane ascuns cand
+  // /api/ads e oprit — site-ul fara reclame arata identic cu inainte.
+  check('Slotul de reclama exista pe home si e ascuns cand reclamele-s oprite', p.$('[data-ad-slot="index"]') !== null && p.$('[data-ad-slot="index"]')?.hidden === true, `hidden=${p.$('[data-ad-slot="index"]')?.hidden}`);
   if (p.$('#hero-banner')?.hidden === false) {
     check('TOT bannerul e un link catre seria afisata', p.$('#hero-banner')?.tagName === 'A' && /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || ''), `${p.$('#hero-banner')?.tagName} ${p.$('#hero-banner')?.getAttribute('href')}`);
     check('Titlul anime-ului e afisat in banner', (p.text('#hero-title') || '').length > 1, p.text('#hero-title'));
@@ -434,7 +437,16 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   const repTabOn = await until(() => p.$('#panel-reports')?.hidden === false);
   check('Tabul de raportari deschide panoul', repTabOn, `hidden=${p.$('#panel-reports')?.hidden}`);
   const repListOn = await until(() => p.$$('#reports-list .report-row-admin').length > 0 || /Nicio raportare|Nu am putut/.test(p.text('#reports-list') || ''));
-  check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
+  check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));
+  // Tabul „Monetizare": formularul de sloturi se construieste din /api/admin/ads.
+  p.$('#tab-ads')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const adsTabOn = await until(() => p.$('#panel-ads')?.hidden === false);
+  check('Tabul Monetizare deschide panoul', adsTabOn, `hidden=${p.$('#panel-ads')?.hidden}`);
+  const adsSlotsOn = await until(() => p.$$('#ads-slots .ads-slot').length >= 3);
+  check('Sloturile de reclame se construiesc din API (index/series/episode)', adsSlotsOn, `sloturi=${p.$$('#ads-slots .ads-slot').length}`);
+  check('Fiecare slot are URL, tip si dimensiuni editabile', p.$$('#ads-slots .ads-slot-url').length === p.$$('#ads-slots .ads-slot').length && p.$$('#ads-slots .ads-slot-type').length >= 3, `url=${p.$$('#ads-slots .ads-slot-url').length}`);
+  check('Comutatorul general si „ascunde pentru staff" exista', !!p.$('#ads-enabled') && !!p.$('#ads-hide-staff') && !!p.$('#ads-save'), 'lipsesc controalele generale');
+  await p.teardown();
 }
 
 console.log('\n=== DOM: /episode (player, surse, progres) ===');

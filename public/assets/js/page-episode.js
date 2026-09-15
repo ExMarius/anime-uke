@@ -1,5 +1,6 @@
 import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive } from './core.js';
 import { initChat } from './chat.js';
+import { initAds } from './ads.js';
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //
@@ -841,6 +842,7 @@ function initReport() {
 }
 
 initReport();
+initAds().catch(() => { /* reclamele sunt optionale */ });
 
 // =====================================================================
 // PLAYER v4: navigare intre episoade jos, mod cinema, auto-next.

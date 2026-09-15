@@ -1,5 +1,6 @@
 import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
 import { initChat, openChat } from './chat.js';
+import { initAds } from './ads.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
 //
@@ -579,6 +580,7 @@ await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 startGuestNudge();
 initHero().catch(() => { /* bannerul e decorativ: pagina merge si fara el */ });
+initAds().catch(() => { /* reclamele sunt optionale: pagina merge si fara ele */ });
 renderContinue().catch(() => { /* randul de continuare e optional */ });
 
 // Debounce: fara el, fiecare litera tastata ar insemna un LIKE pe tot

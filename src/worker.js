@@ -56,6 +56,7 @@ const PUBLIC_API = new Set([
   '/api/recent',         // ultimele episoade adaugate (date de catalog)
   '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
   '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
+  '/api/ads',            // sloturile de reclame active (vizitatorii sunt majoritatea traficului)
 ]);
 function isPublicApi(path) {
   if (PUBLIC_API.has(path)) return true;

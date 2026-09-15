@@ -64,12 +64,16 @@ import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
+import * as adsRoute from './routes/api/ads.js';
+import * as adminAdsRoute from './routes/api/admin/ads.js';
 import * as profileRoute from './routes/api/profile.js';
 import * as watchlistRoute from './routes/api/watchlist.js';
 
 const ROUTES = [
   // --- publice ---
   { method: 'GET', path: '/api/series', mod: seriesList },
+  // Monetizare: configurația publică a sloturilor de reclame (doar cele active).
+  { method: 'GET', path: '/api/ads', mod: adsRoute },
   { method: 'GET', path: '/api/series/:id', mod: seriesById },
   { method: 'GET', path: '/api/episodes/:id', mod: episodeById },
 
@@ -133,6 +137,8 @@ const ROUTES = [
   // avea mai multe surse si ele se editeaza independent de episod.
   { method: '*', path: '/api/admin/episode-sources', mod: adminEpisodeSources },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
+  // Monetizare: configurarea sloturilor de reclame (tab „Monetizare" în admin).
+  { method: '*', path: '/api/admin/ads', mod: adminAdsRoute },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },
