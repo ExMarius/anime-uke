@@ -141,11 +141,12 @@ cat cf-relay/last-output.txt
   `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);
   audit live cu sesiune (are nevoie de un cont de test).
 
-- **Monetizare — pașii rămași la owner**: să-și facă un cont la o rețea care acceptă subdomenii
-  `.pages.dev` și conținut de streaming (recomandat pornit cu **A-ADS** — iframe pur, fără aprobare de
-  domeniu, plăți în crypto — și/sau **Adsterra** — Direct Link/banner, plăți PayPal/Paxum de la $5;
-  AdSense NU acceptă nici .pages.dev, nici streaming). Apoi: admin → Monetizare → lipește URL-ul
-  slotului → Salvează. Donațiile (Ko-fi etc.) au fost amânate explicit de owner „pe ultima dată".
+- **Monetizare — ACTIVĂ pe live** cu A-ADS, ad unit **2455410** (cont făcut de owner, 2026-09-15):
+  toate cele 3 sloturi rulează `https://acceptable.a-ads.com/2455410/?size=Adaptive`, `hide_for_staff`
+  pornit. Orice schimbare se face din admin → Monetizare (fără deploy). Rămas la owner: să-și seteze
+  portofelul de payout în contul A-ADS. Idei următoare: Adsterra Direct Link pe slotul `episode`
+  (plăți PayPal de la $5), comparat CPM-urile după câteva săptămâni. AdSense NU acceptă nici
+  `.pages.dev`, nici streaming. Donațiile (Ko-fi etc.) amânate explicit de owner „pe ultima dată".
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —
   vezi `src/routes/api/episodes/by-id.js`), buton „mulțumesc", link „Ultima vizionare", panou notificări extins,
