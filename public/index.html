@@ -25,6 +25,37 @@
        pentru paginile fara efecte secundare la load (series/profile).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
+  <style>
+    .ad-unit {
+      width: 100%;
+      max-width: 780px;
+      margin: 1.6rem auto 1.8rem;
+      padding: 0;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+    .ad-unit iframe {
+      border: 0;
+      padding: 0;
+      width: 100% !important;
+      max-width: 100%;
+      height: auto;
+      overflow: hidden;
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+    }
+    .ad-unit__label {
+      display: block;
+      font-size: .68rem;
+      color: var(--dim-2, #8b7e85);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .45rem;
+      font-weight: 650;
+    }
+  </style>
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
@@ -57,7 +88,7 @@
     <header class="hero">
       <span class="hero__eyebrow">🔴 Streaming gratuit</span>
       <h1 class="hero__title">Anime-ul tău,<br><em>la un click distanță.</em></h1>
-      <p class="hero__sub">Urmărește episoadele preferate, marchează-le ca vizionate și adună puncte. Totul într-un singur loc, fără reclame enervante.</p>
+      <p class="hero__sub">Urmărește episoadele preferate, marchează-le ca vizionate și adună puncte. Totul într-un singur loc.</p>
 
       <div class="hero__actions">
         <a class="btn btn--accent btn--lg" href="#serii">Începe să privești</a>
@@ -77,6 +108,17 @@
         <input id="search-input" type="search" placeholder="Caută o serie sau un gen…" autocomplete="off">
       </div>
     </header>
+
+    <!-- ========== PUBLICITATE (A-Ads) ========== -->
+    <div class="ad-unit" id="ad-home">
+      <span class="ad-unit__label">Reclamă</span>
+      <!-- BEGIN AADS AD UNIT 2455410 -->
+      <div id="frame" style="width: 100%; margin: auto; position: relative; z-index: 99998;">
+        <iframe data-aa="2455410" src="//acceptable.a-ads.com/2455410/?size=Adaptive"
+                style="border:0; padding:0; width:100%; height:auto; overflow:hidden; display:block; margin:auto; border-radius:12px;"></iframe>
+      </div>
+      <!-- END AADS AD UNIT 2455410 -->
+    </div>
 
     <!-- Randul „Continua vizionarea": din progresul real, nu din istoric fals. -->
     <section class="section" id="continue-section" hidden>
@@ -231,7 +273,7 @@
 
 
   <footer class="site-foot">
-    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit, fără reclame.</p>
+    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit.</p>
     <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 
