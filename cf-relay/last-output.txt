@@ -1,7 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ a34f5a0
+comanda: cf-relay/cmd.sh @ be9e10e
 ────────────────────────────────────
-=== Fix sitemap minimal valid pentru Google ===
+=== Fix sitemap GSC: minimal + txt + CORS ===
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,11 +15,11 @@ comanda: cf-relay/cmd.sh @ a34f5a0
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=a34f5a0
+    [0;32m✓[0m assete versionate ?v=be9e10e
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://9ca9b749.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://a8d22565.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -27,16 +27,15 @@ comanda: cf-relay/cmd.sh @ a34f5a0
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-sitemap raw:
 HTTP/2 200 
-date: Tue, 15 Sep 2026 13:35:12 GMT
+date: Tue, 15 Sep 2026 13:40:18 GMT
 content-type: application/xml; charset=utf-8
-content-length: 798
+access-control-allow-origin: *
 cache-control: public, max-age=3600
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=NAhDGOJlBSkkSf208jVJAZtzXSSaRsSgjwXfxavJ4Q443AhTdrTNr213nEdkPi%2BLgsC0sgknagR34lzyoRdee3l0U%2FdvvVZhaQC7vPTjmR0BrLOQDjxYrg2Hgudq20Yq03C8uQfG"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=do2ZJZ1orJPB%2BZg9PbX6qAMSMGBY2%2BgcIKPD0XvU0VcXicFzMAF3bTGdLpH3DPMu9F0BGLdsMAqSj0KTn00rkRYdxWFVd6XV3uTpwsYtewpv%2BRKo2sPy1Ntye0N4s4u2%2F4FZhBT8"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a3b8036578ea000f-ORD
+cf-ray: a3b80add7e695122-MSP
 alt-svc: h3=":443"; ma=86400
 
 <?xml version="1.0" encoding="UTF-8"?>
@@ -53,6 +52,35 @@ alt-svc: h3=":443"; ma=86400
   <url><loc>https://anime-uke.pages.dev/episod/4209</loc></url>
   <url><loc>https://anime-uke.pages.dev/episod/4208</loc></url>
 </urlset>
+--- txt ---
+https://anime-uke.pages.dev/
+https://anime-uke.pages.dev/serie/1019
+https://anime-uke.pages.dev/serie/1018
+https://anime-uke.pages.dev/serie/1017
+https://anime-uke.pages.dev/serie/1015
+https://anime-uke.pages.dev/serie/1014
+https://anime-uke.pages.dev/episod/4212
+https://anime-uke.pages.dev/episod/4211
+https://anime-uke.pages.dev/episod/4210
+https://anime-uke.pages.dev/episod/4209
+https://anime-uke.pages.dev/episod/4208
+--- robots ---
+# Site public: catalogul si episoadele sunt vizibile pentru toata lumea.
+# Doar zonele personale si de administrare raman in afara indexarii.
+User-agent: *
+Allow: /
+Allow: /series
+Allow: /episode
+Allow: /serie
+Allow: /episod
+Allow: /login
+Allow: /register
+Disallow: /admin
+Disallow: /profile
+Disallow: /shop
+Disallow: /api/
+Disallow: /chat
+Disallow: /logout
 
-validate xml:
-XML valid
+Sitemap: https://anime-uke.pages.dev/sitemap.xml
+Sitemap: https://anime-uke.pages.dev/sitemap.txt
