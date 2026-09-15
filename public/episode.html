@@ -15,6 +15,38 @@
        pentru paginile fara efecte secundare la load (series/profile).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
+  <style>
+    /* Ad unit – integrat discret în tema site-ului */
+    .ad-unit {
+      width: 100%;
+      max-width: 780px;
+      margin: 1.4rem auto 1.6rem;
+      padding: 0;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+    .ad-unit iframe {
+      border: 0;
+      padding: 0;
+      width: 100% !important;
+      max-width: 100%;
+      height: auto;
+      overflow: hidden;
+      display: block;
+      margin: 0 auto;
+      border-radius: 12px;
+    }
+    .ad-unit__label {
+      display: block;
+      font-size: .68rem;
+      color: var(--dim-2, #8b7e85);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .45rem;
+      font-weight: 650;
+    }
+  </style>
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
@@ -85,6 +117,17 @@
       <span class="player-tools__toggles">
         <button class="ptool" id="cinema-btn" type="button" title="Mod cinema: player lat cât tot ecranul">🎬 Cinema</button>
       </span>
+    </div>
+
+    <!-- ========== PUBLICITATE (A-Ads) ========== -->
+    <div class="ad-unit" id="ad-under-player">
+      <span class="ad-unit__label">Reclamă</span>
+      <!-- BEGIN AADS AD UNIT 2455410 -->
+      <div id="frame" style="width: 100%; margin: auto; position: relative; z-index: 99998;">
+        <iframe data-aa="2455410" src="//acceptable.a-ads.com/2455410/?size=Adaptive"
+                style="border:0; padding:0; width:100%; height:auto; overflow:hidden; display:block; margin:auto; border-radius:12px;"></iframe>
+      </div>
+      <!-- END AADS AD UNIT 2455410 -->
     </div>
 
     <!-- ============ NAVIGARE ÎNTRE EPIZOADE (jos, ca la streaming) ============ -->
@@ -176,7 +219,7 @@
 
 
   <footer class="site-foot">
-    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit, fără reclame.</p>
+    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit.</p>
     <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 
