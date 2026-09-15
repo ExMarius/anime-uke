@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9d0145c
+comanda: cf-relay/cmd.sh @ f37cb73
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -8,33 +8,40 @@ comanda: cf-relay/cmd.sh @ 9d0145c
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m deja aplicata
+    [0;32m✓[0m migrari aplicate
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=9d0145c
+    [0;32m✓[0m assete versionate ?v=f37cb73
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
-    [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://1095418c.anime-uke.pages.dev
+    [0;32m✓[0m assete minificate: 9 fisiere
+    [0;32m✓[0m publicat: https://5c822fa1.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-
-=== AUDIT LIVE dupa deploy ===
+── verificari post-deploy: monetizare ──
+GET /api/ads: 401
+{"error":"Trebuie să fii autentificat"}
+GET /api/admin/ads (fara login): 401
+ads.js initAds: 0
+page-admin bundle contine ads-slots: 0
+data-ad-slot pe /: 0
+style.css ad-box: 0
+admin.html tab-ads: 200
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-14T20:21:38.935Z
+data: 2026-09-15T08:20:15.845Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (199 ms)
-  ℹ️  / → 200 · 199 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (146 ms)
+  ℹ️  / → 200 · 146 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -42,7 +49,7 @@ data: 2026-09-14T20:21:38.935Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ⚠️  / are 3 assete fără ?v= (risc de cache vechi)
-  ℹ️  /login → 200 · 134 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 46 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -50,7 +57,7 @@ data: 2026-09-14T20:21:38.935Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ⚠️  /login are 3 assete fără ?v= (risc de cache vechi)
-  ℹ️  /register → 200 · 133 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 74 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -60,21 +67,21 @@ data: 2026-09-14T20:21:38.935Z
   ⚠️  /register are 3 assete fără ?v= (risc de cache vechi)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 193 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 150 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 96 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 115 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 115 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 110 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 206 ms
+  ℹ️  /episod/4212 → 200 · 118 ms
   ✅ /episod/4212 → 200
-  ℹ️  /episod/4211 → 200 · 99 ms
+  ℹ️  /episod/4211 → 200 · 113 ms
   ✅ /episod/4211 → 200
 
 ── 2. Protecție pagini ──
@@ -177,61 +184,61 @@ data: 2026-09-14T20:21:38.935Z
 
 ── 9. Assete + performanță ──
   ℹ️  cere assetele cu ?v=audit (versiunea din HTML-ul live)
-  ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/css/style.css → 200 · 93646 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/css/style.css e minificat
-  ℹ️  /assets/css/page-episode.css → 200 · 9804 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/css/style.css NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/css/page-episode.css → 200 · 17202 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/page-episode.css e comprimat (br)
   ✅ /assets/css/page-episode.css are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/css/page-episode.css e minificat
-  ℹ️  /assets/css/page-user.css → 200 · 8459 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/css/page-episode.css NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/css/page-user.css → 200 · 15187 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/page-user.css e comprimat (br)
   ✅ /assets/css/page-user.css are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/css/page-user.css e minificat
-  ℹ️  /assets/css/page-admin.css → 200 · 9285 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/css/page-user.css NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/css/page-admin.css → 200 · 15941 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/page-admin.css e comprimat (br)
   ✅ /assets/css/page-admin.css are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/css/page-admin.css e minificat
-  ℹ️  /assets/js/core.js → 200 · 14210 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/css/page-admin.css NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/core.js → 200 · 27081 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/core.js e comprimat (br)
   ✅ /assets/js/core.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/core.js e minificat
-  ℹ️  /assets/js/chat.js → 200 · 15018 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/core.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/chat.js → 200 · 21780 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/chat.js e comprimat (br)
   ✅ /assets/js/chat.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/chat.js e minificat
-  ℹ️  /assets/js/page-index.js → 200 · 42324 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/chat.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-index.js → 200 · 26893 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-index.js e comprimat (br)
   ✅ /assets/js/page-index.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-index.js e minificat
-  ℹ️  /assets/js/page-series.js → 200 · 43820 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/page-index.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-series.js → 200 · 28433 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-series.js e comprimat (br)
   ✅ /assets/js/page-series.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-series.js e minificat
-  ℹ️  /assets/js/page-episode.js → 200 · 46757 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/page-series.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-episode.js → 200 · 40509 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-episode.js e comprimat (br)
   ✅ /assets/js/page-episode.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-episode.js e minificat
-  ℹ️  /assets/js/page-profile.js → 200 · 51343 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/page-episode.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-profile.js → 200 · 39861 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-profile.js e comprimat (br)
   ✅ /assets/js/page-profile.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-profile.js e minificat
-  ℹ️  /assets/js/page-shop.js → 200 · 29863 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/page-profile.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-shop.js → 200 · 9292 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e comprimat (br)
   ✅ /assets/js/page-shop.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-shop.js e minificat
-  ℹ️  /assets/js/page-admin.js → 200 · 20870 B · enc=br · cache=public, max-age=31536000, immutable
+  ⚠️  /assets/js/page-shop.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  /assets/js/page-admin.js → 200 · 19314 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e comprimat (br)
   ✅ /assets/js/page-admin.js are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/js/page-admin.js e minificat
-  ℹ️  total JS servit (8 fișiere): 258.0 KB (comprimat) — fără framework, e sănătos sub ~300 KB
-  ✅ buget JS ok: 258 KB
+  ⚠️  /assets/js/page-admin.js NU pare minificat (deploy.sh nu l-a procesat?)
+  ℹ️  total JS servit (8 fișiere): 208.2 KB (comprimat) — fără framework, e sănătos sub ~300 KB
+  ✅ buget JS ok: 208 KB
   ℹ️  hero-1.jpg: fără Accept webp → image/jpeg (202731 B); cu Accept webp → image/webp (168738 B)
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 199 ms · /series 10 ms · /api/series 242 ms
+  ℹ️  timpi: / 146 ms · /series 28 ms · /api/series 253 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -250,10 +257,22 @@ data: 2026-09-14T20:21:38.935Z
 
 ════════════ PROBLEME (prioritizate) ════════════
 
-  🟡 de verificat (3):
+  🟡 de verificat (15):
    • [1. Pagini + SEO] / are 3 assete fără ?v= (risc de cache vechi)
    • [1. Pagini + SEO] /login are 3 assete fără ?v= (risc de cache vechi)
    • [1. Pagini + SEO] /register are 3 assete fără ?v= (risc de cache vechi)
+   • [9. Assete + performanță] /assets/css/style.css NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/css/page-episode.css NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/css/page-user.css NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/css/page-admin.css NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/core.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/chat.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-index.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-series.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-episode.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-profile.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-shop.js NU pare minificat (deploy.sh nu l-a procesat?)
+   • [9. Assete + performanță] /assets/js/page-admin.js NU pare minificat (deploy.sh nu l-a procesat?)
 
 ════════════ NEACOPERIT FĂRĂ CONT ════════════
   Auditul rulează fără credențiale, deci NU probează: fluxul de login real,
@@ -262,29 +281,5 @@ data: 2026-09-14T20:21:38.935Z
   Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).
 
 ════════════ TOTAL ════════════
-  ✅ 159   🟡 3   🔴 0   ℹ️ 32
+  ✅ 147   🟡 15   🔴 0   ℹ️ 32
 exit audit: 0
-
-=== verificari punctuale (fix-urile din audit) ===
-  /serie/99999999 → 404 (trebuie 404)
-    X-Robots-Tag: x-robots-tag: noindex, follow
-    titlu: <title>404 — Serie inexistentă • anime-uke</title>
-  /episod/99999999 → 404 (trebuie 404)
-  /series → 301 https://anime-uke.pages.dev/ (trebuie 301 spre /)
-  /series?id=1014 → 200 (trebuie 200)
-  /series/ → 301 https://anime-uke.pages.dev/ (trebuie 301 spre /)
-  /package.json → 404 (trebuie 404, nu 302)
-  /AGENTS.md → 404 (trebuie 404)
-  /deploy.sh → 404 (trebuie 404)
-  /src/worker.js → 404 (trebuie 404)
-  /ruta-inexistenta → 404 (trebuie 404)
-  /profile (nelogat) → 302 https://anime-uke.pages.dev/login?next=%2Fprofile (trebuie 302 spre /login)
-  /profile.html (nelogat) → 302 https://anime-uke.pages.dev/login?next=%2Fprofile.html (302 spre /login e ok)
-  /login noindex: 1  canonical: 1
-  /register noindex: 2  canonical: 1
-  CORP header: cross-origin-resource-policy: same-origin
-  sitemap conține /series? (trebuie 0): 0
-  sitemap URL-uri: <loc>https://anime-uke.pages.dev/</loc> <loc>https://anime-uke.pages.dev/serie/1019</loc> <loc>https://anime-uke.pages.dev/serie/1018</loc> <loc>https://anime-uke.pages.dev/serie/1017</loc> <loc>https://anime-uke.pages.dev/serie/1015</loc> <loc>https://anime-uke.pages.dev/serie/1014</loc> 
-  /serie/1014 (serie reala) → 200 (trebuie 200)
-  /episod/4210 (episod real) → 200 (trebuie 200)
-  prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":6,"online":0}
