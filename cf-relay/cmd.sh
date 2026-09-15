@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "=== SEO boost: sitemap episoade + titluri episod ro sub + homepage keywords ==="
+echo "=== Fix sitemap: scoate CORP/CSP ca sa-l citeasca Google ==="
 ./deploy.sh
 echo "exit deploy: $?"
 B="https://anime-uke.pages.dev"
 echo
-echo "homepage checks:"
-curl -s "$B/" | grep -c "aads-wrap"
-curl -s "$B/" | grep -c "2455410"
-curl -s "$B/" | grep -o "<title>.*</title>"
+echo "sitemap raw:"
+curl -s -D - "$B/sitemap.xml" -o /tmp/sitemap.xml | head -20
+cat /tmp/sitemap.xml | head -30
 echo
-echo "sitemap checks:"
-curl -s "$B/sitemap.xml" | head -20
-curl -s "$B/sitemap.xml" | grep -c "/serie/"
-curl -s "$B/sitemap.xml" | grep -c "/episod/"
+echo "count serie:"
+grep -c "/serie/" /tmp/sitemap.xml || echo 0
+echo "count episod:"
+grep -c "/episod/" /tmp/sitemap.xml || echo 0
+echo
+echo "check headers - should NOT have Cross-Origin-Resource-Policy: same-origin"
+curl -s -I "$B/sitemap.xml" | grep -i -E "content-type|corp|cross-origin"
