@@ -140,38 +140,21 @@ async function sitemapHandler(request, env) {
   const now = Date.now();
 
   if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    let urls = [{ loc: '/', priority: '1.0' }];
+    let urls = ['/'];
     try {
-      const seriesRes = await env.DB
-        .prepare('SELECT id, updated_at FROM anime_series ORDER BY id DESC LIMIT 2000')
-        .all();
-      for (const r of seriesRes.results || []) urls.push({ loc: `/serie/${r.id}`, priority: '0.8', lastmod: r.updated_at });
-
-      const epRes = await env.DB
-        .prepare('SELECT id, created_at FROM episodes ORDER BY id DESC LIMIT 5000')
-        .all();
-      for (const r of epRes.results || []) urls.push({ loc: `/episod/${r.id}`, priority: '0.6', lastmod: r.created_at });
+      const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
+      for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
+      const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
+      for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
     } catch (e) {
       console.error('sitemap D1 esuat:', e?.message || e);
-      // fallback la query simplu fara coloane extra daca migrarea lipseste
-      try {
-        const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
-        for (const r of seriesRes.results || []) urls.push({ loc: `/serie/${r.id}`, priority: '0.8' });
-        const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
-        for (const r of epRes.results || []) urls.push({ loc: `/episod/${r.id}`, priority: '0.6' });
-      } catch {}
     }
-    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-    const today = new Date().toISOString().split('T')[0];
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // Varianta minimalista valida 100% pentru Google - fara lastmod/priority care uneori incurca parserul
     sitemapCache.body =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      urls.map((u) => {
-        const loc = esc(origin + u.loc);
-        const pri = u.priority;
-        const lm = u.lastmod ? esc(String(u.lastmod).split(' ')[0].split('T')[0]) : today;
-        return `  <url><loc>${loc}</loc><lastmod>${lm}</lastmod><priority>${pri}</priority></url>`;
-      }).join('\n') +
+      urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
       `\n</urlset>\n`;
     sitemapCache.at = now;
   }
@@ -179,10 +162,8 @@ async function sitemapHandler(request, env) {
   return new Response(sitemapCache.body, {
     status: 200,
     headers: {
-      'Content-Type': 'text/xml; charset=utf-8',
+      'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',
-      // Fara CORP same-origin — Google trebuie sa-l poata citi cross-origin
-      'X-Robots-Tag': 'noindex',
     },
   });
 }
