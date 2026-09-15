@@ -2,37 +2,10 @@ import { matchRoute } from './router.js';
 import { SECURITY_HEADERS } from './lib/http.js';
 import { getSessionUser } from './lib/session.js';
 
-// =====================================================================
-// Handlerul principal (Advanced Mode).
-//
-// Ordine: API/WS mai intii, apoi assete statice prin env.ASSETS.
-// Header-ele de securitate se aplica pe TOATE raspunsurile, inclusiv pe
-// cele statice — in v1 paginile HTML nu aveau niciun header de securitate.
-// =====================================================================
-
 const API_404 = { error: 'Endpoint inexistent' };
 
-// =====================================================================
-// POARTA DE AUTENTIFICARE
-//
-// Site-ul e privat: un vizitator fara cont ajunge direct la /login.
-// Publice raman doar paginile de autentificare, assetele statice si
-// endpoint-urile de auth — altfel nimeni nu s-ar putea loga.
-//
-// Cost: o citire D1 per request poarta. La 1000 de utilizatori zilnici
-// cu ~50 de request-uri fiecare inseamna ~50.000 de randuri citite/zi,
-// adica 1% din cota gratuita de 5.000.000.
-// =====================================================================
-// Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
-// in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
-// comentarii de scris, ratinguri, cufere, shop, profil, admin).
 const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
 
-// Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
-// Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
-// 404 — vezi poarta din handleFetch. Fără ea, /package.json sau /AGENTS.md
-// cădeau pe poarta de autentificare și răspundeau 302 → /login?next=/package.json,
-// adică dezvăluiau că fișierul există în repo și umpleau crawl-ul de gunoi.
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
   '/admin', '/admin/serii', '/admin/serie', '/404',
@@ -40,7 +13,6 @@ const STATIC_PAGES = new Set([
 ]);
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
-  // URL-urile pretty de catalog: publice (site public).
   if (path.startsWith('/serie/') || path.startsWith('/episod/')) return true;
   return false;
 }
@@ -50,17 +22,15 @@ const PUBLIC_API = new Set([
   '/api/auth/register-options',
   '/api/auth/logout',
   '/api/auth/me',
-  '/api/top',            // clasamente publice (agregari anonime)
-  '/api/pulse',          // doar un contor agregat („N online”), fara date personale
-  '/api/genres',         // lista de genuri pentru filtre (zero date personale)
-  '/api/recent',         // ultimele episoade adaugate (date de catalog)
-  '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
-  '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
+  '/api/top',
+  '/api/pulse',
+  '/api/genres',
+  '/api/recent',
+  '/api/comments',
+  '/api/subtitle',
 ]);
 function isPublicApi(path) {
   if (PUBLIC_API.has(path)) return true;
-  // Detaliul seriei (cu episoade) si sursele episodului: publice, ca sa
-  // mearga vizionarea fara cont. Nu expun decat continut de catalog.
   if (path === '/api/series' || path.startsWith('/api/series/')) return true;
   if (path.startsWith('/api/episodes/')) return true;
   return false;
@@ -69,11 +39,10 @@ function isPublicApi(path) {
 function isPublic(path) {
   if (isPublicPage(path)) return true;
   if (isPublicApi(path)) return true;
-  if (path.startsWith('/assets/')) return true;   // CSS/JS/imagini, fara date
+  if (path.startsWith('/assets/')) return true;
   return false;
 }
 
-/** Redirectioneaza catre login pastrand destinatia, ca sa revii dupa logare. */
 function redirectToLogin(url) {
   const next = `${url.pathname}${url.search}`;
   const target = `/login?next=${encodeURIComponent(next)}`;
@@ -83,24 +52,14 @@ function redirectToLogin(url) {
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
-  // Normalizare pentru verificările de rutare: `/series/` și `/series.html` sunt
-  // aceeași pagină ca `/series`. Fără ea, `/series/` sărea peste redirectul 301
-  // și ajungea la poarta de autentificare (302 → /login), iar `/profile.html`
-  // primea 404 în loc de 308-ul de clean URL pe care îl dă routerul Pages.
   const norm = path.length > 1 ? path.replace(/\/+$/, '').replace(/\.html$/, '') || '/' : path;
 
   let response;
   try {
-    // Fisierele care nu trebuie servite niciodata raspund cu 404 si pentru
-    // vizitatori — un 302 catre /login ar dezvalui ca ruta exista.
     if (BLOCKED_PATHS.includes(path) || path.startsWith('/.git') || path.startsWith('/migrations')) {
       return applySecurityHeaders(jsonResponse({ error: 'Not found' }, 404));
     }
 
-    // `/series` fără id e pagină moartă: JS-ul făcea location.replace('/'), iar
-    // crawlerul vedea 200 + head gol (titlu generic, fără canonical/og) la un URL
-    // declarat în sitemap. Acum trimitem 301 spre catalog (care chiar e pe `/`).
-    // `/series?id=N` rămâne valabil (forma veche, folosită în linkuri).
     if (norm === '/series' && !/^\d+$/.test(url.searchParams.get('id') || '')) {
       return applySecurityHeaders(new Response(null, {
         status: 301,
@@ -108,7 +67,6 @@ export async function handleFetch(request, env, ctx) {
       }));
     }
 
-    // Rute necunoscute → 404 onest, înainte de poarta de autentificare.
     const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
     const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
     if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
@@ -143,19 +101,14 @@ export async function handleFetch(request, env, ctx) {
 
 async function handleApi(request, env, ctx, path) {
   const match = matchRoute(request.method, path);
-
   if (!match) return jsonResponse(API_404, 404);
-
   if (!match.handler) {
-    // Ruta exista, metoda nu. Spunem clientului ce metode sunt acceptate.
     const allowed = allowedMethods(path);
     return new Response(JSON.stringify({ error: 'Metodă nepermisă' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json; charset=utf-8', Allow: allowed.join(', ') },
     });
   }
-
-  // Context identic cu cel din Pages Functions, ca rutele sa nu se schimbe.
   const context = {
     request,
     env,
@@ -164,7 +117,6 @@ async function handleApi(request, env, ctx, path) {
     data: {},
     next: async () => serveStatic(request, env),
   };
-
   return await match.handler(context);
 }
 
@@ -177,14 +129,6 @@ function allowedMethods(path) {
   return [...found];
 }
 
-// =====================================================================
-// SITEMAP — partea „site real”, nu jucărie: motoarele de căutare primesc
-// o hartă validă a catalogului. E publică (roboții nu au cont), dar nu
-// expune nimic sensitiv: doar URL-uri canoinice.
-//
-// Buget: un singur SELECT indexat (id + updated_at), ținut în cache la
-// nivel de izolat 1 oră — cost D1 neglijabil indiferent de trafic.
-// =====================================================================
 const SITEMAP_CACHE_MS = 60 * 60 * 1000;
 const sitemapCache = { at: 0, body: null };
 
@@ -193,19 +137,17 @@ async function sitemapHandler(request, env) {
   const now = Date.now();
 
   if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    // In sitemap doar paginile cu valoare de indexat: prima pagina,
-    // catalogul si seriile. /login si /register sunt utilitare — le lasam
-    // afara ca sa nu le concureze pe cele de continut in rezultate.
-    // `/series` fără id face 301 spre `/`, deci nu mai are ce căuta aici:
-    // un URL de sitemap care redirectează la alt URL e semnal de calitate slabă.
-    let urls = ['/'];
+    let urls = [{ loc: '/', priority: '1.0' }];
     try {
-      const res = await env.DB
+      const seriesRes = await env.DB
         .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
         .all();
-      // URL-urile pretty — cele pe care le indexam (canonical-ul din pagina
-      // pointeaza spre ele, deci sitemap-ul trebuie sa fie coerent).
-      for (const r of res.results || []) urls.push(`/serie/${r.id}`);
+      for (const r of seriesRes.results || []) urls.push({ loc: `/serie/${r.id}`, priority: '0.8' });
+
+      const epRes = await env.DB
+        .prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000')
+        .all();
+      for (const r of epRes.results || []) urls.push({ loc: `/episod/${r.id}`, priority: '0.6' });
     } catch (e) {
       console.error('sitemap D1 esuat:', e?.message || e);
     }
@@ -213,7 +155,7 @@ async function sitemapHandler(request, env) {
     sitemapCache.body =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      urls.map((u) => `  <url><loc>${esc(origin + u)}</loc></url>`).join('\n') +
+      urls.map((u) => `  <url><loc>${esc(origin + u.loc)}</loc><priority>${u.priority}</priority></url>`).join('\n') +
       `\n</urlset>\n`;
     sitemapCache.at = now;
   }
@@ -227,62 +169,29 @@ async function sitemapHandler(request, env) {
   });
 }
 
-// Cai care nu trebuie servite niciodata ca asset static. In productie Pages
-// exclude automat `_worker.js`, dar blocam explicit ca sa nu depindem de asta
-// si ca mesajele de eroare ale serverului de assete sa nu scape catre client
-// (local, wrangler raspundea cu un 502 care includea calea absoluta pe disc).
 const BLOCKED_PATHS = ['/_worker.js', '/.dev.vars', '/wrangler.toml'];
 
-/**
- * Pagini al caror URL contine un parametru de cale.
- *
- * `/admin/serie/123` serveste continutul lui `public/admin/serie.html`, iar
- * JavaScript-ul citeste id-ul din `location.pathname`. Astfel URL-ul ramane
- * curat si poate fi pus in bookmark sau trimis, fara sa fie nevoie de un
- * fisier fizic pentru fiecare serie.
- *
- * ATENTIE: aici se serveste un asset la o ALTA cale decat cea ceruta, exact
- * situatia care a produs bucla de la /profile. De aceea raspunsurile de
- * redirect nu sunt pasate clientului — vezi followAssetRedirect().
- */
 const DYNAMIC_PAGES = [
   { re: /^\/admin\/serie\/\d+\/?$/, asset: '/admin/serie' },
-  // URL-uri prietenoase pentru SEO (modelul site-urilor de anime):
-  // /serie/1014 in loc de /series?id=1014. Same pagina, adresa citibila.
   { re: /^\/serie\/\d+\/?$/, asset: '/series' },
   { re: /^\/episod\/\d+\/?$/, asset: '/episode' },
 ];
 
-// ---------------------------------------------------------------------
-// SSR „lite" pentru /serie/<id>: crawlerii (Google) si share-urile sociale
-// primesc HTML cu titlul, descrierea si datele structurate ale seriei,
-// fara sa depinda de rularea JS-ului. Cost: 1 citire D1 per serie, tinuta
-// in cache 5 minute in izolat — un crawler rabdator citeste o singura
-// data indiferent cate pagini acceseaza.
-// ---------------------------------------------------------------------
 const SEO_CACHE_MS = 5 * 60 * 1000;
 
-/**
- * Originea canonica pentru SEO (canonical, og:url, sitemap).
- * Implicit originea cererii (ex. pages.dev). Cand ownerul adauga un domeniu
- * propriu (gratuit DigitalPlat sau .ro platit), seteaza variabila
- * CANONICAL_ORIGIN (ex. https://anime-uke.dpdns.org) in configurarea Pages —
- * si TOATE referintele SEO comuta odata, fara modificari de cod.
- */
 function canonicalOrigin(env, request) {
   const raw = String(env.CANONICAL_ORIGIN || '').trim();
   return raw.startsWith('http') ? raw.replace(/\/+$/, '') : new URL(request.url).origin;
 }
-const seoCache = new Map();   // cheie -> { at, row } (row = null înseamnă „nu există”)
+const seoCache = new Map();
 
-/** Cache la nivel de izolat: scutește D1 de aceleași citiri repetate. */
 function seoCacheGet(key) {
   const hit = seoCache.get(key);
   if (hit && Date.now() - hit.at < SEO_CACHE_MS) return { hit: true, row: hit.row };
   return { hit: false, row: null };
 }
 function seoCacheSet(key, row) {
-  if (seoCache.size > 200) seoCache.clear();
+  if (seoCache.size > 300) seoCache.clear();
   seoCache.set(key, { at: Date.now(), row });
 }
 
@@ -299,7 +208,6 @@ async function seriesForSeo(env, id) {
       )
       .bind(id)
       .first();
-    // Cășuim și absența: scanerele lovesc aceleași id-uri inventate de multe ori.
     seoCacheSet(key, row || null);
     return row;
   } catch {
@@ -307,34 +215,41 @@ async function seriesForSeo(env, id) {
   }
 }
 
-/** Există episodul? O citire D1 indexată pe cheia primară, cu cache. */
-async function episodeExists(env, id) {
-  const key = `e${id}`;
+async function episodeForSeo(env, id) {
+  const key = `ep${id}`;
   const cached = seoCacheGet(key);
-  if (cached.hit) return Boolean(cached.row);
+  if (cached.hit) return cached.row;
   try {
-    const row = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(id).first();
+    const row = await env.DB
+      .prepare(
+        `SELECT e.id, e.series_id, e.episode_number, e.title as ep_title,
+                s.title as series_title, s.description as series_desc, s.cover_image, s.genre
+         FROM episodes e JOIN anime_series s ON s.id = e.series_id WHERE e.id = ?`
+      )
+      .bind(id)
+      .first();
     seoCacheSet(key, row || null);
-    return Boolean(row);
+    return row;
   } catch {
-    // La eroare de D1 presupunem că există — mai bine o pagină care se încarcă
-    // decât un 404 fals pe un episod real.
-    return true;
+    return null;
   }
+}
+
+async function episodeExists(env, id) {
+  const ep = await episodeForSeo(env, id);
+  return Boolean(ep);
 }
 
 function escAttr(v) {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** Tagurile <head> generate pe server pentru o serie. */
 function seriesSeoTags(env, request, series) {
   const origin = canonicalOrigin(env, request);
   const canonical = `${origin}/serie/${series.id}`;
   const title = `${series.title} — Anime subtitrat în română online | Anime-Uke`;
   const desc = String(series.description || '').trim().slice(0, 160)
     || `${series.title} — anime subtitrat în română, gratuit, pe Anime-Uke.`;
-
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'TVSeries',
@@ -345,8 +260,6 @@ function seriesSeoTags(env, request, series) {
     numberOfEpisodes: series.episode_count || undefined,
     startDate: series.release_date || (series.year ? String(series.year) : undefined),
     inLanguage: 'ro',
-    // Fisa detaliata (0024): Google foloseste alternateName pentru cautari
-    // dupa titlul japonez/englez, sameAs leaga entitatea de MAL/AniList.
     alternateName: series.alt_titles
       ? String(series.alt_titles).split('/').map((t) => t.trim()).filter(Boolean)
       : undefined,
@@ -354,7 +267,6 @@ function seriesSeoTags(env, request, series) {
     contentRating: series.age_rating || undefined,
     sameAs: series.external_url || undefined,
   };
-
   return `  <title>${escAttr(title)}</title>
   <meta name="description" content="${escAttr(desc)}">
   <link rel="canonical" href="${escAttr(canonical)}">
@@ -366,9 +278,43 @@ function seriesSeoTags(env, request, series) {
   <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
 }
 
-/** Injecteaza tagurile in HTML-ul paginii de serie (inlocuieste <title>). */
+function episodeSeoTags(env, request, ep) {
+  const origin = canonicalOrigin(env, request);
+  const canonical = `${origin}/episod/${ep.id}`;
+  const epNum = ep.episode_number;
+  const seriesTitle = ep.series_title;
+  const title = `${seriesTitle} Episodul ${epNum} Subtitrat în Română — Anime ro sub | Anime-Uke`;
+  const desc = `${seriesTitle} episodul ${epNum} subtitrat în română, tradus ro sub, online gratuit pe Anime-Uke. ${String(ep.series_desc || '').slice(0, 80)}`.slice(0, 160);
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'TVEpisode',
+    name: `${seriesTitle} Episodul ${epNum}`,
+    episodeNumber: epNum,
+    partOfSeries: { '@type': 'TVSeries', name: seriesTitle },
+    description: desc,
+    image: ep.cover_image || undefined,
+    inLanguage: 'ro',
+    url: canonical,
+  };
+  return `  <title>${escAttr(title)}</title>
+  <meta name="description" content="${escAttr(desc)}">
+  <link rel="canonical" href="${escAttr(canonical)}">
+  <meta property="og:title" content="${escAttr(`${seriesTitle} Episodul ${epNum} — anime ro sub`)}">
+  <meta property="og:description" content="${escAttr(desc)}">
+  <meta property="og:type" content="video.episode">
+  <meta property="og:url" content="${escAttr(canonical)}">
+  <meta property="og:image" content="${escAttr(ep.cover_image || `${origin}/assets/img/hero-1.jpg`)}">
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
 function injectSeriesSeo(env, request, html, series) {
   const tags = seriesSeoTags(env, request, series);
+  const withTitle = html.replace(/<title>.*?<\/title>/i, '');
+  return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
+}
+
+function injectEpisodeSeo(env, request, html, ep) {
+  const tags = episodeSeoTags(env, request, ep);
   const withTitle = html.replace(/<title>.*?<\/title>/i, '');
   return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
 }
@@ -380,23 +326,10 @@ function assetPathFor(path) {
   return null;
 }
 
-/**
- * E calea o pagină pe care o avem într-adevăr? Se cheamă cu calea NORMALIZATĂ
- * (fără slash final și fără .html), deci aici mai verificăm doar seturile.
- */
 function isKnownPage(path) {
   return STATIC_PAGES.has(path) || Boolean(assetPathFor(path));
 }
 
-/**
- * Urmareste un singur redirect intern de la routerul de assete.
- *
- * Routerul Pages aplica „clean URLs": pentru /admin/serie.html raspunde cu
- * 308 catre /admin/serie. Daca am pasa redirectul acela browserului in timp
- * ce el ceruse /admin/serie/123, am obtine o bucla. Il rezolvam aici, in
- * interiorul workerului, iar daca si al doilea raspuns e un redirect ne
- * oprim — mai bine un 404 onest decat o bucla infinita.
- */
 async function followAssetRedirect(env, origin, location, headers) {
   if (!location) return null;
   const target = new URL(location, origin);
@@ -417,9 +350,6 @@ async function serveStatic(request, env) {
     return jsonResponse({ error: 'Assetele statice nu sunt disponibile' }, 500);
   }
 
-  // Pentru caile obisnuite NU remapam nimic: routerul de assete Pages stie
-  // deja sa serveasca profile.html la /profile. O remapare /profile ->
-  // /profile.html ar inchide o bucla infinita (ERR_TOO_MANY_REDIRECTS).
   const assetPath = assetPathFor(path);
   const assetRequest = assetPath
     ? new Request(new URL(assetPath, url.origin).toString(), { method: 'GET', headers: request.headers })
@@ -428,9 +358,6 @@ async function serveStatic(request, env) {
   try {
     const res = await env.ASSETS.fetch(assetRequest);
 
-    // Negociere WebP: daca exista o versiune .webp langa jpg/png-ul cerut
-    // (generata la deploy), o servim pe ea — ~40% mai putini bytes, aceeasi
-    // imagine. Doar pentru browsere care anunta image/webp (toate moderne).
     if (res.status === 200) {
       const m = /^\/assets\/img\/.+\.(jpg|jpeg|png)$/i.exec(path);
       const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
@@ -448,14 +375,9 @@ async function serveStatic(request, env) {
       return followed || jsonResponse({ error: 'Not found' }, 404);
     }
 
-    // SSR „lite": /serie/<id> iese cu head plin (titlu, descriere, JSON-LD)
-    // generat din D1 — crawlerii nu trebuie sa ruleze JS ca sa inteleaga pagina.
     const serieMatch = path.match(/^\/serie\/(\d+)\/?$/);
     if (serieMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
       const series = await seriesForSeo(env, Number(serieMatch[1]));
-      // Serie inexistentă → 404 REAL. Până aici răspundeam 200 cu shell-ul paginii
-      // și lăsam JS-ul să scrie „Seria nu există": pentru Google era un soft 404
-      // (pagină indexabilă, goală), iar crawl budget-ul se ducea pe id-uri inventate.
       if (!series) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
       const html = await res.text();
       const headers = new Headers(res.headers);
@@ -464,17 +386,17 @@ async function serveStatic(request, env) {
       return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
     }
 
-    // La fel pentru /episod/<id>: fără verificare, orice id întorcea 200.
     const epMatch = path.match(/^\/episod\/(\d+)\/?$/);
     if (epMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
-      const exists = await episodeExists(env, Number(epMatch[1]));
-      if (!exists) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      const ep = await episodeForSeo(env, Number(epMatch[1]));
+      if (!ep) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      const html = await res.text();
+      const headers = new Headers(res.headers);
+      headers.delete('content-length');
+      headers.delete('etag');
+      return new Response(injectEpisodeSeo(env, request, html, ep), { status: 200, headers });
     }
 
-    // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
-    // „immutable" 1 an. Fara ?v= (ex. importurile relative dintre modulele
-    // /assets/js) lasam regula din _headers (no-cache + ETag → 304 ieftin):
-    // asa un deploy nu lasa module vechi blocate in cache un an.
     const versioned = path.startsWith('/assets/') && url.searchParams.has('v');
     if (versioned && res.status === 200) {
       const headers = new Headers(res.headers);
@@ -484,15 +406,11 @@ async function serveStatic(request, env) {
 
     return res;
   } catch (e) {
-    // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);
     return jsonResponse({ error: 'Not found' }, 404);
   }
 }
 
-// Răspuns al cărui body l-am citit deja (ex. HTML prelucrat): trebuie să
-// reconstruim Response fără content-length/etag vechi, altfel Cloudflare
-// raportează un mismatch și browserul trunchiază pagina.
 function statusOverride(res, status, headers) {
   const h = new Headers(headers || res.headers);
   h.delete('content-length');
@@ -500,14 +418,6 @@ function statusOverride(res, status, headers) {
   return new Response(res.body, { status, statusText: res.statusText, headers: h });
 }
 
-/**
- * Pagina 404 a sitului — HTML complet, generat aici, fără nicio dependință.
- *
- * De ce nu public/404.html + CSS + JS: o pagină de eroare trebuie să se vadă
- * corect chiar și când assetele lipsesc (deploy greșit, purge CSS agresiv) și
- * nu merita 3 cereri în plus. Stilul e inline în <style>, deci nu depinde de
- * style.css și nici de safelist-ul din purge-css.
- */
 function notFoundPage(title = 'Pagină inexistentă', message = 'Pagina cerută nu există pe anime-uke.') {
   const html = `<!DOCTYPE html>
 <html lang="ro">
@@ -557,7 +467,6 @@ function notFoundPage(title = 'Pagină inexistentă', message = 'Pagina cerută 
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store',
-      // Centură și pentru header: un 404 cu conținut nu trebuie indexat.
       'X-Robots-Tag': 'noindex, follow',
     },
   });
@@ -571,10 +480,7 @@ function jsonResponse(data, status) {
 }
 
 function applySecurityHeaders(response) {
-  // Raspunsul de upgrade WebSocket (101) nu accepta header-e suplimentare
-  // in mod uzual; il lasam neatins ca sa nu stricam handshake-ul.
   if (response.status === 101) return response;
-
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     headers.set(key, value);
