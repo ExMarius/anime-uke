@@ -1,6 +1,75 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 64149b7
+comanda: cf-relay/cmd.sh @ 0f546bf
 ────────────────────────────────────
-data-ad-slot pe /serie/1014: 1
-data-ad-slot pe episode.html (shell): 1
-gratuit in footer /serie/1014: anime subtitrat în română, gratuit.
+
+ ⛅️ wrangler 4.131.2
+────────────────────
+Resource location: remote 
+
+🌀 Executing on remote database anime-db (7209b0bd-227b-46d0-b376-6157b56734fa):
+🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
+🚣 Executed 1 command in 0.28ms
+[
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WNAM",
+      "served_by_colo": "SEA",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2781
+      },
+      "duration": 0.2781,
+      "changes": 1,
+      "last_row_id": 1,
+      "changed_db": true,
+      "size_after": 421888,
+      "rows_read": 0,
+      "rows_written": 2,
+      "total_attempts": 1
+    }
+  }
+]
+D1: config ads scris
+
+ ⛅️ wrangler 4.131.2
+────────────────────
+Resource location: remote 
+
+🌀 Executing on remote database anime-db (7209b0bd-227b-46d0-b376-6157b56734fa):
+🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
+🚣 Executed 1 command in 0.25ms
+[
+  {
+    "results": [
+      {
+        "key": "ads",
+        "len": 459,
+        "updated_at": "2026-09-15 09:08:37"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "WNAM",
+      "served_by_colo": "SEA",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2549
+      },
+      "duration": 0.2549,
+      "changes": 0,
+      "last_row_id": 1,
+      "changed_db": false,
+      "size_after": 421888,
+      "rows_read": 1,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]
+── verificare live ──
+incercarea 1: {"enabled":true,"slots":[{"name":"index","type":"iframe","url":"https://acceptable.a-ads.com/2455410/?size=Adaptive","width":728,"height":90,"label":""},{"name":"series","type":"iframe","url":"https://acceptable.a-ads.com/2455410/?size=Adaptive","width":468,"height":60,"label":""},{"na
+slotul index e servit cu URL-ul A-ADS: 1
