@@ -1,7 +1,56 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 5f41244
+comanda: cf-relay/cmd.sh @ 70432df
 ────────────────────────────────────
-=== Fix double slash //sitemap.xml pentru GSC ===
+=== Verifica Bot Fight Mode si sitemap GSC ===
+Account ID: 80024736ee1b2c8800e84d668dc57154
+
+Lista Pages projects:
+anime-uke c9073da4-ffa8-4cae-9c5a-558ce4bc8453
+animeuke 797f6a6c-607e-4563-bdfb-118906016305
+
+Bot Management (account level):
+{
+  "success": false,
+  "errors": [
+    {
+      "code": 7003,
+      "message": "Could not route to /accounts/80024736ee1b2c8800e84d668dc57154/bot_management, perhaps your object identifier is invalid?"
+    },
+    {
+      "code": 7000,
+      "message": "No route for that URI"
+    }
+  ],
+  "messages": [],
+  "result": null
+}
+
+--- sitemap tests ---
+HTTP/2 200 
+date: Tue, 15 Sep 2026 13:53:57 GMT
+content-type: text/xml; charset=utf-8
+access-control-allow-origin: *
+cache-control: no-store
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=JsRj9MCUY5BUMfoZ2l0pxPe91XogAx18fgqDpc1Qpi0bHo1Ph7ZS%2FZu9iegquFUhRvlrpKk7akh6q2WtnSxF2AcapAKks%2F942crFI5FQCSPl0WheaipwG8OU2mY41ujctijNPnj6"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: a3b81edf3fbe55c7-LAX
+alt-svc: h3=":443"; ma=86400
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://anime-uke.pages.dev/</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1019</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1018</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1017</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1015</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1014</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4212</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4211</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4210</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4209</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4208</loc></url>
+</urlset>
+--- deploy anyway ---
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,31 +64,38 @@ comanda: cf-relay/cmd.sh @ 5f41244
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=5f41244
+    [0;32m✓[0m assete versionate ?v=70432df
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://1a515d7c.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://448d070c.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
 
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
-test single slash:
 HTTP/2 200 
-date: Tue, 15 Sep 2026 13:52:48 GMT
+date: Tue, 15 Sep 2026 13:54:12 GMT
 content-type: text/xml; charset=utf-8
 access-control-allow-origin: *
 cache-control: no-store
-test double slash (GSC bug):
-HTTP/2 404 
-date: Tue, 15 Sep 2026 13:52:48 GMT
-content-type: text/html; charset=utf-8
-cache-control: no-store
-content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=47Sc1tfufVCqOkX8k0D3e43gEquA4jUPpqjkkxBlKFvftEugM6i7fM1zZl5ZRA%2BmYpPzgOvY3%2BYRVH3LNk38Ht94bDb7PvNcST6ItjvfU9xIS%2BAHiTV0jXKVc0xRzo5b0Lu4BF6L"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: a3b81f3bce91b6c9-LAX
+alt-svc: h3=":443"; ma=86400
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://anime-uke.pages.dev/</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1019</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1018</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1017</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1015</loc></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1014</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4212</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4211</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4210</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4209</loc></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4208</loc></url>
+</urlset>
