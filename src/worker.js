@@ -138,16 +138,19 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
   const origin = canonicalOrigin(env, request);
   const now = Date.now();
 
+  // Cache 1h, dar incercam DB de fiecare data cand expira
   if (!sitemapCache.bodyXml || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    let urls = ['/'];
+    let urls = null;
     try {
       const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
-      for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
       const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
+      urls = ['/'];
+      for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
       for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
+      if (urls.length <= 1) throw new Error('empty');
     } catch (e) {
-      console.error('sitemap D1 esuat:', e?.message || e);
-      // fallback hardcodat ca sa nu fie niciodata gol pentru Google
+      console.error('sitemap D1 esuat, folosesc fallback static:', e?.message || e);
+      // Fallback 100% static - garantat valid chiar daca D1 e down
       urls = ['/', '/serie/1019', '/serie/1018', '/serie/1017', '/serie/1015', '/serie/1014', '/episod/4212', '/episod/4211', '/episod/4210', '/episod/4209', '/episod/4208'];
     }
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -155,8 +158,8 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
       urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
-      `\n</urlset>\n`;
-    sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n') + '\n';
+      `\n</urlset>`;
+    sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n');
     sitemapCache.at = now;
   }
 
@@ -165,7 +168,7 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-store',
         'Access-Control-Allow-Origin': '*',
       },
     });
@@ -174,8 +177,8 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
   return new Response(sitemapCache.bodyXml, {
     status: 200,
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Content-Type': 'text/xml; charset=utf-8',
+      'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
     },
   });

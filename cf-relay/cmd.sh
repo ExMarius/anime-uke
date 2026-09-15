@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "=== Fix sitemap GSC: minimal + txt + CORS ==="
+echo "=== Sitemap static + no-store pentru GSC ==="
 ./deploy.sh
 echo "exit deploy: $?"
 B="https://anime-uke.pages.dev"
-echo
-curl -s -I "$B/sitemap.xml" | head -20
-curl -s "$B/sitemap.xml" | head -20
+echo "--- xml headers ---"
+curl -s -I "$B/sitemap.xml" | grep -i -E "content-type|cache|access|cf-ray"
+echo "--- xml body ---"
+curl -s "$B/sitemap.xml"
 echo "--- txt ---"
-curl -s "$B/sitemap.txt" | head -20
+curl -s "$B/sitemap.txt"
 echo "--- robots ---"
 curl -s "$B/robots.txt"
