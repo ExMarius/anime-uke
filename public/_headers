@@ -1,3 +1,13 @@
+/sitemap.xml
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+  Content-Type: application/xml; charset=utf-8
+
+/sitemap.txt
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+  Content-Type: text/plain; charset=utf-8
+
 /*
   Strict-Transport-Security: max-age=31536000
 

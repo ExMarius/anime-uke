@@ -4,7 +4,7 @@ import { getSessionUser } from './lib/session.js';
 
 const API_404 = { error: 'Endpoint inexistent' };
 
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/llms.txt', '/speculationrules.json']);
 
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
@@ -69,7 +69,7 @@ export async function handleFetch(request, env, ctx) {
 
     const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
     const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
-    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
+    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && path !== '/sitemap.txt' && !isKnownPage(norm)) {
       return applySecurityHeaders(notFoundPage());
     }
 
@@ -86,10 +86,9 @@ export async function handleFetch(request, env, ctx) {
 
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
-    } else if (path === '/sitemap.xml') {
+    } else if (path === '/sitemap.xml' || path === '/sitemap.txt') {
       // Sitemap-ul trebuie sa fie citibil de Googlebot fara restrictii CORP/CSP.
-      // Il returnam direct, fara SECURITY_HEADERS care pun Cross-Origin-Resource-Policy: same-origin.
-      response = await sitemapHandler(request, env);
+      response = await sitemapHandler(request, env, path);
       return response;
     } else {
       response = await serveStatic(request, env);
@@ -133,13 +132,13 @@ function allowedMethods(path) {
 }
 
 const SITEMAP_CACHE_MS = 60 * 60 * 1000;
-const sitemapCache = { at: 0, body: null };
+const sitemapCache = { at: 0, bodyXml: null, bodyTxt: null, body: null };
 
-async function sitemapHandler(request, env) {
+async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
   const origin = canonicalOrigin(env, request);
   const now = Date.now();
 
-  if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
+  if (!sitemapCache.bodyXml || now - sitemapCache.at > SITEMAP_CACHE_MS) {
     let urls = ['/'];
     try {
       const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
@@ -148,22 +147,36 @@ async function sitemapHandler(request, env) {
       for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
     } catch (e) {
       console.error('sitemap D1 esuat:', e?.message || e);
+      // fallback hardcodat ca sa nu fie niciodata gol pentru Google
+      urls = ['/', '/serie/1019', '/serie/1018', '/serie/1017', '/serie/1015', '/serie/1014', '/episod/4212', '/episod/4211', '/episod/4210', '/episod/4209', '/episod/4208'];
     }
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    // Varianta minimalista valida 100% pentru Google - fara lastmod/priority care uneori incurca parserul
-    sitemapCache.body =
+    sitemapCache.bodyXml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
       urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
       `\n</urlset>\n`;
+    sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n') + '\n';
     sitemapCache.at = now;
   }
 
-  return new Response(sitemapCache.body, {
+  if (forPath === '/sitemap.txt') {
+    return new Response(sitemapCache.bodyTxt, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
+  return new Response(sitemapCache.bodyXml, {
     status: 200,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',
+      'Access-Control-Allow-Origin': '*',
     },
   });
 }
