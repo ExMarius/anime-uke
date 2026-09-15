@@ -1,7 +1,7 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 7217b58
+comanda: cf-relay/cmd.sh @ 4279fa9
 ────────────────────────────────────
-=== SEO boost: sitemap episoade + titluri episod ro sub + homepage keywords ===
+=== Fix sitemap: scoate CORP/CSP ca sa-l citeasca Google ===
 
 [1;35m==> 1/5  Baza de date D1[0m
     [0;32m✓[0m exista deja: anime-db (7209b0bd-227b-46d0-b376-6157b56734fa)
@@ -15,11 +15,11 @@ comanda: cf-relay/cmd.sh @ 7217b58
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7217b58
+    [0;32m✓[0m assete versionate ?v=4279fa9
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://b750cce8.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://23e09964.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -27,25 +27,38 @@ comanda: cf-relay/cmd.sh @ 7217b58
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-homepage checks:
-6
-4
-<title>Anime-Uke — Anime Ro Sub | Anime Subtitrat în Română Online Gratuit</title>
+sitemap raw:
+HTTP/2 200 
+date: Tue, 15 Sep 2026 13:27:28 GMT
+content-type: text/xml; charset=utf-8
+content-length: 1381
+cache-control: public, max-age=3600
+x-robots-tag: noindex
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=rU3Zu4Esj%2FzQ9X4pt3LhvaRSrLhOwgvBN%2F5MVKFm77S%2F5%2Bj2MmcwZGBp8nfBJfa4Os3Qf14rFBgnoa7CLf4HchAMLbIEz1pU9uAXZx27so2Nz9L8%2FnU%2F%2F1CukFv%2BvZ7vJYHCOj%2FM"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: a3b7f8148f5a885c-LAX
+alt-svc: h3=":443"; ma=86400
 
-sitemap checks:
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://anime-uke.pages.dev/</loc><priority>1.0</priority></url>
-  <url><loc>https://anime-uke.pages.dev/serie/1019</loc><priority>0.8</priority></url>
-  <url><loc>https://anime-uke.pages.dev/serie/1018</loc><priority>0.8</priority></url>
-  <url><loc>https://anime-uke.pages.dev/serie/1017</loc><priority>0.8</priority></url>
-  <url><loc>https://anime-uke.pages.dev/serie/1015</loc><priority>0.8</priority></url>
-  <url><loc>https://anime-uke.pages.dev/serie/1014</loc><priority>0.8</priority></url>
-  <url><loc>https://anime-uke.pages.dev/episod/4212</loc><priority>0.6</priority></url>
-  <url><loc>https://anime-uke.pages.dev/episod/4211</loc><priority>0.6</priority></url>
-  <url><loc>https://anime-uke.pages.dev/episod/4210</loc><priority>0.6</priority></url>
-  <url><loc>https://anime-uke.pages.dev/episod/4209</loc><priority>0.6</priority></url>
-  <url><loc>https://anime-uke.pages.dev/episod/4208</loc><priority>0.6</priority></url>
+  <url><loc>https://anime-uke.pages.dev/</loc><lastmod>2026-09-15</lastmod><priority>1.0</priority></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1019</loc><lastmod>2026-09-15</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1018</loc><lastmod>2026-09-15</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1017</loc><lastmod>2026-09-15</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1015</loc><lastmod>2026-09-15</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/serie/1014</loc><lastmod>2026-09-15</lastmod><priority>0.8</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4212</loc><lastmod>2026-09-15</lastmod><priority>0.6</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4211</loc><lastmod>2026-09-15</lastmod><priority>0.6</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4210</loc><lastmod>2026-09-15</lastmod><priority>0.6</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4209</loc><lastmod>2026-09-15</lastmod><priority>0.6</priority></url>
+  <url><loc>https://anime-uke.pages.dev/episod/4208</loc><lastmod>2026-09-15</lastmod><priority>0.6</priority></url>
 </urlset>
+
+count serie:
 5
+count episod:
 5
+
+check headers - should NOT have Cross-Origin-Resource-Policy: same-origin
+content-type: text/xml; charset=utf-8
