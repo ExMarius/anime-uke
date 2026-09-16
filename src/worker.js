@@ -4,7 +4,7 @@ import { getSessionUser } from './lib/session.js';
 
 const API_404 = { error: 'Endpoint inexistent' };
 
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap', '/llms.txt', '/speculationrules.json']);
 
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
@@ -71,7 +71,7 @@ export async function handleFetch(request, env, ctx) {
 
     const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
     const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
-    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && path !== '/sitemap.txt' && !isKnownPage(norm)) {
+    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && path !== '/sitemap.txt' && path !== '/sitemap' && !isKnownPage(norm)) {
       return applySecurityHeaders(notFoundPage());
     }
 
@@ -88,8 +88,7 @@ export async function handleFetch(request, env, ctx) {
 
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
-    } else if (path === '/sitemap.xml' || path === '/sitemap.txt') {
-      // Sitemap-ul trebuie sa fie citibil de Googlebot fara restrictii CORP/CSP.
+    } else if (path === '/sitemap.xml' || path === '/sitemap.txt' || path === '/sitemap') {
       response = await sitemapHandler(request, env, path);
       return response;
     } else {
@@ -176,6 +175,7 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
     });
   }
 
+  // /sitemap fara extensie - returneaza XML la fel ca /sitemap.xml
   return new Response(sitemapCache.bodyXml, {
     status: 200,
     headers: {

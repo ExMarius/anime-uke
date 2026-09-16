@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "=== Debug Pages project + sitemap GSC ==="
-echo "Account: $CLOUDFLARE_ACCOUNT_ID"
-echo
-echo "Pages project anime-uke details:"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/anime-uke" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq .
-echo
-echo "--- sitemap fetch tests from GitHub runner ---"
+echo "=== Final sitemap fix + test GSC ==="
+./deploy.sh
+echo "exit deploy: $?"
 B="https://anime-uke.pages.dev"
-for ua in "Mozilla/5.0" "Googlebot" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" "Mozilla/5.0 (compatible; bingbot/2.0)"; do
-  echo "UA: $ua"
-  curl -s -o /dev/null -w "%{http_code} %{content_type}\n" -A "$ua" "$B/sitemap.xml"
-done
-echo
-echo "--- robots.txt ---"
+echo "--- single slash xml ---"
+curl -s -I "$B/sitemap.xml" | head -5
+curl -s "$B/sitemap.xml" | wc -l
+echo "--- double slash xml ---"
+curl -s -I "$B//sitemap.xml" | head -5
+curl -s "$B//sitemap.xml" | wc -l
+echo "--- txt ---"
+curl -s -I "$B/sitemap.txt" | head -5
+curl -s "$B/sitemap.txt" | wc -l
+echo "--- sitemap (no ext) ---"
+curl -s -I "$B/sitemap" | head -5
+curl -s "$B/sitemap" | wc -l
+echo "--- robots ---"
 curl -s "$B/robots.txt"
-echo
-echo "--- sitemap.xml raw ---"
-curl -s "$B/sitemap.xml"
-echo
-echo "--- sitemap.txt raw ---"
-curl -s "$B/sitemap.txt"
