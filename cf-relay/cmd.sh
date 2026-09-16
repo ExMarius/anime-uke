@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 set -uo pipefail
-echo "=== Verifica Bot Fight Mode si sitemap GSC ==="
-echo "Account ID: $CLOUDFLARE_ACCOUNT_ID"
+echo "=== Debug Pages project + sitemap GSC ==="
+echo "Account: $CLOUDFLARE_ACCOUNT_ID"
 echo
-echo "Lista Pages projects:"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[] | "\(.name) \(.id)"' | head -20
+echo "Pages project anime-uke details:"
+curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/anime-uke" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq .
 echo
-echo "Bot Management (account level):"
-curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/bot_management" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq .
-echo
-echo "--- sitemap tests ---"
+echo "--- sitemap fetch tests from GitHub runner ---"
 B="https://anime-uke.pages.dev"
-curl -s -I -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" "$B/sitemap.xml" | head -10
-curl -s -A "Googlebot" "$B/sitemap.xml" | head -20
+for ua in "Mozilla/5.0" "Googlebot" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" "Mozilla/5.0 (compatible; bingbot/2.0)"; do
+  echo "UA: $ua"
+  curl -s -o /dev/null -w "%{http_code} %{content_type}\n" -A "$ua" "$B/sitemap.xml"
+done
 echo
-echo "--- deploy anyway ---"
-./deploy.sh
-echo "exit deploy: $?"
-curl -s -I "$B/sitemap.xml" | head -10
-curl -s "$B/sitemap.xml" | head -20
+echo "--- robots.txt ---"
+curl -s "$B/robots.txt"
+echo
+echo "--- sitemap.xml raw ---"
+curl -s "$B/sitemap.xml"
+echo
+echo "--- sitemap.txt raw ---"
+curl -s "$B/sitemap.txt"
