@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ ac2e2ce
+comanda: cf-relay/cmd.sh @ 234a9c9
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ ac2e2ce
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=ac2e2ce
+    [0;32m✓[0m assete versionate ?v=234a9c9
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://308a4c6c.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://f795936b.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-21T19:48:03.048Z
+data: 2026-09-21T19:57:54.878Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (383 ms)
-  ℹ️  / → 200 · 383 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (342 ms)
+  ℹ️  / → 200 · 342 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-21T19:48:03.048Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 150 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 147 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-21T19:48:03.048Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 172 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 179 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-21T19:48:03.048Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 209 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 217 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 95 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 79 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 117 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 72 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 203 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 190 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 92 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 82 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -183,7 +183,7 @@ data: 2026-09-21T19:48:03.048Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=ac2e2ce (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=234a9c9 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 68882 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -238,7 +238,7 @@ data: 2026-09-21T19:48:03.048Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 383 ms · /series 21 ms · /api/series 194 ms
+  ℹ️  timpi: / 342 ms · /series 16 ms · /api/series 153 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -247,7 +247,9 @@ data: 2026-09-21T19:48:03.048Z
   ✅ /chat fără upgrade → 401 (refuz curat)
   ℹ️  /chat cu Origin străin + upgrade → 0
   ✅ chat-ul nu acceptă upgrade de pe altă origine
-  ✅ /favicon.ico → 200
+  ✅ /favicon.ico → 200 image/vnd.microsoft.icon (15086 B)
+  ✅ favicon.ico e al nostru (15086 B, nu cel implicit Cloudflare)
+  ✅ /apple-touch-icon.png → 200 PNG (iOS)
   ✅ /login are noindex (pagină utilitară)
   ✅ /register are noindex (pagină utilitară)
   ✅ /serie/99999999 → 404
@@ -265,7 +267,7 @@ data: 2026-09-21T19:48:03.048Z
   Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).
 
 ════════════ TOTAL ════════════
-  ✅ 168   🟡 0   🔴 0   ℹ️ 32
+  ✅ 170   🟡 0   🔴 0   ℹ️ 32
 exit audit: 0
 
 === verificari punctuale (fix-urile din audit) ===
@@ -304,7 +306,7 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=ac2e2ce 
+  ?v= din / (trebuie build-ul curent): ?v=234a9c9 
 === verificari punctuale (logo V7) ===
   /assets/img/logo.png → 200 (trebuie 200)
   /assets/img/logo-icon.png → 200 (trebuie 200)
@@ -313,3 +315,7 @@ exit audit: 0
   og:image logo în /: 1 (trebuie 1)
   marca auth logo în /register: 1 (trebuie 1)
   JS bundle conține logo-icon (navbar): 1 (trebuie ≥1)
+=== verificari punctuale (favicon Google) ===
+  /favicon.ico → 200 15086B (trebuie 200 si >4000B, nu iconita Cloudflare)
+  /favicon.ico content-type: content-type: image/vnd.microsoft.icon (trebuie image/x-icon)
+  /apple-touch-icon.png → 200 15382B image/png (trebuie 200 PNG)
