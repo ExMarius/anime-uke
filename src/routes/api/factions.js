@@ -44,6 +44,12 @@ export async function onRequestGet(context) {
 
     const mine = user.faction_slug || '';
     const rep = await myRep(env, user.id, mk);
+    // Jetoanele de factiune (shop) permit schimbarea imediata, fara sa
+    // astepti luna urmatoare — vezi POST cu use_token.
+    const tokRow = await env.DB
+      .prepare(`SELECT qty FROM user_items WHERE user_id = ? AND item_id = 'faction_token'`)
+      .bind(user.id)
+      .first();
 
     // Top membri ai facțiunii mele în luna curentă + marcaj de lider
     let members = [];
@@ -82,6 +88,7 @@ export async function onRequestGet(context) {
       my_faction: mine,
       my_faction_month: user.faction_month || null,
       can_change: user.faction_month !== mk,
+      faction_tokens: tokRow?.qty || 0,
       my_rep: rep.rep,
       members,
       standings: board,
@@ -113,8 +120,18 @@ export async function onRequestPost(context) {
   if (!theme) return errorResponse(400, 'Facțiunea nu există');
 
   const mk = monthKey();
+  let usedToken = false;
   if (gate.user.faction_month === mk && gate.user.faction_slug) {
-    return errorResponse(409, 'Te-ai alăturat deja unei facțiuni luna asta. Schimbarea e posibilă la începutul lunii următoare.');
+    // 🔀 Jetonul din shop sare peste blocajul lunar — se consuma la folosire.
+    if (!body?.use_token) {
+      return errorResponse(409, 'Te-ai alăturat deja unei facțiuni luna asta. Schimbarea e posibilă la începutul lunii următoare (sau acum, cu un jeton din shop).');
+    }
+    const burn = await env.DB
+      .prepare(`UPDATE user_items SET qty = qty - 1 WHERE user_id = ? AND item_id = 'faction_token' AND qty > 0`)
+      .bind(gate.user.id)
+      .run();
+    if (!burn.meta?.changes) return errorResponse(409, 'Nu ai niciun jeton de facțiune. Se cumpără din shop.');
+    usedToken = true;
   }
 
   // Alegerea setează ȘI tema de grade (automat, după facțiune — cerință).
@@ -133,5 +150,5 @@ export async function onRequestPost(context) {
     .bind(mk, gate.user.id, slug)
     .run();
 
-  return json({ success: true, faction: slug, rank_theme: slug });
+  return json({ success: true, faction: slug, rank_theme: slug, used_token: usedToken });
 }

@@ -8,8 +8,9 @@ export async function onRequestGet(context) {
   const gate = await requireUser(request, env);
   if (gate.response) return gate.response;
 
-  const me = await env.DB.prepare('SELECT gold, active_name_color, active_theme FROM users WHERE id = ?').bind(gate.user.id).first();
+  const me = await env.DB.prepare('SELECT gold, active_name_color, active_theme, xp_boost_until FROM users WHERE id = ?').bind(gate.user.id).first();
   const gold = me?.gold || 0;
+  const boostUntil = me?.xp_boost_until || null;
   const owned = await ownedItems(env, gate.user.id);
   const decorate = (i) => ({
     ...i,
@@ -22,6 +23,8 @@ export async function onRequestGet(context) {
     gold,
     active_name_color: me?.active_name_color || null,
     active_theme: me?.active_theme || null,
+    boost_until: boostUntil,
+    boost_active: !!boostUntil && Date.now() < boostUntil,
     items: SHOP_ITEMS.map((i) => ({
       ...i,
       qty: owned[i.id] || 0,

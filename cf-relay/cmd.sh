@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy sitemap-uri GSC: /sitemap.xml + /sitemap.txt + /sitemap (fara headere
-# de securitate, cu serii si episoade) — statusul "Nu s-a putut prelua" e blocat.
+# Deploy Shop 2.0: scos Nume de aur (duplicat), +misterios/boost/tom/jeton/
+# set chei/Nova, +4 culori, +2 teme, migrare 0026 (xp_boost_until).
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -82,3 +82,15 @@ echo "--- validare XML stricta (expat, acelasi parser ca la Google) ---"; python
 echo "--- marime corp ---"; wc -c < /tmp/sm.bin
 echo "--- fara compresie (Accept-Encoding: identity) → compara bytes ---"; curl -s -H 'Accept-Encoding: identity' -o /tmp/sm2.bin "$B/sitemap.xml"; cmp -s /tmp/sm.bin /tmp/sm2.bin && echo IDENTIC || echo DIFERIT
 echo "--- txt: fiecare linie e URL pe domeniul nostru? ---"; python3 -c "lines=open('/tmp/sm.txt').read().split(chr(10)); bad=[l for l in lines if l and not l.startswith('https://anime-uke.pages.dev/')]; print('linii:', len(lines), '| invalide:', bad if bad else 'NICIUNA')"
+echo "=== verificari punctuale (shop 2.0) ==="
+W="npx wrangler"; [ -x "$PWD/node_modules/.bin/wrangler" ] && W="$PWD/node_modules/.bin/wrangler"
+$W d1 execute DB --remote --command "SELECT xp_boost_until FROM users LIMIT 1" >/dev/null 2>&1 \
+  && echo "  migrare 0026: coloana xp_boost_until exista pe D1 productie" \
+  || echo "  migrare 0026: LIPSESTE coloana xp_boost_until de pe productie!"
+V=$(curl -s "$B/" | grep -oE '[a-z-]+\.(css|js)\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
+curl -s "$B/assets/css/style.css?v=$V" -o /tmp/st.css
+echo "  css (purge): nc-sunset=$(grep -c 'nc-sunset' /tmp/st.css) theme-sakura=$(grep -c 'theme-sakura' /tmp/st.css) theme-royal=$(grep -c 'theme-royal' /tmp/st.css) (toate ≥1)"
+curl -s "$B/assets/js/page-shop.js?v=$V" -o /tmp/ps.js
+echo "  bundle shop: shop-boost=$(grep -c 'shop-boost' /tmp/ps.js) reward_text=$(grep -c 'reward_text' /tmp/ps.js) nc-sunset=$(grep -c 'nc-sunset' /tmp/ps.js) (toate ≥1)"
+curl -s "$B/assets/js/page-profile.js?v=$V" -o /tmp/pp.js
+echo "  bundle profil: use_token=$(grep -c 'use_token' /tmp/pp.js) (≥1)"

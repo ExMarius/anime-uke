@@ -15,6 +15,16 @@ function paint() {
   if (!data) return;
 
   goldEl.textContent = `🪙 ${data.gold.toLocaleString('ro-RO')}`;
+  // Banner boost XP (⚡ Boost 24h): cat e activ, tot XP-ul e dublu.
+  const boostEl = document.getElementById('shop-boost');
+  if (boostEl) {
+    const until = data.boost_until || 0;
+    if (data.boost_active && until > Date.now()) {
+      const ms = until - Date.now();
+      boostEl.hidden = false;
+      boostEl.textContent = `⚡ Boost XP activ — tot XP-ul e dublu încă ${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m.`;
+    } else boostEl.hidden = true;
+  }
   paintColors();
   paintThemes();
   grid.innerHTML = '';
@@ -90,6 +100,7 @@ function paintColors() {
     nm.className = 'color-card__name';
     nm.textContent = myName;
     if (c.special === 'rainbow') nm.classList.add('nc-rainbow');
+    else if (c.special === 'sunset') nm.classList.add('nc-sunset');
     else if (c.special === 'glow') { nm.classList.add(`nc-${c.id.slice(6)}`, 'nc-glow'); }
     else nm.classList.add(`nc-${c.id.slice(6)}`);
     demo.append('Culoare: ', nm);
@@ -226,23 +237,34 @@ async function buy(item, btn, after) {
       return;
     }
     delete btn.dataset.confirm;
-    data.gold = res.data.gold;
-    if (item.id.startsWith('color_')) {
-      const c = (data.colors || []).find((x) => x.id === item.id);
-      if (c) { c.owned = true; c.can_buy = false; }
-    } else if (item.id.startsWith('theme_')) {
-      const t = (data.themes || []).find((x) => x.id === item.id);
-      if (t) { t.owned = true; t.can_buy = false; }
+    if (res.data.refetch) {
+      // Articolele instant/pachet schimba mai multe lucruri deodata (gold
+      // primit inapoi, boost, chei creditate) — reincarcam starea, nu o peticim.
+      const fresh = await api('/shop');
+      if (fresh.ok) data = fresh.data;
     } else {
-      for (const it of data.items) {
-        if (it.id === item.id) it.qty = res.data.qty;
-        it.owned = !it.consumable && it.qty > 0;
+      data.gold = res.data.gold;
+      if (item.id.startsWith('color_')) {
+        const c = (data.colors || []).find((x) => x.id === item.id);
+        if (c) { c.owned = true; c.can_buy = false; }
+      } else if (item.id.startsWith('theme_')) {
+        const t = (data.themes || []).find((x) => x.id === item.id);
+        if (t) { t.owned = true; t.can_buy = false; }
+      } else {
+        for (const it of data.items) {
+          if (it.id === item.id) it.qty = res.data.qty;
+          it.owned = !it.consumable && it.qty > 0;
+        }
       }
     }
     paint();
     clearSession();          // gold-ul din nav se reimprospateaza
     renderNav('');
-    toast(`✅ ${item.name || 'Articol'} e al tău!`, 'success');
+    const doneMsg = res.data.reward_text ? `🎁 ${res.data.reward_text}`
+      : res.data.boost_until ? '⚡ Boost XP activ — tot XP-ul e dublu 24h!'
+      : res.data.xp_granted ? `📚 +${res.data.xp_granted} XP!`
+      : `✅ ${item.name || 'Articol'} e al tău!`;
+    toast(doneMsg, 'success');
     if (after) await after();
   });
 }

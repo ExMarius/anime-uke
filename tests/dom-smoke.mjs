@@ -641,10 +641,11 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
 {
   console.log('=== DOM: /shop (vitrina de gold) ===');
   const p = await mountPage({ htmlFile: 'public/shop.html', url: '/shop', module: 'page-shop.js' });
-  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 3);
-  check('Shop-ul randeaza cele 3 articole', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
+  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 8);
+  check('Shop-ul randeaza cele 8 articole (Shop 2.0)', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
   check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
-  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 8, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Bannerul de boost exista (ascuns cand e inactiv)', !!p.$('#shop-boost'), 'lipseste #shop-boost');
   check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
   check('Shop explica economia: cel puțin 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length >= 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));

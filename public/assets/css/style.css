@@ -1731,6 +1731,18 @@ tr.row-click:hover .row-link { color: var(--accent-hi); }
 .nc-royal { color: #818cf8; }
 .nc-sky { color: #38bdf8; }
 .nc-violet { color: #8b5cf6; }
+.nc-silver { color: #cbd5e1; }
+.nc-bronze { color: #cd7f32; }
+.nc-mint { color: #6ee7b7; }
+.nc-sunset {
+  background: linear-gradient(90deg, #fb923c, #f472b6, #c084fc, #fb923c);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: ncsunset 4s linear infinite;
+}
+@keyframes ncsunset { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .nc-sunset { animation: none; } }
 .nc-imperator { color: #dc2626; }
 .nc-glow { text-shadow: 0 0 8px rgba(220, 38, 38, .65); }
 .nc-rainbow {
@@ -1779,6 +1791,12 @@ body.theme-green {
   --accent: #22c55e; --accent-hi: #4ade80; --accent-deep: #15803d;
   --accent-glow: rgba(34, 197, 94, .38); --accent-soft: rgba(34, 197, 94, .13);
 }
+body.theme-sakura {
+  --bg: #120709; --bg-2: #180b0e; --surface: #201016; --surface-2: #2a1620;
+  --surface-3: #371e2a; --line: rgba(244, 114, 182, .18);
+  --accent: #f472b6; --accent-hi: #f9a8d4; --accent-deep: #9d174d;
+  --accent-glow: rgba(244, 114, 182, .38); --accent-soft: rgba(244, 114, 182, .13);
+}
 body.theme-minimalist {
   --bg: #0b0b0b; --bg-2: #101010; --surface: #161616; --surface-2: #1e1e1e;
   --surface-3: #262626; --line: rgba(255, 255, 255, .12);
@@ -1790,6 +1808,12 @@ body.theme-storm {
   --surface-3: #1d2436; --line: rgba(148, 163, 184, .2);
   --accent: #94a3b8; --accent-hi: #cbd5e1; --accent-deep: #475569;
   --accent-glow: rgba(148, 163, 184, .35); --accent-soft: rgba(148, 163, 184, .12);
+}
+body.theme-royal {
+  --bg: #0a0805; --bg-2: #100c07; --surface: #16100a; --surface-2: #1f160d;
+  --surface-3: #2a1e11; --line: rgba(251, 191, 36, .2);
+  --accent: #fbbf24; --accent-hi: #fde68a; --accent-deep: #92400e;
+  --accent-glow: rgba(251, 191, 36, .4); --accent-soft: rgba(251, 191, 36, .13);
 }
 body.theme-classic {
   --bg: #0f0a05; --bg-2: #150f08; --surface: #1c1409; --surface-2: #261b0d;

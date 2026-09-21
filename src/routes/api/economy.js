@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
   try { await settleFactions(env); } catch { /* nu blocăm panoul */ }
 
   const me = await env.DB
-    .prepare('SELECT xp, level, gold FROM users WHERE id = ?')
+    .prepare('SELECT xp, level, gold, xp_boost_until FROM users WHERE id = ?')
     .bind(user.id)
     .first();
 
@@ -100,6 +100,8 @@ export async function onRequestGet(context) {
     gold: me?.gold || 0,
     chest,
     chest_keys: keyRow?.qty || 0,
+    xp_boost_until: me?.xp_boost_until || null,
+    xp_boost_ms: Math.max(0, (me?.xp_boost_until || 0) - Date.now()),
     badges: (badgeRows.results || []).map((b) => ({
       badge: b.badge,
       month: b.month || null,

@@ -1518,7 +1518,8 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   const anonShop = await req(jar(), 'GET', '/api/shop');
   check('Shop-ul anonim → 401', anonShop.status === 401, `status=${anonShop.status}`);
   const shop = await req(j, 'GET', '/api/shop');
-  check('Catalogul are 3 articole cu preturi si flag-uri', shop.data?.items?.length === 3 && shop.data.items.every((i) => i.price > 0 && typeof i.can_buy === 'boolean'), JSON.stringify(shop.data?.items?.map((i) => [i.id, i.price]))?.slice(0, 140));
+  check('Catalogul are 8 articole cu preturi si flag-uri (Shop 2.0)', shop.data?.items?.length === 8 && shop.data.items.every((i) => i.price > 0 && typeof i.can_buy === 'boolean'), JSON.stringify(shop.data?.items?.map((i) => [i.id, i.price]))?.slice(0, 200));
+  check('Numele de aur nu se mai vinde (era duplicat cu Auriu)', !(shop.data?.items || []).some((i) => i.id === 'name_gold'), (shop.data?.items || []).map((i) => i.id).join(','));
 
   // --- fara gold nu cumperi nimic
   const poor = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
@@ -1534,14 +1535,14 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   // --- cumpara consumabila + durabila
   const buyKey = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
   check('Cheia de cufar se cumpara si scade gold-ul atomic', buyKey.data?.success === true && buyKey.data?.qty === 1 && buyKey.data?.gold === goldBefore + 2000 - 150, JSON.stringify(buyKey.data));
-  const buyName = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
-  check('Numele de aur se cumpara', buyName.data?.success === true && buyName.data?.gold === goldBefore + 2000 - 150 - 400, JSON.stringify(buyName.data));
-  const dupe = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  const buySup = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
+  check('Suporterul se cumpara', buySup.data?.success === true && buySup.data?.gold === goldBefore + 2000 - 150 - 1000, JSON.stringify(buySup.data));
+  const dupe = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
   check('Articolul permanent nu se poate cumpara de doua ori → 409', dupe.status === 409, `status=${dupe.status}`);
   const ghost = await req(j, 'POST', '/api/shop/buy', { item_id: 'yacht' });
   check('Articolul inexistent → 400', ghost.status === 400, `status=${ghost.status}`);
   const shop2 = await req(j, 'GET', '/api/shop');
-  check('GET /shop reflecta proprietatea si gold-ul ramas', shop2.data?.items?.find((i) => i.id === 'name_gold')?.owned === true && shop2.data?.items?.find((i) => i.id === 'chest_key')?.qty === 1, JSON.stringify(shop2.data?.items?.map((i) => [i.id, i.owned, i.qty]))?.slice(0, 140));
+  check('GET /shop reflecta proprietatea si gold-ul ramas', shop2.data?.items?.find((i) => i.id === 'flair_supporter')?.owned === true && shop2.data?.items?.find((i) => i.id === 'chest_key')?.qty === 1, JSON.stringify(shop2.data?.items?.map((i) => [i.id, i.owned, i.qty]))?.slice(0, 140));
 
   // --- cheia sare peste cooldown-ul cufarului
   const cState = await req(j, 'GET', '/api/chest');
@@ -1557,12 +1558,9 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   const noKey = await req(j, 'POST', '/api/chest', { use_key: 1 });
   check('Fara chei in inventar, use_key → 409', noKey.status === 409, `status=${noKey.status}`);
 
-  // --- cosmeticele se vad pe profil
+  // --- cosmeticele se vad pe profil (Suporterul e deja cumparat mai sus)
   const prof2 = await req(j, 'GET', '/api/profile/user2');
-  check('Profilul arata flair 💎 si numele de aur', prof2.data?.flair === '' && prof2.data?.name_gold === true, JSON.stringify({ f: prof2.data?.flair, g: prof2.data?.name_gold }));
-  const buyFlair = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
-  const prof3 = await req(j, 'GET', '/api/profile/user2');
-  check('Dupa cumpararea Suporterului apare 💎', buyFlair.data?.success === true && prof3.data?.flair === '💎', JSON.stringify(prof3.data?.flair));
+  check('Profilul arata flair-ul 💎', prof2.data?.flair === '💎', JSON.stringify({ f: prof2.data?.flair, g: prof2.data?.name_gold }));
 
   // ================= RAPORTARE SURSE =================
   const epFull = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
@@ -1597,6 +1595,129 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   check('Respingerea functioneaza', dismiss.data?.status === 'dismissed', JSON.stringify(dismiss.data));
   const userReports = await req(j, 'GET', '/api/admin/reports');
   check('Lista de raportari e doar pentru admin → 403', userReports.status === 403, `status=${userReports.status}`);
+}
+
+console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, teme ===');
+// Toate pe useri proaspeti: boost-ul ×2 si XP-ul aleator din misterios ar
+// strica asertiunile exacte de XP ale celorlalte sectiuni.
+{
+  const regB = await req(jar(), 'POST', '/api/auth/register', { username: 'shopb', email: 'shopb@test.ro', password: 'parola123' });
+  const jb = jar();
+  await req(jb, 'POST', '/api/auth/login', { email: 'shopb@test.ro', password: 'parola123' });
+  check('User proaspat pentru Shop 2.0', regB.status === 201, `status=${regB.status}`);
+  const profB = await req(jb, 'GET', '/api/profile/shopb');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profB.data?.user?.id, value: 100000 });
+  const cat = await req(jb, 'GET', '/api/shop');
+  const ids = (cat.data?.items || []).map((i) => i.id);
+  check('Catalog Shop 2.0: 8 articole, fara name_gold',
+    ids.length === 8 && !ids.includes('name_gold') && ['mystery_box', 'xp_boost', 'xp_tome', 'faction_token', 'chest_keys_3', 'flair_nova'].every((x) => ids.includes(x)),
+    ids.join(','));
+  check('Culori noi: Argintiu/Bronz/Menta/Apus',
+    ['color_silver', 'color_bronze', 'color_mint', 'color_sunset'].every((x) => (cat.data?.colors || []).some((c) => c.id === x)),
+    `n=${cat.data?.colors?.length}`);
+  check('Teme noi: Sakura/Royal',
+    ['theme_sakura', 'theme_royal'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+    `n=${cat.data?.themes?.length}`);
+
+  const gone = await req(jb, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  check('Numele de aur nu se mai poate cumpara → 400', gone.status === 400, `status=${gone.status}`);
+
+  // --- misteriosul primul: eventualul gold castigat nu trebuie sa strice
+  // matematica exacta de dupa (luam baseline dupa el, nu inainte).
+  const eco0 = await req(jb, 'GET', '/api/economy');
+  const box = await req(jb, 'POST', '/api/shop/buy', { item_id: 'mystery_box' });
+  const eco1 = await req(jb, 'GET', '/api/economy');
+  const r = box.data;
+  const dg = eco1.data.gold - eco0.data.gold;
+  const dx = eco1.data.xp - eco0.data.xp;
+  const consistent = r?.success === true && (
+    (r.reward === 'gold' && dg === r.reward_amount - 200) ||
+    (r.reward === 'xp' && dx === r.reward_amount && dg === -200) ||
+    (r.reward === 'key' && eco1.data.chest_keys === eco0.data.chest_keys + 1 && dg === -200) ||
+    (r.reward === 'nothing' && r.reward_amount === 0 && dg === -200)
+  );
+  check('Cufarul misterios se deschide pe loc, cu efectul promis', consistent, JSON.stringify({ r, dg, dx }));
+  const goldBase = eco1.data.gold;
+
+  // --- tomul: +200 XP exact (fara boost pe userul asta)
+  const tome = await req(jb, 'POST', '/api/shop/buy', { item_id: 'xp_tome' });
+  const eco2 = await req(jb, 'GET', '/api/economy');
+  check('Tomul da +200 XP exact', tome.data?.xp_granted === 200 && eco2.data.xp - eco1.data.xp === 200, `dx=${eco2.data.xp - eco1.data.xp}`);
+
+  // --- setul de chei crediteaza 3× chest_key
+  const keys = await req(jb, 'POST', '/api/shop/buy', { item_id: 'chest_keys_3' });
+  const eco3 = await req(jb, 'GET', '/api/economy');
+  check('Setul de 3 chei intra in inventar', keys.data?.linked?.id === 'chest_key' && eco3.data.chest_keys === eco2.data.chest_keys + 3, `chei=${eco3.data.chest_keys}`);
+
+  // --- Nova primeaza peste Suporter
+  const nova = await req(jb, 'POST', '/api/shop/buy', { item_id: 'flair_nova' });
+  const profNova = await req(jb, 'GET', '/api/profile/shopb');
+  check('Nova pune flair 🌠 pe profil', nova.data?.success === true && profNova.data?.flair === '🌠', profNova.data?.flair);
+  await req(jb, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
+  const profSup = await req(jb, 'GET', '/api/profile/shopb');
+  check('Dupa Suporter, tot Nova se vede (precedenta)', profSup.data?.flair === '🌠', profSup.data?.flair);
+
+  // --- culoare + tema noua: cumparare + activare
+  const silv = await req(jb, 'POST', '/api/shop/buy', { item_id: 'color_silver' });
+  const actS = await req(jb, 'POST', '/api/shop/activate', { type: 'color', id: 'color_silver' });
+  const profCol = await req(jb, 'GET', '/api/profile/shopb');
+  check('Argintiu se cumpara si se activeaza', silv.data?.success === true && actS.data?.active_name_color === 'color_silver' && profCol.data?.name_color === 'color_silver', profCol.data?.name_color);
+  const sak = await req(jb, 'POST', '/api/shop/buy', { item_id: 'theme_sakura' });
+  const actT = await req(jb, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const shopAfter = await req(jb, 'GET', '/api/shop');
+  check('Sakura se cumpara si se activeaza', sak.data?.success === true && actT.data?.active_theme === 'theme_sakura' && shopAfter.data?.active_theme === 'theme_sakura', shopAfter.data?.active_theme);
+
+  // --- matematica exacta a gold-ului (baseline luat dupa misterios)
+  const spent = 500 + 400 + 2500 + 1000 + 2500 + 75000;
+  check('Gold-ul ramas e exact pretul total', shopAfter.data?.gold === goldBase - spent, `${goldBase} - ${spent} = ${goldBase - spent} vs ${shopAfter.data?.gold}`);
+
+  // --- CSS-ul claselor noi chiar exista (altfel cumperi ceva invizibil)
+  const css = await (await fetch(BASE + '/assets/css/style.css')).text();
+  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal'].every((s) => css.includes(s)), 'lipseste o clasa');
+}
+
+console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');
+{
+  // --- boost-ul dubleaza XP-ul din orice sursa, 24h, prelungibil
+  await req(jar(), 'POST', '/api/auth/register', { username: 'boostu', email: 'boostu@test.ro', password: 'parola123' });
+  const ju = jar();
+  await req(ju, 'POST', '/api/auth/login', { email: 'boostu@test.ro', password: 'parola123' });
+  const profU = await req(ju, 'GET', '/api/profile/boostu');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profU.data?.user?.id, value: 1000 });
+  const boost = await req(ju, 'POST', '/api/shop/buy', { item_id: 'xp_boost' });
+  check('Boost-ul seteaza expirarea ~24h in viitor', boost.data?.success === true && boost.data?.boost_until > Date.now() + 23 * 3600000, `until=${boost.data?.boost_until}`);
+  const ecoB = await req(ju, 'GET', '/api/economy');
+  check('Economy arata boost-ul activ', ecoB.data?.xp_boost_ms > 23 * 3600000, `ms=${ecoB.data?.xp_boost_ms}`);
+  const cm = await req(ju, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu pentru testul de boost XP dublu' });
+  const xpB1 = (await req(ju, 'GET', '/api/economy')).data.xp;
+  check('Cu boost, comentariul da +10 XP in loc de +5', cm.data?.success === true && xpB1 === ecoB.data.xp + 10, `${ecoB.data.xp}->${xpB1}`);
+  await req(ju, 'DELETE', `/api/comments?id=${cm.data?.id}`);
+  const boost2 = await req(ju, 'POST', '/api/shop/buy', { item_id: 'xp_boost' });
+  check('Al doilea boost prelungeste expirarea', boost2.data?.boost_until > (boost.data?.boost_until || 0), `${boost.data?.boost_until} -> ${boost2.data?.boost_until}`);
+
+  // --- jetonul sare peste blocajul lunar al factiunilor
+  await req(jar(), 'POST', '/api/auth/register', { username: 'toku', email: 'toku@test.ro', password: 'parola123' });
+  const jt = jar();
+  await req(jt, 'POST', '/api/auth/login', { email: 'toku@test.ro', password: 'parola123' });
+  const profT = await req(jt, 'GET', '/api/profile/toku');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profT.data?.user?.id, value: 2000 });
+  const fac0 = await req(jt, 'GET', '/api/factions');
+  const fa = fac0.data?.factions?.[1]?.slug;
+  const fb = fac0.data?.factions?.[2]?.slug;
+  check('Userul nou n-are jetoane', fac0.data?.faction_tokens === 0, `n=${fac0.data?.faction_tokens}`);
+  await req(jt, 'POST', '/api/factions', { faction: fa });
+  const locked = await req(jt, 'POST', '/api/factions', { faction: fb });
+  check('Fara jeton, a doua alegere in luna → 409', locked.status === 409, `status=${locked.status}`);
+  const noTok = await req(jt, 'POST', '/api/factions', { faction: fb, use_token: 1 });
+  check('use_token fara jeton → 409', noTok.status === 409, `status=${noTok.status}`);
+  await req(jt, 'POST', '/api/shop/buy', { item_id: 'faction_token' });
+  const fac1 = await req(jt, 'GET', '/api/factions');
+  check('Dupa cumparare, GET arata 1 jeton', fac1.data?.faction_tokens === 1, `n=${fac1.data?.faction_tokens}`);
+  const sw = await req(jt, 'POST', '/api/factions', { faction: fb, use_token: 1 });
+  const fac2 = await req(jt, 'GET', '/api/factions');
+  check('Cu jeton, schimbarea reuseste si jetonul se consuma',
+    sw.data?.success === true && sw.data?.used_token === true && fac2.data?.my_faction === fb && fac2.data?.faction_tokens === 0,
+    `f=${fac2.data?.my_faction} t=${fac2.data?.faction_tokens}`);
 }
 
 console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
