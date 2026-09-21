@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy de sincronizare: llms.txt + _headers (cosmetice, zero cod). Reconfirmă 168/0/0.
+# Deploy logo V7: navbar, favicon, auth, footer, og:image.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -52,3 +52,11 @@ echo "  robots Allow: /series? (trebuie 0): $(curl -s "$B/robots.txt" | grep -c 
 echo "  speculationrules prerender: $(curl -s "$B/speculationrules.json" | python3 -c "import sys,json; print(json.load(sys.stdin)['prerender'][0]['where'])")"
 echo "  prima pagina → $(curl -s -o /dev/null -w '%{http_code}' "$B/")  · /api/pulse → $(curl -s "$B/api/pulse")"
 echo "  ?v= din / (trebuie build-ul curent): $(curl -s "$B/" | grep -oE '\?v=[A-Za-z0-9._-]+' | sort -u | tr '\n' ' ')"
+echo "=== verificari punctuale (logo V7) ==="
+echo "  /assets/img/logo.png → $(curl -s -o /dev/null -w '%{http_code}' "$B/assets/img/logo.png") (trebuie 200)"
+echo "  /assets/img/logo-icon.png → $(curl -s -o /dev/null -w '%{http_code}' "$B/assets/img/logo-icon.png") (trebuie 200)"
+echo "  negociere webp logo: $(curl -s -o /dev/null -D - -H 'Accept: image/webp' "$B/assets/img/logo-icon.png" | grep -i '^content-type' | tr -d '\r') (trebuie image/webp)"
+echo "  favicon logo în /login: $(curl -s "$B/login" | grep -c 'rel="icon" href="/assets/img/logo-icon.png"') (trebuie 1)"
+echo "  og:image logo în /: $(curl -s "$B/" | grep -c 'og:image" content="https://anime-uke.pages.dev/assets/img/logo.png"') (trebuie 1)"
+echo "  marca auth logo în /register: $(curl -s "$B/register" | grep -c 'auth-logo__mark" src="/assets/img/logo-icon.png"') (trebuie 1)"
+echo "  JS bundle conține logo-icon (navbar): $(curl -s "$B/assets/js/page-index.js?v=$(curl -s "$B/" | grep -oE 'page-index.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)" | grep -c 'logo-icon.png') (trebuie ≥1)"
