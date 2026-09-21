@@ -1,18 +1,53 @@
 #!/usr/bin/env bash
-# READ-ONLY: jurnalul admin recent (s-au șters serii la ~18:35?) + counturi D1.
 set -uo pipefail
-WRANGLER="npx wrangler"
-[ -x "$PWD/node_modules/.bin/wrangler" ] && WRANGLER="$PWD/node_modules/.bin/wrangler"
-echo "=== admin_log ultimele 12 ==="
-$WRANGLER d1 execute DB --remote --json --command "SELECT id, admin_id, action, target_type, target_id, created_at FROM admin_log ORDER BY id DESC LIMIT 12" 2>/dev/null | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-rows=d[0]['results'] if isinstance(d,list) else d.get('results',[])
-for r in rows: print(r['id'], r['created_at'], 'admin#'+str(r['admin_id']), r['action'], r.get('target_type'), r.get('target_id'))
-"
+./deploy.sh
+echo "exit deploy: $?"
+# Propagarea Pages durează zeci de secunde: auditul imediat după deploy a
+# prins o dată HTML vechi (titlu + ?v= din deployment-ul anterior). Așteptăm.
+echo "aștept 60s propagarea…"; sleep 60
+
 echo
-echo "=== counturi ==="
-$WRANGLER d1 execute DB --remote --json --command "SELECT (SELECT COUNT(*) FROM anime_series) serii, (SELECT COUNT(*) FROM episodes) episoade, (SELECT COUNT(*) FROM users) useri, (SELECT COUNT(*) FROM chat_messages) chat" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['results'][0])"
+echo "=== AUDIT LIVE dupa deploy ==="
+node scripts/audit-live.mjs https://anime-uke.pages.dev
+echo "exit audit: $?"
+
+B="https://anime-uke.pages.dev"
 echo
-echo "=== sitemap acum (count) ==="
-curl -s "https://anime-uke.pages.dev/sitemap.xml" | grep -oE '<loc>[^<]*</loc>' | wc -l
+echo "=== verificari punctuale (fix-urile din audit) ==="
+echo "  /serie/99999999 → $(curl -s -o /tmp/nf.html -w '%{http_code}' "$B/serie/99999999") (trebuie 404)"
+echo "    X-Robots-Tag: $(curl -sI "$B/serie/99999999" | grep -i '^x-robots-tag' | tr -d '\r')"
+echo "    titlu: $(grep -oE '<title>[^<]*</title>' /tmp/nf.html | head -1)"
+echo "  /episod/99999999 → $(curl -s -o /dev/null -w '%{http_code}' "$B/episod/99999999") (trebuie 404)"
+echo "  /series → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/series") (trebuie 301 spre /)"
+echo "  /series?id=1014 → $(curl -s -o /dev/null -w '%{http_code}' "$B/series?id=1014") (trebuie 200)"
+echo "  /series/ → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/series/") (trebuie 301 spre /)"
+echo "  /package.json → $(curl -s -o /dev/null -w '%{http_code}' "$B/package.json") (trebuie 404, nu 302)"
+echo "  /AGENTS.md → $(curl -s -o /dev/null -w '%{http_code}' "$B/AGENTS.md") (trebuie 404)"
+echo "  /deploy.sh → $(curl -s -o /dev/null -w '%{http_code}' "$B/deploy.sh") (trebuie 404)"
+echo "  /src/worker.js → $(curl -s -o /dev/null -w '%{http_code}' "$B/src/worker.js") (trebuie 404)"
+echo "  /ruta-inexistenta → $(curl -s -o /dev/null -w '%{http_code}' "$B/ruta-inexistenta") (trebuie 404)"
+echo "  /profile (nelogat) → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/profile") (trebuie 302 spre /login)"
+echo "  /profile.html (nelogat) → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/profile.html") (302 spre /login e ok)"
+echo "  /login noindex: $(curl -s "$B/login" | grep -c 'noindex')  canonical: $(curl -s "$B/login" | grep -c 'rel="canonical"')"
+echo "  /register noindex: $(curl -s "$B/register" | grep -c 'noindex')  canonical: $(curl -s "$B/register" | grep -c 'rel="canonical"')"
+echo "  CORP header: $(curl -sI "$B/" | grep -i '^cross-origin-resource-policy' | tr -d '\r')"
+echo "  sitemap conține /series? (trebuie 0): $(curl -s "$B/sitemap.xml" | grep -c '<loc>[^<]*/series</loc>')"
+echo "  sitemap URL-uri: $(curl -s "$B/sitemap.xml" | grep -oE '<loc>[^<]*</loc>' | tr '\n' ' ')"
+echo "  /serie/1014 (serie reala) → $(curl -s -o /dev/null -w '%{http_code}' "$B/serie/1014") (trebuie 200)"
+echo "  /episod/4210 (episod real) → $(curl -s -o /dev/null -w '%{http_code}' "$B/episod/4210") (trebuie 200)"
+echo "  SSR episod /episod/4210:"
+curl -s "$B/episod/4210" -o /tmp/ep.html
+echo "    titlu: $(grep -oE '<title>[^<]*</title>' /tmp/ep.html | head -1)"
+echo "    description: $(grep -c 'meta name="description"' /tmp/ep.html)  canonical: $(grep -c 'rel="canonical"' /tmp/ep.html)  video.episode: $(grep -c 'video.episode' /tmp/ep.html)"
+echo "    TVEpisode: $(grep -c 'TVEpisode' /tmp/ep.html)  BreadcrumbList: $(grep -c 'BreadcrumbList' /tmp/ep.html)  partOfTVSeries: $(grep -c 'partOfTVSeries' /tmp/ep.html)"
+echo "    titlu generic ramas? (trebuie 0): $(grep -c '<title>Episod • anime-uke</title>' /tmp/ep.html)"
+echo "=== verificari punctuale (runda fix-uri: CSP, pulse, rute moarte) ==="
+echo "  CSP: $(curl -sI "$B/" | grep -i '^content-security-policy' | tr -d '\r' | cut -c1-160)"
+echo "  HSTS pe API: $(curl -sI "$B/api/pulse" | grep -i '^strict-transport-security' | tr -d '\r')"
+echo "  /404 (nelogat) → $(curl -s -o /dev/null -w '%{http_code}' "$B/404") (trebuie 404, nu 302)"
+echo "  /admin/serie (bare) → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin/serie") (trebuie 404)"
+echo "  /covers/x.png → $(curl -s -o /tmp/cv.html -w '%{http_code}' "$B/covers/x.png") + pagina site-ului: $(grep -c 'Mergi la catalog' /tmp/cv.html)"
+echo "  robots Allow: /series? (trebuie 0): $(curl -s "$B/robots.txt" | grep -c 'Allow: /series')"
+echo "  speculationrules prerender: $(curl -s "$B/speculationrules.json" | python3 -c "import sys,json; print(json.load(sys.stdin)['prerender'][0]['where'])")"
+echo "  prima pagina → $(curl -s -o /dev/null -w '%{http_code}' "$B/")  · /api/pulse → $(curl -s "$B/api/pulse")"
+echo "  ?v= din / (trebuie build-ul curent): $(curl -s "$B/" | grep -oE '\?v=[A-Za-z0-9._-]+' | sort -u | tr '\n' ' ')"
