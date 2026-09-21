@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Deploy de sincronizare: llms.txt + _headers (cosmetice, zero cod). Reconfirmă 168/0/0.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
