@@ -2,7 +2,8 @@
 
 **Data:** 2026-09-21 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
 **Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=1a11f03` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi)
+**Build auditat:** `?v=7703add` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi —
+doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|

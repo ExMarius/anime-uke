@@ -146,7 +146,8 @@ cat cf-relay/last-output.txt
   dublat de audit-live); README corectat (CSP, frame-src, sandbox). e2e 482 → **491**, audit live
   ✅ 168 · 🟡 0 · 🔴 0, build `?v=1a11f03`. Lecție: după deploy se așteaptă 60s înainte de audit
   (propagarea Pages a servit o dată HTML vechi) — e în `cf-relay/cmd.sh`.
-- Curățenie + predare (2026-09-21, același branch, fără deploy — producția e tot `?v=1a11f03`): test de
+- Curățenie + predare (2026-09-21, același branch; deploy de sincronizare `?v=7703add` — doar llms.txt +
+  _headers, zero cod; audit reconfirmat 168/0/0): test de
   regresie pulse (socket deschis → `online ≥ 1`; verificat că pică pe codul vechi) → e2e **492**;
   `llms.txt` fără linkul `/series` (301); scos referințele moarte `/covers` din `_headers`/`deploy.sh`;
   README fără titlul dublat. Vânătoare de cod mort cu rezultat negativ (bine): toate exporturile din
