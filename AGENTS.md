@@ -13,7 +13,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 491 · dom 147 · plafoane 13), deployat.
+- **Stare:** stabil, curat, toate testele verzi (e2e 492 · dom 147 · plafoane 13), deployat.
   Audit live: ✅ 168 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
 
 ## 1. Setup în 60 de secunde
@@ -68,9 +68,16 @@ cat cf-relay/last-output.txt
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
-- Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl), sau — mai bine,
-  pentru că acoperă zeci de probe deodată — `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh`
-  (rulează și fără `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
+- **Atenție, Git integration activă:** proiectul Pages face build automat la fiecare push (inclusiv
+  commit-urile `relay: output` — de aici preview-urile). Un merge în `main` declanșează deploy de
+  producție **din git** (fără `?v=`/purge/minify/migrări — dar cu bindinguri corecte din `wrangler.toml`
+  comis). După un merge în `main`, rulează un deploy prin relay ca să readuci producția la forma optimizată.
+- Pentru verificări read-only pe live ai două căi: (1) tool-ul de fetch al agentului (merge direct, fără
+  relay): `robots.txt`, `sitemap.xml`, `speculationrules.json`, `/api/pulse` se văd ca text, paginile vin
+  randate (cu JS executat), iar `/404` dovedește 404-ul real. Ce NU vezi prin fetch: headerele HTTP
+  (CSP/HSTS/Cache) — pentru alea rămâne relay-ul cu `curl -sI`. (2) auditul complet, care acoperă zeci de
+  probe deodată: `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh` (rulează și fără
+  `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
 - Token-ul Cloudflare stă **doar** în GitHub Secrets (`CLOUDFLARE_API_TOKEN`). **Nu-l scrie niciodată în fișiere**,
   nici în mesaje de commit, nici în `cmd.sh`.
 - Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca marker de deploy; folosește
@@ -139,6 +146,15 @@ cat cf-relay/last-output.txt
   dublat de audit-live); README corectat (CSP, frame-src, sandbox). e2e 482 → **491**, audit live
   ✅ 168 · 🟡 0 · 🔴 0, build `?v=1a11f03`. Lecție: după deploy se așteaptă 60s înainte de audit
   (propagarea Pages a servit o dată HTML vechi) — e în `cf-relay/cmd.sh`.
+- Curățenie + predare (2026-09-21, același branch, fără deploy — producția e tot `?v=1a11f03`): test de
+  regresie pulse (socket deschis → `online ≥ 1`; verificat că pică pe codul vechi) → e2e **492**;
+  `llms.txt` fără linkul `/series` (301); scos referințele moarte `/covers` din `_headers`/`deploy.sh`;
+  README fără titlul dublat. Vânătoare de cod mort cu rezultat negativ (bine): toate exporturile din
+  `src/lib` sunt folosite (unele doar intern — `addXp` via `addActivity`, `MISSIONS` via `getMissionState`;
+  `requireModerator` e rezervă documentată pentru rute viitoare), toate apelurile frontend au rută în
+  router (verificat scriptic), toate assetele/CSS-ul/imaginile sunt referite. `/api/me/theme` n-are UI
+  (doar teste) — by design, tema vine din facțiuni. Live reverificat și prin fetch direct (robots,
+  sitemap, pulse, speculationrules, `/404`, `/episod/4210` randat complet).
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
