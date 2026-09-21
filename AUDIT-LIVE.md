@@ -1,13 +1,14 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-14 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
-**Mod:** read-only, fără credențiale · **Scor final:** ✅ **162** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=55a3027` (wrangler 4.131.2, migrări 0001–0025 aplicate remote)
+**Data:** 2026-09-21 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
+**Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
+**Build auditat:** `?v=0936caa` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
 | 1 (înainte de reparări, build `eb03ecd`) | ✅ 144 · 🟡 19 · 🔴 2 | auditul inițial: 2 probleme reale + 19 observații |
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
+| 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
 
 ---
 
@@ -24,6 +25,15 @@
 **Fișiere atinse:** `src/worker.js` (rutare/404/SSR + sitemap), `src/lib/http.js` (header), `public/login.html`,
 `public/register.html`, `tests/e2e.mjs` (+19 verificări), `scripts/audit-live.mjs` (probe noi).
 **Teste locale după reparări:** `./test.sh` → e2e **474** · dom-smoke **147** · caps **13**, toate verzi.
+
+## 1b. Runda 3 (2026-09-21): SSR SEO pe `/episod/<id>`
+
+Punctul 1 din §3 („cea mai mare oportunitate de trafic organic”) e implementat: `episodeForSeo()` citește
+episodul + seria dintr-un JOIN indexat, cu cache 5 min în izolat (inclusiv negativ); la eroare D1 pagina
+se servește nemodificată, fără 404 fals. Titlul generic „Episod • anime-uke” nu mai ajunge niciodată la
+crawleri — e înlocuit server-side. Verificat pe live (`/episod/4210`, `/episod/4211`, `/episod/4212`):
+200 + `TVEpisode` + `video.episode`.
+**Fișiere atinse:** `src/worker.js`, `tests/e2e.mjs` (+8 verificări → **482**), `scripts/audit-live.mjs` (+6 probe).
 
 ---
 
@@ -52,10 +62,11 @@
 
 ## 3. Rămase de decis (nu sunt defecte, sunt alegeri de produs)
 
-1. **SSR SEO lipsește pe `/episod/<id>`** — paginile de episod au title generic „Episod • anime-uke”, fără
-   description/og/JSON-LD, deși sunt paginile cu cel mai mare potențial de trafic organic („anime X episodul Y
-   subtitrat în română”). Repararea cere o citire D1 per episod + cache (la fel ca la serii) și un bloc
-   `VideoObject`/`BreadcrumbList` în JSON-LD. **Nu s-a făcut acum** — e feature nou, nu reparație.
+1. ~~**SSR SEO lipsește pe `/episod/<id>`**~~ — **REZOLVAT 2026-09-21** (runda 3): paginile de episod ies din
+   server cu titlu „Serie — Episodul N subtitrat în română | Anime-Uke”, description, canonical,
+   `og:type video.episode` și JSON-LD `TVEpisode` (+`partOfTVSeries`) + `BreadcrumbList`. Cost: o citire D1
+   (JOIN indexat episod+serie) cu cache 5 min + cache negativ, la fel ca la serii. Dovada pe live:
+   `/episod/4210` → titlu „One Piece — Episodul 3 subtitrat în română | Anime-Uke”, `TVEpisode`/`BreadcrumbList` prezente.
 2. **Canonical/og hardcodate pe `anime-uke.pages.dev`** în `index.html`, `login.html`, `register.html`. Când se
    adaugă domeniu propriu (`CANONICAL_ORIGIN`), aceste trei fișiere trebuie trecute pe originea canonică
    (sau injectate din worker, ca la `/serie/<id>`).

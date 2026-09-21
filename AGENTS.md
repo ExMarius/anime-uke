@@ -13,8 +13,8 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 474 · dom 147 · plafoane 13), deployat.
-  Audit live: ✅ 162 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
+- **Stare:** stabil, curat, toate testele verzi (e2e 482 · dom 147 · plafoane 13), deployat.
+  Audit live: ✅ 168 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
 
 ## 1. Setup în 60 de secunde
 
@@ -123,6 +123,12 @@ cat cf-relay/last-output.txt
     `STATIC_PAGES` + `DYNAMIC_PAGES` verificat ÎNAINTE de poarta de autentificare, cu normalizare `/x/`→`/x`, `/x.html`→`/x`.
   - `/login` și `/register`: `noindex` + canonical. Header nou `Cross-Origin-Resource-Policy: same-origin`.
   - `tests/e2e.mjs` a crescut de la 455 la **474** de verificări (toate cazurile de mai sus).
+- SSR SEO pe `/episod/<id>` (2026-09-21, branch `arena/01a0c538-anime-uke`): titlu
+  „Serie — Episodul N subtitrat în română | Anime-Uke”, description, canonical, `og:type video.episode`,
+  JSON-LD `TVEpisode` (+`partOfTVSeries`) și `BreadcrumbList` Acasă → Serie → Episod. Implementare în
+  `src/worker.js` (`episodeForSeo` — un JOIN indexat, cache 5 min + cache negativ; la eroare D1 servește
+  shell-ul nemodificat, fără 404 fals). e2e 474 → **482**, audit-live are probe noi pe episoade, audit
+  producție ✅ **168** · 🟡 0 · 🔴 0 (build `?v=0936caa`). Detalii în `AUDIT-LIVE.md`.
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
