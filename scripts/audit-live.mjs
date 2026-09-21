@@ -132,8 +132,13 @@ async function main() {
   }
   for (const id of episodeIds) {
     const r = await req(`/episod/${id}`);
-    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms`);
-    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'WARN');
+    const hasLd = /application\/ld\+json/.test(r.text);
+    const title = (r.text.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || '';
+    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms · title „${title.slice(0, 60)}”`);
+    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'FAIL');
+    expect(S1, hasLd, `/episod/${id} are JSON-LD (SEO)`, `/episod/${id} NU are JSON-LD`, 'WARN');
+    expect(S1, /"TVEpisode"/.test(r.text), `/episod/${id} are JSON-LD TVEpisode`, `/episod/${id} nu are TVEpisode`, 'WARN');
+    expect(S1, /property=["']og:type["'][^>]*video\.episode/.test(r.text), `/episod/${id} are og:type video.episode`, `/episod/${id} nu are og:type video.episode`, 'WARN');
   }
 
   // -------------------------------------------------------------------

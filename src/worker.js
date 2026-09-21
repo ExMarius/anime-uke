@@ -307,19 +307,36 @@ async function seriesForSeo(env, id) {
   }
 }
 
-/** Există episodul? O citire D1 indexată pe cheia primară, cu cache. */
-async function episodeExists(env, id) {
+/**
+ * Episodul + datele seriei lui, pentru SSR SEO pe /episod/<id>.
+ *
+ * O singură citire D1 (JOIN indexat pe cheia primară), cu cache 5 min în
+ * izolat — inclusiv cache negativ, ca scanerele care lovesc id-uri inventate
+ * să nu ardă cota gratuită. La eroare de D1 întoarce `undefined` („nu știu”):
+ * pagina-shell se servește ca atare, fără 404 fals pe un episod real.
+ *
+ * @returns {object|null|undefined} rândul | null (nu există) | undefined (eroare D1)
+ */
+async function episodeForSeo(env, id) {
   const key = `e${id}`;
   const cached = seoCacheGet(key);
-  if (cached.hit) return Boolean(cached.row);
+  if (cached.hit) return cached.row;
   try {
-    const row = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(id).first();
+    const row = await env.DB
+      .prepare(
+        `SELECT e.id, e.series_id, e.episode_number, e.title AS ep_title, e.created_at,
+                s.title AS series_title, s.description AS series_desc, s.cover_image,
+                s.genre, s.year, s.status
+         FROM episodes e
+         JOIN anime_series s ON s.id = e.series_id
+         WHERE e.id = ?`
+      )
+      .bind(id)
+      .first();
     seoCacheSet(key, row || null);
-    return Boolean(row);
+    return row;
   } catch {
-    // La eroare de D1 presupunem că există — mai bine o pagină care se încarcă
-    // decât un 404 fals pe un episod real.
-    return true;
+    return undefined;
   }
 }
 
@@ -369,6 +386,73 @@ function seriesSeoTags(env, request, series) {
 /** Injecteaza tagurile in HTML-ul paginii de serie (inlocuieste <title>). */
 function injectSeriesSeo(env, request, html, series) {
   const tags = seriesSeoTags(env, request, series);
+  const withTitle = html.replace(/<title>.*?<\/title>/i, '');
+  return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
+}
+
+/**
+ * Tagurile <head> generate pe server pentru un episod.
+ *
+ * Paginile de episod sunt poarta principală de trafic organic („anime X
+ * episodul Y subtitrat în română”), deci titlul pune exact interogarea:
+ * serie + număr episod + „subtitrat în română”. JSON-LD e TVEpisode (perechea
+ * lui TVSeries de pe pagina seriei) + BreadcrumbList Acasă → Serie → Episod.
+ */
+function episodeSeoTags(env, request, ep) {
+  const origin = canonicalOrigin(env, request);
+  const canonical = `${origin}/episod/${ep.id}`;
+  const epLabel = `Episodul ${ep.episode_number}`;
+  const title = `${ep.series_title} — ${epLabel} subtitrat în română | Anime-Uke`;
+  const epTitle = String(ep.ep_title || '').trim();
+  const desc = (
+    epTitle
+      ? `${epLabel} „${epTitle}” din ${ep.series_title}, subtitrat în română, gratuit, pe Anime-Uke.`
+      : `${epLabel} din ${ep.series_title} — anime subtitrat în română, gratuit, pe Anime-Uke.`
+  ).slice(0, 160);
+
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TVEpisode',
+        episodeNumber: ep.episode_number,
+        name: `${ep.series_title} — ${epLabel}`,
+        description: String(ep.series_desc || desc).slice(0, 500),
+        image: ep.cover_image || undefined,
+        datePublished: String(ep.created_at || '').slice(0, 10) || undefined,
+        inLanguage: 'ro',
+        url: canonical,
+        partOfTVSeries: {
+          '@type': 'TVSeries',
+          name: ep.series_title,
+          url: `${origin}/serie/${ep.series_id}`,
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: `${origin}/` },
+          { '@type': 'ListItem', position: 2, name: ep.series_title, item: `${origin}/serie/${ep.series_id}` },
+          { '@type': 'ListItem', position: 3, name: epLabel, item: canonical },
+        ],
+      },
+    ],
+  };
+
+  return `  <title>${escAttr(title)}</title>
+  <meta name="description" content="${escAttr(desc)}">
+  <link rel="canonical" href="${escAttr(canonical)}">
+  <meta property="og:title" content="${escAttr(`${ep.series_title} — ${epLabel}`)}">
+  <meta property="og:description" content="${escAttr(desc)}">
+  <meta property="og:type" content="video.episode">
+  <meta property="og:url" content="${escAttr(canonical)}">
+  <meta property="og:image" content="${escAttr(ep.cover_image || `${origin}/assets/img/hero-1.jpg`)}">
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
+/** Injecteaza tagurile in HTML-ul paginii de episod (inlocuieste <title>). */
+function injectEpisodeSeo(env, request, html, ep) {
+  const tags = episodeSeoTags(env, request, ep);
   const withTitle = html.replace(/<title>.*?<\/title>/i, '');
   return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
 }
@@ -464,11 +548,20 @@ async function serveStatic(request, env) {
       return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
     }
 
-    // La fel pentru /episod/<id>: fără verificare, orice id întorcea 200.
+    // /episod/<id>: 404 real la id inexistent + head plin (titlu, descriere,
+    // canonical, og, JSON-LD TVEpisode) generat din D1 — la fel ca la serii.
     const epMatch = path.match(/^\/episod\/(\d+)\/?$/);
     if (epMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
-      const exists = await episodeExists(env, Number(epMatch[1]));
-      if (!exists) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      const ep = await episodeForSeo(env, Number(epMatch[1]));
+      if (ep === null) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      // ep === undefined = eroare D1: servim shell-ul nemodificat (fără 404 fals).
+      if (ep) {
+        const html = await res.text();
+        const headers = new Headers(res.headers);
+        headers.delete('content-length');
+        headers.delete('etag');
+        return new Response(injectEpisodeSeo(env, request, html, ep), { status: 200, headers });
+      }
     }
 
     // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi

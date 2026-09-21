@@ -286,6 +286,8 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
       epMissingHtml.includes('noindex') && String(epMissing.headers.get('x-robots-tag') || '').includes('noindex'),
       `x-robots-tag=${epMissing.headers.get('x-robots-tag')}`);
     check('   ...404 e HTML de pagină, nu JSON gol', epMissingHtml.includes('<!DOCTYPE html>') && epMissingHtml.includes('Mergi la catalog'), epMissingHtml.slice(0, 80));
+    const epAgain = await fetch(`${BASE}/episod/999999`, { redirect: 'manual' });
+    check('   ...al doilea apel dă tot 404 (cache negativ stabil)', epAgain.status === 404, `status=${epAgain.status}`);
 
     const serMissing = await fetch(`${BASE}/serie/999999`, { redirect: 'manual' });
     const serMissingHtml = await serMissing.text();
@@ -310,10 +312,27 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
     legacy.status === 201 && legacy.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/abc123' && legacy.data.episode.sources[0].kind === 'embed',
     JSON.stringify(legacy.data).slice(0, 200));
 
-  // Contrapartea verificării de 404: un episod REAL trebuie să rămână 200.
+  // Contrapartea verificării de 404: un episod REAL trebuie să rămână 200,
+  // cu head plin (SSR SEO), ca la serii.
   {
-    const epReal = await fetch(`${BASE}/episod/${legacy.data.episode.id}`, { redirect: 'manual' });
+    const epIdReal = legacy.data.episode.id;
+    const epReal = await fetch(`${BASE}/episod/${epIdReal}`, { redirect: 'manual' });
     check('Pretty URL /episod/:id existent → 200', epReal.status === 200, `status=${epReal.status}`);
+    const epHtml = await epReal.text();
+    check('SSR episod: titlul conține seria + numărul episodului',
+      epHtml.includes('One Piece') && epHtml.includes('Episodul 1') && epHtml.includes('subtitrat în română'),
+      epHtml.match(/<title[^>]*>[\s\S]*?<\/title>/i)?.[0]?.slice(0, 120) || 'fără <title>');
+    check('SSR episod: titlul generic a dispărut (un singur <title>)',
+      !epHtml.includes('<title>Episod • anime-uke</title>') && (epHtml.match(/<title>/gi) || []).length === 1,
+      `titluri=${(epHtml.match(/<title>/gi) || []).length}`);
+    check('SSR episod: meta description injectată', epHtml.includes('meta name="description"'), '');
+    check('SSR episod: JSON-LD TVEpisode + BreadcrumbList injectate',
+      epHtml.includes('"TVEpisode"') && epHtml.includes('"BreadcrumbList"'), '');
+    check('SSR episod: canonical pe /episod/:id',
+      epHtml.includes(`/episod/${epIdReal}`) && epHtml.includes('rel="canonical"'), '');
+    check('SSR episod: og:type video.episode', epHtml.includes('video.episode'), '');
+    check('SSR episod: JSON-LD leagă seria (partOfTVSeries)',
+      epHtml.includes('"partOfTVSeries"') && epHtml.includes(`/serie/${seriesId}`), '');
   }
 
   const badEp2 = await req(j, 'POST', '/api/admin/episodes', { series_id: 9999, episode_number: 2, title: 'x', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/abc123' }] });
