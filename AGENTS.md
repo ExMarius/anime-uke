@@ -13,7 +13,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 482 · dom 147 · plafoane 13), deployat.
+- **Stare:** stabil, curat, toate testele verzi (e2e 491 · dom 147 · plafoane 13), deployat.
   Audit live: ✅ 168 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
 
 ## 1. Setup în 60 de secunde
@@ -129,14 +129,23 @@ cat cf-relay/last-output.txt
   `src/worker.js` (`episodeForSeo` — un JOIN indexat, cache 5 min + cache negativ; la eroare D1 servește
   shell-ul nemodificat, fără 404 fals). e2e 474 → **482**, audit-live are probe noi pe episoade, audit
   producție ✅ **168** · 🟡 0 · 🔴 0 (build `?v=0936caa`). Detalii în `AUDIT-LIVE.md`.
+- Verificare totală + reparații (2026-09-21, același branch): `style-src 'unsafe-inline'` deliberat în CSP
+  (reclamele A-Ads, pagina 404 din worker și layout-ul admin erau blocate de `style-src 'self'`;
+  `script-src` rămâne strict — probele e2e/audit verifică acum per-directivă); HSTS și pe răspunsurile
+  workerului; `pulse` citea DO-ul greșit (`'global'` vs `'global-chat'`) → `online` mereu 0, reparat și
+  verificat cu socket real (0→1→0); scos din allowlist `/404` (cerea login!), `/admin/serie` bare (JS cu
+  NaN), `/covers/*` (director inexistent); `seriesForSeo` la eroare D1 servește shell-ul ca episoadele;
+  `robots.txt` fără `Allow: /series`; prerender pe `/serie/*`; șters `tests/prod-smoke.mjs` (expirat,
+  dublat de audit-live); README corectat (CSP, frame-src, sandbox). e2e 482 → **491**, audit live
+  ✅ 168 · 🟡 0 · 🔴 0, build `?v=1a11f03`. Lecție: după deploy se așteaptă 60s înainte de audit
+  (propagarea Pages a servit o dată HTML vechi) — e în `cf-relay/cmd.sh`.
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
-- Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): SSR SEO pe `/episod/<id>` (title generic azi;
-  e cea mai mare oportunitate de trafic organic — cere JSON-LD `VideoObject`/`BreadcrumbList` + cache ca la serii);
-  canonical/og hardcodate pe `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe
-  `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);
-  audit live cu sesiune (are nevoie de un cont de test).
+- Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): canonical/og hardcodate pe
+  `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe `CANONICAL_ORIGIN` când apare
+  domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea); audit live cu sesiune
+  (are nevoie de un cont de test). SSR SEO pe `/episod/<id>` e **gata** (2026-09-21, vezi §6).
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —

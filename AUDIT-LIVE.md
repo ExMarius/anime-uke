@@ -2,13 +2,14 @@
 
 **Data:** 2026-09-21 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
 **Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=0936caa` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi)
+**Build auditat:** `?v=1a11f03` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
 | 1 (înainte de reparări, build `eb03ecd`) | ✅ 144 · 🟡 19 · 🔴 2 | auditul inițial: 2 probleme reale + 19 observații |
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
 | 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
+| 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
 
 ---
 
@@ -35,13 +36,25 @@ crawleri — e înlocuit server-side. Verificat pe live (`/episod/4210`, `/episo
 200 + `TVEpisode` + `video.episode`.
 **Fișiere atinse:** `src/worker.js`, `tests/e2e.mjs` (+8 verificări → **482**), `scripts/audit-live.mjs` (+6 probe).
 
+## 1c. Runda 4 (2026-09-21): fix-urile verificării totale
+
+`style-src 'unsafe-inline'` deliberat (reclamele A-Ads, pagina 404 din worker și layout-ul admin erau
+blocate de CSP; `script-src` rămâne strict — proba de audit verifică acum per-directivă); HSTS și pe
+răspunsurile API; `/api/pulse` citește DO-ul de chat corect (`global-chat`, era `global` → `online` mereu
+0, verificat local cu socket real: 0→1→0); `/404`, `/admin/serie` bare și `/covers/*` scos din allowlist
+(toate → 404 cu pagina site-ului); `robots.txt` fără `Allow: /series`; prerender pe `/serie/*`.
+**Fișiere atinse:** `src/lib/http.js`, `src/worker.js`, `src/routes/api/pulse.js`, `public/robots.txt`,
+`public/speculationrules.json`, `tests/e2e.mjs` (+9 verificări → **491**), `scripts/audit-live.mjs`,
+`README.md`; șters `tests/prod-smoke.mjs` (expirat, dublat de audit-live).
+Notă operațională: între deploy și audit se așteaptă 60s (propagarea Pages a servit o dată HTML vechi).
+
 ---
 
 ## 2. Ce e sănătos (verificat pe live, nu doar în cod)
 
 | Zonă | Rezultat |
 |---|---|
-| **Headere de securitate** | CSP strict fără `unsafe-inline`/`unsafe-eval`, `frame-ancestors 'none'`, HSTS 1 an, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP |
+| **Headere de securitate** | CSP cu `script-src` strict (fără `unsafe-inline`/`unsafe-eval`; `style-src` are `unsafe-inline` deliberat din runda 4), `frame-ancestors 'none'`, HSTS 1 an (și pe API, din runda 4), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP |
 | **Cookie de sesiune** | `HttpOnly; Secure; SameSite=Lax; Path=/` — JS nu-l poate citi |
 | **CSRF** | `POST /api/auth/register` și `/login` cu `Origin: https://evil.example` → **403**; fără `Origin` (curl/navigare) → 401, deci fluxurile normale nu se blochează |
 | **Rate limit** | login: al 10-lea eșec → **429** (10/5 min/IP) · register: a 5-a cerere → **429** (5/oră/IP) |
