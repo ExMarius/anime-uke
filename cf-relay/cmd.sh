@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy logo V7: navbar, favicon, auth, footer, og:image.
+# Deploy favicon real: /favicon.ico + /apple-touch-icon.png (fara ele, Google
+# arata iconita implicita Cloudflare in rezultatele de cautare).
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -60,3 +61,7 @@ echo "  favicon logo în /login: $(curl -s "$B/login" | grep -c 'rel="icon" href
 echo "  og:image logo în /: $(curl -s "$B/" | grep -c 'og:image" content="https://anime-uke.pages.dev/assets/img/logo.png"') (trebuie 1)"
 echo "  marca auth logo în /register: $(curl -s "$B/register" | grep -c 'auth-logo__mark" src="/assets/img/logo-icon.png"') (trebuie 1)"
 echo "  JS bundle conține logo-icon (navbar): $(curl -s "$B/assets/js/page-index.js?v=$(curl -s "$B/" | grep -oE 'page-index.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)" | grep -c 'logo-icon.png') (trebuie ≥1)"
+echo "=== verificari punctuale (favicon Google) ==="
+echo "  /favicon.ico → $(curl -s -o /tmp/fi.ico -w '%{http_code} %{size_download}B' "$B/favicon.ico") (trebuie 200 si >4000B, nu iconita Cloudflare)"
+echo "  /favicon.ico content-type: $(curl -s -o /dev/null -D - "$B/favicon.ico" | grep -i '^content-type' | tr -d '\r') (trebuie image/x-icon)"
+echo "  /apple-touch-icon.png → $(curl -s -o /dev/null -w '%{http_code} %{size_download}B %{content_type}' "$B/apple-touch-icon.png") (trebuie 200 PNG)"

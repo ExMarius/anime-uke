@@ -26,7 +26,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
 
 // Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
 // Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
@@ -36,7 +36,7 @@ const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register',
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
   '/admin', '/admin/serii',
-  '/favicon.ico', '/robots.txt', '/llms.txt', '/speculationrules.json',
+  '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/llms.txt', '/speculationrules.json',
   // Intenționat ABSENTE (primesc 404 onest de la allowlist):
   //   /404          — nu există public/404.html; intrarea veche cerea login (302)!
   //   /admin/serie  — fără id, JS-ul pornea cu seriesId=NaN și făcea apeluri invalide.

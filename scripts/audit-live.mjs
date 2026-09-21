@@ -373,8 +373,21 @@ async function main() {
   const chatCross = await req('/chat', { headers: { Origin: evil, Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': 'ZGVtbw==' } });
   info(S11, `/chat cu Origin străin + upgrade → ${chatCross.status}`);
   expect(S11, chatCross.status !== 101, 'chat-ul nu acceptă upgrade de pe altă origine', 'chat-ul a acceptat upgrade cross-origin (101)', 'FAIL');
+  // Favicon propriu la rădăcină: fără el, Pages servea iconița Cloudflare la
+  // /favicon.ico, iar Google o arăta în rezultatele de căutare. Cea implicită
+  // e minusculă (~1 KB), a noastră are 15 KB — dimensiunea o deosebește.
   const favicon = await req('/favicon.ico');
-  expect(S11, favicon.status === 200 || favicon.status === 404, `/favicon.ico → ${favicon.status}`, `/favicon.ico → ${favicon.status}`, 'WARN');
+  const favCt = favicon.headers['content-type'] || '';
+  const favLen = Number(favicon.headers['content-length'] || favicon.text.length || 0);
+  expect(S11, favicon.status === 200 && /icon/i.test(favCt),
+    `/favicon.ico → 200 ${favCt} (${favLen} B)`,
+    `/favicon.ico → ${favicon.status} ${favCt} (fără favicon propriu, Pages servește iconița Cloudflare)`, 'FAIL');
+  expect(S11, favLen > 4000,
+    `favicon.ico e al nostru (${favLen} B, nu cel implicit Cloudflare)`,
+    `favicon.ico suspect de mic (${favLen} B) — poate e cel implicit Cloudflare`, 'WARN');
+  const appleIcon = await req('/apple-touch-icon.png');
+  expect(S11, appleIcon.status === 200 && /png/.test(appleIcon.headers['content-type'] || ''),
+    '/apple-touch-icon.png → 200 PNG (iOS)', `/apple-touch-icon.png → ${appleIcon.status}`, 'WARN');
   for (const p of ['/login', '/register']) {
     const r = await req(p);
     expect(S11, /name=["']robots["'][^>]*noindex/i.test(r.text), `${p} are noindex (pagină utilitară)`, `${p} NU are noindex`, 'WARN');

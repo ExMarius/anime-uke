@@ -209,6 +209,22 @@ console.log('\n=== 1. VIZITATOR ===');
       loginHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && loginHtml.includes('auth-logo__mark'),
       loginHtml.match(/<link rel="icon"[^>]*>/)?.[0]);
   }
+
+  // Favicon real la rădăcină: fără el, Cloudflare Pages servea iconița
+  // proprie la /favicon.ico, iar Google o arăta în rezultatele de căutare.
+  {
+    const ico = await fetch(BASE + '/favicon.ico');
+    const icoBuf = Buffer.from(await ico.arrayBuffer());
+    check('GET /favicon.ico → 200 cu content-type icon',
+      ico.status === 200 && (ico.headers.get('content-type') || '').includes('icon'),
+      `status=${ico.status} ct=${ico.headers.get('content-type')}`);
+    check('favicon.ico e al nostru, nu cel implicit Cloudflare (dimensiune)',
+      icoBuf.length > 4000, `bytes=${icoBuf.length}`);
+    const apple = await fetch(BASE + '/apple-touch-icon.png');
+    check('GET /apple-touch-icon.png → 200 PNG (iOS)',
+      apple.status === 200 && (apple.headers.get('content-type') || '').includes('png'),
+      `status=${apple.status} ct=${apple.headers.get('content-type')}`);
+  }
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
 }
