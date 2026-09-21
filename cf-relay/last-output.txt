@@ -1,106 +1,22 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9512d72
+comanda: cf-relay/cmd.sh @ 3657c34
 ────────────────────────────────────
-=== 1. headere / (cache?) ===
-HTTP/2 200 
-cache-control: public, max-age=0, must-revalidate
-etag: "1629b44aaa34a28429a1d0eba683f159"
-cf-ray: a3eb476eccc88be3-IAD
-  titlu /: <title>Anime-Uke — Anime Subtitrat în Română Online</title>
-  ?v= din /: ?v=0936caa 
-  description /: <meta name="description" content="Urmărește gratuit seriile anime preferate subtitrate în limba română pe Anime-Uke. Adună puncte la fiecare episod, folosește chatul live și intră în comunit
+=== admin_log ultimele 12 ===
+81 2026-09-14 16:26:26 admin#1 create_episode episode 4212
+80 2026-09-14 16:23:21 admin#1 create_series series 1019
+79 2026-09-14 12:09:59 admin#1 create_series series 1018
+78 2026-09-14 12:06:30 admin#1 create_series series 1017
+77 2026-09-14 12:05:15 admin#1 delete_series series 1016
+76 2026-09-14 12:04:57 admin#1 create_series series 1016
+75 2026-09-14 11:39:23 admin#1 delete_user user 21
+74 2026-09-14 11:08:18 admin#1 delete_source episode 4211
+73 2026-09-14 11:04:09 admin#1 create_episode episode 4211
+72 2026-09-14 11:01:24 admin#1 create_series series 1015
+71 2026-09-13 18:20:07 admin#1 delete_invite invite 11
+70 2026-09-13 18:20:05 admin#1 delete_invite invite 12
 
-=== 2. deployment-uri Pages (care e production?) ===
+=== counturi ===
+{'serii': 5, 'episoade': 5, 'useri': 3, 'chat': 30}
 
- ⛅️ wrangler 4.131.2
-────────────────────
-┌──────────────────────────────────────┬─────────────┬──────────────────────────┬─────────┬──────────────────────────────────────┬────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Id                                   │ Environment │ Branch                   │ Source  │ Deployment                           │ Status         │ Build                                                                                                                  │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ ac0a056e-7795-48b8-a8c3-2a9b54514c40 │ Preview     │ arena/01a0c538-anime-uke │ 9512d72 │ https://ac0a056e.anime-uke.pages.dev │ just now       │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/ac0a056e-7795-48b8-a8c3-2a9b54514c40 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 98053449-24db-4f1d-b6af-e285217e44dd │ Preview     │ arena/01a0c538-anime-uke │ 82b948f │ https://98053449.anime-uke.pages.dev │ 17 minutes ago │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/98053449-24db-4f1d-b6af-e285217e44dd │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 72c1eb67-2e38-4b34-809a-91ef8dd68ddd │ Preview     │ arena/01a0c538-anime-uke │ 0b29075 │ https://72c1eb67.anime-uke.pages.dev │ 18 minutes ago │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/72c1eb67-2e38-4b34-809a-91ef8dd68ddd │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 0d2bd6e2-7b7f-411b-8153-0592e95bd724 │ Production  │ main                     │ 0936caa │ https://0d2bd6e2.anime-uke.pages.dev │ 19 minutes ago │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/0d2bd6e2-7b7f-411b-8153-0592e95bd724 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 6fd42637-e6ab-4b73-aa58-1b6e055ab4e7 │ Preview     │ arena/01a0c538-anime-uke │ 0936caa │ https://6fd42637.anime-uke.pages.dev │ 19 minutes ago │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/6fd42637-e6ab-4b73-aa58-1b6e055ab4e7 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 11243377-138f-42b0-9697-4b12172656c0 │ Preview     │ arena/01a0a477-anime-uke │ ed944de │ https://11243377.anime-uke.pages.dev │ 5 days ago     │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/11243377-138f-42b0-9697-4b12172656c0 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 319af28e-15a2-4c27-a880-2fba2ce7bae0 │ Production  │ main                     │ 960fa7b │ https://319af28e.anime-uke.pages.dev │ 5 days ago     │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/319af28e-15a2-4c27-a880-2fba2ce7bae0 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ eb1910b5-78ac-4c81-b979-3fe7ed8a9252 │ Preview     │ arena/01a0a477-anime-uke │ 960fa7b │ https://eb1910b5.anime-uke.pages.dev │ 5 days ago     │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/eb1910b5-78ac-4c81-b979-3fe7ed8a9252 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 09a216aa-dfd0-4677-a937-5cc8d49bcaf0 │ Preview     │ arena/01a0a477-anime-uke │ 6175c03 │ https://09a216aa.anime-uke.pages.dev │ 5 days ago     │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/09a216aa-dfd0-4677-a937-5cc8d49bcaf0 │
-├──────────────────────────────────────┼─────────────┼──────────────────────────┼─────────┼──────────────────────────────────────┼────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 4a7a9447-d98b-4198-a5ce-daf4110edb64 │ Preview     │ arena/01a0a477-anime-uke │ 4529e83 │ https://4a7a9447.anime-uke.pages.dev │ 5 days ago     │ https://dash.cloudflare.com/80024736ee1b2c8800e84d668dc57154/pages/view/anime-uke/4a7a9447-d98b-4198-a5ce-daf4110edb64 │
-
-=== 3. D1 ground truth ===
-
- ⛅️ wrangler 4.131.2 (update available 4.136.1)
-───────────────────────────────────────────────
-Resource location: remote 
-
-🌀 Executing on remote database DB (7209b0bd-227b-46d0-b376-6157b56734fa):
-🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
-🚣 Executed 1 command in 0.14ms
-[
-  {
-    "results": [
-      {
-
- ⛅️ wrangler 4.131.2 (update available 4.136.1)
-───────────────────────────────────────────────
-Resource location: remote 
-
-🌀 Executing on remote database DB (7209b0bd-227b-46d0-b376-6157b56734fa):
-🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
-🚣 Executed 1 command in 0.25ms
-[
-  {
-    "results": [
-      {
-        "id": 1014,
-        "title": "One Piece",
-        "status": "ongoing"
-      },
-      {
-        "id": 1015,
-        "title": "Liar Game",
-        "status": "completed"
-      },
-      {
-        "id": 1017,
-        "title": "Jitsu wa Watashi wa / Actually, I am...",
-        "status": "ongoing"
-      },
-      {
-        "id": 1018,
-        "title": "DanMachi",
-        "status": "completed"
-
- ⛅️ wrangler 4.131.2 (update available 4.136.1)
-───────────────────────────────────────────────
-Resource location: remote 
-
-🌀 Executing on remote database DB (7209b0bd-227b-46d0-b376-6157b56734fa):
-🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
-🚣 Executed 1 command in 0.18ms
-[
-  {
-    "results": [
-      {
-
-=== 4. sitemap ACUM ===
-<loc>https://anime-uke.pages.dev/</loc> <loc>https://anime-uke.pages.dev/serie/1019</loc> <loc>https://anime-uke.pages.dev/serie/1018</loc> <loc>https://anime-uke.pages.dev/serie/1017</loc> <loc>https://anime-uke.pages.dev/serie/1015</loc> <loc>https://anime-uke.pages.dev/serie/1014</loc> 
-  headere sitemap:
-HTTP/2 200 
-cache-control: public, max-age=3600
-
-=== 5. episod + pulse ===
-HTTP/2 200 
-cache-control: public, max-age=0, must-revalidate
-  /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  /login ?v=: ?v=0936caa 
+=== sitemap acum (count) ===
+6
