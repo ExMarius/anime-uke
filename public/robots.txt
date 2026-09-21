@@ -18,3 +18,4 @@ Disallow: /chat
 Disallow: /logout
 
 Sitemap: https://anime-uke.pages.dev/sitemap.xml
+Sitemap: https://anime-uke.pages.dev/sitemap.txt

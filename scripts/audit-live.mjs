@@ -184,6 +184,13 @@ async function main() {
   expect(S4, urls.length === new Set(urls).size, 'sitemap fără duplicate', `sitemap are duplicate (${urls.length} vs ${new Set(urls).size} unice)`, 'WARN');
   expect(S4, !urls.some((u) => u.replace(/\/$/, '').endsWith('/series')),
     'sitemap nu conține /series (ruta face 301 spre /)', `sitemap conține /series, care face 301 → / (semnal de calitate slabă): ${urls.join(' ')}`, 'FAIL');
+  expect(S4, urls.some((u) => u.includes('/episod/')),
+    'sitemap include episoade (poarta de trafic organic)', 'sitemap fără episoade — doar prima pagină + serii', 'WARN');
+  expect(S4, !sitemap.headers['cross-origin-resource-policy'] && !sitemap.headers['content-security-policy'],
+    'sitemap iese fără CORP/CSP (curat pentru crawler-e)', `sitemap are corp=${sitemap.headers['cross-origin-resource-policy'] || '—'}`, 'WARN');
+  const sitemapTxt = await req('/sitemap.txt');
+  expect(S4, sitemapTxt.status === 200 && /text\/plain/.test(sitemapTxt.headers['content-type'] || ''),
+    '/sitemap.txt → 200 text/plain (alternativa din Search Console)', `/sitemap.txt → ${sitemapTxt.status}`, 'WARN');
   info(S4, `sitemap: ${urls.length} URL-uri · primele 3: ${urls.slice(0, 3).join(' ')}`);
   expect(S4, llms.status === 200 && llms.text.length > 50, `llms.txt → 200 (${llms.text.length} car.)`, `llms.txt → ${llms.status}`, 'WARN');
   const spec = await req('/speculationrules.json');

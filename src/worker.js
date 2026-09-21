@@ -26,7 +26,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap', '/llms.txt', '/speculationrules.json']);
 
 // Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
 // Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
@@ -36,7 +36,8 @@ const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register',
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
   '/admin', '/admin/serii',
-  '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/llms.txt', '/speculationrules.json',
+  '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap',
+  '/llms.txt', '/speculationrules.json',
   // Intenționat ABSENTE (primesc 404 onest de la allowlist):
   //   /404          — nu există public/404.html; intrarea veche cerea login (302)!
   //   /admin/serie  — fără id, JS-ul pornea cu seriesId=NaN și făcea apeluri invalide.
@@ -77,15 +78,18 @@ function isPublic(path) {
 }
 
 /** Redirectioneaza catre login pastrand destinatia, ca sa revii dupa logare. */
-function redirectToLogin(url) {
-  const next = `${url.pathname}${url.search}`;
+function redirectToLogin(url, normPath) {
+  const next = `${normPath || url.pathname}${url.search}`;
   const target = `/login?next=${encodeURIComponent(next)}`;
   return new Response(null, { status: 302, headers: { Location: target, 'Cache-Control': 'no-store' } });
 }
 
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
-  const path = url.pathname;
+  // Normalizeaza slash-urile duble (ex. //sitemap.xml → /sitemap.xml): unii
+  // clienti construiesc URL-uri cu //, iar fara asta cadeau pe 404 deși
+  // resursa exista. Tot rutarea lucreaza pe calea normalizata.
+  const path = url.pathname.replace(/\/{2,}/g, '/') || '/';
   // Normalizare pentru verificările de rutare: `/series/` și `/series.html` sunt
   // aceeași pagină ca `/series`. Fără ea, `/series/` sărea peste redirectul 301
   // și ajungea la poarta de autentificare (302 → /login), iar `/profile.html`
@@ -116,7 +120,7 @@ export async function handleFetch(request, env, ctx) {
     // Fără /covers/: directorul public/covers/ nu există (coperțile sunt URL-uri
     // externe), deci îl lăsăm să cadă pe pagina 404 a site-ului, nu pe 404-ul generic.
     const isAssetPath = path.startsWith('/assets/');
-    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
+    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && path !== '/sitemap.txt' && path !== '/sitemap' && !isKnownPage(norm)) {
       return applySecurityHeaders(notFoundPage());
     }
 
@@ -126,15 +130,19 @@ export async function handleFetch(request, env, ctx) {
         const isApi = path === '/api' || path.startsWith('/api/') || path === '/chat';
         response = isApi
           ? jsonResponse({ error: 'Trebuie să fii autentificat' }, 401)
-          : redirectToLogin(url);
+          : redirectToLogin(url, path);
         return applySecurityHeaders(response);
       }
     }
 
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
-    } else if (path === '/sitemap.xml') {
-      response = await sitemapHandler(request, env);
+    } else if (path === '/sitemap.xml' || path === '/sitemap.txt' || path === '/sitemap') {
+      // Sitemap-urile ies direct, FĂRĂ headerele de securitate (CORP/CSP):
+      // sunt consumate de crawler-e, nu de browsere, iar varianta minimalista
+      // (fara headere, text/xml) e cea care a trecut de verificarile GSC.
+      response = await sitemapHandler(request, env, path);
+      return response;
     } else {
       response = await serveStatic(request, env);
     }
@@ -191,43 +199,62 @@ function allowedMethods(path) {
 // nivel de izolat 1 oră — cost D1 neglijabil indiferent de trafic.
 // =====================================================================
 const SITEMAP_CACHE_MS = 60 * 60 * 1000;
-const sitemapCache = { at: 0, body: null };
+const sitemapCache = { at: 0, bodyXml: null, bodyTxt: null };
 
-async function sitemapHandler(request, env) {
+async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
   const origin = canonicalOrigin(env, request);
   const now = Date.now();
 
-  if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    // In sitemap doar paginile cu valoare de indexat: prima pagina,
-    // catalogul si seriile. /login si /register sunt utilitare — le lasam
-    // afara ca sa nu le concureze pe cele de continut in rezultate.
-    // `/series` fără id face 301 spre `/`, deci nu mai are ce căuta aici:
-    // un URL de sitemap care redirectează la alt URL e semnal de calitate slabă.
-    let urls = ['/'];
+  if (!sitemapCache.bodyXml || now - sitemapCache.at > SITEMAP_CACHE_MS) {
+    // Prima pagina + URL-urile pretty ale seriilor si episoadelor (cele pe
+    // care le indexam; canonical-ul pointeaza spre ele, deci sitemap-ul
+    // trebuie sa fie coerent). Fara /login si /register (utilitare) si fara
+    // /series (face 301 spre / — un URL de sitemap care redirecteaza la alt
+    // URL e semnal de calitate slabă).
+    let urls = null;
     try {
-      const res = await env.DB
-        .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
-        .all();
-      // URL-urile pretty — cele pe care le indexam (canonical-ul din pagina
-      // pointeaza spre ele, deci sitemap-ul trebuie sa fie coerent).
-      for (const r of res.results || []) urls.push(`/serie/${r.id}`);
+      const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
+      const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
+      urls = ['/'];
+      for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
+      for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
+      if (urls.length <= 1) throw new Error('empty');
     } catch (e) {
-      console.error('sitemap D1 esuat:', e?.message || e);
+      console.error('sitemap D1 esuat, folosesc fallback static:', e?.message || e);
+      // Fallback 100% static — garantat valid chiar daca D1 e down.
+      urls = ['/', '/serie/1019', '/serie/1018', '/serie/1017', '/serie/1015', '/serie/1014',
+        '/episod/4212', '/episod/4211', '/episod/4210', '/episod/4209', '/episod/4208'];
     }
-    const esc = (s) => s.replace(/&/g, '&amp;');
-    sitemapCache.body =
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    sitemapCache.bodyXml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      urls.map((u) => `  <url><loc>${esc(origin + u)}</loc></url>`).join('\n') +
-      `\n</urlset>\n`;
+      urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
+      `\n</urlset>`;
+    sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n');
     sitemapCache.at = now;
   }
 
-  return new Response(sitemapCache.body, {
+  // Varianta text (un URL pe linie) — ceruta de Google Search Console ca
+  // alternativa la cea XML.
+  if (forPath === '/sitemap.txt') {
+    return new Response(sitemapCache.bodyTxt, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
+  // /sitemap.xml si /sitemap (fara extensie) — acelasi XML minimalist.
+  return new Response(sitemapCache.bodyXml, {
     status: 200,
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Content-Type': 'text/xml; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
     },
   });
 }

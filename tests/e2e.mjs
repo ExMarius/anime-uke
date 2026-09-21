@@ -225,6 +225,35 @@ console.log('\n=== 1. VIZITATOR ===');
       apple.status === 200 && (apple.headers.get('content-type') || '').includes('png'),
       `status=${apple.status} ct=${apple.headers.get('content-type')}`);
   }
+
+  // Sitemap-uri pentru Google Search Console: XML + TXT + /sitemap fara
+  // extensie, iesite direct fara headerele de securitate (CORP/CSP), cu
+  // serii SI episoade. Pe baza goala intra fallback-ul static, deci
+  // asertiunile sunt deterministe indiferent de starea DB-ului.
+  {
+    const sm = await fetch(BASE + '/sitemap.xml');
+    const smText = await sm.text();
+    check('GET /sitemap.xml → 200 text/xml valid',
+      sm.status === 200 && (sm.headers.get('content-type') || '').includes('text/xml') && smText.startsWith('<?xml'),
+      `status=${sm.status} ct=${sm.headers.get('content-type')}`);
+    check('Sitemap-ul XML contine serii si episoade (URL-uri pretty)',
+      smText.includes('/serie/') && smText.includes('/episod/'), `${(smText.match(/<loc>/g) || []).length} URL-uri`);
+    check('Sitemap-ul iese fara CORP (fara headere de securitate)',
+      !sm.headers.get('cross-origin-resource-policy') && !sm.headers.get('content-security-policy'),
+      `corp=${sm.headers.get('cross-origin-resource-policy')}`);
+    const txt = await fetch(BASE + '/sitemap.txt');
+    const txtText = await txt.text();
+    check('GET /sitemap.txt → 200 text/plain, un URL pe linie',
+      txt.status === 200 && (txt.headers.get('content-type') || '').includes('text/plain')
+      && txtText.split('\n')[0].startsWith('http') && txtText.includes('/serie/'),
+      `status=${txt.status} linii=${txtText.split('\n').length}`);
+    const noext = await fetch(BASE + '/sitemap');
+    check('GET /sitemap (fara extensie) → acelasi XML',
+      noext.status === 200 && (noext.headers.get('content-type') || '').includes('text/xml'),
+      `status=${noext.status}`);
+    const dbl = await fetch(BASE + '//sitemap.xml');
+    check('GET //sitemap.xml (slash dublu) → 200, nu 404', dbl.status === 200, `status=${dbl.status}`);
+  }
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
 }

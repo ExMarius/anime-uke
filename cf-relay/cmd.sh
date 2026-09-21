@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy favicon real: /favicon.ico + /apple-touch-icon.png (fara ele, Google
-# arata iconita implicita Cloudflare in rezultatele de cautare).
+# Deploy sitemap-uri GSC: /sitemap.xml + /sitemap.txt + /sitemap (fara headere
+# de securitate, cu serii si episoade) — statusul "Nu s-a putut prelua" e blocat.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -65,3 +65,11 @@ echo "=== verificari punctuale (favicon Google) ==="
 echo "  /favicon.ico → $(curl -s -o /tmp/fi.ico -w '%{http_code} %{size_download}B' "$B/favicon.ico") (trebuie 200 si >4000B, nu iconita Cloudflare)"
 echo "  /favicon.ico content-type: $(curl -s -o /dev/null -D - "$B/favicon.ico" | grep -i '^content-type' | tr -d '\r') (trebuie image/x-icon)"
 echo "  /apple-touch-icon.png → $(curl -s -o /dev/null -w '%{http_code} %{size_download}B %{content_type}' "$B/apple-touch-icon.png") (trebuie 200 PNG)"
+echo "=== verificari punctuale (sitemap-uri GSC) ==="
+echo "  /sitemap.xml → $(curl -s -o /tmp/sm.xml -w '%{http_code} %{content_type}' "$B/sitemap.xml") (trebuie 200 text/xml)"
+echo "    URL-uri: $(grep -c '<loc>' /tmp/sm.xml) · episoade: $(grep -c '/episod/' /tmp/sm.xml) · CORP prezent? (trebuie 0): $(curl -s -o /dev/null -D - "$B/sitemap.xml" | grep -ci '^cross-origin-resource-policy')"
+echo "  /sitemap.txt → $(curl -s -o /tmp/sm.txt -w '%{http_code} %{content_type}' "$B/sitemap.txt") (trebuie 200 text/plain)"
+echo "    linii: $(wc -l < /tmp/sm.txt) · prima: $(head -1 /tmp/sm.txt)"
+echo "  /sitemap (fara extensie) → $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/sitemap") (trebuie 200 text/xml)"
+echo "  //sitemap.xml (slash dublu) → $(curl -s -o /dev/null -w '%{http_code}' "$B//sitemap.xml") (trebuie 200)"
+echo "  cu UA Googlebot: $(curl -s -o /dev/null -w '%{http_code}' -A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' "$B/sitemap.xml") (trebuie 200)"
