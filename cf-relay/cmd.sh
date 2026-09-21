@@ -32,4 +32,10 @@ echo "  sitemap conține /series? (trebuie 0): $(curl -s "$B/sitemap.xml" | grep
 echo "  sitemap URL-uri: $(curl -s "$B/sitemap.xml" | grep -oE '<loc>[^<]*</loc>' | tr '\n' ' ')"
 echo "  /serie/1014 (serie reala) → $(curl -s -o /dev/null -w '%{http_code}' "$B/serie/1014") (trebuie 200)"
 echo "  /episod/4210 (episod real) → $(curl -s -o /dev/null -w '%{http_code}' "$B/episod/4210") (trebuie 200)"
+echo "  SSR episod /episod/4210:"
+curl -s "$B/episod/4210" -o /tmp/ep.html
+echo "    titlu: $(grep -oE '<title>[^<]*</title>' /tmp/ep.html | head -1)"
+echo "    description: $(grep -c 'meta name="description"' /tmp/ep.html)  canonical: $(grep -c 'rel="canonical"' /tmp/ep.html)  video.episode: $(grep -c 'video.episode' /tmp/ep.html)"
+echo "    TVEpisode: $(grep -c 'TVEpisode' /tmp/ep.html)  BreadcrumbList: $(grep -c 'BreadcrumbList' /tmp/ep.html)  partOfTVSeries: $(grep -c 'partOfTVSeries' /tmp/ep.html)"
+echo "    titlu generic ramas? (trebuie 0): $(grep -c '<title>Episod • anime-uke</title>' /tmp/ep.html)"
 echo "  prima pagina → $(curl -s -o /dev/null -w '%{http_code}' "$B/")  · /api/pulse → $(curl -s "$B/api/pulse")"
