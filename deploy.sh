@@ -152,7 +152,7 @@ $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=tr
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
-find public/covers public/assets/img -name '*.webp' -delete 2>/dev/null || true
+find public/assets/img -name '*.webp' -delete 2>/dev/null || true
 git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------

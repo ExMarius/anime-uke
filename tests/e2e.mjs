@@ -1062,6 +1062,11 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
     check('init contine lista online', Array.isArray(init.online), JSON.stringify(init.online));
     check('init contine istoric (array)', Array.isArray(init.history));
 
+    // REGRESIE: pulse citea DO-ul 'global' în loc de 'global-chat' → online era
+    // mereu 0. Cu socket-ul deschis, pulse trebuie să vadă măcar 1 utilizator.
+    const pulseLive = await req(j, 'GET', '/api/pulse');
+    check('Pulse vede socket-ul deschis (online ≥ 1)', (pulseLive.data?.online ?? 0) >= 1, JSON.stringify(pulseLive.data));
+
     ws.send(JSON.stringify({ type: 'chat', message: 'Salut din test!' }));
     const msg = await new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('timeout la mesaj')), 6000);

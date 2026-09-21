@@ -170,10 +170,6 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 
 ---
 
----
-
-## Securitate
-
 ## Securitate
 
 | Aspect | Implementare |
