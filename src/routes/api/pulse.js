@@ -48,7 +48,9 @@ export async function onRequestGet(context) {
   let online = 0;
   try {
     if (env.CHAT) {
-      const stub = env.CHAT.get(env.CHAT.idFromName('global'));
+      // ACELAȘI nume ca în src/routes/chat.js ('global-chat'): cu 'global' citeam
+      // o instanță-fantomă, mereu goală, deci „online" era permanent 0.
+      const stub = env.CHAT.get(env.CHAT.idFromName('global-chat'));
       const res = await stub.fetch('https://chat.internal/state');
       if (res.ok) {
         const data = await res.json();

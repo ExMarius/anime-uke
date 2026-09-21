@@ -35,8 +35,11 @@ const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register',
 // adică dezvăluiau că fișierul există în repo și umpleau crawl-ul de gunoi.
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
-  '/admin', '/admin/serii', '/admin/serie', '/404',
+  '/admin', '/admin/serii',
   '/favicon.ico', '/robots.txt', '/llms.txt', '/speculationrules.json',
+  // Intenționat ABSENTE (primesc 404 onest de la allowlist):
+  //   /404          — nu există public/404.html; intrarea veche cerea login (302)!
+  //   /admin/serie  — fără id, JS-ul pornea cu seriesId=NaN și făcea apeluri invalide.
 ]);
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
@@ -110,7 +113,9 @@ export async function handleFetch(request, env, ctx) {
 
     // Rute necunoscute → 404 onest, înainte de poarta de autentificare.
     const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
-    const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
+    // Fără /covers/: directorul public/covers/ nu există (coperțile sunt URL-uri
+    // externe), deci îl lăsăm să cadă pe pagina 404 a site-ului, nu pe 404-ul generic.
+    const isAssetPath = path.startsWith('/assets/');
     if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
       return applySecurityHeaders(notFoundPage());
     }
@@ -286,6 +291,9 @@ function seoCacheSet(key, row) {
   seoCache.set(key, { at: Date.now(), row });
 }
 
+/**
+ * @returns {object|null|undefined} rândul | null (nu există) | undefined (eroare D1 → shell, fără 404 fals)
+ */
 async function seriesForSeo(env, id) {
   const key = `s${id}`;
   const cached = seoCacheGet(key);
@@ -303,7 +311,7 @@ async function seriesForSeo(env, id) {
     seoCacheSet(key, row || null);
     return row;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -540,7 +548,9 @@ async function serveStatic(request, env) {
       // Serie inexistentă → 404 REAL. Până aici răspundeam 200 cu shell-ul paginii
       // și lăsam JS-ul să scrie „Seria nu există": pentru Google era un soft 404
       // (pagină indexabilă, goală), iar crawl budget-ul se ducea pe id-uri inventate.
-      if (!series) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
+      if (series === null) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
+      // series === undefined = eroare D1: servim shell-ul nemodificat (fără 404 fals).
+      if (!series) return res;
       const html = await res.text();
       const headers = new Headers(res.headers);
       headers.delete('content-length');

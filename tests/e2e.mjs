@@ -131,14 +131,30 @@ console.log('\n=== 1. VIZITATOR ===');
   // Rute necunoscute → 404 onest. Până acum cădeau pe poarta de autentificare și
   // răspundeau 302 → /login?next=/package.json, adică dezvăluiau că fișierul
   // există în repo (conținutul nu scăpa, dar nici 302 nu e răspunsul corect).
-  for (const unknown of ['/package.json', '/AGENTS.md', '/deploy.sh', '/src/worker.js', '/ruta-inexistenta', '/admin/ceva-ciudat']) {
+  for (const unknown of ['/package.json', '/AGENTS.md', '/deploy.sh', '/src/worker.js', '/ruta-inexistenta', '/admin/ceva-ciudat', '/404', '/admin/serie']) {
     const r = await fetch(BASE + unknown, { redirect: 'manual' });
     check(`GET ${unknown} → 404 (nu 302 spre /login)`, r.status === 404, `status=${r.status} location=${r.headers.get('location') || '—'}`);
+  }
+  // /covers/ nu există pe disc (coperțile sunt URL-uri externe) → pagina 404 a
+  // site-ului, nu 404-ul generic al routerului de assete.
+  {
+    const r = await fetch(BASE + '/covers/logo.png', { redirect: 'manual' });
+    const body = await r.text();
+    check('GET /covers/logo.png → 404 cu pagina site-ului', r.status === 404 && body.includes('Mergi la catalog'), `status=${r.status}`);
   }
   const login = await fetch(BASE + '/login');
   check('Header CSP prezent pe pagina publica', !!login.headers.get('content-security-policy'));
   check('Header X-Content-Type-Options prezent', login.headers.get('x-content-type-options') === 'nosniff');
-  check('CSP nu contine unsafe-inline', !String(login.headers.get('content-security-policy')).includes('unsafe-inline'));
+  // CSP pe directive: script-src STRICT (fără unsafe-inline/unsafe-eval — zero JS
+  // inline în site), style-src cu 'unsafe-inline' deliberat (snippet A-Ads +
+  // pagina 404 generată în worker + layout admin — comentariul din http.js).
+  {
+    const csp = String(login.headers.get('content-security-policy') || '');
+    const scriptSrc = (csp.match(/script-src[^;]*/)?.[0] || '');
+    const styleSrc = (csp.match(/style-src[^;]*/)?.[0] || '');
+    check('CSP script-src strict (fără unsafe-*)', scriptSrc.includes("'self'") && !/unsafe-inline|unsafe-eval/.test(scriptSrc), scriptSrc);
+    check("CSP style-src permite 'unsafe-inline' (decizie documentată)", styleSrc.includes("'unsafe-inline'"), styleSrc);
+  }
   check('Header Cross-Origin-Resource-Policy prezent', login.headers.get('cross-origin-resource-policy') === 'same-origin',
     `corp=${login.headers.get('cross-origin-resource-policy')}`);
 
@@ -153,6 +169,30 @@ console.log('\n=== 1. VIZITATOR ===');
   // Assetele raman publice: fara ele pagina de login ar fi nefunctionala
   const css = await fetch(BASE + '/assets/css/style.css');
   check('GET /assets/css/style.css → 200 public', css.status === 200);
+
+  // HSTS și pe răspunsurile JSON ale workerului (nu doar pe assete via _headers).
+  {
+    const pulse = await fetch(BASE + '/api/pulse');
+    check('API JSON are Strict-Transport-Security', String(pulse.headers.get('strict-transport-security') || '').includes('max-age=31536000'),
+      `hsts=${pulse.headers.get('strict-transport-security')}`);
+    const pdata = await pulse.json().catch(() => ({}));
+    check('Pulse expune contorul online ca număr', typeof pdata?.online === 'number', JSON.stringify(pdata).slice(0, 100));
+  }
+
+  // robots.txt: fără /series (face 301 spre /), cu Sitemap declarat.
+  {
+    const robots = await (await fetch(BASE + '/robots.txt')).text();
+    check('robots.txt nu mai anunță /series', !robots.includes('Allow: /series'), robots.split('\n').filter((l) => l.includes('/series')).join(';'));
+    check('robots.txt declară Sitemap:', /Sitemap:/i.test(robots), '');
+  }
+
+  // Speculation Rules: prerender pe URL-urile pretty reale (/serie/*), nu pe
+  // /series* care nu mai lovea nimic.
+  {
+    const spec = await (await fetch(BASE + '/speculationrules.json')).json().catch(() => null);
+    const pre = JSON.stringify(spec?.prerender || []);
+    check('prerender pe /serie/*', pre.includes('/serie/'), pre.slice(0, 120));
+  }
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
 }

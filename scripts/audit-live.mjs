@@ -277,7 +277,10 @@ async function main() {
   const h = home.headers;
   const csp = h['content-security-policy'] || '';
   expect(S8, csp.length > 0, 'CSP prezent', 'LIPSEȘTE Content-Security-Policy', 'FAIL');
-  expect(S8, csp && !/unsafe-inline|unsafe-eval/.test(csp), 'CSP fără unsafe-inline/unsafe-eval', `CSP conține unsafe-*: ${csp.slice(0, 120)}`, 'FAIL');
+  // script-src STRICT (fără unsafe-*): style-src are 'unsafe-inline' deliberat
+  // (snippet A-Ads + pagina 404 din worker — vezi comentariul din src/lib/http.js).
+  const scriptSrc = (csp.match(/script-src[^;]*/)?.[0] || '');
+  expect(S8, scriptSrc && !/unsafe-inline|unsafe-eval/.test(scriptSrc), `script-src strict (${scriptSrc})`, `script-src permite unsafe-*: ${scriptSrc}`, 'FAIL');
   expect(S8, /frame-ancestors\s+'none'/.test(csp), "CSP are frame-ancestors 'none'", 'CSP fără frame-ancestors', 'WARN');
   const hsts = h['strict-transport-security'] || '';
   expect(S8, /max-age=(\d+)/.test(hsts) && Number(hsts.match(/max-age=(\d+)/)[1]) >= 31536000, `HSTS ${hsts}`, `HSTS slab/lipsă: „${hsts}”`, 'WARN');

@@ -62,8 +62,9 @@ scripts/
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
 ├── dom-smoke.mjs           paginile în jsdom (local)           ├─ ./test.sh le rulează pe toate
-├── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
-└── prod-smoke.mjs          verificare blândă pe producție (o singură înregistrare, pauze)
+└── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
+    (verificarea pe producție = scripts/audit-live.mjs, prin relay; vechiul
+    prod-smoke.mjs a fost șters — descria site-ul privat cu invitații.)
 cf-relay/                   cmd.sh = comanda rulată de GitHub Actions; last-output.txt = rezultatul
 .github/workflows/cloudflare-relay.yml
 AGENTS.md                   ghid de predare pentru următorul care lucrează (CLAUDE.md trimite la el)
@@ -182,8 +183,8 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 | Enumerare conturi | login-ul face un hash „de umplutură" și când userul nu există, deci timpii de răspuns sunt identici; mesajul de eroare e același |
 | Sesiune | JWT HS256 cu `exp` (7 zile), în cookie `HttpOnly; Secure; SameSite=Lax; Path=/` |
 | CSRF | `SameSite=Lax` + verificare explicită a header-ului `Origin` pe toate cererile care modifică date |
-| XSS | **CSP strict fără `unsafe-inline`** — tot JS-ul e în fișiere externe, zero handlere inline. Randarea folosește `textContent`/`createElement`, niciodată `innerHTML` cu date de la utilizator. |
-| iframe player | `sandbox` + `referrerpolicy`; `frame-src` restricționat la domeniile DoodStream |
+| XSS | **CSP cu `script-src` strict, fără `unsafe-inline`** — tot JS-ul e în fișiere externe, zero handlere inline. (`style-src` are `unsafe-inline` deliberat: snippet A-Ads + pagina 404 din worker; stilurile nu execută JS.) Randarea folosește `textContent`/`createElement`, niciodată `innerHTML` cu date de la utilizator. |
+| iframe player | `referrerpolicy` + `allow` cu allowlist pe origin (`fullscreen *` etc.), fără `sandbox` (playerii terți cad silențios cu el — vezi comentariul din `episode.html`); `frame-src 'self' https:` — allowlist fix imposibil, furnizorii își rotesc domeniile (vezi `src/lib/http.js`) |
 | Alte headere | `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` |
 | Banare | `is_banned` e verificat la **fiecare** request autentificat, nu doar la login — un utilizator banat își pierde sesiunea imediat |
 | Rate limiting | login 10/5min, register 5/oră, watch 60/oră, chat 20/min + 1.5s între mesaje (toate pe IP sau per utilizator) |
@@ -216,8 +217,8 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/e2e.mjs`, `tests/dom-smoke.mjs`,
   `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
-- `node tests/prod-smoke.mjs [baseUrl]`: pe producție. **Nu rula e2e.mjs pe producție** — zecile de înregistrări
-  rapide declanșează protecția anti-brute-force de la marginea Cloudflare.
+- Pe producție **nu rula e2e.mjs** — zecile de înregistrări rapide declanșează protecția anti-brute-force
+  de la marginea Cloudflare. Verificarea pe live = `audit-live.mjs` prin relay (mai jos).
 - `node scripts/audit-live.mjs [baseUrl]`: audit read-only — statusuri pagini, SEO (title/description/canonical/og/
   JSON-LD/sitemap), headere de securitate și cookie, CSRF pe origine străină, rate limit la login/register,
   rute API publice vs protejate, soft-404, compresie/cache/minificare, scanare de secrete în bundle-urile publice.

@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/assets/css/page-episode.css">
   <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
-       pentru paginile fara efecte secundare la load (series/profile).
+       pentru paginile fara efecte secundare la load (/serie/*).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
   <style>
@@ -107,9 +107,9 @@
         hidden></video>
 
     </div>
-    <!-- Fullscreen-ul e BUTONUL SURSEI: iframe-ul are allow-fullscreen +
-         allow-fullscreen in sandbox, deci playerul furnizorului (mp4upload,
-         DoodStream etc.) isi poate face singur fullscreen. Noi nu punem
+    <!-- Fullscreen-ul e BUTONUL SURSEI: iframe-ul are allowfullscreen +
+         allow="fullscreen *" (fără sandbox — playerii terți cad silențios cu el),
+         deci playerul furnizorului își poate face singur fullscreen. Noi nu punem
          buton propriu peste al lui. Raman doar scurtaturile pentru fisierul
          video redat nativ. -->
     <div class="player-tools">
