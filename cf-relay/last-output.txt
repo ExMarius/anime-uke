@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 7703add
+comanda: cf-relay/cmd.sh @ ac2e2ce
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 7703add
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7703add
+    [0;32m✓[0m assete versionate ?v=ac2e2ce
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://b8ae3d1e.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://308a4c6c.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-21T19:24:02.269Z
+data: 2026-09-21T19:48:03.048Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (412 ms)
-  ℹ️  / → 200 · 412 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (383 ms)
+  ℹ️  / → 200 · 383 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-21T19:24:02.269Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 141 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 150 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-21T19:24:02.269Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 101 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 172 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-21T19:24:02.269Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 206 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 209 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 97 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 95 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 93 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 117 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 204 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 203 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 109 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 92 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -183,8 +183,8 @@ data: 2026-09-21T19:24:02.269Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=7703add (versiunea din HTML-ul live)
-  ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  cere assetele cu ?v=ac2e2ce (versiunea din HTML-ul live)
+  ℹ️  /assets/css/style.css → 200 · 68882 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/css/style.css e minificat
@@ -200,7 +200,7 @@ data: 2026-09-21T19:24:02.269Z
   ✅ /assets/css/page-admin.css e comprimat (br)
   ✅ /assets/css/page-admin.css are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/css/page-admin.css e minificat
-  ℹ️  /assets/js/core.js → 200 · 14210 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/core.js → 200 · 14289 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/core.js e comprimat (br)
   ✅ /assets/js/core.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/core.js e minificat
@@ -208,37 +208,37 @@ data: 2026-09-21T19:24:02.269Z
   ✅ /assets/js/chat.js e comprimat (br)
   ✅ /assets/js/chat.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/chat.js e minificat
-  ℹ️  /assets/js/page-index.js → 200 · 42324 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-index.js → 200 · 42403 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-index.js e comprimat (br)
   ✅ /assets/js/page-index.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-index.js e minificat
-  ℹ️  /assets/js/page-series.js → 200 · 43820 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-series.js → 200 · 43899 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-series.js e comprimat (br)
   ✅ /assets/js/page-series.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-series.js e minificat
-  ℹ️  /assets/js/page-episode.js → 200 · 46757 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-episode.js → 200 · 46836 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-episode.js e comprimat (br)
   ✅ /assets/js/page-episode.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-episode.js e minificat
-  ℹ️  /assets/js/page-profile.js → 200 · 51343 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-profile.js → 200 · 51422 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-profile.js e comprimat (br)
   ✅ /assets/js/page-profile.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-profile.js e minificat
-  ℹ️  /assets/js/page-shop.js → 200 · 29863 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-shop.js → 200 · 29942 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e comprimat (br)
   ✅ /assets/js/page-shop.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e minificat
-  ℹ️  /assets/js/page-admin.js → 200 · 20870 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-admin.js → 200 · 20949 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e comprimat (br)
   ✅ /assets/js/page-admin.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e minificat
-  ℹ️  total JS servit (8 fișiere): 258.0 KB (comprimat) — fără framework, e sănătos sub ~300 KB
-  ✅ buget JS ok: 258 KB
+  ℹ️  total JS servit (8 fișiere): 258.6 KB (comprimat) — fără framework, e sănătos sub ~300 KB
+  ✅ buget JS ok: 259 KB
   ℹ️  hero-1.jpg: fără Accept webp → image/jpeg (202731 B); cu Accept webp → image/webp (168738 B)
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 412 ms · /series 15 ms · /api/series 215 ms
+  ℹ️  timpi: / 383 ms · /series 21 ms · /api/series 194 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -304,4 +304,12 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=7703add 
+  ?v= din / (trebuie build-ul curent): ?v=ac2e2ce 
+=== verificari punctuale (logo V7) ===
+  /assets/img/logo.png → 200 (trebuie 200)
+  /assets/img/logo-icon.png → 200 (trebuie 200)
+  negociere webp logo: content-type: image/webp (trebuie image/webp)
+  favicon logo în /login: 1 (trebuie 1)
+  og:image logo în /: 1 (trebuie 1)
+  marca auth logo în /register: 1 (trebuie 1)
+  JS bundle conține logo-icon (navbar): 1 (trebuie ≥1)
