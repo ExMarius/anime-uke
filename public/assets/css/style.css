@@ -110,6 +110,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
   box-shadow: 0 4px 18px -4px var(--accent-glow);
   font-size: 1.05rem;
 }
+/* Brandul e <img> (logo-icon.png): umple cutia, fără deformare. */
+img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
+/* Mini-logo inline în textul de footer (<b><img> anime-uke</b>). */
+.fblogo { width: 1.15em; height: 1.15em; vertical-align: -.18em; border-radius: 4px; }
 .nav__brand__text { background: linear-gradient(92deg, #fff 20%, var(--accent-hi) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 .nav__links { display: flex; gap: .4rem; margin-left: auto; align-items: center; flex-wrap: wrap; }

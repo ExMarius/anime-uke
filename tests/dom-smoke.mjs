@@ -205,6 +205,10 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('link[rel="speculationrules"][href="/speculationrules.json"]'), 'lipseste <link rel=speculationrules>');
   const bellOn = await until(() => !!p.$('#nav-bell'));
   check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
+  // Nav-ul e randat aici (dovada: clopoțelul) — verificăm și brandul.
+  const brandImg = p.$('#nav .nav__brand__mark');
+  check('Brandul din nav e logo-ul (img, nu glifă)', brandImg?.tagName === 'IMG' && (brandImg.getAttribute('src') || '').includes('logo-icon.png'), `${brandImg?.tagName} ${brandImg?.getAttribute('src')}`);
+  check('Faviconul e logo-ul', (p.$('link[rel="icon"]')?.getAttribute('href') || '').includes('logo-icon.png'), p.$('link[rel="icon"]')?.getAttribute('href'));
   p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const popOn = await until(() => p.$('#notif-pop')?.hidden === false);
   check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));

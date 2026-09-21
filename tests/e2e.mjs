@@ -193,6 +193,22 @@ console.log('\n=== 1. VIZITATOR ===');
     const pre = JSON.stringify(spec?.prerender || []);
     check('prerender pe /serie/*', pre.includes('/serie/'), pre.slice(0, 120));
   }
+
+  // Logo: assete publice + referințe în HTML + negociere WebP (ca la hero).
+  {
+    for (const asset of ['/assets/img/logo.png', '/assets/img/logo-icon.png']) {
+      const r = await fetch(BASE + asset);
+      check(`GET ${asset} → 200 public`, r.status === 200, `status=${r.status}`);
+    }
+    const webp = await fetch(BASE + '/assets/img/logo-icon.png', { headers: { Accept: 'image/webp' } });
+    check('Negociere WebP și pentru PNG (logo)', (webp.headers.get('content-type') || '').includes('webp'), webp.headers.get('content-type'));
+    const homeHtml = await (await fetch(BASE + '/')).text();
+    check('og:image de pe / e logo-ul', homeHtml.includes('/assets/img/logo.png'), homeHtml.match(/og:image[^>]*>/)?.[0]);
+    const loginHtml = await (await fetch(BASE + '/login')).text();
+    check('Login folosește logo-ul (favicon + marca auth)',
+      loginHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && loginHtml.includes('auth-logo__mark'),
+      loginHtml.match(/<link rel="icon"[^>]*>/)?.[0]);
+  }
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
 }

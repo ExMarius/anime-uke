@@ -207,9 +207,12 @@ export async function renderNav(active = '') {
   const brand = document.createElement('a');
   brand.className = 'nav__brand';
   brand.href = '/';
-  const mark = document.createElement('span');
+  const mark = document.createElement('img');
   mark.className = 'nav__brand__mark';
-  mark.textContent = '鬼';
+  mark.src = '/assets/img/logo-icon.png';
+  mark.alt = '';                    // decorativ: numele e în .nav__brand__text
+  mark.setAttribute('aria-hidden', 'true');
+  mark.width = 34; mark.height = 34; // fără CLS: spațiul e rezervat din start
   const btext = document.createElement('span');
   btext.className = 'nav__brand__text';
   btext.textContent = 'anime-uke';
