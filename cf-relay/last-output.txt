@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9d0145c
+comanda: cf-relay/cmd.sh @ 0936caa
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 9d0145c
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=9d0145c
+    [0;32m✓[0m assete versionate ?v=0936caa
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://1095418c.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://0d2bd6e2.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -28,54 +28,60 @@ exit deploy: 0
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-14T20:21:38.935Z
+data: 2026-09-21T18:35:35.292Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (199 ms)
-  ℹ️  / → 200 · 199 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (284 ms)
+  ℹ️  / → 200 · 284 ms · title „Anime-Uke — Anime Ro Sub | Anime Subtitrat în Română Online ” (67 car.)
   ✅ / răspunde 200
-  ✅ / title are lungime sănătoasă (44)
-  ✅ / meta description 160 car.
+  ✅ / title are lungime sănătoasă (67)
+  ✅ / meta description 182 car.
   ✅ / are canonical
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
-  ⚠️  / are 3 assete fără ?v= (risc de cache vechi)
-  ℹ️  /login → 200 · 134 ms · title „Login • anime-uke” (17 car.)
+  ✅ / are toate assetele versionate (?v=)
+  ℹ️  /login → 200 · 226 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
   ✅ /login are canonical
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
-  ⚠️  /login are 3 assete fără ?v= (risc de cache vechi)
-  ℹ️  /register → 200 · 133 ms · title „Cont nou • anime-uke” (20 car.)
+  ✅ /login are toate assetele versionate (?v=)
+  ℹ️  /register → 200 · 227 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
   ✅ /register are canonical
   ℹ️  /register e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /register are lang="ro"
-  ⚠️  /register are 3 assete fără ?v= (risc de cache vechi)
+  ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 193 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 262 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 96 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 87 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 115 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 99 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 206 ms
+  ℹ️  /episod/4212 → 200 · 241 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian Episodul 1 ”
   ✅ /episod/4212 → 200
-  ℹ️  /episod/4211 → 200 · 99 ms
+  ✅ /episod/4212 are JSON-LD (SEO)
+  ✅ /episod/4212 are JSON-LD TVEpisode
+  ✅ /episod/4212 are og:type video.episode
+  ℹ️  /episod/4211 → 200 · 110 ms · title „Liar Game Episodul 1 Subtitrat în Română — Anime ro sub | An”
   ✅ /episod/4211 → 200
+  ✅ /episod/4211 are JSON-LD (SEO)
+  ✅ /episod/4211 are JSON-LD TVEpisode
+  ✅ /episod/4211 are og:type video.episode
 
 ── 2. Protecție pagini ──
   ✅ /profile → 302 /login?next=%2Fprofile
@@ -105,11 +111,11 @@ data: 2026-09-14T20:21:38.935Z
   ✅ robots.txt → 200
   ✅ robots.txt declară Sitemap:
   ✅ sitemap.xml → 200 și e XML
-  ✅ sitemap are 6 URL-uri
+  ✅ sitemap are 11 URL-uri
   ✅ toate URL-urile din sitemap folosesc originea canonică
   ✅ sitemap fără duplicate
   ✅ sitemap nu conține /series (ruta face 301 spre /)
-  ℹ️  sitemap: 6 URL-uri · primele 3: https://anime-uke.pages.dev/ https://anime-uke.pages.dev/serie/1019 https://anime-uke.pages.dev/serie/1018
+  ℹ️  sitemap: 11 URL-uri · primele 3: https://anime-uke.pages.dev/ https://anime-uke.pages.dev/serie/1019 https://anime-uke.pages.dev/serie/1018
   ✅ llms.txt → 200 (557 car.)
   ✅ speculationrules.json → 200
 
@@ -176,7 +182,7 @@ data: 2026-09-14T20:21:38.935Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=audit (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=960fa7b (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -231,7 +237,7 @@ data: 2026-09-14T20:21:38.935Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 199 ms · /series 10 ms · /api/series 242 ms
+  ℹ️  timpi: / 284 ms · /series 16 ms · /api/series 161 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -249,11 +255,7 @@ data: 2026-09-14T20:21:38.935Z
   ℹ️  /series/ → 301 /
 
 ════════════ PROBLEME (prioritizate) ════════════
-
-  🟡 de verificat (3):
-   • [1. Pagini + SEO] / are 3 assete fără ?v= (risc de cache vechi)
-   • [1. Pagini + SEO] /login are 3 assete fără ?v= (risc de cache vechi)
-   • [1. Pagini + SEO] /register are 3 assete fără ?v= (risc de cache vechi)
+  (niciuna — auditul a trecut curat)
 
 ════════════ NEACOPERIT FĂRĂ CONT ════════════
   Auditul rulează fără credențiale, deci NU probează: fluxul de login real,
@@ -262,7 +264,7 @@ data: 2026-09-14T20:21:38.935Z
   Acestea sunt acoperite local de ./test.sh — e2e (API) + dom-smoke (pagini) + caps (plafoane).
 
 ════════════ TOTAL ════════════
-  ✅ 159   🟡 3   🔴 0   ℹ️ 32
+  ✅ 168   🟡 0   🔴 0   ℹ️ 32
 exit audit: 0
 
 === verificari punctuale (fix-urile din audit) ===
@@ -287,4 +289,9 @@ exit audit: 0
   sitemap URL-uri: <loc>https://anime-uke.pages.dev/</loc> <loc>https://anime-uke.pages.dev/serie/1019</loc> <loc>https://anime-uke.pages.dev/serie/1018</loc> <loc>https://anime-uke.pages.dev/serie/1017</loc> <loc>https://anime-uke.pages.dev/serie/1015</loc> <loc>https://anime-uke.pages.dev/serie/1014</loc> 
   /serie/1014 (serie reala) → 200 (trebuie 200)
   /episod/4210 (episod real) → 200 (trebuie 200)
-  prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":6,"online":0}
+  SSR episod /episod/4210:
+    titlu: <title>One Piece — Episodul 3 subtitrat în română | Anime-Uke</title>
+    description: 1  canonical: 1  video.episode: 1
+    TVEpisode: 1  BreadcrumbList: 1  partOfTVSeries: 1
+    titlu generic ramas? (trebuie 0): 0
+  prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
