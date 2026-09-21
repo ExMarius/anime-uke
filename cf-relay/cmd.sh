@@ -73,3 +73,12 @@ echo "    linii: $(wc -l < /tmp/sm.txt) · prima: $(head -1 /tmp/sm.txt)"
 echo "  /sitemap (fara extensie) → $(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/sitemap") (trebuie 200 text/xml)"
 echo "  //sitemap.xml (slash dublu) → $(curl -s -o /dev/null -w '%{http_code}' "$B//sitemap.xml") (trebuie 200)"
 echo "  cu UA Googlebot: $(curl -s -o /dev/null -w '%{http_code}' -A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' "$B/sitemap.xml") (trebuie 200)"
+echo "=== inspectie bytes sitemap (GSC 'nu a putut fi citit') ==="
+curl -s -D /tmp/sm.hdr -o /tmp/sm.bin "$B/sitemap.xml"
+echo "--- headere complete ---"; tr -d '\r' < /tmp/sm.hdr
+echo "--- primii 120 bytes (hex+text, trebuie sa inceapa cu 3c 3f 78 6d = '<?xm') ---"; head -c 120 /tmp/sm.bin | od -A d -t x1z
+echo "--- ultimii 60 bytes ---"; tail -c 60 /tmp/sm.bin | od -A d -t x1z
+echo "--- validare XML stricta (expat, acelasi parser ca la Google) ---"; python3 -c "import xml.parsers.expat; p=xml.parsers.expat.ParserCreate(); p.Parse(open('/tmp/sm.bin','rb').read(), True); print('EXPAT: XML VALID')"
+echo "--- marime corp ---"; wc -c < /tmp/sm.bin
+echo "--- fara compresie (Accept-Encoding: identity) → compara bytes ---"; curl -s -H 'Accept-Encoding: identity' -o /tmp/sm2.bin "$B/sitemap.xml"; cmp -s /tmp/sm.bin /tmp/sm2.bin && echo IDENTIC || echo DIFERIT
+echo "--- txt: fiecare linie e URL pe domeniul nostru? ---"; python3 -c "lines=open('/tmp/sm.txt').read().split(chr(10)); bad=[l for l in lines if l and not l.startswith('https://anime-uke.pages.dev/')]; print('linii:', len(lines), '| invalide:', bad if bad else 'NICIUNA')"
