@@ -165,9 +165,9 @@ $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=tr
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
-# (Frații .webp ai imaginilor sunt COMISAȚI în repo: runner-ul GitHub nu are
-# ImageMagick, iar workerul nu mai negociaza WebP — paginile refera direct
-# .webp. De aceea NU se mai sterge nimic aici.)
+# Frații .webp ai imaginilor (hero, logo) sunt COMISAȚI în repo: runner-ul
+# GitHub nu are ImageMagick, iar workerul nu mai negociaza WebP — paginile
+# refera direct .webp. De aceea NU se mai sterge nimic aici.
 git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------

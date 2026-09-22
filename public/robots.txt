@@ -2,10 +2,12 @@
 # Doar zonele personale si de administrare raman in afara indexarii.
 User-agent: *
 Allow: /
-Allow: /series
+# Fără /series: face 301 spre / (n-are ce căuta nici aici, nici în sitemap).
 Allow: /episode
 Allow: /serie
 Allow: /episod
+# Utilitarele rămân Allow + noindex în pagină (nu Disallow: crawlerul trebuie
+# să vadă noindex-ul, altfel URL-ul poate apărea ca listare fără conținut).
 Allow: /login
 Allow: /register
 Disallow: /admin
@@ -16,3 +18,4 @@ Disallow: /chat
 Disallow: /logout
 
 Sitemap: https://anime-uke.pages.dev/sitemap.xml
+Sitemap: https://anime-uke.pages.dev/sitemap.txt

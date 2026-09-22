@@ -39,7 +39,15 @@ export async function grantBadge(env, userId, badge, month = '') {
 
 /** Adauga XP si rezolva nivelurile in bucla (cat timp trece de prag). */
 export async function addXp(env, userId, amount) {
-  if (!amount) return { leveledUp: false };
+  if (!amount) return { leveledUp: false, boosted: false };
+  // Boost-ul din shop (⚡ Boost XP 24h) dubleaza XP-ul din ORICE sursa cat e
+  // activ — o citire pe cheia primara, aceeasi ca in bucla de mai jos.
+  let boosted = false;
+  const b = await env.DB.prepare('SELECT xp_boost_until FROM users WHERE id = ?').bind(userId).first();
+  if (b?.xp_boost_until && Date.now() < b.xp_boost_until) {
+    amount *= 2;
+    boosted = true;
+  }
   await env.DB.prepare('UPDATE users SET xp = xp + ? WHERE id = ?').bind(amount, userId).run();
 
   let leveledUp = false;
@@ -54,7 +62,7 @@ export async function addXp(env, userId, amount) {
       .run();
     leveledUp = true;
   }
-  return { leveledUp };
+  return { leveledUp, boosted };
 }
 
 /** Puncte lunare + insigna „Utilizator activ" cand treci de pragul lunii. */
@@ -78,6 +86,8 @@ export async function addMonthly(env, userId, amount) {
 /** Perechea standard din spec: aceeasi actiune hraneste ambele contoare. */
 export async function addActivity(env, userId, amount) {
   const r = await addXp(env, userId, amount);
-  await addMonthly(env, userId, amount);
+  // Punctele lunare tin pasul cu XP-ul FINAL (dublat de boost): altfel
+  // boost-ul ar umfla nivelul fara sa miste clasamentul lunar.
+  await addMonthly(env, userId, r.boosted ? amount * 2 : amount);
   return r;
 }

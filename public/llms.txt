@@ -2,7 +2,6 @@
 
 > Platformă gratuită de streaming cu anime subtitrat în română. Catalogul și episoadele se vizionează fără cont; contul e necesar doar pentru progres, puncte, chat și contribuții.
 
-- [Acasă](https://anime-uke.pages.dev/): pagina principală — hero, catalog și chat
-- [Catalog serii](https://anime-uke.pages.dev/series): toate seriile, cu filtre pe gen și status
+- [Acasă + catalog](https://anime-uke.pages.dev/): pagina principală — hero, catalog (cu filtre pe gen și status) și chat
 - [One Piece](https://anime-uke.pages.dev/serie/1014): exemplu de pagină de serie
 - [Sitemap XML](https://anime-uke.pages.dev/sitemap.xml): indexul complet de URL-uri pentru crawleri

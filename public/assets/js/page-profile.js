@@ -539,8 +539,11 @@ function renderEconomy() {
 
   const xpPct = d.xp_needed > 0 ? Math.min(100, Math.round((d.xp / d.xp_needed) * 100)) : 0;
   document.getElementById('econ-xp-fill').style.width = `${xpPct}%`;
-  document.getElementById('econ-xp-label').textContent =
-    `${fmt(d.xp)} / ${fmt(d.xp_needed)} XP până la nivelul următor`;
+  let xpLabel = `${fmt(d.xp)} / ${fmt(d.xp_needed)} XP până la nivelul următor`;
+  if ((d.xp_boost_ms || 0) > 0) {
+    xpLabel += ` · ⚡ Boost ×2 încă ${Math.floor(d.xp_boost_ms / 3600000)}h ${Math.floor((d.xp_boost_ms % 3600000) / 60000)}m`;
+  }
+  document.getElementById('econ-xp-label').textContent = xpLabel;
 
   const mPct = Math.min(100, Math.round((d.monthly_points / d.monthly_goal) * 100));
   document.getElementById('econ-month-fill').style.width = `${mPct}%`;
@@ -813,13 +816,15 @@ async function loadFaction() {
   paintFaction();
 }
 
-function factionPickHTML() {
+function factionPickHTML(useToken = false) {
   const d = factionData;
   const wrap = document.createElement('div');
   wrap.className = 'faction__pick';
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.innerHTML = 'Alege o facțiune la <b>începutul lunii</b>. Episoadele, comentariile și cufărul îți aduc <b>reputație</b> pentru ea.';
+  hint.innerHTML = useToken
+    ? `Ai <b>${d.faction_tokens || 0} jetoane 🔀</b> — alege facțiunea în care treci ACUM (se consumă 1 jeton).`
+    : 'Alege o facțiune la <b>începutul lunii</b>. Episoadele, comentariile și cufărul îți aduc <b>reputație</b> pentru ea.';
   wrap.appendChild(hint);
 
   const grid = document.createElement('div');
@@ -840,10 +845,14 @@ function factionPickHTML() {
     tiers.textContent = f.tiers.map((x) => x.label).join(' → ');
     b.append(icon, name, tiers);
     b.addEventListener('click', async () => {
-      if (!confirm(`Intri în facțiunea „${f.title}"? Alegerea e blocată până la începutul lunii următoare.`)) return;
-      const r = await api('/factions', { method: 'POST', body: { faction: f.slug } });
+      if (useToken && f.slug === d.my_faction) { toast('Ești deja în facțiunea asta.', 'info'); return; }
+      const q = useToken
+        ? `Treci în facțiunea „${f.title}" ACUM, cu 1 jeton 🔀?`
+        : `Intri în facțiunea „${f.title}"? Alegerea e blocată până la începutul lunii următoare.`;
+      if (!confirm(q)) return;
+      const r = await api('/factions', { method: 'POST', body: useToken ? { faction: f.slug, use_token: 1 } : { faction: f.slug } });
       if (!r.ok) { toast(r.data?.error || 'Nu am putut schimba facțiunea', 'error'); return; }
-      toast(`🏛️ Bun venit în ${f.title}! Gradele tale sunt acum pe tema ei.`, 'success', 6000);
+      toast(useToken ? `🔀 Bine ai venit în ${f.title}! (1 jeton consumat)` : `🏛️ Bun venit în ${f.title}! Gradele tale sunt acum pe tema ei.`, 'success', 6000);
       await loadFaction();
       renderNav('').catch(() => {});
     });
@@ -880,6 +889,16 @@ function paintFaction() {
     t2.className = 'faction__win';
     t2.innerHTML = ' 🏅 Facțiunea ta a CÂȘTIGAT luna trecută — primești 1.5x gold și XP!';
     sub.appendChild(t2);
+  }
+
+  // 🔀 Jetonul din shop: schimbare imediata, fara sa astepti luna urmatoare.
+  if (!d.can_change && (d.faction_tokens || 0) > 0) {
+    body.appendChild(factionPickHTML(true));
+  } else if (!d.can_change) {
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.innerHTML = 'Schimbarea e blocată până la începutul lunii următoare — sau <b>acum</b>, cu un 🔀 <a href="/shop">jeton din shop</a>.';
+    body.appendChild(note);
   }
 
   // Top membri + lider

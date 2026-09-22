@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, applySiteTheme } from './core.js';
 
 // =====================================================================
 // Panoul admin. Toate celulele sunt construite cu createElement +
@@ -35,6 +35,7 @@ async function guard() {
 const LOADERS = {
   stats: loadStats,
   users: loadUsers,
+  sezon: loadSeason,
   ranks: loadRanks,
   reports: loadReports,
   log: loadLog,
@@ -144,13 +145,21 @@ async function loadUsers() {
   const tbody = document.querySelector('#users-table tbody');
   tbody.innerHTML = '';
 
-  if (!users.length) { tbody.appendChild(emptyRow(6, 'Niciun utilizator.')); return; }
+  if (!users.length) { tbody.appendChild(emptyRow(9, 'Niciun utilizator.')); return; }
 
   for (const u of users) {
     const isSelf = u.id === currentId;
     const tr = document.createElement('tr');
+    tr.dataset.uid = u.id;
 
     const actions = [];
+    // Economia se poate ajusta si pe propriul cont (gold/puncte/nivel nu
+    // pot bloca panoul); rolul/banul/stergerea raman interzise pe sine.
+    actions.push({
+      label: '💰 Gold/Puncte/Nivel',
+      cls: 'btn btn--sm btn--ghost',
+      onClick: () => toggleEconEditor(u, tr),
+    });
     if (!isSelf) {
       actions.push({
         label: u.is_admin ? 'Fă user' : 'Fă admin',
@@ -173,13 +182,28 @@ async function loadUsers() {
       cell(u.id),
       cell(u.username + (isSelf ? ' (tu)' : '')),
       cell(u.email),
-      cell(u.points),
+      cell(fmtNum(u.points)),
+      cell(`🪙 ${fmtNum(u.gold)}`),
+      cell(`Nv. ${u.level ?? 1} · ${fmtNum(u.xp)} XP`),
       pill(staffLabel(u), u.is_admin ? 'pill--admin' : u.staff_role ? 'pill--staff' : 'pill--user'),
       pill(u.is_banned ? 'Banat' : 'Activ', u.is_banned ? 'pill--banned' : 'pill--user'),
-      actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]),
+      actionsCell(actions),
     );
     tbody.appendChild(tr);
   }
+  // Dupa o ajustare reusita redeschidem editorul pe acelasi user (valorile
+  // „acum" sunt proaspete, nu trebuie sa-l cauti din nou in lista).
+  if (editorUserId != null) {
+    const row = tbody.querySelector(`tr[data-uid="${editorUserId}"]`);
+    const u = users.find((x) => x.id === editorUserId);
+    if (row && u) openEconEditor(u, row);
+    else editorUserId = null;
+  }
+}
+
+/** Numar cu separatori ro-RO (null/undefined → 0). */
+function fmtNum(v) {
+  return Number(v || 0).toLocaleString('ro-RO');
 }
 
 /** Eticheta de rol din tabelul de utilizatori: Admin / grad de staff / User. */
@@ -213,6 +237,229 @@ async function deleteUser(user) {
   toast(`Contul „${user.username}" a fost șters`, 'ok');
   loadUsers();
   loadStats();
+}
+
+// ---------------------------------------------------------------------
+// EDITOR ECONOMIE (gold/puncte/nivel): un rand extensibil sub utilizator,
+// cu trei mini-formulare. Delta-urile (gold/puncte) accepta si negative
+// (scadere, cu oprire la 0); nivelul se seteaza absolut (1-100, XP-ul se
+// reseteaza la pragul nivelului). Dupa fiecare aplicare reusita lista se
+// reincarca si editorul se redeschide pe acelasi user.
+// ---------------------------------------------------------------------
+let editorUserId = null;
+
+function toggleEconEditor(u, tr) {
+  if (editorUserId === u.id) {
+    editorUserId = null;
+    tr.parentNode.querySelector('.econ-edit-row')?.remove();
+    return;
+  }
+  editorUserId = u.id;
+  tr.parentNode.querySelector('.econ-edit-row')?.remove();
+  openEconEditor(u, tr);
+}
+
+function openEconEditor(u, tr) {
+  const row = document.createElement('tr');
+  row.className = 'econ-edit-row';
+  const td = document.createElement('td');
+  td.colSpan = 9;
+  const wrap = document.createElement('div');
+  wrap.className = 'econ-edit';
+  wrap.append(
+    econGroup(`🪙 Gold — acum: ${fmtNum(u.gold)}`, '±delta (ex. 500 sau -200)', 'Adaugă', (v) => applyEcon(u, 'set_gold', v, (d) => `🪙 Gold nou: ${fmtNum(d.gold)}`)),
+    econGroup(`⭐ Puncte — acum: ${fmtNum(u.points)}`, '±delta (ex. 100 sau -50)', 'Adaugă', (v) => applyEcon(u, 'set_points', v, (d) => `⭐ Puncte noi: ${fmtNum(d.points)}`)),
+    econGroup(`🎚️ Nivel — acum: Nv. ${u.level ?? 1}`, 'nivel absolut 1-100', 'Setează', (v) => applyEcon(u, 'set_level', v, (d) => `🎚️ Nivel nou: Nv. ${d.level} (XP resetat)`)),
+  );
+  td.appendChild(wrap);
+  row.appendChild(td);
+  tr.after(row);
+}
+
+/** Un mini-formular: eticheta + input numeric + buton. Fara innerHTML. */
+function econGroup(label, placeholder, btnLabel, onApply) {
+  const grp = document.createElement('div');
+  grp.className = 'econ-edit__grp';
+  const lab = document.createElement('span');
+  lab.className = 'econ-edit__label';
+  lab.textContent = label;
+  const input = document.createElement('input');
+  input.className = 'input input--sm econ-edit__input';
+  input.type = 'number';
+  input.step = '1';
+  input.placeholder = placeholder;
+  input.setAttribute('aria-label', label);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn--accent btn--sm';
+  btn.textContent = btnLabel;
+  btn.addEventListener('click', () => withBusy(btn, async () => {
+    const raw = input.value.trim();
+    if (!raw) { toast('Scrie o valoare mai întâi', 'err'); return; }
+    await onApply(Number(raw));
+  }));
+  const line = document.createElement('div');
+  line.className = 'econ-edit__line';
+  line.append(input, btn);
+  grp.append(lab, line);
+  return grp;
+}
+
+async function applyEcon(u, action, value, okMsg) {
+  if (action === 'set_level' && !confirm(`Îl treci pe ${u.username} la nivelul ${value}? XP-ul i se resetează la pragul nivelului.`)) return;
+  const res = await api('/admin/users', { method: 'POST', body: { action, user_id: u.id, value } });
+  if (!res.ok) { toast(res.data?.error || 'Ajustarea a eșuat', 'err'); return; }
+  toast(okMsg(res.data), 'ok');
+  editorUserId = u.id; // ramane deschis dupa reincarcarea listei
+  loadUsers();
+  loadStats();
+}
+
+// ---------------------------------------------------------------------
+// SEZON: tema globala pentru toata lumea (doar adminul o seteaza). Temele
+// de sezon nu apar in shop; cine are tema personala o pastreaza, restul vad
+// sezonul. Previzualizarea foloseste acelasi mecanism ca in shop (motorul
+// canvas porneste singur la schimbarea clasei body).
+// ---------------------------------------------------------------------
+async function loadSeason() {
+  const box = document.getElementById('sezon-list');
+  const cur = document.getElementById('sezon-curent');
+  if (!box) return;
+  const res = await api('/admin/season');
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca sezonul.'; return; }
+  const activ = res.data.seasonal_theme || null;
+  if (cur) cur.textContent = activ ? `activă: ${(res.data.available || []).find((t) => t.id === activ)?.name || activ}` : 'dezactivat';
+  box.innerHTML = '';
+  for (const t of res.data.available || []) {
+    const row = document.createElement('div');
+    row.className = 'ranks-row';
+    const title = document.createElement('span');
+    title.className = 'ranks-row__title';
+    title.textContent = `${t.id === activ ? '✅ ' : ''}${t.name}`;
+    row.appendChild(title);
+    const peek = document.createElement('button');
+    peek.type = 'button';
+    peek.className = 'btn btn--ghost btn--sm';
+    peek.textContent = '👁 Previzualizează';
+    peek.addEventListener('click', () => peekSeason(t.id));
+    const set = document.createElement('button');
+    set.type = 'button';
+    set.className = 'btn btn--accent btn--sm';
+    set.textContent = t.id === activ ? '✓ Activă' : 'Setează ca sezon';
+    set.disabled = t.id === activ;
+    set.addEventListener('click', () => withBusy(set, async () => {
+      if (!confirm(`„${t.name}" devine tema TUTUROR (temele personale active se resetează — nimic cumpărat nu se pierde). Continui?`)) return;
+      const r = await api('/admin/season', { method: 'POST', body: { theme_id: t.id } });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut seta sezonul', 'error'); return; }
+      const n = Number(r.data?.reset_users) || 0;
+      toast(`Sezon activ: ${t.name} 🍂 (${n} ${n === 1 ? 'utilizator trecut' : 'utilizatori trecuți'} pe sezon)`, 'success');
+      const meNow = await getSession(true);
+      applySiteTheme(meNow?.site_theme || null);
+      loadSeason();
+    }));
+    row.append(peek, set);
+    box.appendChild(row);
+  }
+  await paintSeasonBanner(activ, res.data.available || []);
+}
+
+// ---------------------------------------------------------------------
+// Banner „tu vezi X, ceilalti vad sezonul": adminul cu tema personala NU
+// vede sezonul (asa e specificatia), dar nimic nu-i spunea asta — parea un
+// bug („am activat Halloween si vad toamna"). Bannerul arata tema efectiva
+// a adminului + buton de previzualizare PERSISTENTA (pana la refresh).
+// ---------------------------------------------------------------------
+async function paintSeasonBanner(activ, available) {
+  document.getElementById('sezon-banner')?.remove();
+  if (!activ) return;
+  const me = await getSession().catch(() => null);
+  const efectiv = me?.site_theme || null;
+  if (efectiv === activ) return; // vede sezonul — nimic de explicat
+  const numeSezon = (available.find((t) => t.id === activ) || {}).name || activ;
+  let numeEfectiv = 'Standard';
+  let motiv = 'se propagă — dă Refresh în câteva secunde';
+  if (efectiv) {
+    // Numele temei efective + activarea RAW (api() prefixeaza singur /api;
+    // /auth/me NU expune active_theme, dar /shop da — e singura sursa).
+    const shop = await api('/shop');
+    numeEfectiv = (shop.data?.themes || []).find((t) => t.id === efectiv)?.name || efectiv;
+    if (shop.data?.active_theme) motiv = 'temă personală';
+  }
+  const bold = (s) => { const e = document.createElement('b'); e.textContent = s; return e; };
+  const panel = document.querySelector('#panel-sezon .box');
+  const list = document.getElementById('sezon-list');
+  if (!panel || !list) return;
+  const b = document.createElement('div');
+  b.id = 'sezon-banner';
+  b.className = 'box__hint'; // clasa exista in HTML — zero risc de purge CSS
+  const txt = document.createElement('span');
+  txt.append(
+    document.createTextNode('👁️ Tu vezi acum '),
+    bold(numeEfectiv),
+    document.createTextNode(` (${motiv}) — ceilalți utilizatori pe Standard văd `),
+    bold(numeSezon),
+    document.createTextNode('. '),
+  );
+  const vezi = document.createElement('button');
+  vezi.type = 'button';
+  vezi.id = 'sezon-vezi';
+  vezi.className = 'btn btn--accent btn--sm';
+  vezi.textContent = 'Vezi sezonul';
+  const mea = document.createElement('button');
+  mea.type = 'button';
+  mea.id = 'sezon-mea';
+  mea.className = 'btn btn--ghost btn--sm';
+  mea.textContent = '⟳ Înapoi la tema mea';
+  mea.disabled = true;
+  vezi.addEventListener('click', () => {
+    previewSeasonPersistent(activ);
+    vezi.disabled = true;
+    mea.disabled = false;
+  });
+  mea.addEventListener('click', async () => {
+    const m2 = await getSession(true);
+    applySiteTheme(m2?.site_theme || null);
+    vezi.disabled = false;
+    mea.disabled = true;
+  });
+  b.append(txt, vezi, document.createTextNode(' '), mea);
+  panel.insertBefore(b, list);
+}
+
+/** Previzualizare PERSISTENTA a sezonului (pana la refresh): nu scrie in
+ *  cache-ul de tema, deci la reincarcare revine tema proprie. Motorul canvas
+ *  porneste/opreste singur din MutationObserver la schimbarea clasei. */
+function previewSeasonPersistent(themeId) {
+  document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
+  document.body.classList.add(`theme-${themeId.slice(6)}`);
+  toast('👁️ Vezi sezonul acum — rămâne până reîncarci pagina', 'info', 4000);
+}
+
+function initSeason() {
+  document.getElementById('sezon-clear')?.addEventListener('click', async (e) => {
+    await withBusy(e.currentTarget, async () => {
+      const r = await api('/admin/season', { method: 'POST', body: { theme_id: '' } });
+      if (!r.ok) { toast(r.data?.error || 'Eroare', 'error'); return; }
+      toast('Sezon dezactivat — toată lumea revine la tema proprie/Standard', 'success');
+      const meNow = await getSession(true);
+      applySiteTheme(meNow?.site_theme || null);
+      loadSeason();
+    });
+  });
+}
+initSeason();
+
+/** Previzualizare 5s a unei teme de sezon, apoi revenire la tema efectiva. */
+let sezonPeekTimer = 0;
+function peekSeason(themeId) {
+  document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
+  document.body.classList.add(`theme-${themeId.slice(6)}`);
+  toast('👁️ Previzualizare 5 secunde…', 'info', 2000);
+  clearTimeout(sezonPeekTimer);
+  sezonPeekTimer = setTimeout(async () => {
+    const me = await getSession(true);
+    applySiteTheme(me?.site_theme || null);
+  }, 5000);
 }
 
 // GRADE: grade de staff (acordate manual) + teme de nivel (automate)

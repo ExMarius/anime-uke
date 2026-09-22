@@ -3,7 +3,7 @@
 // proprietatile; cumpararea e un POST cu confirmare in doi pasi (click
 // pe card → click pe „Confirma"), ca sa nu arunci gold-ul din greseala.
 // =====================================================================
-import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession } from './core.js';
+import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession, applySiteTheme } from './core.js';
 import { initChat } from './chat.js';
 
 let data = null;
@@ -15,6 +15,16 @@ function paint() {
   if (!data) return;
 
   goldEl.textContent = `🪙 ${data.gold.toLocaleString('ro-RO')}`;
+  // Banner boost XP (⚡ Boost 24h): cat e activ, tot XP-ul e dublu.
+  const boostEl = document.getElementById('shop-boost');
+  if (boostEl) {
+    const until = data.boost_until || 0;
+    if (data.boost_active && until > Date.now()) {
+      const ms = until - Date.now();
+      boostEl.hidden = false;
+      boostEl.textContent = `⚡ Boost XP activ — tot XP-ul e dublu încă ${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m.`;
+    } else boostEl.hidden = true;
+  }
   paintColors();
   paintThemes();
   grid.innerHTML = '';
@@ -90,6 +100,7 @@ function paintColors() {
     nm.className = 'color-card__name';
     nm.textContent = myName;
     if (c.special === 'rainbow') nm.classList.add('nc-rainbow');
+    else if (c.special === 'sunset') nm.classList.add('nc-sunset');
     else if (c.special === 'glow') { nm.classList.add(`nc-${c.id.slice(6)}`, 'nc-glow'); }
     else nm.classList.add(`nc-${c.id.slice(6)}`);
     demo.append('Culoare: ', nm);
@@ -119,7 +130,7 @@ function paintThemes() {
 
     const name = document.createElement('h3');
     name.className = 'theme-card__name';
-    name.textContent = t.name;
+    name.textContent = t.id === 'theme_standard' && data.seasonal ? `Standard (sezon: ${data.seasonal.name})` : t.name;
 
     const chip = document.createElement('button');
     chip.type = 'button';
@@ -131,7 +142,7 @@ function paintThemes() {
     foot.className = 'color-card__foot';
     const price = document.createElement('span');
     price.className = 'color-card__price';
-    price.textContent = t.price <= 1 ? 'Gratuit' : `🪙 ${t.price.toLocaleString('ro-RO')}`;
+    price.textContent = t.seasonal && t.owned ? '🍂 Deținută (sezon)' : t.price <= 1 ? 'Gratuit' : `🪙 ${t.price.toLocaleString('ro-RO')}`;
     foot.appendChild(price);
     foot.appendChild(actionBtn(t, () => activate(t, card)));
     card.append(name, chip, foot);
@@ -190,7 +201,7 @@ async function activate(item, btn) {
     if (isColor) data.active_name_color = res.data.active_name_color;
     else {
       data.active_theme = res.data.active_theme;
-      setThemeClass(currentThemeSlug());
+      applySiteTheme(res.data.active_theme); // aplica + sincronizeaza cache-ul instant
     }
     // împrospătăm stările active/owned din răspunsul local
     for (const c of data.colors || []) c.active = c.id === data.active_name_color;
@@ -226,23 +237,34 @@ async function buy(item, btn, after) {
       return;
     }
     delete btn.dataset.confirm;
-    data.gold = res.data.gold;
-    if (item.id.startsWith('color_')) {
-      const c = (data.colors || []).find((x) => x.id === item.id);
-      if (c) { c.owned = true; c.can_buy = false; }
-    } else if (item.id.startsWith('theme_')) {
-      const t = (data.themes || []).find((x) => x.id === item.id);
-      if (t) { t.owned = true; t.can_buy = false; }
+    if (res.data.refetch) {
+      // Articolele instant/pachet schimba mai multe lucruri deodata (gold
+      // primit inapoi, boost, chei creditate) — reincarcam starea, nu o peticim.
+      const fresh = await api('/shop');
+      if (fresh.ok) data = fresh.data;
     } else {
-      for (const it of data.items) {
-        if (it.id === item.id) it.qty = res.data.qty;
-        it.owned = !it.consumable && it.qty > 0;
+      data.gold = res.data.gold;
+      if (item.id.startsWith('color_')) {
+        const c = (data.colors || []).find((x) => x.id === item.id);
+        if (c) { c.owned = true; c.can_buy = false; }
+      } else if (item.id.startsWith('theme_')) {
+        const t = (data.themes || []).find((x) => x.id === item.id);
+        if (t) { t.owned = true; t.can_buy = false; }
+      } else {
+        for (const it of data.items) {
+          if (it.id === item.id) it.qty = res.data.qty;
+          it.owned = !it.consumable && it.qty > 0;
+        }
       }
     }
     paint();
     clearSession();          // gold-ul din nav se reimprospateaza
     renderNav('');
-    toast(`✅ ${item.name || 'Articol'} e al tău!`, 'success');
+    const doneMsg = res.data.reward_text ? `🎁 ${res.data.reward_text}`
+      : res.data.boost_until ? '⚡ Boost XP activ — tot XP-ul e dublu 24h!'
+      : res.data.xp_granted ? `📚 +${res.data.xp_granted} XP!`
+      : `✅ ${item.name || 'Articol'} e al tău!`;
+    toast(doneMsg, 'success');
     if (after) await after();
   });
 }

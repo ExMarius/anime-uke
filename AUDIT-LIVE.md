@@ -1,32 +1,36 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-22 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
+**Data:** 2026-09-21 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
 **Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=2db4976` (wrangler 4.131.2, migrări 0001–0025 aplicate remote)
+**Build auditat:** `?v=7703add` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi —
+doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
 | 1 (înainte de reparări, build `eb03ecd`) | ✅ 144 · 🟡 19 · 🔴 2 | auditul inițial: 2 probleme reale + 19 observații |
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
-| 3 (după optimizările de buget, build `2db4976`) | ✅ 168 · 🟡 0 · 🔴 0 | probe noi pe „ce nu trece prin worker” — toate verzi |
+| 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
+| 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
+| 5 (integrare + buget de invocări, build `<vezi mai jos>`) | vezi §1d | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 
 ---
 
-## 0. Sesiunea „buget 0": de ce site-ul nu mai poate pica la trafic
+## 1d. Runda 5 (2026-09-22): integrare + buget de invocări
 
-Planul gratuit dă **100.000 de invocări de Worker pe zi**, iar fiecare cerere care ajunge în
-Pages Functions consumă una. Un vizitator fără cont cheltuia ~12 invocări (1 pagină + 6 assete +
-5 cereri de API: `/series`, `/top`, `/recent`, `/genres`, `/pulse`). Acum cheltuie **~2**.
+Două sesiuni lucrau în paralel pe `main` și **ambele publicau în același proiect Pages**, deci
+live-ul oscila între două versiuni divergente. Acum există o singură linie, testată împreună:
+feature-urile din `arena/01a0c538-anime-uke` (SSR SEO pe episod, logo, teme de sezon, shop 2.0,
+sitemap-uri GSC) + bugetul de invocări din `arena/01a0ca0d-anime-uke`.
 
-| Ce s-a schimbat | Efect | Dovada pe live (build `2db4976`) |
+| Schimbare | Efect | Dovada pe live |
 |---|---|---|
-| `public/_routes.json`: `/assets/*`, `/`, `/login`, `/register`, `/episode` nu mai intră în worker | assetele = 0 invocări; o pagină statică = 0 invocări | `cache-control: public, max-age=31536000, immutable` (o singură valoare — înainte ieșea `no-cache, no-cache`, semnul trecerii prin worker) |
-| `public/_headers`: headerele de securitate pentru căile ocolite | securitatea nu scade (paritate verificată automat) | CSP + HSTS + `X-Frame-Options` + `Permissions-Policy` + CORP prezente pe `/assets/css/style.css` (5/5); `/profile`, `/admin`, `/shop` încă 302 → `/login?next=…`; `/serie/99999999` → 404 |
-| `/api/home`: prima pagină într-o singură cerere (catalog + topuri + ultimele episoade + genuri + „online") | 5 cereri de API → 1 | `/api/home` → 200 (public), agregare completă, 289 ms |
-| imagini referite direct `.webp` (frați comiși în repo) | fără negociere pe server, fără cereri duble | `hero-1.webp` → 200 `image/webp` (168 KB vs 202 KB JPEG); pagina nu mai cere `.jpg`-ul (rămâne doar în `og:image`, pentru rețelele sociale) |
+| `public/_routes.json` — `/assets/*`, `/`, `/login`, `/register`, `/episode`, favicon, apple-touch-icon, robots/llms/speculationrules nu mai intră în worker | acele cereri costă **0 invocări** | `cache-control: public, max-age=31536000, immutable` pe asset, o singură valoare (înainte: `no-cache, no-cache` = semnul trecerii prin worker) |
+| `public/_headers` — headerele cailor ocolite, identice cu `SECURITY_HEADERS` (inclusiv `style-src 'unsafe-inline'`, decizia documentată pentru A-Ads) | securitatea nu scade | CSP + HSTS + X-Frame-Options + Permissions-Policy + CORP + nosniff pe asset; `tests/e2e.mjs` compară cele două seturi |
+| `GET /api/home` — prima pagină într-o singură invocare (catalog + topuri + ultimele episoade + genuri + „online") | 5 cereri de API → **1** | `/api/home` → 200 public, toate secțiunile; `dom-smoke` numără cererile paginii |
+| imagini cerute direct `.webp` (hero + logo), `.png`/`.jpg` doar pentru favicon, `og:image` și rezervă | fără negociere pe server, fără cereri duble | `logo-icon.webp` 1,9 KB vs PNG 10,9 KB; `og:image` rămâne PNG (rețelele sociale nu acceptă WebP) |
+| `scripts/usage.mjs` (`npm run usage`, rulat de relay) | consumul zilei din cotele gratuite, vizibil | vezi tabelul de mai jos |
 
-**Consum real, măsurat (`node scripts/usage.mjs` prin relay, ziua UTC 2026-09-22** — zi care
-include toate deployurile, auditurile și suitele de teste ale zilei):
+**Consum real măsurat** (ziua UTC în care s-a deployat, cu toate testele și auditurile):
 
 | Cotă gratuită | Consumat | Din plafon |
 |---|---|---|
@@ -37,8 +41,7 @@ include toate deployurile, auditurile și suitele de teste ale zilei):
 | DO durată | 1 GB-s | 0% |
 
 **De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke` →
-Settings → Runtime → **Fail open**. Atunci, chiar dacă se epuizează cota, catalogul static
-continuă să se încarce (nu pagina de eroare).
+Settings → Runtime → **Fail open**, ca la epuizarea cotei catalogul static să rămână vizibil.
 
 ---
 
@@ -56,13 +59,34 @@ continuă să se încarce (nu pagina de eroare).
 `public/register.html`, `tests/e2e.mjs` (+19 verificări), `scripts/audit-live.mjs` (probe noi).
 **Teste locale după reparări:** `./test.sh` → e2e **474** · dom-smoke **147** · caps **13**, toate verzi.
 
+## 1b. Runda 3 (2026-09-21): SSR SEO pe `/episod/<id>`
+
+Punctul 1 din §3 („cea mai mare oportunitate de trafic organic”) e implementat: `episodeForSeo()` citește
+episodul + seria dintr-un JOIN indexat, cu cache 5 min în izolat (inclusiv negativ); la eroare D1 pagina
+se servește nemodificată, fără 404 fals. Titlul generic „Episod • anime-uke” nu mai ajunge niciodată la
+crawleri — e înlocuit server-side. Verificat pe live (`/episod/4210`, `/episod/4211`, `/episod/4212`):
+200 + `TVEpisode` + `video.episode`.
+**Fișiere atinse:** `src/worker.js`, `tests/e2e.mjs` (+8 verificări → **482**), `scripts/audit-live.mjs` (+6 probe).
+
+## 1c. Runda 4 (2026-09-21): fix-urile verificării totale
+
+`style-src 'unsafe-inline'` deliberat (reclamele A-Ads, pagina 404 din worker și layout-ul admin erau
+blocate de CSP; `script-src` rămâne strict — proba de audit verifică acum per-directivă); HSTS și pe
+răspunsurile API; `/api/pulse` citește DO-ul de chat corect (`global-chat`, era `global` → `online` mereu
+0, verificat local cu socket real: 0→1→0); `/404`, `/admin/serie` bare și `/covers/*` scos din allowlist
+(toate → 404 cu pagina site-ului); `robots.txt` fără `Allow: /series`; prerender pe `/serie/*`.
+**Fișiere atinse:** `src/lib/http.js`, `src/worker.js`, `src/routes/api/pulse.js`, `public/robots.txt`,
+`public/speculationrules.json`, `tests/e2e.mjs` (+9 verificări → **491**), `scripts/audit-live.mjs`,
+`README.md`; șters `tests/prod-smoke.mjs` (expirat, dublat de audit-live).
+Notă operațională: între deploy și audit se așteaptă 60s (propagarea Pages a servit o dată HTML vechi).
+
 ---
 
 ## 2. Ce e sănătos (verificat pe live, nu doar în cod)
 
 | Zonă | Rezultat |
 |---|---|
-| **Headere de securitate** | CSP strict fără `unsafe-inline`/`unsafe-eval`, `frame-ancestors 'none'`, HSTS 1 an, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP |
+| **Headere de securitate** | CSP cu `script-src` strict (fără `unsafe-inline`/`unsafe-eval`; `style-src` are `unsafe-inline` deliberat din runda 4), `frame-ancestors 'none'`, HSTS 1 an (și pe API, din runda 4), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP |
 | **Cookie de sesiune** | `HttpOnly; Secure; SameSite=Lax; Path=/` — JS nu-l poate citi |
 | **CSRF** | `POST /api/auth/register` și `/login` cu `Origin: https://evil.example` → **403**; fără `Origin` (curl/navigare) → 401, deci fluxurile normale nu se blochează |
 | **Rate limit** | login: al 10-lea eșec → **429** (10/5 min/IP) · register: a 5-a cerere → **429** (5/oră/IP) |
@@ -83,20 +107,32 @@ continuă să se încarce (nu pagina de eroare).
 
 ## 3. Rămase de decis (nu sunt defecte, sunt alegeri de produs)
 
-1. **SSR SEO lipsește pe `/episod/<id>`** — paginile de episod au title generic „Episod • anime-uke”, fără
-   description/og/JSON-LD, deși sunt paginile cu cel mai mare potențial de trafic organic („anime X episodul Y
-   subtitrat în română”). Repararea cere o citire D1 per episod + cache (la fel ca la serii) și un bloc
-   `VideoObject`/`BreadcrumbList` în JSON-LD. **Nu s-a făcut acum** — e feature nou, nu reparație.
+1. ~~**SSR SEO lipsește pe `/episod/<id>`**~~ — **REZOLVAT 2026-09-21** (runda 3): paginile de episod ies din
+   server cu titlu „Serie — Episodul N subtitrat în română | Anime-Uke”, description, canonical,
+   `og:type video.episode` și JSON-LD `TVEpisode` (+`partOfTVSeries`) + `BreadcrumbList`. Cost: o citire D1
+   (JOIN indexat episod+serie) cu cache 5 min + cache negativ, la fel ca la serii. Dovada pe live:
+   `/episod/4210` → titlu „One Piece — Episodul 3 subtitrat în română | Anime-Uke”, `TVEpisode`/`BreadcrumbList` prezente.
 2. **Canonical/og hardcodate pe `anime-uke.pages.dev`** în `index.html`, `login.html`, `register.html`. Când se
    adaugă domeniu propriu (`CANONICAL_ORIGIN`), aceste trei fișiere trebuie trecute pe originea canonică
    (sau injectate din worker, ca la `/serie/<id>`).
 3. **`/episode` fără id** rămâne 200 (shell + JS). Nu e în sitemap și nu e link-uit; se poate aplica același 301
-   ca la `/series` dacă se dorește consecvență. **Atenție la implementare:** shell-ul `/episode` e acum
-   servit direct din stratul static (e în `public/_routes.json`), deci un 301 pentru cazul „fără id" ar
-   trebui făcut fie din `_redirects`, fie scoțând ruta de sub bypass — nu din worker, care nu-l mai vede.
+   ca la `/series` dacă se dorește consecvență.
 4. **Audit cu sesiune pe live** — auditul nu are credențiale, deci fluxele logate (shop, cufere, misiuni, facțiuni,
    admin, chat) sunt verificate doar local de `./test.sh`. Dacă vrei o trecere și pe live, e nevoie de un cont de
    test (sau aprobarea să creez unul temporar și să-l șterg după).
+
+---
+
+## 3b. Note de întreținere pentru `_routes.json`
+
+- Orice rută pusă în `exclude` **nu mai trece prin poarta de autentificare din worker** — doar
+  pagini publice. `exclude` conține acum: `/assets/*`, `/`, `/login`, `/register`, `/episode`,
+  `/favicon.ico`, `/apple-touch-icon.png`, `/robots.txt`, `/llms.txt`, `/speculationrules.json`.
+- Rămân OBLIGATORIU pe worker: `/api/*`, `/chat`, SSR `/serie/<id>` și `/episod/<id>`,
+  `/sitemap.xml`, `/sitemap.txt`, `/sitemap`, `/profile`, `/shop`, `/admin/*`.
+- Dacă apare o pagină publică nouă (ex. `/despre`), adaug-o în `exclude` **și** în
+  `PUBLIC_PAGES`/`STATIC_PAGES` din `src/worker.js` (altfel e 404 prin worker, pentru
+  crawlerii care o cer pe calea din `include`).
 
 ---
 

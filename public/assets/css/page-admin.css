@@ -416,3 +416,11 @@ tbody tr:last-child td { border-bottom: none; }
 /* Selecturile de filtre: latime minima ca popularea asincrona a optiunilor
    sa nu miste elementele de langa ele (CLS). */
 #genre-select { min-width: 11rem; }
+
+/* ---- editor economie (gold/puncte/nivel): rand extensibil sub user ---- */
+.econ-edit-row td { background: rgba(255,255,255,.02); }
+.econ-edit { display: flex; gap: 1.4rem; flex-wrap: wrap; padding: .5rem .2rem; }
+.econ-edit__grp { display: flex; flex-direction: column; gap: .4rem; min-width: 210px; }
+.econ-edit__label { font-size: .82rem; font-weight: 700; color: var(--text-dim); }
+.econ-edit__line { display: flex; gap: .45rem; }
+.econ-edit__input { width: 150px; }

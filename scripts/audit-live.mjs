@@ -132,8 +132,13 @@ async function main() {
   }
   for (const id of episodeIds) {
     const r = await req(`/episod/${id}`);
-    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms`);
-    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'WARN');
+    const hasLd = /application\/ld\+json/.test(r.text);
+    const title = (r.text.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || '';
+    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms · title „${title.slice(0, 60)}”`);
+    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'FAIL');
+    expect(S1, hasLd, `/episod/${id} are JSON-LD (SEO)`, `/episod/${id} NU are JSON-LD`, 'WARN');
+    expect(S1, /"TVEpisode"/.test(r.text), `/episod/${id} are JSON-LD TVEpisode`, `/episod/${id} nu are TVEpisode`, 'WARN');
+    expect(S1, /property=["']og:type["'][^>]*video\.episode/.test(r.text), `/episod/${id} are og:type video.episode`, `/episod/${id} nu are og:type video.episode`, 'WARN');
   }
 
   // -------------------------------------------------------------------
@@ -179,6 +184,13 @@ async function main() {
   expect(S4, urls.length === new Set(urls).size, 'sitemap fără duplicate', `sitemap are duplicate (${urls.length} vs ${new Set(urls).size} unice)`, 'WARN');
   expect(S4, !urls.some((u) => u.replace(/\/$/, '').endsWith('/series')),
     'sitemap nu conține /series (ruta face 301 spre /)', `sitemap conține /series, care face 301 → / (semnal de calitate slabă): ${urls.join(' ')}`, 'FAIL');
+  expect(S4, urls.some((u) => u.includes('/episod/')),
+    'sitemap include episoade (poarta de trafic organic)', 'sitemap fără episoade — doar prima pagină + serii', 'WARN');
+  expect(S4, !sitemap.headers['cross-origin-resource-policy'] && !sitemap.headers['content-security-policy'],
+    'sitemap iese fără CORP/CSP (curat pentru crawler-e)', `sitemap are corp=${sitemap.headers['cross-origin-resource-policy'] || '—'}`, 'WARN');
+  const sitemapTxt = await req('/sitemap.txt');
+  expect(S4, sitemapTxt.status === 200 && /text\/plain/.test(sitemapTxt.headers['content-type'] || ''),
+    '/sitemap.txt → 200 text/plain (alternativa din Search Console)', `/sitemap.txt → ${sitemapTxt.status}`, 'WARN');
   info(S4, `sitemap: ${urls.length} URL-uri · primele 3: ${urls.slice(0, 3).join(' ')}`);
   expect(S4, llms.status === 200 && llms.text.length > 50, `llms.txt → 200 (${llms.text.length} car.)`, `llms.txt → ${llms.status}`, 'WARN');
   const spec = await req('/speculationrules.json');
@@ -281,7 +293,10 @@ async function main() {
   const h = home.headers;
   const csp = h['content-security-policy'] || '';
   expect(S8, csp.length > 0, 'CSP prezent', 'LIPSEȘTE Content-Security-Policy', 'FAIL');
-  expect(S8, csp && !/unsafe-inline|unsafe-eval/.test(csp), 'CSP fără unsafe-inline/unsafe-eval', `CSP conține unsafe-*: ${csp.slice(0, 120)}`, 'FAIL');
+  // script-src STRICT (fără unsafe-*): style-src are 'unsafe-inline' deliberat
+  // (snippet A-Ads + pagina 404 din worker — vezi comentariul din src/lib/http.js).
+  const scriptSrc = (csp.match(/script-src[^;]*/)?.[0] || '');
+  expect(S8, scriptSrc && !/unsafe-inline|unsafe-eval/.test(scriptSrc), `script-src strict (${scriptSrc})`, `script-src permite unsafe-*: ${scriptSrc}`, 'FAIL');
   expect(S8, /frame-ancestors\s+'none'/.test(csp), "CSP are frame-ancestors 'none'", 'CSP fără frame-ancestors', 'WARN');
   const hsts = h['strict-transport-security'] || '';
   expect(S8, /max-age=(\d+)/.test(hsts) && Number(hsts.match(/max-age=(\d+)/)[1]) >= 31536000, `HSTS ${hsts}`, `HSTS slab/lipsă: „${hsts}”`, 'WARN');
@@ -394,8 +409,21 @@ async function main() {
   const chatCross = await req('/chat', { headers: { Origin: evil, Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': 'ZGVtbw==' } });
   info(S11, `/chat cu Origin străin + upgrade → ${chatCross.status}`);
   expect(S11, chatCross.status !== 101, 'chat-ul nu acceptă upgrade de pe altă origine', 'chat-ul a acceptat upgrade cross-origin (101)', 'FAIL');
+  // Favicon propriu la rădăcină: fără el, Pages servea iconița Cloudflare la
+  // /favicon.ico, iar Google o arăta în rezultatele de căutare. Cea implicită
+  // e minusculă (~1 KB), a noastră are 15 KB — dimensiunea o deosebește.
   const favicon = await req('/favicon.ico');
-  expect(S11, favicon.status === 200 || favicon.status === 404, `/favicon.ico → ${favicon.status}`, `/favicon.ico → ${favicon.status}`, 'WARN');
+  const favCt = favicon.headers['content-type'] || '';
+  const favLen = Number(favicon.headers['content-length'] || favicon.text.length || 0);
+  expect(S11, favicon.status === 200 && /icon/i.test(favCt),
+    `/favicon.ico → 200 ${favCt} (${favLen} B)`,
+    `/favicon.ico → ${favicon.status} ${favCt} (fără favicon propriu, Pages servește iconița Cloudflare)`, 'FAIL');
+  expect(S11, favLen > 4000,
+    `favicon.ico e al nostru (${favLen} B, nu cel implicit Cloudflare)`,
+    `favicon.ico suspect de mic (${favLen} B) — poate e cel implicit Cloudflare`, 'WARN');
+  const appleIcon = await req('/apple-touch-icon.png');
+  expect(S11, appleIcon.status === 200 && /png/.test(appleIcon.headers['content-type'] || ''),
+    '/apple-touch-icon.png → 200 PNG (iOS)', `/apple-touch-icon.png → ${appleIcon.status}`, 'WARN');
   for (const p of ['/login', '/register']) {
     const r = await req(p);
     expect(S11, /name=["']robots["'][^>]*noindex/i.test(r.text), `${p} are noindex (pagină utilitară)`, `${p} NU are noindex`, 'WARN');

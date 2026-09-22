@@ -227,6 +227,12 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('link[rel="speculationrules"][href="/speculationrules.json"]'), 'lipseste <link rel=speculationrules>');
   const bellOn = await until(() => !!p.$('#nav-bell'));
   check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
+  // Nav-ul e randat aici (dovada: clopoțelul) — verificăm și brandul.
+  const brandImg = p.$('#nav .nav__brand__mark');
+  // Logo-ul din nav e .webp (assetul nu mai trece prin worker, deci nu există
+  // negociere Accept pe server); faviconul rămâne .png, pentru iOS/crawlere.
+  check('Brandul din nav e logo-ul .webp (img, nu glifă)', brandImg?.tagName === 'IMG' && (brandImg.getAttribute('src') || '').endsWith('logo-icon.webp'), `${brandImg?.tagName} ${brandImg?.getAttribute('src')}`);
+  check('Faviconul e logo-ul', (p.$('link[rel="icon"]')?.getAttribute('href') || '').includes('logo-icon.png'), p.$('link[rel="icon"]')?.getAttribute('href'));
   p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const popOn = await until(() => p.$('#notif-pop')?.hidden === false);
   check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));
@@ -459,6 +465,64 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
 }
 
+console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
+{
+  // Adminul primeste o tema personala (Sakura), ca sa existe diferenta intre
+  // ce vede el si sezon — cazul real „am activat Halloween si vad toamna".
+  const meR = await fetch(`${BASE}/api/auth/me`, { headers: { Cookie: COOKIE } });
+  const adminId = (await meR.json())?.user?.id;
+  const post = (path, body) => fetch(`${BASE}${path}`, { method: 'POST', headers: { Cookie: COOKIE, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await post('/api/admin/users', { action: 'set_gold', user_id: adminId, value: 200000 });
+  await post('/api/shop/buy', { item_id: 'theme_sakura' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+
+  const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  const seteaza = async (nume) => {
+    p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const ok = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+    if (!ok) return false;
+    p.$$('#sezon-list .ranks-row').find((r) => (r.textContent || '').includes(nume))
+      ?.querySelectorAll('button')[1]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    return until(() => new RegExp(nume).test(p.text('#sezon-curent') || ''));
+  };
+  p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const rowsOk = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+  check('Tabul Sezon listeaza cele 4 teme', rowsOk, `randuri=${p.$$('#sezon-list .ranks-row').length}`);
+  // Setarea e globala: adminul (resetat de pe Sakura) vede sezonul LIVE, fara banner.
+  const setOk = await seteaza('Iarnă');
+  check('Setarea sezonului din UI (Iarna)', setOk, `curent=${p.text('#sezon-curent')}`);
+  const liveOk = await until(() => [...p.window.document.body.classList].includes('theme-iarna'));
+  check('Adminul vede sezonul live pe pagina proprie (reset global)', liveOk, [...p.window.document.body.classList].join(','));
+  await wait(600);
+  check('Fara banner cand adminul vede sezonul', !p.$('#sezon-banner'), p.text('#sezon-banner') || '(absent)');
+  check('Nicio eroare de runtime pe tabul Sezon (setare)', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+  // Realegere personala DUPA setare → la urmatoarea vizita bannerul explica diferenta.
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const p2 = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  // HARNESS: core.js se importa o singura data per proces (modulele de pagina
+  // il refera fara ?t=), deci cache-ul lui de sesiune supravietuieste intre
+  // mount-uri — p2 ar mosteni sesiunea veche (cu sezonul) a lui p1. Il golim
+  // explicit. In productie nu exista problema: fiecare pagina e un graf proaspat.
+  await import('../public/assets/js/core.js').then((m) => m.clearSession());
+  p2.$('#tab-sezon')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  await until(() => p2.$$('#sezon-list .ranks-row').length === 4);
+  const bannerOk = await until(() => !!p2.$('#sezon-banner'));
+  const bannerTxt = p2.text('#sezon-banner') || '';
+  check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
+  p2.$('#sezon-vezi')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  const prevOk = await until(() => [...p2.window.document.body.classList].includes('theme-iarna'));
+  check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p2.window.document.body.classList].join(','));
+  p2.$('#sezon-mea')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  const backOk = await until(() => [...p2.window.document.body.classList].includes('theme-sakura'));
+  check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p2.window.document.body.classList].join(','));
+  check('Nicio eroare de runtime pe tabul Sezon (banner)', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+  await p2.teardown();
+  // Curatenie: sezonul gol + adminul inapoi pe Standard (suitele urmatoare).
+  await post('/api/admin/season', { theme_id: '' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_standard' });
+}
+
 console.log('\n=== DOM: /episode (player, surse, progres) ===');
 // Pagina asta nu era acoperita deloc de dom-smoke, deci un crash la bootstrap
 // ajungea direct in productie ca un spinner vesnic. Acum o montam cu un
@@ -662,10 +726,12 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
 {
   console.log('=== DOM: /shop (vitrina de gold) ===');
   const p = await mountPage({ htmlFile: 'public/shop.html', url: '/shop', module: 'page-shop.js' });
-  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 3);
-  check('Shop-ul randeaza cele 3 articole', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
+  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 8);
+  check('Shop-ul randeaza cele 8 articole (Shop 2.0)', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
   check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
-  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 8, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Bannerul de boost exista (ascuns cand e inactiv)', !!p.$('#shop-boost'), 'lipseste #shop-boost');
+  check('Temele se randeaza (13 in shop; sezonul e ascuns)', p.$$('#themes-grid .theme-card').length === 13, `n=${p.$$('#themes-grid .theme-card').length}`);
   check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
   check('Shop explica economia: cel puțin 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length >= 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));

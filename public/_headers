@@ -15,7 +15,7 @@
 # =====================================================================
 /*
   Strict-Transport-Security: max-age=31536000
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
@@ -48,7 +48,4 @@
 /assets/subs/*
   Cache-Control: no-cache
 
-# Coperțile: numele se poate refolosi (adminul înlocuiește imaginea), deci
-# o săptămână — propagarea unei înlocuiri rămâne rezonabil de rapidă.
-/covers/*
-  Cache-Control: public, max-age=604800
+# (Fără regulă /covers/*: directorul nu există — coperțile sunt URL-uri externe.)

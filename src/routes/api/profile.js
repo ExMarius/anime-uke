@@ -90,7 +90,7 @@ export async function onRequestGet(context) {
     user = me;
   } else {
     user = await env.DB
-      .prepare('SELECT id, username, points, is_admin, staff_role, level, rank_theme, created_at FROM users WHERE username = ?')
+      .prepare('SELECT id, username, points, is_admin, staff_role, level, rank_theme, created_at, active_name_color FROM users WHERE username = ?')
       .bind(raw)
       .first();
     if (!user) return errorResponse(404, 'Utilizatorul nu există');
@@ -116,9 +116,10 @@ export async function onRequestGet(context) {
         )
         .bind(user.id)
         .all(),
-      // Cosmeticele din shop (💎 Suporter / 🌟 Nume de aur) — o citire indexata.
+      // Cosmeticele din shop (💎 Suporter / 🌠 Nova; 🌟 Nume de aur = legacy,
+      // nu se mai vinde, dar cine-l are il pastreaza) — o citire indexata.
       env.DB
-        .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter')`)
+        .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter', 'flair_nova')`)
         .bind(user.id)
         .all(),
     ]);
@@ -126,7 +127,7 @@ export async function onRequestGet(context) {
 
     return json({
       ...present(user, profile, stats, me?.id === user.id, await loadRankThemes(env)),
-      flair: owned.has('flair_supporter') ? '💎' : '',
+      flair: owned.has('flair_nova') ? '🌠' : owned.has('flair_supporter') ? '💎' : '',
       name_gold: owned.has('name_gold'),
       name_color: user.active_name_color || null,
       recommendations: recommendations?.results || [],

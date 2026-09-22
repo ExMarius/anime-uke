@@ -1,1 +1,1 @@
-{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/api/*","/admin/*","/logout","/assets/*","#*"]}}]},"eagerness":"moderate"}],"prerender":[{"source":"document","where":{"href_matches":"/series*"},"eagerness":"conservative"}]}
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/api/*","/admin/*","/logout","/assets/*","#*"]}}]},"eagerness":"moderate"}],"prerender":[{"source":"document","where":{"href_matches":"/serie/*"},"eagerness":"conservative"}]}

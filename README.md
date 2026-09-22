@@ -28,10 +28,12 @@ public/                     assete statice + entrypoint
 ├── admin/serie.html        admin: o serie + episoadele + sursele ei  (/admin/serie/<id>)
 ├── _headers                headerele cailor care NU trec prin worker (paritate cu SECURITY_HEADERS)
 ├── _routes.json            scoate assetele + paginile publice statice de sub worker (buget 0!)
+├── favicon.ico, apple-touch-icon.png
 ├── robots.txt, llms.txt, speculationrules.json
 └── assets/
     ├── css/style.css       nucleu; page-admin.css, page-episode.css, page-user.css per pagină
-    ├── img/hero-*.webp     bannerul hero (referit direct .webp; .jpg = rezerva)
+    ├── img/hero-*.webp     bannerul hero (referit direct .webp; .jpg = rezervă)
+    ├── img/logo*.webp|png  logo: .webp în pagină, .png pentru favicon/og:image
     ├── subs/demo-ro.vtt    subtitrare demo folosită de teste
     └── js/
         ├── core.js         api(), sesiune, nav, toast, badge-uri (staffBadge/rankChip), pulse
@@ -65,8 +67,9 @@ scripts/
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
 ├── dom-smoke.mjs           paginile în jsdom (local)           ├─ ./test.sh le rulează pe toate
-├── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
-└── prod-smoke.mjs          verificare blândă pe producție (o singură înregistrare, pauze)
+└── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
+    (verificarea pe producție = scripts/audit-live.mjs, prin relay; vechiul
+    prod-smoke.mjs a fost șters — descria site-ul privat cu invitații.)
 cf-relay/                   cmd.sh = comanda rulată de GitHub Actions; last-output.txt = rezultatul
 .github/workflows/cloudflare-relay.yml
 AGENTS.md                   ghid de predare pentru următorul care lucrează (CLAUDE.md trimite la el)
@@ -113,18 +116,18 @@ npm install                     # Node 22+
 cp .dev.vars.example .dev.vars  # JWT_SECRET local
 npm run dev                     # ./dev.sh → http://localhost:8788 (aplică migrările locale)
 npm run seed                    # opțional: catalog de demo (vezi antetul scripts/seed.mjs)
-npm test                        # ./test.sh: e2e + dom + plafoane, pe o bază curată (~1 min)
-npm run usage                   # consumul de azi din cotele gratuite (necesită token + permisiune de analytics)
+npm test                        # ./test.sh: e2e + dom + teme + plafoane, pe o bază curată (~1 min)
+npm run usage                   # consumul de azi din cotele gratuite (token + permisiune de analytics)
 ```
 
 Reguli care evită surprize:
 
 1. **Orice schimbare de schemă = o migrare nouă** `migrations/00NN_*.sql`. `deploy.sh` le aplică automat pe D1 remote; `dev.sh`/`test.sh` local.
-3. **Orice endpoint nou** se adaugă în `src/router.js` (metoda `'*'` dacă fișierul are mai mulți handleri).
-4. **Clasele CSS construite dinamic în JS** (`'ubadge ubadge--' + x`) trebuie adăugate în safelist-ul din `scripts/purge-css.mjs`, altfel dispar din producție.
-5. **Pentru fiecare feature scrie verificări** în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). `./test.sh` trebuie să fie verde înainte de deploy.
-6. **Pagină nouă în `public/`?** Adaug-o în `STATIC_PAGES` din `src/worker.js` — altfel ruta cade pe allowlist și primește 404.
-7. **Rute „inexistente” trebuie să dea 404 real** (nu 200 cu shell gol și nici 302 spre `/login`): așa le tratează
+2. **Orice endpoint nou** se adaugă în `src/router.js` (metoda `'*'` dacă fișierul are mai mulți handleri).
+3. **Clasele CSS construite dinamic în JS** (`'ubadge ubadge--' + x`) trebuie adăugate în safelist-ul din `scripts/purge-css.mjs`, altfel dispar din producție.
+4. **Pentru fiecare feature scrie verificări** în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). `./test.sh` trebuie să fie verde înainte de deploy.
+5. **Pagină nouă în `public/`?** Adaug-o în `STATIC_PAGES` din `src/worker.js` — altfel ruta cade pe allowlist și primește 404.
+6. **Rute „inexistente” trebuie să dea 404 real** (nu 200 cu shell gol și nici 302 spre `/login`): așa le tratează
    `serveStatic()` pentru `/serie/<id>` și `/episod/<id>`, iar allowlist-ul pentru orice altă cale necunoscută.
 5. `wrangler.toml` apare modificat cât timp rulează `dev.sh` — **nu-l comite** în starea aceea (e copia locală). La `git pull --rebase` cu dev.sh pornit: `git stash && git pull --rebase && git stash pop`.
 6. Primul cont înregistrat pe o bază goală devine automat admin (bootstrap). Plafoane: 1000 useri / 1000 serii (`src/lib/limits.js`, suprascriibile prin `LIMIT_USERS`/`LIMIT_SERIES` la teste).
@@ -139,9 +142,7 @@ npm run deploy                    # ./deploy.sh
 ```
 
 `deploy.sh` rulează în ordinea obligatorie: **D1 → migrări → Worker DO (`anime-uke-do`) → Pages → JWT_SECRET**,
-purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină, versionează assetele cu `?v=<commit>` și
-trece JS/CSS-ul din `public/_headers` pe `immutable` 1 an (ele nu mai trec prin worker, deci
-Cache-Control se decide acolo, nu în cod).
+purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină și versionează assetele cu `?v=<commit>`.
 
 **Fără acces de rețea la Cloudflare** (ex. sandbox de agent): scrie comanda în `cf-relay/cmd.sh`, comite pe un
 branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-ul e în secretul
@@ -165,72 +166,72 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 ### Optimizări de buget (toate deliberate, nu accidentale)
 
 0. **Assetele si paginile publice statice NU trec prin worker.** `public/_routes.json`
-   scoate `/assets/*`, `/`, `/login`, `/register` si `/episode` de sub Pages Functions:
-   fiecare cerere care ajunge in worker consuma o invocare din cota gratuita de
-   100.000/zi, iar un singur vizitator face 1 pagina + ~6 asset-uri + 2-3 cereri de
-   API. Headerele de securitate pentru caile ocolite vin din `public/_headers`
-   (identice cu `SECURITY_HEADERS` din worker — `tests/e2e.mjs` verifica paritatea).
+   scoate `/assets/*`, `/`, `/login`, `/register`, `/episode`, `/favicon.ico`,
+   `/apple-touch-icon.png`, `/robots.txt`, `/llms.txt`, `/speculationrules.json` de sub
+   Pages Functions: fiecare cerere care ajunge în worker consumă o invocare din cota
+   gratuită de 100.000/zi, iar un vizitator face 1 pagină + ~6 assete + 2-3 cereri de API.
+   Headerele de securitate pentru căile ocolite vin din `public/_headers` (identice cu
+   `SECURITY_HEADERS` din worker — `tests/e2e.mjs` verifică paritatea la fiecare rulare).
+   `deploy.sh` refuză publicarea fără `_routes.json`.
 1. **Chat-ul nu scrie în D1 la fiecare mesaj.** Mesajele se buffer-izează în `ChatDO` și se scriu în loturi (la 10 mesaje sau 15 secunde prin alarmă). ~10× mai puține scrieri.
 2. **Contorul de vizualizări nu scrie în D1 la fiecare view.** `StatsDO` acumulează și scrie o dată la 20 views / 30 secunde, cu deduplicare pe 10 minute. ~20× mai puține scrieri.
 3. **Istoricul chat-ului se citește din D1 o dată pe viața DO-ului**, nu la fiecare conectare (v1 făcea un `SELECT` la fiecare socket nou).
 4. **Rate limiting doar pe rute sensibile** (login, register, watch, admin). Fiecare verificare costă 1 request DO, deci GET-urile publice nu trec pe acolo.
 5. **Endpoint-uri combinate**: `/api/series/:id` returnează seria *și* episoadele ei
-   într-un singur apel; `/api/home` aduce TOATĂ prima pagină (catalog + topuri +
-   ultimele episoade + genuri + contorul „online") într-o singură invocare, în loc
-   de cinci. Pagina mai face apoi doar cererile de sesiune (`/auth/me`, `/continue`,
+   într-un singur apel; `/api/home` aduce TOATĂ prima pagină (catalog + topuri + ultimele
+   episoade + genuri + contorul „online") într-o singură invocare, în loc de cinci.
+   Pagina mai face apoi doar cererile de sesiune (`/auth/me`, `/continue`,
    `/notifications/unread`).
-6. **Indexuri pe fiecare coloană folosită în `WHERE`/`JOIN`** — pe D1 se taxează rândurile *scanate*, nu cele returnate.
-7. **Fără Tailwind CDN** (v1 încărca ~300 KB JS pe fiecare pagină). Un singur CSS de câțiva KB, cache-abil.
-8. **WebSocket Hibernation API** în `ChatDO` — DO-ul nu consumă CPU cât timp e idle.
-
----
+6. **Imaginile sunt referite direct `.webp`** (hero, logo), cu `.png`/`.jpg` păstrate pentru
+   favicon, `og:image` (rețelele sociale nu acceptă WebP) și ca rezervă. Fără negociere pe
+   server: assetul nu mai trece prin worker, deci nu mai există două cereri per imagine.
+7. **Indexuri pe fiecare coloană folosită în `WHERE`/`JOIN`** — pe D1 se taxează rândurile *scanate*, nu cele returnate.
+8. **Fără Tailwind CDN** (v1 încărca ~300 KB JS pe fiecare pagină). Un singur CSS de câțiva KB, cache-abil.
+9. **WebSocket Hibernation API** în `ChatDO` — DO-ul nu consumă CPU cât timp e idle.
+10. **Cache-Control-ul assetelor vine din `public/_headers`**, nu din cod: `deploy.sh`
+    înlocuiește „no-cache" cu `immutable` 1 an pentru JS/CSS (toate referințele din HTML
+    poartă `?v=<commit>`, iar `page-*.js` sunt bundle-uite). Zero revalidări, zero cereri
+    care să ajungă în worker.
 
 ---
 
 ## Cât duce planul gratuit (și ce faci când se apropie)
 
-Cotele care contează, pe planul gratuit: **100.000 invocări de Worker/zi** (Functions),
-**5M rânduri citite + 100.000 scrieri D1/zi**, **100.000 requests DO/zi**, 10 ms CPU/cerere.
-Toate se resetează la **00:00 UTC**. Depășirea cotelor D1/DO oprește partea dinamică
-(site-ul static rămâne sus — vezi „Fail open” mai jos).
+Cotele care contează: **100.000 invocări de Worker/zi** (Functions), **5M rânduri citite +
+100.000 scrieri D1/zi**, **100.000 requests DO/zi**, 10 ms CPU/cerere. Toate se resetează la
+**00:00 UTC**. Depășirea cotelor D1/DO oprește partea dinamică (site-ul static rămâne sus —
+vezi „Fail open" mai jos).
 
 **Costul unei vizite acum:**
 
 | Ce | Înainte | Acum |
 |---|---|---|
-| Prima pagină (HTML + 6 assete) | 1 + 6 invocări | **0** (servește stratul static) |
+| Prima pagină (HTML + assete + logo) | 1 + 6 invocări | **0** (servește stratul static) |
 | API pentru prima pagină | 5 (`/series` `/top` `/recent` `/genres` `/pulse`) | **1** (`/api/home`) |
 | Sesiune (nav, puncte) | 1 | 1 |
 | **Total vizitator fără cont** | **~12** | **~2** |
 
-Cu ~2 invocări per vizită, 100k/zi înseamnă **zeci de mii de vizite pe zi** — de
-câteva ori mai mult decât înainte. Un vizitator logat care se uită la un episod
-consumă în plus: `/api/episodes/:id`, `/api/view`, un heartbeat la 2 minute
-(`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1), plus poll-ul de
-notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în ordinea
-în care merita atinse:
+Cu ~2 invocări per vizită, 100k/zi înseamnă **zeci de mii de vizite pe zi**. Un vizitator
+logat care se uită la un episod consumă în plus: `/api/episodes/:id`, `/api/view`, un
+heartbeat la 2 minute (`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1) și poll-ul
+de notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în ordinea în care
+merită atinse:
 
-1. **Fail open** (dashboard → Workers & Pages → `anime-uke` → Settings → Runtime):
-   dacă e pe „Fail open”, la epuizarea cotei vizitatorii văd în continuare catalogul
-   servit static, nu pagina de eroare. Verifică o dată și lasă-l așa.
-2. **Poll-ul de notificări** (`core.js`, 60 s) — se poate lungi sau condiționa de
-   vizibilitatea tab-ului.
-3. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`,
-   `SEND_CAP` și `MAX_INCREMENT` din `src/routes/api/progress.js` — trebuie ținute
-   sincronizate): 2 minute → 5 minute scade de ~2,5× scrierile D1 din vizionare.
-4. **Plafoanele de conținut** (`LIMIT_USERS` / `LIMIT_SERIES`) rămân valabile.
-5. **Protecție anti-abuz gratis**: Bot Fight Mode (on), „Under Attack Mode” pentru
-   urgente, 5 reguli WAF custom pe planul gratuit. Rate limiting-ul propriu
-   acoperă deja login/register/watch/chat.
-6. **Backup**: D1 are Time Travel (restaurare la un moment din trecut) — nu e
-   nevoie de un job de backup. `worker-do` și Pages se pot redeploya din repo.
-7. **Vezi consumul**: `npm run usage` (sau prin relay, la sfârșitul deployului)
-   afișează procentul din fiecare cotă pentru ziua UTC curentă. Cere pe token
-   permisiunea „Account Analytics: Read" — dacă lipsește, scriptul spune exact asta.
+1. **Fail open** (dashboard → Workers & Pages → `anime-uke` → Settings → Runtime): la
+   epuizarea cotei, vizitatorii văd în continuare catalogul servit static, nu pagina de eroare.
+2. **Poll-ul de notificări** (`core.js`, 60 s) — se poate lungi sau condiționa de vizibilitatea tab-ului.
+3. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`, `SEND_CAP` și
+   `MAX_INCREMENT` din `src/routes/api/progress.js` — de ținut sincronizate): 2 → 5 minute
+   scade de ~2,5× scrierile D1 din vizionare.
+4. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează
+   procentul din fiecare cotă pentru ziua UTC curentă. Cere pe token permisiunea
+   „Account Analytics: Read" — dacă lipsește, scriptul spune exact asta.
+5. **Protecție anti-abuz gratis**: Bot Fight Mode, „Under Attack Mode" pentru urgente,
+   5 reguli WAF custom pe planul gratuit. Rate limiting-ul propriu acoperă login/register/watch/chat.
+6. **Backup**: D1 are Time Travel (restaurare la un moment din trecut); `worker-do` și Pages
+   se redeploya din repo.
 
 ---
-
-## Securitate
 
 ## Securitate
 
@@ -241,8 +242,8 @@ notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în 
 | Enumerare conturi | login-ul face un hash „de umplutură" și când userul nu există, deci timpii de răspuns sunt identici; mesajul de eroare e același |
 | Sesiune | JWT HS256 cu `exp` (7 zile), în cookie `HttpOnly; Secure; SameSite=Lax; Path=/` |
 | CSRF | `SameSite=Lax` + verificare explicită a header-ului `Origin` pe toate cererile care modifică date |
-| XSS | **CSP strict fără `unsafe-inline`** — tot JS-ul e în fișiere externe, zero handlere inline. Randarea folosește `textContent`/`createElement`, niciodată `innerHTML` cu date de la utilizator. |
-| iframe player | `sandbox` + `referrerpolicy`; `frame-src` restricționat la domeniile DoodStream |
+| XSS | **CSP cu `script-src` strict, fără `unsafe-inline`** — tot JS-ul e în fișiere externe, zero handlere inline. (`style-src` are `unsafe-inline` deliberat: snippet A-Ads + pagina 404 din worker; stilurile nu execută JS.) Randarea folosește `textContent`/`createElement`, niciodată `innerHTML` cu date de la utilizator. |
+| iframe player | `referrerpolicy` + `allow` cu allowlist pe origin (`fullscreen *` etc.), fără `sandbox` (playerii terți cad silențios cu el — vezi comentariul din `episode.html`); `frame-src 'self' https:` — allowlist fix imposibil, furnizorii își rotesc domeniile (vezi `src/lib/http.js`) |
 | Alte headere | `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy`, `Permissions-Policy` |
 | Banare | `is_banned` e verificat la **fiecare** request autentificat, nu doar la login — un utilizator banat își pierde sesiunea imediat |
 | Rate limiting | login 10/5min, register 5/oră, watch 60/oră, chat 20/min + 1.5s între mesaje (toate pe IP sau per utilizator) |
@@ -275,8 +276,8 @@ notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în 
 
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/e2e.mjs`, `tests/dom-smoke.mjs`,
   `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
-- `node tests/prod-smoke.mjs [baseUrl]`: pe producție. **Nu rula e2e.mjs pe producție** — zecile de înregistrări
-  rapide declanșează protecția anti-brute-force de la marginea Cloudflare.
+- Pe producție **nu rula e2e.mjs** — zecile de înregistrări rapide declanșează protecția anti-brute-force
+  de la marginea Cloudflare. Verificarea pe live = `audit-live.mjs` prin relay (mai jos).
 - `node scripts/audit-live.mjs [baseUrl]`: audit read-only — statusuri pagini, SEO (title/description/canonical/og/
   JSON-LD/sitemap), headere de securitate și cookie, CSRF pe origine străină, rate limit la login/register,
   rute API publice vs protejate, soft-404, compresie/cache/minificare, scanare de secrete în bundle-urile publice.
