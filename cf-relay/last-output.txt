@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ c8eecaa
+comanda: cf-relay/cmd.sh @ 730b2cc
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ c8eecaa
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=c8eecaa
+    [0;32m✓[0m assete versionate ?v=730b2cc
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
-    [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://38daad27.anime-uke.pages.dev
+    [0;32m✓[0m assete minificate: 9 fisiere
+    [0;32m✓[0m publicat: https://217c3dd5.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T07:10:09.659Z
+data: 2026-09-22T07:26:23.165Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (231 ms)
-  ℹ️  / → 200 · 231 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (237 ms)
+  ℹ️  / → 200 · 237 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-22T07:10:09.659Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 105 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 80 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-22T07:10:09.659Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 99 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 125 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-22T07:10:09.659Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 182 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 127 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 110 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 111 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 97 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 86 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 183 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 164 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 101 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 82 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -186,8 +186,8 @@ data: 2026-09-22T07:10:09.659Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=c8eecaa (versiunea din HTML-ul live)
-  ℹ️  /assets/css/style.css → 200 · 72279 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  cere assetele cu ?v=730b2cc (versiunea din HTML-ul live)
+  ℹ️  /assets/css/style.css → 200 · 73144 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/css/style.css e minificat
@@ -203,7 +203,7 @@ data: 2026-09-22T07:10:09.659Z
   ✅ /assets/css/page-admin.css e comprimat (br)
   ✅ /assets/css/page-admin.css are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/css/page-admin.css e minificat
-  ℹ️  /assets/js/core.js → 200 · 14289 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/core.js → 200 · 14346 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/core.js e comprimat (br)
   ✅ /assets/js/core.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/core.js e minificat
@@ -211,37 +211,37 @@ data: 2026-09-22T07:10:09.659Z
   ✅ /assets/js/chat.js e comprimat (br)
   ✅ /assets/js/chat.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/chat.js e minificat
-  ℹ️  /assets/js/page-index.js → 200 · 42403 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-index.js → 200 · 47201 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-index.js e comprimat (br)
   ✅ /assets/js/page-index.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-index.js e minificat
-  ℹ️  /assets/js/page-series.js → 200 · 43899 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-series.js → 200 · 48694 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-series.js e comprimat (br)
   ✅ /assets/js/page-series.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-series.js e minificat
-  ℹ️  /assets/js/page-episode.js → 200 · 46836 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-episode.js → 200 · 51643 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-episode.js e comprimat (br)
   ✅ /assets/js/page-episode.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-episode.js e minificat
-  ℹ️  /assets/js/page-profile.js → 200 · 52301 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-profile.js → 200 · 57098 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-profile.js e comprimat (br)
   ✅ /assets/js/page-profile.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-profile.js e minificat
-  ℹ️  /assets/js/page-shop.js → 200 · 30533 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-shop.js → 200 · 35318 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e comprimat (br)
   ✅ /assets/js/page-shop.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e minificat
-  ℹ️  /assets/js/page-admin.js → 200 · 20949 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-admin.js → 200 · 25729 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e comprimat (br)
   ✅ /assets/js/page-admin.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e minificat
-  ℹ️  total JS servit (8 fișiere): 260.0 KB (comprimat) — fără framework, e sănătos sub ~300 KB
-  ✅ buget JS ok: 260 KB
+  ℹ️  total JS servit (8 fișiere): 288.1 KB (comprimat) — fără framework, e sănătos sub ~300 KB
+  ✅ buget JS ok: 288 KB
   ℹ️  hero-1.jpg: fără Accept webp → image/jpeg (202731 B); cu Accept webp → image/webp (168738 B)
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 231 ms · /series 11 ms · /api/series 316 ms
+  ℹ️  timpi: / 237 ms · /series 16 ms · /api/series 200 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -309,7 +309,7 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=c8eecaa 
+  ?v= din / (trebuie build-ul curent): ?v=730b2cc 
 === verificari punctuale (logo V7) ===
   /assets/img/logo.png → 200 (trebuie 200)
   /assets/img/logo-icon.png → 200 (trebuie 200)
@@ -333,15 +333,15 @@ exit audit: 0
 === inspectie bytes sitemap (GSC 'nu a putut fi citit') ===
 --- headere complete ---
 HTTP/2 200 
-date: Tue, 22 Sep 2026 07:10:41 GMT
+date: Tue, 22 Sep 2026 07:26:58 GMT
 content-type: text/xml; charset=utf-8
 content-length: 797
 access-control-allow-origin: *
 cache-control: no-store
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=sVUvFm6sz%2B0oMNm%2FZ%2Frow9ECQf6qznYyuoSutJaYt%2FrvhkKr68Gr%2FH8CRTHcqXkKzuXT93Mj5ed9sxM5L1qUHGspnMTh%2FldPq9wMyIoN4SgAOBiZpdiPv%2BFxcaE07Ag6vwno%2Bg5M"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=qvCTt1jJHe0TRiJhZLTIFZSEsMvveHJ7jXZWsGZNkZXsaHtN4xuoS7jrt4h6doiHBSkFGh%2B5vLokavQF6ohTJekil2gu0Vbc4z3MaSMony333Y2mWKcJw7xOk7pb%2Bn6iXzGnZp3b"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a3ef7dc62f085c80-IAD
+cf-ray: a3ef959dbf58442f-ORD
 alt-svc: h3=":443"; ma=86400
 
 --- primii 120 bytes (hex+text, trebuie sa inceapa cu 3c 3f 78 6d = '<?xm') ---
@@ -370,6 +370,7 @@ IDENTIC
 linii: 11 | invalide: NICIUNA
 === verificari punctuale (shop 2.0) ===
   migrare 0026: coloana xp_boost_until exista pe D1 productie
-  css (purge): nc-sunset=1 theme-sakura=1 theme-royal=1 anim-sunset=1 anim-aurora=1 anim-ocean=1 keyframes: @keyframes theme-aurora-drift @keyframes theme-ocean-drift @keyframes theme-sunset-drift  (trebuie 3 nume)
+  css (purge): nc-sunset=1 theme-sakura=1 theme-royal=1 anim-sunset=1 anim-aurora=1 anim-ocean=1 anim-petale=1 anim-portocaliu=1 keyframes: @keyframes theme-aurora-drift @keyframes theme-ocean-drift @keyframes theme-sunset-drift  (trebuie 3 nume)
+  motor canvas: rAF=1 petale=0 bule=0 stele=0 (toate ≥1)
   bundle shop: shop-boost=1 reward_text=1 nc-sunset=1 (toate ≥1)
   bundle profil: use_token=1 (≥1)
