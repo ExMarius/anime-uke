@@ -348,9 +348,11 @@ async function loadSeason() {
     set.textContent = t.id === activ ? '✓ Activă' : 'Setează ca sezon';
     set.disabled = t.id === activ;
     set.addEventListener('click', () => withBusy(set, async () => {
+      if (!confirm(`„${t.name}" devine tema TUTUROR (temele personale active se resetează — nimic cumpărat nu se pierde). Continui?`)) return;
       const r = await api('/admin/season', { method: 'POST', body: { theme_id: t.id } });
       if (!r.ok) { toast(r.data?.error || 'Nu am putut seta sezonul', 'error'); return; }
-      toast(`Sezon activ: ${t.name} 🍂`, 'success');
+      const n = Number(r.data?.reset_users) || 0;
+      toast(`Sezon activ: ${t.name} 🍂 (${n} ${n === 1 ? 'utilizator trecut' : 'utilizatori trecuți'} pe sezon)`, 'success');
       const meNow = await getSession(true);
       applySiteTheme(meNow?.site_theme || null);
       loadSeason();

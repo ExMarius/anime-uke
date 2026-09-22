@@ -453,24 +453,47 @@ console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
   await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
 
   const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  const seteaza = async (nume) => {
+    p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const ok = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+    if (!ok) return false;
+    p.$$('#sezon-list .ranks-row').find((r) => (r.textContent || '').includes(nume))
+      ?.querySelectorAll('button')[1]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    return until(() => new RegExp(nume).test(p.text('#sezon-curent') || ''));
+  };
   p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const rowsOk = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
   check('Tabul Sezon listeaza cele 4 teme', rowsOk, `randuri=${p.$$('#sezon-list .ranks-row').length}`);
-  const randIarna = p.$$('#sezon-list .ranks-row').find((r) => (r.textContent || '').includes('Iarnă'));
-  randIarna?.querySelectorAll('button')[1]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  const setOk = await until(() => /Iarnă/.test(p.text('#sezon-curent') || ''));
+  // Setarea e globala: adminul (resetat de pe Sakura) vede sezonul LIVE, fara banner.
+  const setOk = await seteaza('Iarnă');
   check('Setarea sezonului din UI (Iarna)', setOk, `curent=${p.text('#sezon-curent')}`);
-  const bannerOk = await until(() => !!p.$('#sezon-banner'));
-  const bannerTxt = p.text('#sezon-banner') || '';
-  check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
-  p.$('#sezon-vezi')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  const prevOk = await until(() => [...p.window.document.body.classList].includes('theme-iarna'));
-  check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p.window.document.body.classList].join(','));
-  p.$('#sezon-mea')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
-  const backOk = await until(() => [...p.window.document.body.classList].includes('theme-sakura'));
-  check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p.window.document.body.classList].join(','));
-  check('Nicio eroare de runtime pe tabul Sezon', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  const liveOk = await until(() => [...p.window.document.body.classList].includes('theme-iarna'));
+  check('Adminul vede sezonul live pe pagina proprie (reset global)', liveOk, [...p.window.document.body.classList].join(','));
+  await wait(600);
+  check('Fara banner cand adminul vede sezonul', !p.$('#sezon-banner'), p.text('#sezon-banner') || '(absent)');
+  check('Nicio eroare de runtime pe tabul Sezon (setare)', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+  // Realegere personala DUPA setare → la urmatoarea vizita bannerul explica diferenta.
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const p2 = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  // HARNESS: core.js se importa o singura data per proces (modulele de pagina
+  // il refera fara ?t=), deci cache-ul lui de sesiune supravietuieste intre
+  // mount-uri — p2 ar mosteni sesiunea veche (cu sezonul) a lui p1. Il golim
+  // explicit. In productie nu exista problema: fiecare pagina e un graf proaspat.
+  await import('../public/assets/js/core.js').then((m) => m.clearSession());
+  p2.$('#tab-sezon')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  await until(() => p2.$$('#sezon-list .ranks-row').length === 4);
+  const bannerOk = await until(() => !!p2.$('#sezon-banner'));
+  const bannerTxt = p2.text('#sezon-banner') || '';
+  check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
+  p2.$('#sezon-vezi')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  const prevOk = await until(() => [...p2.window.document.body.classList].includes('theme-iarna'));
+  check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p2.window.document.body.classList].join(','));
+  p2.$('#sezon-mea')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+  const backOk = await until(() => [...p2.window.document.body.classList].includes('theme-sakura'));
+  check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p2.window.document.body.classList].join(','));
+  check('Nicio eroare de runtime pe tabul Sezon (banner)', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+  await p2.teardown();
   // Curatenie: sezonul gol + adminul inapoi pe Standard (suitele urmatoare).
   await post('/api/admin/season', { theme_id: '' });
   await post('/api/shop/activate', { type: 'theme', id: 'theme_standard' });

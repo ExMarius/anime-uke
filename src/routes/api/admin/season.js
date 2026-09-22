@@ -34,8 +34,16 @@ export async function onRequestPost(context) {
   const themeId = String(body.theme_id ?? '');
   try {
     const v = await setSeasonalTheme(env, themeId);
-    await logAdminAction(env, admin, 'set_seasonal', 'site', 0, v || '(gol)');
-    return json({ success: true, seasonal_theme: v });
+    // Setarea e GLOBALA: toata lumea trece pe sezon, deci temele personale
+    // ACTIVE se reseteaza (ce e cumparat NU se pierde — ramane in user_items,
+    // iar cine nu place sezonul isi alege singur alta, care bate sezonul).
+    let resetati = 0;
+    if (v) {
+      const r = await env.DB.prepare('UPDATE users SET active_theme = NULL WHERE active_theme IS NOT NULL').run();
+      resetati = r?.meta?.changes ?? 0;
+    }
+    await logAdminAction(env, admin, 'set_seasonal', 'site', 0, `${v || '(gol)'} | resetati: ${resetati}`);
+    return json({ success: true, seasonal_theme: v, reset_users: resetati });
   } catch {
     return errorResponse(400, 'Tema de sezon invalida (alege din lista sau gol)');
   }

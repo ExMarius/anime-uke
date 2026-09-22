@@ -8,6 +8,8 @@
 # posesori), cu eticheta „Deținută (sezon)" — altfel isi pierdeau tema din UI.
 # UX sezon: banner „tu vezi X personal, ceilalti vad sezonul" + previzualizare
 # persistenta + refresh propriu dupa setare (cazul „activ Halloween, vad toamna").
+# Semantica noua: setarea sezonului e GLOBALA (reseteaza temele personale
+# active — nimic cumparat nu se pierde); cine nu-l place isi alege singur alta.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"

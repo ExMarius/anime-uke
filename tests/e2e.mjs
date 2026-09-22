@@ -1110,11 +1110,15 @@ console.log('\n=== 9c. ADMIN: tema de sezon globala ===');
   await req(je, 'POST', '/api/auth/login', { email: 'econu@test.ro', password: 'parola123' });
 
   const set = await req(j, 'POST', '/api/admin/season', { theme_id: 'theme_iarna' });
-  check('Setare sezon iarna', set.data?.success === true && set.data?.seasonal_theme === 'theme_iarna', JSON.stringify(set.data));
+  check('Setare sezon iarna (global, cu reset)', set.data?.success === true && set.data?.seasonal_theme === 'theme_iarna' && Number(set.data?.reset_users) >= 1, JSON.stringify(set.data));
   const meDef = await req(je, 'GET', '/api/auth/me');
-  check('User fara tema personala mosteneste sezonul', meDef.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meDef.data?.user?.site_theme));
-  const mePers = await req(j2b, 'GET', '/api/auth/me');
-  check('User cu tema personala o pastreaza', mePers.data?.user?.site_theme === 'theme_sakura', JSON.stringify(mePers.data?.user?.site_theme));
+  check('User pe Standard vede sezonul', meDef.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meDef.data?.user?.site_theme));
+  const meReset = await req(j2b, 'GET', '/api/auth/me');
+  check('Tema personala se RESETEAZA la setarea sezonului', meReset.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meReset.data?.user?.site_theme));
+  // ...dar ce e cumparat nu se pierde: user2 isi alege singur la loc Sakura.
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const meRealeg = await req(j2b, 'GET', '/api/auth/me');
+  check('Dupa realegere, personala bate sezonul', meRealeg.data?.user?.site_theme === 'theme_sakura', JSON.stringify(meRealeg.data?.user?.site_theme));
   const shopSeas = await req(je, 'GET', '/api/shop');
   check('Shop expune sezonul curent (eticheta Standard)', shopSeas.data?.seasonal?.id === 'theme_iarna', JSON.stringify(shopSeas.data?.seasonal));
   const noAccess = await req(je, 'POST', '/api/admin/season', { theme_id: 'theme_paste' });
@@ -1124,7 +1128,9 @@ console.log('\n=== 9c. ADMIN: tema de sezon globala ===');
   check('Temele de sezon nu se pot cumpara → 400', buySeas.status === 400 && buyOld.status === 400, `${buySeas.status}/${buyOld.status}`);
   const clr = await req(j, 'POST', '/api/admin/season', { theme_id: '' });
   const meClr = await req(je, 'GET', '/api/auth/me');
-  check('Golire sezon → defaultul revine la Standard (null)', clr.data?.seasonal_theme === null && meClr.data?.user?.site_theme === null, `${clr.data?.seasonal_theme}/${meClr.data?.user?.site_theme}`);
+  const meClr2 = await req(j2b, 'GET', '/api/auth/me');
+  check('Golire sezon → Standardul revine, realegerile raman', clr.data?.seasonal_theme === null && meClr.data?.user?.site_theme === null && meClr2.data?.user?.site_theme === 'theme_sakura', `${clr.data?.seasonal_theme}/${meClr.data?.user?.site_theme}/${meClr2.data?.user?.site_theme}`);
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_standard' }); // user2 la loc pe Standard (starea de dinainte de §9c)
   // Curatenie: §13i cere user2 lefter — readucem gold-ul la valoarea de dinainte
   const u2acum = (await req(j, 'GET', '/api/admin/users')).data.users.find((u) => u.username === 'user2');
   const back = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2row.id, value: goldInainte - Number(u2acum.gold) });

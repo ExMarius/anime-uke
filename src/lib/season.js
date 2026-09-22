@@ -2,9 +2,10 @@
 // season.js — tema de sezon a site-ului (globala, setata doar din admin).
 //
 // Temele de sezon (toamna, Halloween, iarna, Paste) NU sunt in shop si nu
-// se pot cumpara; adminul activeaza una pentru toata lumea. Utilizatorii
-// FARA tema personala (active_theme NULL) o vad ca implicita, cei cu tema
-// personala nu sunt afectati. Rezolvarea se face in GET /api/auth/me.
+// se pot cumpara; adminul activeaza una pentru toata lumea. La SETARE, toate
+// temele personale ACTIVE se reseteaza global (toata lumea vede sezonul);
+// ce e cumparat nu se pierde, iar cine nu place sezonul isi alege singur
+// alta, care bate sezonul. Rezolvarea se face in GET /api/auth/me.
 //
 // Citirea e cache-uita in izolat 60s: /auth/me e lovit la fiecare load de
 // pagina, fara cache fiecare ar costa o citire D1 in plus.
