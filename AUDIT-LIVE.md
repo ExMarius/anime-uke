@@ -12,6 +12,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
 | 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
 | 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
+| 6 (scara 1000×1000, migrarea 0028) | vezi §1e | o vizită: ~230.000 → ~64 rânduri citite din D1 |
 
 ---
 
@@ -137,6 +138,42 @@ Notă operațională: între deploy și audit se așteaptă 60s (propagarea Page
 - Dacă apare o pagină publică nouă (ex. `/despre`), adaug-o în `exclude` **și** în
   `PUBLIC_PAGES`/`STATIC_PAGES` din `src/worker.js` (altfel e 404 prin worker, pentru
   crawlerii care o cer pe calea din `include`).
+
+---
+
+## 1e. Runda 6 (2026-09-22): scara 1.000 × 1.000 (migrarea 0028)
+
+Întrebarea proprietarului — „duce 1.000 de utilizatori și 1.000 de serii?" — a fost
+măsurată, nu estimată: `scripts/bench-scale.mjs` construiește scara maximă pe un D1 local
+(aceleași migrări; 1.000 serii, 19.788 episoade, 1.000 conturi, 199.011 rânduri de progres,
+29.578 note) și raportează ce citește fiecare interogare fierbinte. Pe planul gratuit se
+taxează rândurile citite (5M/zi), deci asta era întrebarea reală — iar răspunsul, înainte,
+era NU: **~230.000 rânduri citite pentru O vizită pe prima pagină** (~21 vizite/zi până la
+epuizarea cotei).
+
+| Interogare din prima pagină | Rânduri citite înainte | După 0028 |
+|---|---|---|
+| Top săptămânal (`watch_progress`, scanare completă) | 199.011 | 1 (cache) · ~4.000 la recalculul orar |
+| Top notate (`GROUP BY` pe toate notele) | 29.578 | 5 |
+| `pulse` (COUNT/SUM pe 3 tabele) | 41.576 | 4 |
+| Catalog (24 carduri, B-tree temporar) | ≤1.000 | ≤25 |
+| **Total pe vizită** | **~230.000** | **~64** |
+
+Fix-urile (migrarea 0028 + cod): `idx_progress_updated`, media notelor denormalizată pe
+serie și resincronizată în același batch cu votul (`src/lib/ratings.js`), `idx_series_rating`,
+`idx_series_created_id`, contoarele `users_total`/`views_total` în `site_meta`, cache de o
+oră pentru topul săptămânal în `leaderboard_cache` (`TOP_CACHE_MINUTES=0` în dev/teste).
+
+Dovada pe producție (secțiunea 14 din `cf-relay/cmd.sh`): `EXPLAIN QUERY PLAN` rulat pe D1-ul
+real, pentru cele patru interogări — `SEARCH w USING INDEX idx_progress_updated`, `SCAN
+anime_series USING INDEX idx_series_rating` (parcurgere de index cu oprire după 5 rânduri),
+`SCAN s USING COVERING INDEX idx_series_created_id`, `SEARCH site_meta USING INDEX …`.
+Verificarea „scanări de `watch_progress` în topul săptămânal (trebuie 0)" e în output-ul relay-ului.
+
+Teste noi: `tests/top-cache.mjs` (17 — cache-ul topului: hit, miss, expirare, `TOP_CACHE_MINUTES=0`,
+degradare când D1 pică) și `tests/counters.mjs` (16 — maparea contoarelor pe `pulse` și forma
+batch-ului care resincronizează media), plus în e2e verificarea că media denormalizată din
+clasament e identică cu cea calculată live din note.
 
 ---
 

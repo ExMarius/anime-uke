@@ -1975,6 +1975,16 @@ console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
   check('Clasamentul de voturi are media si numarul de voturi', !!ratedRow && Number(ratedRow.average) === 8 && ratedRow.votes >= 1, JSON.stringify(ratedRow));
   const weekRow = (top.data?.weekly || []).find((r) => r.id === globalThis.seriesId);
   check('Topul saptamanal numara privitori unici din progresul real', !!weekRow && weekRow.watchers >= 1 && typeof weekRow.seconds === 'number', JSON.stringify(weekRow));
+  // Media din clasament e cea denormalizata pe serie (0028), iar ruta seriei o
+  // calculeaza live din series_ratings: daca cele doua surse nu spun acelasi
+  // lucru, cineva a scris note pe o cale care nu resincronizeaza contoarele.
+  {
+    const serLive = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+    check('Media denormalizata = media calculata live din note',
+      Number(ratedRow?.average) === Number(serLive.data?.rating_average)
+      && Number(ratedRow?.votes) === Number(serLive.data?.rating_count),
+      `top=${ratedRow?.average}/${ratedRow?.votes} serie=${serLive.data?.rating_average}/${serLive.data?.rating_count}`);
+  }
   check('Topurile sunt limitate la 5 intrari', (top.data?.weekly || []).length <= 5 && (top.data?.rated || []).length <= 5, `w=${top.data?.weekly?.length} r=${top.data?.rated?.length}`);
 }
 

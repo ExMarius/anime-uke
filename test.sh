@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          e2e + dom-smoke + theme-cache + theme-flow + pixel-teme + plafoane
+#   ./test.sh          e2e + dom-smoke + theme-cache + top-cache + counters + theme-flow + pixel-teme + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -89,7 +89,10 @@ stop_server() {
 
 echo "── reset baza locala ──"
 rm -rf .wrangler/state
-start_server
+# TOP_CACHE_MINUTES=0: topul săptămânal se recalculează la fiecare cerere, ca
+# suita să vadă imediat progresul scris de teste (în producție cache-ul e de o
+# oră; comportamentul lui e testat separat, în tests/top-cache.mjs).
+start_server TOP_CACHE_MINUTES=0
 
 RC=0
 echo
@@ -128,6 +131,28 @@ fi
 [ "$THEME_RC" -eq 0 ] || RC=1
 
 echo
+echo "════════ top-cache (cache top săptămânal, fara server) ════════"
+node tests/top-cache.mjs > /tmp/topcache.log 2>&1
+TOPC_RC=$?
+tail -6 /tmp/topcache.log
+if [ $TOPC_RC -ne 0 ]; then
+  echo "!! top-cache s-a oprit cu codul $TOPC_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/topcache.log | tail -12
+fi
+[ "$TOPC_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ counters (contoare denormalizate, fara server) ════════"
+node tests/counters.mjs > /tmp/counters.log 2>&1
+COUNTERS_RC=$?
+tail -6 /tmp/counters.log
+if [ $COUNTERS_RC -ne 0 ]; then
+  echo "!! counters s-a oprit cu codul $COUNTERS_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/counters.log | tail -12
+fi
+[ "$COUNTERS_RC" -eq 0 ] || RC=1
+
+echo
 echo "════════ theme-flow (flux tema animata, pagina reala) ════════"
 node tests/theme-flow.mjs > /tmp/flow.log 2>&1
 FLOW_RC=$?
@@ -158,7 +183,10 @@ stop_server
 echo
 echo "── reset baza locala (faza plafoane) ──"
 rm -rf .wrangler/state
-start_server LIMIT_USERS=4 LIMIT_SERIES=2 CANONICAL_ORIGIN=https://anime-uke.test
+# TOP_CACHE_MINUTES=0: topul săptămânal se recalculează la fiecare cerere, ca
+# suita să vadă imediat progresul scris de teste (în producție cache-ul e de o
+# oră; comportamentul lui e testat separat, în tests/top-cache.mjs).
+start_server TOP_CACHE_MINUTES=0 LIMIT_USERS=4 LIMIT_SERIES=2 CANONICAL_ORIGIN=https://anime-uke.test
 
 echo
 echo "════════ caps-e2e (plafoane buget-0) ════════"

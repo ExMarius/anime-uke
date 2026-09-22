@@ -4,6 +4,7 @@ import { json, errorResponse, setAuthCookie, getClientIp, sanitizeText, isSameOr
 import { validateUsername, validateEmail, validatePassword } from '../../../lib/validate.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { DEFAULT_LIMIT_USERS, resolveLimit, usersFullMessage } from '../../../lib/limits.js';
+import { bumpMetaStmt } from '../../../lib/paging.js';
 
 // Register: max 5 conturi/ora per IP. Previne crearea automata de conturi,
 // care altfel ar umple D1 gratuit (500 MB) si ar putea depasi cota de scrieri.
@@ -72,13 +73,17 @@ export async function onRequestPost(context) {
 
   let userId;
   try {
-    const insert = await env.DB
-      .prepare(
-        `INSERT INTO users (username, email, password_hash, password_salt, points, is_admin, is_banned)
-         VALUES (?, ?, ?, ?, 0, ?, 0)`
-      )
-      .bind(username.value, email.value, hash, salt, isFirstUser ? 1 : 0)
-      .run();
+    // Contorul users_total (folosit de /api/pulse) se actualizează în ACELAȘI
+    // batch cu inserarea: fie există și contul, și contorul, fie niciunul.
+    const [insert] = await env.DB.batch([
+      env.DB
+        .prepare(
+          `INSERT INTO users (username, email, password_hash, password_salt, points, is_admin, is_banned)
+           VALUES (?, ?, ?, ?, 0, ?, 0)`
+        )
+        .bind(username.value, email.value, hash, salt, isFirstUser ? 1 : 0),
+      bumpMetaStmt(env, 'users_total', 1),
+    ].filter(Boolean));
 
     userId = insert.meta?.last_row_id;
     if (!userId) throw new Error('last_row_id lipsa');

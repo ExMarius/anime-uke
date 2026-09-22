@@ -13,8 +13,8 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 573 · dom 163 · theme-cache 7 ·
-  theme-flow PASS · pixel-teme 8 · plafoane 13), deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
+- **Stare:** stabil, curat, toate testele verzi (e2e 574 · dom 163 · theme-cache 7 ·
+  top-cache 17 · counters 16 · theme-flow PASS · pixel-teme 8 · plafoane 13), deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
   (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
@@ -111,6 +111,10 @@ cat cf-relay/last-output.txt
 | Imagine 404 / hero fără WebP pe live | `.webp` sunt COMISE în repo, nu generate la deploy | `git add public/assets/img/*.webp`; nu pune `find -delete` în `deploy.sh` |
 | Logo-ul din nav nu se încarcă pe un browser vechi | DOM-ul cere direct `.webp` (nu mai există negociere pe server) | e intenționat: WebP e suportat de orice browser care rulează module ES; `.png` rămâne pentru favicon/`og:image` |
 | Prima pagină cheltuie 5 cereri de API | cineva a desfăcut agregarea din `/api/home` | `tests/dom-smoke.mjs` numără cererile paginii („Prima pagină cere catalogul o singură dată") |
+| Cota D1 se duce în câteva ore, deși traficul e mic | o interogare SCANEAZĂ un tabel întreg (se taxează rândurile citite, nu cererile) | `node scripts/bench-scale.mjs` arată planul + rândurile per interogare; la scara maximă nimic din prima pagină n-are voie să fie „SCAN <tabel mare>" |
+| Clasamentul „cele mai bine notate" arată medii vechi | o cale nouă scrie în `series_ratings` fără să resincronizeze contoarele | folosește `saveRating()` din `src/lib/ratings.js`; `tests/counters.mjs` verifică forma batch-ului |
+| `pulse` arată 0 serii / 0 membri | contoarele din `site_meta` nu se întrețin pe o cale de scriere nouă | contoarele se bat cu `bumpMetaStmt` (serii/episoade: `admin/*`; conturi: `register.js`; vizualizări: `StatsDO.flush`) |
+| Testele e2e nu văd o vizionare în „top săptămânal" | topul e ținut o oră în `leaderboard_cache` | rulați cu `TOP_CACHE_MINUTES=0` (o face `test.sh`/`dev.sh`); cache-ul propriu-zis e testat în `tests/top-cache.mjs` |
 
 ## 5. Modelul de date pe care trebuie să-l respecți
 
@@ -205,6 +209,33 @@ cele două versiuni. Acum e o singură linie, testată împreună:
    „anterior" a fost reparată — butoanele pornesc `disabled` în HTML).
 4. **De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke`
    → Settings → Runtime → **Fail open** (la epuizarea cotei, catalogul static rămâne vizibil).
+
+---
+
+### Scara: 1.000 de serii / 1.000 de utilizatori (2026-09-22, migrarea 0028)
+
+Întrebarea proprietarului a primit un răspuns măsurat, nu estimat: `scripts/bench-scale.mjs`
+construiește scara maximă pe un D1 local (migrările reale: 1.000 serii, 19.788 episoade,
+1.000 useri, 199.011 rânduri de progres, 29.578 note) și raportează rândurile citite.
+Rezultatul de dinainte: **~230.000 rânduri pentru o singură vizită pe prima pagină** —
+adica ~21 de vizite/zi până la epuizarea cotei de 5M. Trei interogări scanau tabele
+întregi la fiecare afișare: topul săptămânal (199.011), topul notelor (29.578) și pulse
+(41.576). Migrarea 0028 + codul aferent le-au adus la ~64 rânduri/vizită:
+
+- `idx_progress_updated` — fereastra de 7 zile devine căutare în index;
+- `anime_series.rating_avg/rating_count` + `idx_series_rating` — media notelor se
+  resincronizează în ACELAȘI batch cu votul (`src/lib/ratings.js`), clasamentul citește
+  5 rânduri (era GROUP BY pe toate notele site-ului);
+- `idx_series_created_id` — catalogul nu mai are nevoie de B-tree temporar;
+- `site_meta.users_total/views_total` — pulse citește 4 contoare (era 41.576 rânduri);
+- topul săptămânal se ține o oră în `leaderboard_cache` (tabelul din 0008, până acum
+  nefolosit): recalculul costă ~4.000 rânduri, 24 de ori pe zi, iar cererile obișnuite
+  citesc 1 rând. `TOP_CACHE_MINUTES=0` (dev/teste) îl face proaspăt la fiecare cerere.
+
+Regula care ține site-ul în buget: **nimic din calea fierbinte nu are voie să SCAN-eze un
+tabel mare**. `bench-scale.mjs` are o gardă anti-derivă (verifică înainte de rulare că
+SQL-ul măsurat există în handler), deci dacă cineva schimbă o interogare, bench-ul cade
+zgomotos în loc să raporteze cifre pentru altceva.
 
 ---
 

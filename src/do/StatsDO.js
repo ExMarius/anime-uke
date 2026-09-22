@@ -13,6 +13,8 @@
 // ca un refresh repetat sa nu umfle artificial contorul.
 // =====================================================================
 
+import { bumpMetaStmt } from '../lib/paging.js';
+
 const FLUSH_THRESHOLD = 20;
 const FLUSH_ALARM_MS = 30_000;
 const DEDUPE_WINDOW_MS = 10 * 60_000;
@@ -84,7 +86,14 @@ export class StatsDO {
 
     try {
       const stmt = this.env.DB.prepare('UPDATE episodes SET views = views + ? WHERE id = ?');
-      await this.env.DB.batch(entries.map(([id, n]) => stmt.bind(n, id)));
+      // Al doilea statement din batch: contorul global de vizualizări
+      // (site_meta.views_total), ca „pulse" să nu mai însumeze toate
+      // episoadele la fiecare reîmprospătare. Un singur drum către D1.
+      const total = entries.reduce((s, [, n]) => s + n, 0);
+      const stmts = entries.map(([id, n]) => stmt.bind(n, id));
+      const meta = bumpMetaStmt(this.env, 'views_total', total);
+      if (meta) stmts.push(meta);
+      await this.env.DB.batch(stmts);
     } catch (e) {
       console.error('StatsDO flush esuat:', e?.message || e);
       // Repunem ca sa nu pierdem views (limitat, sa nu creasca la infinit)

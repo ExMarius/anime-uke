@@ -10,6 +10,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity } from '../../lib/xp.js';
+import { saveRating } from '../../lib/ratings.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -57,26 +58,16 @@ export async function onRequestPost(context) {
     .bind(user.id, sid.value)
     .first();
 
-  await env.DB
-    .prepare(
-      `INSERT INTO series_ratings (user_id, series_id, rating)
-       VALUES (?, ?, ?)
-       ON CONFLICT(user_id, series_id) DO UPDATE SET rating = excluded.rating`
-    )
-    .bind(user.id, sid.value, rating)
-    .run();
-
-  const agg = await env.DB
-    .prepare('SELECT AVG(rating) AS avg, COUNT(*) AS n FROM series_ratings WHERE series_id = ?')
-    .bind(sid.value)
-    .first();
+  // Votul + resincronizarea mediei denormalizate, într-un singur batch
+  // (un singur drum către D1, atomic: niciodată o serie cu media veche).
+  const agg = await saveRating(env, user.id, sid.value, rating);
 
   if (!had) await addActivity(env, user.id, 5);   // +5 XP doar la primul vot
 
   return json({
     success: true,
     rating,
-    average: Math.round((agg?.avg || 0) * 10) / 10,
-    count: agg?.n || 0,
+    average: agg.average,
+    count: agg.count,
   });
 }

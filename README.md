@@ -63,6 +63,7 @@ scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
 ├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
 ├── usage.mjs               „cât din cota gratuită am consumat azi" (GraphQL Analytics, read-only)
+├── bench-scale.mjs         „duce 1000 de serii / 1000 de useri?" — rândurile citite de fiecare interogare
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
@@ -197,6 +198,44 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 
 ## Cât duce planul gratuit (și ce faci când se apropie)
 
+### „Duce 1.000 de utilizatori și 1.000 de serii?" — da, cu o condiție: să nu scanezi tabele
+
+Plafoanele site-ului sunt 1.000 de conturi și 1.000 de anime-uri (`src/lib/limits.js`).
+Întrebarea se poate răspunde doar măsurând, așa că există un banc de test care
+construiește exact acea scară pe un D1 local (aceleași migrări ca producția) și
+numără ce citește fiecare interogare fierbinte:
+
+```bash
+node scripts/bench-scale.mjs            # 1000 serii · 1000 useri · un an de activitate
+node scripts/bench-scale.mjs --views 6000   # proiecția pentru alt trafic
+```
+
+Pe planul gratuit contează **rândurile citite** (5 milioane/zi), nu cererile. Vestea
+bună: invocările nu sunt problema — o vizită costă ~2 din 100.000. Problema erau trei
+interogări care scanau tabele întregi **la fiecare afișare a primei pagini**:
+
+| Interogare (prima pagină) | Înainte | Acum | Ce a rezolvat-o |
+|---|---|---|---|
+| Top săptămânal (`watch_progress`, 7 zile) | **199.011** | **1** (din cache) / ~4.000 la recalcul orar | `idx_progress_updated` (0028) + cache de o oră în `leaderboard_cache` |
+| Top notate (`series_ratings`) | **29.578** | **5** | media denormalizată pe serie + `idx_series_rating` (0028) |
+| `pulse` (COUNT/SUM pe 3 tabele) | **41.576** | **4** | contoare în `site_meta` (0028), întreținute la scriere |
+| Catalog 24 carduri | ≤1.000 | **≤25** | `idx_series_created_id` (0028) |
+| Restul (sesiune, genuri, sitemap, notificări) | ~600 | ~600 (amortizat) | erau deja indexate |
+
+**Rezultatul măsurat:** o vizită pe prima pagină a scăzut de la **~230.000** de rânduri
+citite la **~64**, iar la 2.000 de vizite pe zi consumul ajunge la **~395.000 rânduri/zi
+(8% din cotă)**. Plafonul de 5M/zi ar ține acum teoretic ~78.000 de vizite pe zi pe prima
+pagină, în loc de ~21. Aceeași măsurătoare a arătat și ce NU era o problemă: scrierile
+(heartbeat-ul de vizionare e la 2 minute, vizualizările se bat la 20 înainte de un flush
+D1) și invocările.
+
+Ce a rămas deliberat „scump" și de ce e în regulă: genurile (1.000 rânduri, o dată pe
+oră), sitemap-urile (până la 6.000 rânduri, o dată pe oră, cerute de crawlere) și
+recalculul topului săptămânal (o dată pe oră). Toate trei sunt în afara căii fierbinți,
+deci nu cresc cu traficul. Dacă vreodată crește și numărul lor, pârghiile sunt în
+`README`-ul de mai jos plus `TOP_CACHE_MINUTES` (cache-ul topului, în minute).
+
+
 Cotele care contează: **100.000 invocări de Worker/zi** (Functions), **5M rânduri citite +
 100.000 scrieri D1/zi**, **100.000 requests DO/zi**, 10 ms CPU/cerere. Toate se resetează la
 **00:00 UTC**. Depășirea cotelor D1/DO oprește partea dinamică (site-ul static rămâne sus —
@@ -209,7 +248,8 @@ vezi „Fail open" mai jos).
 | Prima pagină (HTML + assete + logo) | 1 + 6 invocări | **0** (servește stratul static) |
 | API pentru prima pagină | 5 (`/series` `/top` `/recent` `/genres` `/pulse`) | **1** (`/api/home`) |
 | Sesiune (nav, puncte) | 1 | 1 |
-| **Total vizitator fără cont** | **~12** | **~2** |
+| **Total vizitator fără cont** | **~12 invocări** | **~2 invocări** |
+| **Rânduri citite din D1 / vizită** | **~230.000** | **~64** |
 
 Cu ~2 invocări per vizită, 100k/zi înseamnă **zeci de mii de vizite pe zi**. Un vizitator
 logat care se uită la un episod consumă în plus: `/api/episodes/:id`, `/api/view`, un
@@ -223,12 +263,14 @@ merită atinse:
 3. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`, `SEND_CAP` și
    `MAX_INCREMENT` din `src/routes/api/progress.js` — de ținut sincronizate): 2 → 5 minute
    scade de ~2,5× scrierile D1 din vizionare.
-4. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează
+4. **Vezi scara**: `node scripts/bench-scale.mjs` spune ce ar costa fiecare interogare la
+   1.000 de serii și 1.000 de utilizatori (și cât ar ține cota la traficul dorit).
+5. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează
    procentul din fiecare cotă pentru ziua UTC curentă. Cere pe token permisiunea
    „Account Analytics: Read" — dacă lipsește, scriptul spune exact asta.
-5. **Protecție anti-abuz gratis**: Bot Fight Mode, „Under Attack Mode" pentru urgente,
+6. **Protecție anti-abuz gratis**: Bot Fight Mode, „Under Attack Mode" pentru urgente,
    5 reguli WAF custom pe planul gratuit. Rate limiting-ul propriu acoperă login/register/watch/chat.
-6. **Backup**: D1 are Time Travel (restaurare la un moment din trecut); `worker-do` și Pages
+7. **Backup**: D1 are Time Travel (restaurarere la un moment din trecut); `worker-do` și Pages
    se redeploya din repo.
 
 ---

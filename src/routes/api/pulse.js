@@ -8,13 +8,24 @@ import { json } from '../../lib/http.js';
 // site-ul pare o broșură statică.
 //
 // Buget D1 (planul gratuit = 5M rânduri citite/zi, scrieri PICA hard):
-//   - un singur SELECT cu subinterogări COUNT, țintit de indexuri;
-//   - ținut în cache la nivel de izolat 5 minute — la 1000 de vizitatori/zi
-//     Costs ~kilobytes din cotă, nu milioane.
-//   - „online” vine din ChatDO (memorie, zero D1) pe GET /state.
+//   Măsurat la scara maximă (1.000 serii / 1.000 useri, vezi migrarea 0028):
+//   COUNT(*) pe anime_series + COUNT(*) pe users + SUM(views) pe toate
+//   episoadele = 41.576 rânduri citite la FIECARE reîmprospătare a cache-ului
+//   de 5 minute. Cu câteva izolate calde, doar contorul decorativ din
+//   subsolul paginii mânca toată cota zilei.
+//
+//   Acum citește contoarele denormalizate din site_meta (întreținute de
+//   admin/series + admin/episodes la adăugări/ștergeri, de register.js la
+//   cont nou și de StatsDO la flush-ul de vizualizări): 4 rânduri în loc de
+//   41.576. Diferența posibilă față de COUNT(*) e de câteva unități în urma
+//   realității (o vizualizare încă neflush-uită din DO) — pentru un număr
+//   afișat ca „câte serii există" asta e irelevant, iar economisirea nu e.
+//   - online vine din ChatDO (memorie, zero D1) pe GET /state.
 // =====================================================================
 
 const CACHE_MS = 5 * 60 * 1000;
+/** Contoarele din site_meta care alcătuiesc „pulse"-ul de catalog. */
+export const PULSE_KEYS = ['series_total', 'episodes_total', 'users_total', 'views_total'];
 const cache = { at: 0, data: null };
 
 export async function onRequestGet(context) {
@@ -23,20 +34,19 @@ export async function onRequestGet(context) {
   const now = Date.now();
   if (!cache.data || now - cache.at > CACHE_MS) {
     try {
-      const row = await env.DB
+      const res = await env.DB
         .prepare(
-          `SELECT
-             (SELECT COUNT(*) FROM anime_series)                        AS series,
-             (SELECT COUNT(*) FROM episodes)                            AS episodes,
-             (SELECT COUNT(*) FROM users)                               AS members,
-             (SELECT COALESCE(SUM(views), 0) FROM episodes)             AS views`
+          `SELECT key, value FROM site_meta
+            WHERE key IN ('series_total', 'episodes_total', 'users_total', 'views_total')`
         )
-        .first();
+        .all();
+      const c = {};
+      for (const r of res.results || []) c[r.key] = Number(r.value) || 0;
       cache.data = {
-        series: row?.series || 0,
-        episodes: row?.episodes || 0,
-        members: row?.members || 0,
-        views: row?.views || 0,
+        series: c.series_total || 0,
+        episodes: c.episodes_total || 0,
+        members: c.users_total || 0,
+        views: c.views_total || 0,
       };
       cache.at = now;
     } catch {

@@ -17,7 +17,8 @@
     "test:e2e": "node tests/e2e.mjs",
     "deploy": "./deploy.sh",
     "deploy:do": "cd worker-do && npx wrangler deploy",
-    "dev:pages": "npx wrangler pages dev --port=8788"
+    "dev:pages": "npx wrangler pages dev --port=8788",
+    "bench": "node scripts/bench-scale.mjs"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.9",

@@ -5,11 +5,14 @@ import { json } from '../../lib/http.js';
 //
 // Standard pe site-urile de anime: filtrezi după gen (Acțiune, Romantism…).
 // Genul e stocat ca „A, B, C" pe serie, deci separăm virgulele în JS și
-// păstrăm lista în cache 10 minute — la 1000 de serii interogarea citește
-// o singură dată coloana, apoi răspunde din memorie.
+// păstrăm lista în cache o ORĂ — la 1000 de serii interogarea citește 1.000
+// de rânduri (scanare de coloană: genul e o listă „A, B, C", nu e indexabil),
+// deci cu 10 minute de cache și câteva izolate calde se duceau ~150.000 de
+// rânduri pe zi doar ca să știm ce filtre afișăm. Lista de genuri e practic
+// statică pentru un catalog de 1000 de serii.
 // =====================================================================
 
-const CACHE_MS = 10 * 60 * 1000;
+const CACHE_MS = 60 * 60 * 1000;
 const cache = { at: 0, list: null };
 
 export async function onRequestGet(context) {
@@ -40,5 +43,5 @@ export async function onRequestGet(context) {
     }
   }
 
-  return json({ genres: cache.list }, { headers: { 'cache-control': 'public, max-age=600' } });
+  return json({ genres: cache.list }, { headers: { 'cache-control': 'public, max-age=3600' } });
 }

@@ -106,6 +106,30 @@ echo "   GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}
 echo "   GET /api/admin/season anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/season") (trebuie 401)"
 echo "   /admin anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 302)"
 
+echo "── 14. migrarea 0028: contoarele + planurile de execuție pe D1 de producție"
+W="npx wrangler"; [ -x "$PWD/node_modules/.bin/wrangler" ] && W="$PWD/node_modules/.bin/wrangler"
+$W d1 execute DB --remote --command "SELECT rating_avg, rating_count FROM anime_series LIMIT 1" >/dev/null 2>&1 \
+  && echo "   0028: coloanele rating_avg/rating_count există pe anime_series" \
+  || echo "   0028: LIPSESC coloanele rating_avg/rating_count!"
+echo "   0028: contor users_total → $($W d1 execute DB --remote --command "SELECT value FROM site_meta WHERE key='users_total'" --json 2>/dev/null | grep -o '\"value\": *[0-9]*' | head -1)"
+echo "   0028: contor views_total → $($W d1 execute DB --remote --command "SELECT value FROM site_meta WHERE key='views_total'" --json 2>/dev/null | grep -o '\"value\": *[0-9]*' | head -1)"
+
+# Planurile de execuție sunt dovada că indexurile din 0028 sunt FOLOSITE pe
+# datele reale: „SCAN <tabel mare>" = se citesc toate rândurile (metrica taxată
+# de D1), „SEARCH ... USING INDEX" = doar câteva.
+plan() {
+  local name="$1" sql="$2" out
+  out="$($W d1 execute DB --remote --command "EXPLAIN QUERY PLAN $sql" --json 2>/dev/null \
+    | grep -o '"detail":[^,}]*' | sed 's/"detail": *//' | tr -d '"' | tr '\n' '|')"
+  echo "   $name → $out"
+}
+plan "top săptămânal" "SELECT e.series_id FROM watch_progress w JOIN episodes e ON e.id = w.episode_id WHERE w.updated_at >= datetime('now','-7 days') GROUP BY e.series_id LIMIT 5"
+plan "top notate"     "SELECT id FROM anime_series WHERE rating_count > 0 ORDER BY rating_avg DESC, rating_count DESC LIMIT 5"
+plan "catalog"        "SELECT s.id FROM anime_series s ORDER BY s.created_at DESC, s.id DESC LIMIT 25 OFFSET 0"
+plan "pulse"          "SELECT key, value FROM site_meta WHERE key IN ('series_total','episodes_total','users_total','views_total')"
+SCANS="$($W d1 execute DB --remote --command "EXPLAIN QUERY PLAN SELECT e.series_id FROM watch_progress w JOIN episodes e ON e.id = w.episode_id WHERE w.updated_at >= datetime('now','-7 days') GROUP BY e.series_id LIMIT 5" --json 2>/dev/null | grep -c 'SCAN watch_progress')"
+echo "   scanări de watch_progress în topul săptămânal (trebuie 0): $SCANS"
+
 echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
