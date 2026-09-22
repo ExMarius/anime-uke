@@ -4,6 +4,8 @@
 # motor (fulgi), posesori Frunze grandfathered.
 # Lectie 2026-09-22: orice dependenta noua in package.json cere lockfile
 # sincronizat (npm install --package-lock-only), altfel pica „npm ci" din relay.
+# Fix grandfathering: sezonierele DETINUTE apar inapoi in catalog (doar la
+# posesori), cu eticheta „Deținută (sezon)" — altfel isi pierdeau tema din UI.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"

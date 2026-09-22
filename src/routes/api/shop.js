@@ -33,7 +33,9 @@ export async function onRequestGet(context) {
       can_buy: gold >= i.price && (i.consumable || !(owned[i.id] > 0)),
     })),
     colors: NAME_COLORS.map(decorate),
-    themes: SITE_THEMES.filter((t) => !t.seasonal).map(decorate),
+    // Sezonierele detinute RAMAN vizibile (grandfathered): posesorul isi vede
+    // tema, o poate previzualiza si reactiva; can_buy=false vine din decorate.
+    themes: SITE_THEMES.filter((t) => !t.seasonal || (owned[t.id] || 0) > 0).map(decorate),
     // Sezonul curent (daca e activat): cardul Standard il arata ca implicit.
     seasonal: await (async () => {
       const id = await getSeasonalTheme(env);

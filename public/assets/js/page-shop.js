@@ -142,7 +142,7 @@ function paintThemes() {
     foot.className = 'color-card__foot';
     const price = document.createElement('span');
     price.className = 'color-card__price';
-    price.textContent = t.price <= 1 ? 'Gratuit' : `🪙 ${t.price.toLocaleString('ro-RO')}`;
+    price.textContent = t.seasonal && t.owned ? '🍂 Deținută (sezon)' : t.price <= 1 ? 'Gratuit' : `🪙 ${t.price.toLocaleString('ro-RO')}`;
     foot.appendChild(price);
     foot.appendChild(actionBtn(t, () => activate(t, card)));
     card.append(name, chip, foot);
