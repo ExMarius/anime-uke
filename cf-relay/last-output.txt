@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 500b362
+comanda: cf-relay/cmd.sh @ 7970f75
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 500b362
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=500b362
+    [0;32m✓[0m assete versionate ?v=7970f75
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 9 fisiere
-    [0;32m✓[0m publicat: https://677fca41.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://8b7de2e5.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T11:11:16.851Z
+data: 2026-09-22T11:41:31.830Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (245 ms)
-  ℹ️  / → 200 · 245 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (285 ms)
+  ℹ️  / → 200 · 285 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-22T11:11:16.851Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 112 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 106 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-22T11:11:16.851Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 118 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 115 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-22T11:11:16.851Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 179 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 191 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 100 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 110 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 98 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 112 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 195 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 197 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 100 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 111 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -186,7 +186,7 @@ data: 2026-09-22T11:11:16.851Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=500b362 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=7970f75 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 74325 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -231,17 +231,17 @@ data: 2026-09-22T11:11:16.851Z
   ✅ /assets/js/page-shop.js e comprimat (br)
   ✅ /assets/js/page-shop.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-shop.js e minificat
-  ℹ️  /assets/js/page-admin.js → 200 · 33729 B · enc=br · cache=public, max-age=31536000, immutable
+  ℹ️  /assets/js/page-admin.js → 200 · 33992 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e comprimat (br)
   ✅ /assets/js/page-admin.js are Cache-Control: public, max-age=31536000, immutable
   ✅ /assets/js/page-admin.js e minificat
-  ℹ️  total JS servit (8 fișiere): 306.8 KB (comprimat) — fără framework, e sănătos sub ~300 KB
+  ℹ️  total JS servit (8 fișiere): 307.1 KB (comprimat) — fără framework, e sănătos sub ~300 KB
   ✅ buget JS ok: 307 KB
   ℹ️  hero-1.jpg: fără Accept webp → image/jpeg (202731 B); cu Accept webp → image/webp (168738 B)
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 245 ms · /series 12 ms · /api/series 256 ms
+  ℹ️  timpi: / 285 ms · /series 15 ms · /api/series 314 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -309,7 +309,7 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=500b362 
+  ?v= din / (trebuie build-ul curent): ?v=7970f75 
 === verificari punctuale (logo V7) ===
   /assets/img/logo.png → 200 (trebuie 200)
   /assets/img/logo-icon.png → 200 (trebuie 200)
@@ -333,15 +333,15 @@ exit audit: 0
 === inspectie bytes sitemap (GSC 'nu a putut fi citit') ===
 --- headere complete ---
 HTTP/2 200 
-date: Tue, 22 Sep 2026 11:11:49 GMT
+date: Tue, 22 Sep 2026 11:42:05 GMT
 content-type: text/xml; charset=utf-8
 content-length: 797
 access-control-allow-origin: *
 cache-control: no-store
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=XdI5klpsXbyyki161jYkevpucgjuf%2FxsET21UqbNPWMP9bHxVL35pYtPrIqnBfGmt4L%2BlrDcICdrzy1gsjEfZ6bxZ%2BpH%2BXrjogVwOMDLKOfoUxDzXE4FuxcYeH1r%2FZlp8wYsCQRn"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=HA%2B%2BblrBdzjVSYYeo8sGYWf0UWwOhAU53dZSTbMTDTNK28OBmdBdwxpr6EQJTrUn2ok%2F7oOLmTvfU5CsJJsAtfvJjIh6h0McGDLGifOYq6D9NQ9wrYitKySkUJYQsOK0bTU0lS%2Fx"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a3f0defe7b50c95f-IAD
+cf-ray: a3f10b557f04d660-IAD
 alt-svc: h3=":443"; ma=86400
 
 --- primii 120 bytes (hex+text, trebuie sa inceapa cu 3c 3f 78 6d = '<?xm') ---
@@ -383,6 +383,6 @@ linii: 11 | invalide: NICIUNA
   GET /api/admin/users anonim → 401 (trebuie 401)
   /admin anonim → 302 (trebuie 302 catre /login)
 === verificari punctuale (sezon) ===
-  migrare 0027 (raw): [   {     "results": [       {         "value": "theme_halloween"       }     ],     "success": true,     "meta": {       "served_by": "v3-prod",       "served_by_region": "WNAM",       "served_by_colo": "SEA",       "served_by_primary": true,       "timings": {         "sql_duration_ms": 0.5355    
-  posesori Frunze (raw, grandfathered): [   {     "results": [       {         "n": 1       }     ],     "success": true,     "meta": {       "served_by": "v3-prod",       "served_by_region": "WNAM",       "served_by_colo": "SEA",       "served_by_primary": true,       "timings": {         "sql_duration_ms": 0.3253       },       "duratio
+  migrare 0027 (raw): [   {     "results": [       {         "value": "theme_paste"       }     ],     "success": true,     "meta": {       "served_by": "v3-prod",       "served_by_region": "WNAM",       "served_by_colo": "SEA",       "served_by_primary": true,       "timings": {         "sql_duration_ms": 0.6262       }
+  posesori Frunze (raw, grandfathered): [   {     "results": [       {         "n": 1       }     ],     "success": true,     "meta": {       "served_by": "v3-prod",       "served_by_region": "WNAM",       "served_by_colo": "SEA",       "served_by_primary": true,       "timings": {         "sql_duration_ms": 0.1803       },       "duratio
   GET /api/admin/season anonim → 401 (trebuie 401)
