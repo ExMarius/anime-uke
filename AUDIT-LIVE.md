@@ -1,13 +1,44 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-14 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
-**Mod:** read-only, fără credențiale · **Scor final:** ✅ **162** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=55a3027` (wrangler 4.131.2, migrări 0001–0025 aplicate remote)
+**Data:** 2026-09-22 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
+**Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
+**Build auditat:** `?v=2db4976` (wrangler 4.131.2, migrări 0001–0025 aplicate remote)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
 | 1 (înainte de reparări, build `eb03ecd`) | ✅ 144 · 🟡 19 · 🔴 2 | auditul inițial: 2 probleme reale + 19 observații |
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
+| 3 (după optimizările de buget, build `2db4976`) | ✅ 168 · 🟡 0 · 🔴 0 | probe noi pe „ce nu trece prin worker” — toate verzi |
+
+---
+
+## 0. Sesiunea „buget 0": de ce site-ul nu mai poate pica la trafic
+
+Planul gratuit dă **100.000 de invocări de Worker pe zi**, iar fiecare cerere care ajunge în
+Pages Functions consumă una. Un vizitator fără cont cheltuia ~12 invocări (1 pagină + 6 assete +
+5 cereri de API: `/series`, `/top`, `/recent`, `/genres`, `/pulse`). Acum cheltuie **~2**.
+
+| Ce s-a schimbat | Efect | Dovada pe live (build `2db4976`) |
+|---|---|---|
+| `public/_routes.json`: `/assets/*`, `/`, `/login`, `/register`, `/episode` nu mai intră în worker | assetele = 0 invocări; o pagină statică = 0 invocări | `cache-control: public, max-age=31536000, immutable` (o singură valoare — înainte ieșea `no-cache, no-cache`, semnul trecerii prin worker) |
+| `public/_headers`: headerele de securitate pentru căile ocolite | securitatea nu scade (paritate verificată automat) | CSP + HSTS + `X-Frame-Options` + `Permissions-Policy` + CORP prezente pe `/assets/css/style.css` (5/5); `/profile`, `/admin`, `/shop` încă 302 → `/login?next=…`; `/serie/99999999` → 404 |
+| `/api/home`: prima pagină într-o singură cerere (catalog + topuri + ultimele episoade + genuri + „online") | 5 cereri de API → 1 | `/api/home` → 200 (public), agregare completă, 289 ms |
+| imagini referite direct `.webp` (frați comiși în repo) | fără negociere pe server, fără cereri duble | `hero-1.webp` → 200 `image/webp` (168 KB vs 202 KB JPEG); pagina nu mai cere `.jpg`-ul (rămâne doar în `og:image`, pentru rețelele sociale) |
+
+**Consum real, măsurat (`node scripts/usage.mjs` prin relay, ziua UTC 2026-09-22** — zi care
+include toate deployurile, auditurile și suitele de teste ale zilei):
+
+| Cotă gratuită | Consumat | Din plafon |
+|---|---|---|
+| Invocări Functions (Pages) | 6.410 | **6%** |
+| D1 rânduri citite | 19.210 | 0% |
+| D1 rânduri scrise | 219 | 0% |
+| Durable Objects requests | 952 | 1% |
+| DO durată | 1 GB-s | 0% |
+
+**De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke` →
+Settings → Runtime → **Fail open**. Atunci, chiar dacă se epuizează cota, catalogul static
+continuă să se încarce (nu pagina de eroare).
 
 ---
 
@@ -60,7 +91,9 @@
    adaugă domeniu propriu (`CANONICAL_ORIGIN`), aceste trei fișiere trebuie trecute pe originea canonică
    (sau injectate din worker, ca la `/serie/<id>`).
 3. **`/episode` fără id** rămâne 200 (shell + JS). Nu e în sitemap și nu e link-uit; se poate aplica același 301
-   ca la `/series` dacă se dorește consecvență.
+   ca la `/series` dacă se dorește consecvență. **Atenție la implementare:** shell-ul `/episode` e acum
+   servit direct din stratul static (e în `public/_routes.json`), deci un 301 pentru cazul „fără id" ar
+   trebui făcut fie din `_redirects`, fie scoțând ruta de sub bypass — nu din worker, care nu-l mai vede.
 4. **Audit cu sesiune pe live** — auditul nu are credențiale, deci fluxele logate (shop, cufere, misiuni, facțiuni,
    admin, chat) sunt verificate doar local de `./test.sh`. Dacă vrei o trecere și pe live, e nevoie de un cont de
    test (sau aprobarea să creez unul temporar și să-l șterg după).

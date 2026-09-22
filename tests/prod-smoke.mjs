@@ -390,7 +390,14 @@ await src.text();
 ck('codul sursa nu e servit ca JS', !srcType.includes('javascript') && src.status !== 200, `HTTP ${src.status} content-type=${srcType}`);
 
 const idx = await fetch(BASE + '/login');
-ck('CSP include frame-src DoodStream', /frame-src[^;]*doodstream\.com/.test(idx.headers.get('content-security-policy') || ''), '');
+// frame-src e 'self' https: in mod deliberat (vezi src/lib/sources.js: furnizorii
+// de embed isi rotesc domeniile, un allowlist fix ar cere un deploy la fiecare
+// schimbare de TLD). Verificam ce conteaza cu adevarat: https: e permis, iar
+// schemele periculoase (javascript:, data:, blob:) nu.
+const loginCsp = idx.headers.get('content-security-policy') || '';
+ck('CSP permite frame-src https: (nu un allowlist de domenii)',
+  /frame-src[^;]*'self'[^;]*https:/.test(loginCsp) && !/frame-src[^;]*(javascript|data|blob):/.test(loginCsp),
+  loginCsp.match(/frame-src[^;]*/)?.[0] || '-');
 ck('X-Frame-Options DENY', (idx.headers.get('x-frame-options') || '') === 'DENY', idx.headers.get('x-frame-options') || '-');
 await idx.text();
 
