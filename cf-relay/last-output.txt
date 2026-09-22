@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 9739bdb
+comanda: cf-relay/cmd.sh @ f60c95c
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ 9739bdb
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=9739bdb
+    [0;32m✓[0m assete versionate ?v=f60c95c
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 9 fisiere
-    [0;32m✓[0m publicat: https://9a6fad2d.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://fbe60804.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T07:29:00.445Z
+data: 2026-09-22T07:31:21.376Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (243 ms)
-  ℹ️  / → 200 · 243 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (357 ms)
+  ℹ️  / → 200 · 357 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-22T07:29:00.445Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 118 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 116 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-22T07:29:00.445Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 95 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 121 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-22T07:29:00.445Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 201 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 185 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 112 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 147 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 108 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 121 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 186 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 320 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 113 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 143 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -186,7 +186,7 @@ data: 2026-09-22T07:29:00.445Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=9739bdb (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=f60c95c (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 73144 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -241,7 +241,7 @@ data: 2026-09-22T07:29:00.445Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 243 ms · /series 14 ms · /api/series 279 ms
+  ℹ️  timpi: / 357 ms · /series 42 ms · /api/series 310 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -309,7 +309,7 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=9739bdb 
+  ?v= din / (trebuie build-ul curent): ?v=f60c95c 
 === verificari punctuale (logo V7) ===
   /assets/img/logo.png → 200 (trebuie 200)
   /assets/img/logo-icon.png → 200 (trebuie 200)
@@ -333,15 +333,15 @@ exit audit: 0
 === inspectie bytes sitemap (GSC 'nu a putut fi citit') ===
 --- headere complete ---
 HTTP/2 200 
-date: Tue, 22 Sep 2026 07:29:33 GMT
+date: Tue, 22 Sep 2026 07:31:56 GMT
 content-type: text/xml; charset=utf-8
 content-length: 797
 access-control-allow-origin: *
 cache-control: no-store
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=hzUblOexYaNz7WfV9oBjgC2MafoZdUSzxsSJ9%2FXzEozG5DktWYKDXOJav5VJgcbiA77JyoycR8aHBUc0NBsLwMF2nRieX8MdgJGiIswdYetEXQmthtOj5Txw9KyRm3uDGgku3I5H"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=P8TumBo7uILcEskUETYe%2Flp5FzQjzQgl5I5vHManjXGgdUQOy3cdGuKJH%2BJ0h4zSFbaveXM3CvbddaOYgEaZ4N63mF6wiokt%2F%2BBzKSsg9rhBdIt6ZAFglkVcaCKTqHkmHJYuvsid"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a3ef9968b8e52d11-IAD
+cf-ray: a3ef9ce6eb53e892-MSP
 alt-svc: h3=":443"; ma=86400
 
 --- primii 120 bytes (hex+text, trebuie sa inceapa cu 3c 3f 78 6d = '<?xm') ---
@@ -371,6 +371,6 @@ linii: 11 | invalide: NICIUNA
 === verificari punctuale (shop 2.0) ===
   migrare 0026: coloana xp_boost_until exista pe D1 productie
   css (purge): nc-sunset=1 theme-sakura=1 theme-royal=1 anim-sunset=1 anim-aurora=1 anim-ocean=1 anim-petale=1 anim-portocaliu=1 keyframes: @keyframes theme-aurora-drift @keyframes theme-ocean-drift @keyframes theme-sunset-drift  (trebuie 3 nume)
-  motor canvas: rAF=1 id=1 petale=0 bule=0 stele=0 (toate >=1; siruri care supravietuiesc minificarii)
+  motor canvas: rAF=1 id=1 petale=1 bule=1 stele=1 portocaliu=1 (toate >=1; siruri care supravietuiesc minificarii)
   bundle shop: shop-boost=1 reward_text=1 nc-sunset=1 (toate ≥1)
   bundle profil: use_token=1 (≥1)
