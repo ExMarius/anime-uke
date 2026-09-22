@@ -1815,6 +1815,66 @@ body.theme-royal {
   --accent: #fbbf24; --accent-hi: #fde68a; --accent-deep: #92400e;
   --accent-glow: rgba(251, 191, 36, .4); --accent-soft: rgba(251, 191, 36, .13);
 }
+/* ===================== TEME ANIMATE (fundaluri vii) ===================== */
+/* Modele consacrate (gradient wave, aurora boreala, valuri oceanice), doar
+   din background-position — fara blur, fara JS. Suprafetele sunt usor
+   translucide ca sa se vada miscarea prin ele. Durate lente (18-30s) ca sa
+   nu distraga si sa nu manance baterie. */
+body.theme-sunset {
+  --bg: #160a12; --bg-2: rgba(28, 12, 20, .88);
+  --surface: rgba(38, 15, 26, .8); --surface-2: rgba(48, 20, 32, .8);
+  --surface-3: rgba(62, 26, 40, .86); --line: rgba(251, 146, 60, .22);
+  --accent: #fb923c; --accent-hi: #fdba74; --accent-deep: #c2410c;
+  --accent-glow: rgba(251, 146, 60, .4); --accent-soft: rgba(251, 146, 60, .14);
+  background: linear-gradient(115deg, #431407, #9a3412, #db2777, #6d28d9, #1e3a8a, #431407);
+  background-size: 350% 350%;
+  background-attachment: fixed;
+  animation: theme-sunset-drift 26s ease infinite;
+}
+@keyframes theme-sunset-drift {
+  0%, 100% { background-position: 0% 45%; }
+  50% { background-position: 100% 55%; }
+}
+body.theme-aurora {
+  --bg: #04070f; --bg-2: rgba(6, 12, 24, .88);
+  --surface: rgba(10, 18, 34, .8); --surface-2: rgba(15, 26, 46, .8);
+  --surface-3: rgba(22, 36, 60, .86); --line: rgba(45, 212, 191, .2);
+  --accent: #2dd4bf; --accent-hi: #5eead4; --accent-deep: #0f766e;
+  --accent-glow: rgba(45, 212, 191, .38); --accent-soft: rgba(45, 212, 191, .13);
+  background:
+    radial-gradient(ellipse 60% 45% at 20% 20%, rgba(45, 212, 191, .35), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 80% 30%, rgba(139, 92, 246, .32), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 85%, rgba(236, 72, 153, .22), transparent 70%),
+    linear-gradient(180deg, #04070f, #0a1024);
+  background-size: 220% 220%, 220% 220%, 220% 220%, cover;
+  background-attachment: fixed;
+  animation: theme-aurora-drift 30s ease-in-out infinite;
+}
+@keyframes theme-aurora-drift {
+  0%, 100% { background-position: 0% 0%, 100% 20%, 50% 100%, 0 0; }
+  50% { background-position: 100% 60%, 20% 80%, 80% 0%, 0 0; }
+}
+body.theme-ocean {
+  --bg: #04121f; --bg-2: rgba(6, 20, 34, .88);
+  --surface: rgba(9, 28, 44, .8); --surface-2: rgba(13, 38, 60, .8);
+  --surface-3: rgba(18, 50, 76, .86); --line: rgba(56, 189, 248, .2);
+  --accent: #38bdf8; --accent-hi: #7dd3fc; --accent-deep: #0369a1;
+  --accent-glow: rgba(56, 189, 248, .38); --accent-soft: rgba(56, 189, 248, .13);
+  background:
+    radial-gradient(1000px 500px at 85% 110%, rgba(34, 211, 238, .16), transparent 60%),
+    repeating-linear-gradient(115deg, rgba(56, 189, 248, .07) 0 40px, transparent 40px 120px),
+    linear-gradient(160deg, #082f49, #0c4a6e 45%, #020617);
+  background-size: auto, 400px 400px, cover;
+  background-attachment: fixed;
+  animation: theme-ocean-drift 18s linear infinite;
+}
+@keyframes theme-ocean-drift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 0 0, 400px 400px, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.theme-sunset, body.theme-aurora, body.theme-ocean { animation: none; }
+}
 body.theme-classic {
   --bg: #0f0a05; --bg-2: #150f08; --surface: #1c1409; --surface-2: #261b0d;
   --surface-3: #31230f; --line: rgba(234, 179, 8, .18);

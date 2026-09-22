@@ -1615,8 +1615,8 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   check('Culori noi: Argintiu/Bronz/Menta/Apus',
     ['color_silver', 'color_bronze', 'color_mint', 'color_sunset'].every((x) => (cat.data?.colors || []).some((c) => c.id === x)),
     `n=${cat.data?.colors?.length}`);
-  check('Teme noi: Sakura/Royal',
-    ['theme_sakura', 'theme_royal'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+  check('Teme noi: Sakura/Royal + animate (Apus/Aurora/Ocean)',
+    ['theme_sakura', 'theme_royal', 'theme_sunset', 'theme_aurora', 'theme_ocean'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
     `n=${cat.data?.themes?.length}`);
 
   const gone = await req(jb, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
@@ -1667,13 +1667,24 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   const shopAfter = await req(jb, 'GET', '/api/shop');
   check('Sakura se cumpara si se activeaza', sak.data?.success === true && actT.data?.active_theme === 'theme_sakura' && shopAfter.data?.active_theme === 'theme_sakura', shopAfter.data?.active_theme);
 
+  // --- tema animata: cumparare + activare pe user separat (e scumpa)
+  await req(jar(), 'POST', '/api/auth/register', { username: 'animu', email: 'animu@test.ro', password: 'parola123' });
+  const ja = jar();
+  await req(ja, 'POST', '/api/auth/login', { email: 'animu@test.ro', password: 'parola123' });
+  const profA = await req(ja, 'GET', '/api/profile/animu');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profA.data?.user?.id, value: 600000 });
+  const aur = await req(ja, 'POST', '/api/shop/buy', { item_id: 'theme_aurora' });
+  const actA = await req(ja, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_aurora' });
+  const shopA = await req(ja, 'GET', '/api/shop');
+  check('Aurora animata se cumpara si se activeaza', aur.data?.success === true && actA.data?.active_theme === 'theme_aurora' && shopA.data?.active_theme === 'theme_aurora' && shopA.data?.gold === 600000 - 250000, `gold=${shopA.data?.gold}`);
+
   // --- matematica exacta a gold-ului (baseline luat dupa misterios)
   const spent = 500 + 400 + 2500 + 1000 + 2500 + 75000;
   check('Gold-ul ramas e exact pretul total', shopAfter.data?.gold === goldBase - spent, `${goldBase} - ${spent} = ${goldBase - spent} vs ${shopAfter.data?.gold}`);
 
   // --- CSS-ul claselor noi chiar exista (altfel cumperi ceva invizibil)
   const css = await (await fetch(BASE + '/assets/css/style.css')).text();
-  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal'].every((s) => css.includes(s)), 'lipseste o clasa');
+  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
 }
 
 console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');
