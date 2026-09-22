@@ -94,12 +94,12 @@ echo "   motor canvas: $(for t in requestAnimationFrame petale bule stele portoc
 
 echo "── 12. bundle-uri de pagină + diagnostice cache (shop/profil/teme)"
 curl -s "$B/assets/js/page-shop.js?v=$VC" -o /tmp/ps.js
-echo "   shop: $(for t in shop-boost reward_text nc-sunset use_token; do printf '%s=%s ' "$t" "$(grep -c "$t" /tmp/ps.js)"; done)(toate ≥1)"
+echo "   shop: $(for t in shop-boost reward_text nc-sunset; do printf '%s=%s ' "$t" "$(grep -c "$t" /tmp/ps.js)"; done)(toate ≥1)"
 curl -s "$B/assets/js/page-profile.js?v=$VC" -o /tmp/pp.js
 echo "   profil: use_token=$(grep -c 'use_token' /tmp/pp.js) (≥1) · temă instant în bundle: auk-theme=$(grep -c 'auk-theme' /tmp/ps.js) (≥1)"
 echo "   head /shop: $(curl -sI "$B/shop" | grep -i '^cache-control' | tr -d '\r')"
 echo "   head / (html): $(curl -sI "$B/" | grep -i '^cache-control' | tr -d '\r')"
-echo "   ?v= live din /: $VC · din /shop: $(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)"
+echo "   ?v= live din /: $VC · din /shop: $(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2) (gol = /shop e în spatele login-ului, normal)"
 
 echo "── 13. poarta admin (economie) + sezon"
 echo "   GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
