@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, applySiteTheme } from './core.js';
 
 // =====================================================================
 // Panoul admin. Toate celulele sunt construite cu createElement +
@@ -35,6 +35,7 @@ async function guard() {
 const LOADERS = {
   stats: loadStats,
   users: loadUsers,
+  sezon: loadSeason,
   ranks: loadRanks,
   reports: loadReports,
   log: loadLog,
@@ -312,6 +313,74 @@ async function applyEcon(u, action, value, okMsg) {
   editorUserId = u.id; // ramane deschis dupa reincarcarea listei
   loadUsers();
   loadStats();
+}
+
+// ---------------------------------------------------------------------
+// SEZON: tema globala pentru toata lumea (doar adminul o seteaza). Temele
+// de sezon nu apar in shop; cine are tema personala o pastreaza, restul vad
+// sezonul. Previzualizarea foloseste acelasi mecanism ca in shop (motorul
+// canvas porneste singur la schimbarea clasei body).
+// ---------------------------------------------------------------------
+async function loadSeason() {
+  const box = document.getElementById('sezon-list');
+  const cur = document.getElementById('sezon-curent');
+  if (!box) return;
+  const res = await api('/admin/season');
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca sezonul.'; return; }
+  const activ = res.data.seasonal_theme || null;
+  if (cur) cur.textContent = activ ? `activă: ${(res.data.available || []).find((t) => t.id === activ)?.name || activ}` : 'dezactivat';
+  box.innerHTML = '';
+  for (const t of res.data.available || []) {
+    const row = document.createElement('div');
+    row.className = 'ranks-row';
+    const title = document.createElement('span');
+    title.className = 'ranks-row__title';
+    title.textContent = `${t.id === activ ? '✅ ' : ''}${t.name}`;
+    row.appendChild(title);
+    const peek = document.createElement('button');
+    peek.type = 'button';
+    peek.className = 'btn btn--ghost btn--sm';
+    peek.textContent = '👁 Previzualizează';
+    peek.addEventListener('click', () => peekSeason(t.id));
+    const set = document.createElement('button');
+    set.type = 'button';
+    set.className = 'btn btn--accent btn--sm';
+    set.textContent = t.id === activ ? '✓ Activă' : 'Setează ca sezon';
+    set.disabled = t.id === activ;
+    set.addEventListener('click', () => withBusy(set, async () => {
+      const r = await api('/admin/season', { method: 'POST', body: { theme_id: t.id } });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut seta sezonul', 'error'); return; }
+      toast(`Sezon activ: ${t.name} 🍂`, 'success');
+      loadSeason();
+    }));
+    row.append(peek, set);
+    box.appendChild(row);
+  }
+}
+
+function initSeason() {
+  document.getElementById('sezon-clear')?.addEventListener('click', async (e) => {
+    await withBusy(e.currentTarget, async () => {
+      const r = await api('/admin/season', { method: 'POST', body: { theme_id: '' } });
+      if (!r.ok) { toast(r.data?.error || 'Eroare', 'error'); return; }
+      toast('Sezon dezactivat — toată lumea revine la tema proprie/Standard', 'success');
+      loadSeason();
+    });
+  });
+}
+initSeason();
+
+/** Previzualizare 5s a unei teme de sezon, apoi revenire la tema efectiva. */
+let sezonPeekTimer = 0;
+function peekSeason(themeId) {
+  document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
+  document.body.classList.add(`theme-${themeId.slice(6)}`);
+  toast('👁️ Previzualizare 5 secunde…', 'info', 2000);
+  clearTimeout(sezonPeekTimer);
+  sezonPeekTimer = setTimeout(async () => {
+    const me = await getSession(true);
+    applySiteTheme(me?.site_theme || null);
+  }, 5000);
 }
 
 // GRADE: grade de staff (acordate manual) + teme de nivel (automate)

@@ -130,7 +130,12 @@ export const SITE_THEMES = [
   { id: 'theme_green',      name: 'Green',      price: 50000 },
   { id: 'theme_sakura',     name: 'Sakura Pastel', price: 75000 },
   { id: 'theme_minimalist', name: 'Minimalist', price: 100000 },
-  { id: 'theme_sunset', name: 'Frunze de toamnă (animate)', price: 150000 },
+  // Teme de sezon: NU apar in shop si nu se cumpara — adminul activeaza una
+  // global (vezi season.js). Cumparatorii vechi de Frunze isi pastreaza tema.
+  { id: 'theme_sunset', name: 'Frunze de toamnă (animate)', price: 150000, seasonal: true },
+  { id: 'theme_halloween', name: 'Halloween (animat)', price: 0, seasonal: true },
+  { id: 'theme_iarna', name: 'Iarnă (animată)', price: 0, seasonal: true },
+  { id: 'theme_paste', name: 'Paște (animat)', price: 0, seasonal: true },
   { id: 'theme_storm',      name: 'Storm',      price: 200000 },
   { id: 'theme_petale', name: 'Sakura (animată)', price: 175000 },
   { id: 'theme_aurora', name: 'Aurora boreală (animată)', price: 250000 },

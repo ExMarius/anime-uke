@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Deploy fix getSession: tema se aplica si pe calea network (prima pagina
-# dupa pauza ramanea netemata, motorul canvas nu pornea). Verificari neschimbate.
+# Deploy teme de sezon: toamna iese din shop + Halloween/iarna/Paste noi,
+# doar din admin (global); migrare 0027 (site_settings); verificare purge,
+# motor (fulgi), posesori Frunze grandfathered.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -89,9 +90,9 @@ $W d1 execute DB --remote --command "SELECT xp_boost_until FROM users LIMIT 1" >
   || echo "  migrare 0026: LIPSESTE coloana xp_boost_until de pe productie!"
 V=$(curl -s "$B/" | grep -oE '[a-z-]+\.(css|js)\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
 curl -s "$B/assets/css/style.css?v=$V" -o /tmp/st.css
-echo "  css (purge): nc-sunset=$(grep -c 'nc-sunset' /tmp/st.css) theme-sakura=$(grep -c 'theme-sakura' /tmp/st.css) theme-royal=$(grep -c 'theme-royal' /tmp/st.css) anim-sunset=$(grep -c 'theme-sunset' /tmp/st.css) anim-aurora=$(grep -c 'theme-aurora' /tmp/st.css) anim-ocean=$(grep -c 'theme-ocean' /tmp/st.css) anim-petale=$(grep -c 'theme-petale' /tmp/st.css) anim-portocaliu=$(grep -c 'theme-portocaliu' /tmp/st.css) keyframes: $(grep -o '@keyframes theme-[a-z-]*' /tmp/st.css | sort -u | tr '\n' ' ') (trebuie 3 nume)"
+echo "  css (purge): nc-sunset=$(grep -c 'nc-sunset' /tmp/st.css) theme-sakura=$(grep -c 'theme-sakura' /tmp/st.css) theme-royal=$(grep -c 'theme-royal' /tmp/st.css) anim-sunset=$(grep -c 'theme-sunset' /tmp/st.css) anim-aurora=$(grep -c 'theme-aurora' /tmp/st.css) anim-ocean=$(grep -c 'theme-ocean' /tmp/st.css) anim-petale=$(grep -c 'theme-petale' /tmp/st.css) anim-portocaliu=$(grep -c 'theme-portocaliu' /tmp/st.css) anim-iarna=$(grep -c 'theme-iarna' /tmp/st.css) anim-halloween=$(grep -c 'theme-halloween' /tmp/st.css) anim-paste=$(grep -c 'theme-paste' /tmp/st.css) keyframes: $(grep -o '@keyframes theme-[a-z-]*' /tmp/st.css | sort -u | tr '\n' ' ') (trebuie 3 nume)"
 curl -s "$B/assets/js/anim-bg.js?v=$V" -o /tmp/ab.js
-echo "  motor canvas: rAF=$(grep -c 'requestAnimationFrame' /tmp/ab.js) id=$(grep -c 'anim-bg' /tmp/ab.js) petale=$(grep -c 'petale' /tmp/ab.js) bule=$(grep -c 'bule' /tmp/ab.js) stele=$(grep -c 'stele' /tmp/ab.js) portocaliu=$(grep -c 'portocaliu' /tmp/ab.js)(motorul >=1) consimtamant=$(grep -c 'prefers-reduced-motion' /tmp/ab.js) (trebuie 0 = poarta reduced-motion eliminata din motor)"
+echo "  motor canvas: rAF=$(grep -c 'requestAnimationFrame' /tmp/ab.js) id=$(grep -c 'anim-bg' /tmp/ab.js) petale=$(grep -c 'petale' /tmp/ab.js) bule=$(grep -c 'bule' /tmp/ab.js) stele=$(grep -c 'stele' /tmp/ab.js) portocaliu=$(grep -c 'portocaliu' /tmp/ab.js) fulgi=$(grep -c 'fulgi' /tmp/ab.js) iarna=$(grep -c 'iarna' /tmp/ab.js) halloween=$(grep -c 'halloween' /tmp/ab.js) paste=$(grep -c 'paste' /tmp/ab.js)(toate >=1) consimtamant=$(grep -c 'prefers-reduced-motion' /tmp/ab.js) (trebuie 0 = poarta reduced-motion eliminata din motor)"
 curl -s "$B/assets/js/page-shop.js?v=$V" -o /tmp/ps.js
 echo "  bundle shop: shop-boost=$(grep -c 'shop-boost' /tmp/ps.js) reward_text=$(grep -c 'reward_text' /tmp/ps.js) nc-sunset=$(grep -c 'nc-sunset' /tmp/ps.js) (toate ≥1)"
 curl -s "$B/assets/js/page-profile.js?v=$V" -o /tmp/pp.js
@@ -107,3 +108,7 @@ echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'p
 echo "=== verificari punctuale (admin economie) ==="
 echo "  GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
 echo "  /admin anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 302 catre /login)"
+echo "=== verificari punctuale (sezon) ==="
+echo "  migrare 0027 (raw): $($W d1 execute DB --remote --command "SELECT value FROM site_settings WHERE key = 'seasonal_theme'" --json 2>/dev/null | tr '\n' ' ' | head -c 300)"
+echo "  posesori Frunze (raw, grandfathered): $($W d1 execute DB --remote --command "SELECT COUNT(*) AS n FROM user_items WHERE item_id = 'theme_sunset'" --json 2>/dev/null | tr '\n' ' ' | head -c 300)"
+echo "  GET /api/admin/season anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/season") (trebuie 401)"

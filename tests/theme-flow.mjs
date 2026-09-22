@@ -3,7 +3,7 @@
 //
 // Contexte goale (fara localStorage/sessionStorage), ca la prima intrare:
 // 1. Inregistreaza un user, ii da gold (prin admin), cumpara si activeaza
-//    „Frunze de toamna" — server-side, ca un utilizator adevarat.
+//    „Sakura animata" — server-side, ca un utilizator adevarat.
 // 2. Monteaza PAGINA REALA /shop in jsdom (HTML de pe server, modulul REAL
 //    page-shop.js, cookie-ul sesiunii), cu canvas2d falsificat (numara
 //    desenele) si rAF manual.
@@ -48,8 +48,8 @@ const reg = await req(j, 'POST', '/api/auth/register', { username: u, email: `${
 const uid = reg.data?.user?.id;
 await req(j, 'POST', '/api/auth/login', { email: `${u}@test.ro`, password: 'parola123' });
 await req(ja, 'POST', '/api/admin/users', { action: 'set_gold', user_id: uid, value: 1000000 });
-await req(j, 'POST', '/api/shop/buy', { item_id: 'theme_sunset' });
-const act = await req(j, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sunset' });
+await req(j, 'POST', '/api/shop/buy', { item_id: 'theme_petale' });
+const act = await req(j, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_petale' });
 console.log('activare server-side:', act.data?.active_theme, '| cookie:', j.cookie ? 'DA' : 'LIPSA');
 
 // 2. pagina reala in jsdom
@@ -131,7 +131,7 @@ console.log('canvas #anim-bg:', canvas ? 'EXISTA' : 'LIPSA');
 const aRulat = pas(5);
 console.log('cadre rulate:', aRulat ? 5 : 0, '| desene particule:', desene);
 
-const okClasa = clasa === 'theme-sunset';
+const okClasa = clasa === 'theme-petale';
 const okDesene = desene >= 100;
 console.log('\n========================================================');
 console.log(okClasa && okDesene ? 'REZULTAT: PASS (flux complet functional)' : `REZULTAT: FAIL (clasa=${okClasa} desene=${okDesene})`);

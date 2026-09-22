@@ -62,6 +62,7 @@ import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
 import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
+import * as adminSeason from './routes/api/admin/season.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
@@ -133,6 +134,7 @@ const ROUTES = [
   // avea mai multe surse si ele se editeaza independent de episod.
   { method: '*', path: '/api/admin/episode-sources', mod: adminEpisodeSources },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
+  { method: '*', path: '/api/admin/season', mod: adminSeason },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },

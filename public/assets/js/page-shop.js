@@ -130,7 +130,7 @@ function paintThemes() {
 
     const name = document.createElement('h3');
     name.className = 'theme-card__name';
-    name.textContent = t.name;
+    name.textContent = t.id === 'theme_standard' && data.seasonal ? `Standard (sezon: ${data.seasonal.name})` : t.name;
 
     const chip = document.createElement('button');
     chip.type = 'button';

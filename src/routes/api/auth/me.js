@@ -1,5 +1,6 @@
 import { json } from '../../../lib/http.js';
 import { getSessionUser, publicUser } from '../../../lib/session.js';
+import { getSeasonalTheme } from '../../../lib/season.js';
 
 // =====================================================================
 // /api/auth/me — singura sursa de adevar despre utilizatorul curent.
@@ -14,6 +15,13 @@ import { getSessionUser, publicUser } from '../../../lib/session.js';
 export async function onRequestGet(context) {
   const { request, env } = context;
   const user = await getSessionUser(request, env);
+
+  // Tema de sezon: utilizatorii fara tema personala (active_theme NULL) o
+  // mostenesc global; cei cu tema personala nu sunt afectati.
+  if (user && !user.active_theme) {
+    const sezon = await getSeasonalTheme(env);
+    if (sezon) return json({ user: publicUser({ ...user, active_theme: sezon }) });
+  }
 
   // 200 chiar si pentru vizitatori — returnam { user: null }.
   // Asa clientul nu trebuie sa trateze 401 ca pe o eroare la fiecare load.

@@ -97,6 +97,7 @@ export async function onRequestPost(context) {
   try { body = await request.json(); } catch { body = {}; }
   const item = findItem(String(body?.item_id || ''));
   if (!item) return errorResponse(400, 'Articolul nu există');
+  if (item.seasonal) return errorResponse(400, 'Temă de sezon — o activează adminul pentru toată lumea');
 
   const owned = await ownedItems(env, gate.user.id);
   if (!item.consumable && (owned[item.id] || 0) > 0) {

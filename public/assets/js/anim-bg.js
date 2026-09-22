@@ -36,6 +36,13 @@ const ANIMS = {
   // Cer instelat: 200 de stele care clipesc + deriv lent (benzile de
   // lumina de dedesubt vin din CSS, animatia theme-aurora-drift).
   aurora:     { tip: 'stele', numar: 200 },
+  // --- Teme de SEZON (doar din admin, globale; nu sunt in shop) ---
+  // Noapte de Halloween: scantei portocalii care urca pe mov aproape negru.
+  halloween:  { tip: 'bule', numar: 50, lumina: '255,150,50', baza: '255,60,0' },
+  // Iarna: fulgi de nea care cad lin pe noapte albastra.
+  iarna:      { tip: 'fulgi', numar: 80 },
+  // Paste: petale pastelate de primavara.
+  paste:      { tip: 'petale', numar: 40, culori: ['#ffd6e8', '#fff3b0', '#d8f3dc', '#e4c1f9', '#caffbf'], margine: '#b5838d' },
 };
 
 let canvas = null;   // elementul <canvas> fullscreen (unic, refolosit)
@@ -129,6 +136,31 @@ function spriteBula(raza, lumina, baza) {
   return s;
 }
 
+/** Sprite de fulg de nea: disc alb luminos + scanteie in cruce (gheata). */
+function spriteFulg(marime) {
+  const s = document.createElement('canvas');
+  const r = Math.ceil(marime * 2 + 4);
+  s.width = s.height = r * 2;
+  const c = s.getContext('2d');
+  const g = c.createRadialGradient(r, r, 0, r, r, marime);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.5, 'rgba(240,248,255,0.85)');
+  g.addColorStop(1, 'rgba(240,248,255,0)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(r, r, marime, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.9)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(r - marime, r);
+  c.lineTo(r + marime, r);
+  c.moveTo(r, r - marime);
+  c.lineTo(r, r + marime);
+  c.stroke();
+  return s;
+}
+
 // --- Fabrici de particule (fiecare cu reset() pentru reciclare) --------
 
 /** Petala: cade in jos, se leagana pe X (vant) si se roteste. */
@@ -171,6 +203,29 @@ function bulaNoua(cfg) {
     },
   };
   p.img = spriteBula(p.raza, cfg.lumina, cfg.baza);
+  p.reset(false);
+  return p;
+}
+
+/** Fulg: cade lent, aproape fara rotatie, cu leganare fina. Are aceeasi
+ *  forma ca petala (img, viteza, vant...), deci impart bucla de desenare. */
+function fulgNou() {
+  const p = {
+    img: null,
+    x: 0, y: 0,
+    marime: 3 + Math.random() * 5,       // 3-8px
+    viteza: 0.5 + Math.random() * 1,     // 0.5-1.5 px/frame in jos
+    unghi: Math.random() * Math.PI * 2,
+    rotatie: 0.002 + Math.random() * 0.008,
+    vant: Math.random() * Math.PI * 2,
+    vantViteza: 0.005 + Math.random() * 0.015,
+    alfa: 0.5 + Math.random() * 0.5,     // opacitate 0.5-1.0
+    reset(deSus) {
+      this.x = Math.random() * latime;
+      this.y = deSus ? -10 : Math.random() * inaltime;
+    },
+  };
+  p.img = spriteFulg(p.marime);
   p.reset(false);
   return p;
 }
@@ -234,7 +289,7 @@ function frame(timp) {
       ctx.globalAlpha = p.alfa;
       ctx.drawImage(p.img, p.x - p.img.width / 2, p.y - p.img.height / 2);
     }
-  } else { // petale
+  } else { // petale + fulgi (aceeasi fizica, sprite diferit)
     for (const p of particule) {
       p.y += p.viteza * f;                       // cade
       p.vant += p.vantViteza * f;
@@ -260,7 +315,7 @@ function porneste(slug) {
   if (!canvas || !ctx) return; // canvas indisponibil — ramane gradientul static
   const cfg = ANIMS[slug];
   if (!cfg) return;
-  const fabrica = cfg.tip === 'bule' ? bulaNoua : cfg.tip === 'stele' ? steaNoua : petalaNoua;
+  const fabrica = cfg.tip === 'bule' ? bulaNoua : cfg.tip === 'stele' ? steaNoua : cfg.tip === 'fulgi' ? fulgNou : petalaNoua;
   try {
     particule = [];
     for (let i = 0; i < cfg.numar; i++) particule.push(fabrica(cfg));

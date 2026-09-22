@@ -1892,6 +1892,36 @@ body.theme-portocaliu {
   background: radial-gradient(ellipse at 50% 42%, #cc5500 0%, #7a2e00 55%, #3d1500 100%);
   background-attachment: fixed;
 }
+/* Iarna (sezon): noapte albastra; peste cad fulgi (canvas). */
+body.theme-iarna {
+  --bg: #0b1628; --bg-2: rgba(14, 26, 48, .88);
+  --surface: rgba(20, 36, 64, .8); --surface-2: rgba(28, 48, 84, .8);
+  --surface-3: rgba(38, 62, 104, .86); --line: rgba(186, 230, 253, .2);
+  --accent: #7dd3fc; --accent-hi: #bae6fd; --accent-deep: #0369a1;
+  --accent-glow: rgba(125, 211, 252, .38); --accent-soft: rgba(125, 211, 252, .13);
+  background: linear-gradient(180deg, #0b1628 0%, #16294d 55%, #274a78 100%);
+  background-attachment: fixed;
+}
+/* Halloween (sezon): mov aproape negru; peste urca scantei (canvas). */
+body.theme-halloween {
+  --bg: #150a24; --bg-2: rgba(28, 14, 48, .88);
+  --surface: rgba(40, 20, 66, .8); --surface-2: rgba(54, 26, 88, .8);
+  --surface-3: rgba(70, 34, 110, .86); --line: rgba(255, 150, 50, .24);
+  --accent: #ff9632; --accent-hi: #ffc078; --accent-deep: #b34a00;
+  --accent-glow: rgba(255, 150, 50, .42); --accent-soft: rgba(255, 150, 50, .15);
+  background: linear-gradient(180deg, #150a24 0%, #241040 60%, #3b1a5e 100%);
+  background-attachment: fixed;
+}
+/* Paste (sezon): primavara in zori; peste cad petale pastelate (canvas). */
+body.theme-paste {
+  --bg: #123b33; --bg-2: rgba(24, 70, 60, .88);
+  --surface: rgba(30, 88, 74, .8); --surface-2: rgba(38, 108, 90, .8);
+  --surface-3: rgba(48, 130, 108, .86); --line: rgba(202, 255, 191, .22);
+  --accent: #7ee2a8; --accent-hi: #b7f5d8; --accent-deep: #1d7a54;
+  --accent-glow: rgba(126, 226, 168, .4); --accent-soft: rgba(126, 226, 168, .14);
+  background: linear-gradient(180deg, #123b33 0%, #2f6f5e 55%, #7fb98a 100%);
+  background-attachment: fixed;
+}
 /* Temele animate NU respecta prefers-reduced-motion: activarea explicita a
    unei teme animate = consimtamant pentru miscare (vezi anim-bg.js). Restul
    interfetei (si culorile de nume) respecta in continuare setarea de sistem. */

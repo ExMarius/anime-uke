@@ -1090,6 +1090,47 @@ console.log('\n=== 9b. ADMIN: gold/puncte/nivel din panou ===');
   await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: 1, value: -50 }); // curatenie: refacem punctele adminului
 }
 
+console.log('\n=== 9c. ADMIN: tema de sezon globala ===');
+{
+  const j = globalThis.admin;
+  const g0 = await req(j, 'GET', '/api/admin/season');
+  check('GET sezon: 4 teme disponibile, initial gol', (g0.data?.available || []).length === 4 && g0.data?.seasonal_theme === null, JSON.stringify(g0.data));
+  const bad = await req(j, 'POST', '/api/admin/season', { theme_id: 'theme_aurora' });
+  check('Sezon cu tema NON-sezoniera → 400', bad.status === 400, `status=${bad.status}`);
+
+  // user2 isi ia o tema personala (Sakura statica), econu ramane pe Standard
+  const u2row = (await req(j, 'GET', '/api/admin/users')).data.users.find((u) => u.username === 'user2');
+  const goldInainte = Number(u2row.gold) || 0;
+  await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2row.id, value: 200000 });
+  const j2b = jar();
+  await req(j2b, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  await req(j2b, 'POST', '/api/shop/buy', { item_id: 'theme_sakura' });
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const je = jar();
+  await req(je, 'POST', '/api/auth/login', { email: 'econu@test.ro', password: 'parola123' });
+
+  const set = await req(j, 'POST', '/api/admin/season', { theme_id: 'theme_iarna' });
+  check('Setare sezon iarna', set.data?.success === true && set.data?.seasonal_theme === 'theme_iarna', JSON.stringify(set.data));
+  const meDef = await req(je, 'GET', '/api/auth/me');
+  check('User fara tema personala mosteneste sezonul', meDef.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meDef.data?.user?.site_theme));
+  const mePers = await req(j2b, 'GET', '/api/auth/me');
+  check('User cu tema personala o pastreaza', mePers.data?.user?.site_theme === 'theme_sakura', JSON.stringify(mePers.data?.user?.site_theme));
+  const shopSeas = await req(je, 'GET', '/api/shop');
+  check('Shop expune sezonul curent (eticheta Standard)', shopSeas.data?.seasonal?.id === 'theme_iarna', JSON.stringify(shopSeas.data?.seasonal));
+  const noAccess = await req(je, 'POST', '/api/admin/season', { theme_id: 'theme_paste' });
+  check('Non-admin nu poate seta sezonul → 403', noAccess.status === 403, `status=${noAccess.status}`);
+  const buySeas = await req(je, 'POST', '/api/shop/buy', { item_id: 'theme_iarna' });
+  const buyOld = await req(je, 'POST', '/api/shop/buy', { item_id: 'theme_sunset' });
+  check('Temele de sezon nu se pot cumpara → 400', buySeas.status === 400 && buyOld.status === 400, `${buySeas.status}/${buyOld.status}`);
+  const clr = await req(j, 'POST', '/api/admin/season', { theme_id: '' });
+  const meClr = await req(je, 'GET', '/api/auth/me');
+  check('Golire sezon → defaultul revine la Standard (null)', clr.data?.seasonal_theme === null && meClr.data?.user?.site_theme === null, `${clr.data?.seasonal_theme}/${meClr.data?.user?.site_theme}`);
+  // Curatenie: §13i cere user2 lefter — readucem gold-ul la valoarea de dinainte
+  const u2acum = (await req(j, 'GET', '/api/admin/users')).data.users.find((u) => u.username === 'user2');
+  const back = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2row.id, value: goldInainte - Number(u2acum.gold) });
+  check('Restore gold user2 dupa §9c', back.data?.gold === goldInainte, `gold=${back.data?.gold} (era ${goldInainte})`);
+}
+
 console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
@@ -1656,8 +1697,11 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   check('Culori noi: Argintiu/Bronz/Menta/Apus',
     ['color_silver', 'color_bronze', 'color_mint', 'color_sunset'].every((x) => (cat.data?.colors || []).some((c) => c.id === x)),
     `n=${cat.data?.colors?.length}`);
-  check('Teme noi: Sakura/Royal + canvas (Frunze/Sakura/Bule/Aurora/Ocean)',
-    ['theme_sakura', 'theme_royal', 'theme_sunset', 'theme_aurora', 'theme_ocean', 'theme_petale', 'theme_portocaliu'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+  check('Teme de vanzare (Sakura/Royal + canvas, fara sezon)',
+    ['theme_sakura', 'theme_royal', 'theme_aurora', 'theme_ocean', 'theme_petale', 'theme_portocaliu'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+    `n=${cat.data?.themes?.length}`);
+  check('Sezonul NU apare in catalog (toamna/Halloween/iarna/Paste), 13 teme',
+    ['theme_sunset', 'theme_halloween', 'theme_iarna', 'theme_paste'].every((x) => !(cat.data?.themes || []).some((t) => t.id === x)) && cat.data?.themes?.length === 13,
     `n=${cat.data?.themes?.length}`);
 
   const gone = await req(jb, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
@@ -1729,10 +1773,10 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
 
   // --- CSS-ul claselor noi chiar exista (altfel cumperi ceva invizibil)
   const css = await (await fetch(BASE + '/assets/css/style.css')).text();
-  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', 'body.theme-petale', 'body.theme-portocaliu', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
+  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', 'body.theme-petale', 'body.theme-portocaliu', 'body.theme-iarna', 'body.theme-halloween', 'body.theme-paste', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
   const ab = await (await fetch(BASE + '/assets/js/anim-bg.js')).text();
   const core = await (await fetch(BASE + '/assets/js/core.js')).text();
-  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'portocaliu', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js') && core.includes('ultimaVerificareBuild'), 'lipseste motorul, legatura sau garda anti-cache din core.js');
+  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'fulgNou', 'portocaliu', 'halloween', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js') && core.includes('ultimaVerificareBuild'), 'lipseste motorul, legatura sau garda anti-cache din core.js');
   check('Temele animate ignora reduced-motion (consimtamant explicit)', !css.includes('body.theme-ocean { animation: none') && !ab.includes("matchMedia('(prefers-reduced-motion"), 'poarta reduced-motion inca prezenta');
   check('Tema instant din localStorage (fara flash)', core.includes('auk-theme'), 'lipseste cache-ul de tema din core.js');
 }
