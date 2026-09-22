@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          e2e (API) + dom-smoke (pagini in jsdom) + plafoane
+#   ./test.sh          e2e (API) + dom-smoke (pagini in jsdom) + theme-cache + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -115,6 +115,17 @@ if [ $DOM_RC -ne 0 ]; then
   grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/dom.log | tail -12
 fi
 [ "$DOM_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ theme-cache (tema instant, fara server) ════════"
+node tests/theme-cache.mjs > /tmp/theme.log 2>&1
+THEME_RC=$?
+tail -10 /tmp/theme.log
+if [ $THEME_RC -ne 0 ]; then
+  echo "!! theme-cache s-a oprit cu codul $THEME_RC — ultimele erori:"
+  grep -nE "Error|at .*\\.mjs|Cannot|is not" /tmp/theme.log | tail -12
+fi
+[ "$THEME_RC" -eq 0 ] || RC=1
 
 # ---------------------------------------------------------------------
 # Faza 3: plafoanele buget-0. Repornim serverul pe o baza curata cu tavane

@@ -3,7 +3,7 @@
 // proprietatile; cumpararea e un POST cu confirmare in doi pasi (click
 // pe card → click pe „Confirma"), ca sa nu arunci gold-ul din greseala.
 // =====================================================================
-import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession } from './core.js';
+import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession, applySiteTheme } from './core.js';
 import { initChat } from './chat.js';
 
 let data = null;
@@ -201,7 +201,7 @@ async function activate(item, btn) {
     if (isColor) data.active_name_color = res.data.active_name_color;
     else {
       data.active_theme = res.data.active_theme;
-      setThemeClass(currentThemeSlug());
+      applySiteTheme(res.data.active_theme); // aplica + sincronizeaza cache-ul instant
     }
     // împrospătăm stările active/owned din răspunsul local
     for (const c of data.colors || []) c.active = c.id === data.active_name_color;

@@ -118,9 +118,17 @@ const ME_TTL_MS = 20 * 1000;
 export function applySiteTheme(theme) {
   try {
     document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
-    if (theme && /^theme_[a-z]+$/.test(theme) && theme !== 'theme_standard') {
+    const valid = theme && /^theme_[a-z]+$/.test(theme) && theme !== 'theme_standard';
+    if (valid) {
       document.body.classList.add(`theme-${theme.slice(6)}`);
     }
+    // Sincronizam cache-ul instant: la urmatoarea pagina tema se aplica din
+    // localStorage inainte de fetch-ul de sesiune (zero flash). Sursa
+    // adevarului ramane serverul — getSession rescrie la fiecare raspuns.
+    try {
+      if (valid) localStorage.setItem('auk-theme', theme);
+      else localStorage.removeItem('auk-theme');
+    } catch { /* mod privat — ramanem pe aplicarea din sesiune */ }
   } catch { /* body indisponibil la momentul apelului — ignorăm */ }
 }
 
@@ -168,6 +176,7 @@ export function whenActive(fn) {
 export async function logout() {
   await api('/auth/logout', { method: 'POST' });
   clearSession();
+  try { localStorage.removeItem('auk-theme'); } catch { /* ignora */ }
   location.href = '/';
 }
 
@@ -742,6 +751,17 @@ export async function startGuestNudge() {
 
 // Fundaluri animate cu particule (teme canvas): porneste singur pe orice
 // pagina care importa core.js. Modulele ES sunt deferred, deci body exista.
+// TEMA INSTANT LA INTRAREA PE PAGINA: fetch-ul de sesiune (getSession) ia
+// sute de ms, timp in care pagina ar clipi in tema implicita. Aplicam
+// sincron ultima tema cunoscuta din localStorage; getSession o confirma sau
+// o corecteaza imediat ce soseste raspunsul (sursa adevarului = serverul).
+try {
+  const temaCache = localStorage.getItem('auk-theme');
+  if (temaCache && /^theme_[a-z]+$/.test(temaCache) && temaCache !== 'theme_standard') {
+    document.body.classList.add(`theme-${temaCache.slice(6)}`);
+  }
+} catch { /* mod privat / body indisponibil — asteptam sesiunea */ }
+
 try { initAnimBg(); } catch { /* fara canvas — ramane gradientul static */ }
 
 // ---------------------------------------------------------------------

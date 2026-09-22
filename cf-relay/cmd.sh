@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy consimtamant animatii: temele animate ignora reduced-motion-ul de
-# sistem (activarea explicita = acord), verificare ca poarta a disparut.
+# Deploy tema instant: clasa temei din localStorage inainte de fetch-ul de
+# sesiune (zero flash), verificare ca marcajul e in bundle-ul live.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -102,7 +102,7 @@ echo "  head /shop: $(curl -sI "$B/shop" | grep -i '^cache-control' | tr -d '\r'
 echo "  head / (html): $(curl -sI "$B/" | grep -i '^cache-control' | tr -d '\r')"
 VS=$(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
 echo "  ?v= live (/shop): $VS"
-echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'petale' /tmp/ps.js) bule=$(grep -c 'bule' /tmp/ps.js) stele=$(grep -c 'stele' /tmp/ps.js) garda=$(grep -c '?v=' /tmp/ps.js) (toate >=1 = motorul + garda anti-cache sunt in bundle-ul din productie)"
+echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'petale' /tmp/ps.js) bule=$(grep -c 'bule' /tmp/ps.js) stele=$(grep -c 'stele' /tmp/ps.js) garda=$(grep -c '?v=' /tmp/ps.js) tema=$(grep -c 'auk-theme' /tmp/ps.js) (toate >=1 = motorul + garda + tema instant sunt in bundle-ul din productie)"
 
 echo "=== verificari punctuale (admin economie) ==="
 echo "  GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
