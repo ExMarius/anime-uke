@@ -1,6 +1,6 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-21 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
+**Data:** 2026-09-22 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
 **Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
 **Build auditat:** `?v=7703add` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi —
 doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
@@ -11,7 +11,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
 | 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
 | 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
-| 5 (integrare + buget de invocări, build `c0ae601`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
+| 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 
 ---
 
