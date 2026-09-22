@@ -1691,7 +1691,7 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', 'body.theme-petale', 'body.theme-portocaliu', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
   const ab = await (await fetch(BASE + '/assets/js/anim-bg.js')).text();
   const core = await (await fetch(BASE + '/assets/js/core.js')).text();
-  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'portocaliu', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js'), 'lipseste motorul sau legatura din core.js');
+  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'portocaliu', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js') && core.includes('ultimaVerificareBuild'), 'lipseste motorul, legatura sau garda anti-cache din core.js');
 }
 
 console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');

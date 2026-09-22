@@ -128,7 +128,7 @@ export const SITE_THEMES = [
   { id: 'theme_mizukage',   name: 'Mizukage',   price: 10000 },
   { id: 'theme_purple',     name: 'Purple',     price: 20000 },
   { id: 'theme_green',      name: 'Green',      price: 50000 },
-  { id: 'theme_sakura',     name: 'Sakura',     price: 75000 },
+  { id: 'theme_sakura',     name: 'Sakura Pastel', price: 75000 },
   { id: 'theme_minimalist', name: 'Minimalist', price: 100000 },
   { id: 'theme_sunset', name: 'Frunze de toamnă (animate)', price: 150000 },
   { id: 'theme_storm',      name: 'Storm',      price: 200000 },

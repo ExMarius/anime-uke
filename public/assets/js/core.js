@@ -743,3 +743,37 @@ export async function startGuestNudge() {
 // Fundaluri animate cu particule (teme canvas): porneste singur pe orice
 // pagina care importa core.js. Modulele ES sunt deferred, deci body exista.
 try { initAnimBg(); } catch { /* fara canvas — ramane gradientul static */ }
+
+// ---------------------------------------------------------------------
+// GARDA ANTI-CACHE: daca tab-ul ramane deschis peste un deploy, shell-ul
+// vechi + API-ul nou inseamna butoane/teme care „nu merg" (codul vechi nu
+// cunoaste temele noi). La revenirea in tab — cel mult o data pe minut —
+// comparam ?v= din tag-urile paginii curente cu ?v= din HTML-ul proaspat
+// de pe server; daca difera, anuntam si reincarcam automat. In dev (fara
+// ?v=) si pe paginile fara assete versionate garda sta inactiva.
+// ---------------------------------------------------------------------
+let ultimaVerificareBuild = 0;
+function vDinTaguri() {
+  const el = document.querySelector('script[src*="?v="], link[href*="?v="]');
+  const url = el?.getAttribute('src') || el?.getAttribute('href') || '';
+  const m = url.match(/[?&]v=([A-Za-z0-9._-]+)/);
+  return m ? m[1] : null;
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) return;
+    const acum = Date.now();
+    if (acum - ultimaVerificareBuild < 60000) return;
+    ultimaVerificareBuild = acum;
+    try {
+      const vCurent = vDinTaguri();
+      if (!vCurent) return;
+      const html = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+      const m = html.match(/[?&]v=([A-Za-z0-9._-]+)/);
+      if (m && m[1] !== vCurent) {
+        toast('A apărut o versiune nouă — reîncarc pagina…', 'info', 2500);
+        setTimeout(() => location.reload(), 1200);
+      }
+    } catch { /* offline sau raspuns neasteptat — ignoram */ }
+  });
+}
