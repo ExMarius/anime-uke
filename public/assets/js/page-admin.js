@@ -351,11 +351,86 @@ async function loadSeason() {
       const r = await api('/admin/season', { method: 'POST', body: { theme_id: t.id } });
       if (!r.ok) { toast(r.data?.error || 'Nu am putut seta sezonul', 'error'); return; }
       toast(`Sezon activ: ${t.name} 🍂`, 'success');
+      const meNow = await getSession(true);
+      applySiteTheme(meNow?.site_theme || null);
       loadSeason();
     }));
     row.append(peek, set);
     box.appendChild(row);
   }
+  await paintSeasonBanner(activ, res.data.available || []);
+}
+
+// ---------------------------------------------------------------------
+// Banner „tu vezi X, ceilalti vad sezonul": adminul cu tema personala NU
+// vede sezonul (asa e specificatia), dar nimic nu-i spunea asta — parea un
+// bug („am activat Halloween si vad toamna"). Bannerul arata tema efectiva
+// a adminului + buton de previzualizare PERSISTENTA (pana la refresh).
+// ---------------------------------------------------------------------
+async function paintSeasonBanner(activ, available) {
+  document.getElementById('sezon-banner')?.remove();
+  if (!activ) return;
+  const me = await getSession().catch(() => null);
+  const efectiv = me?.site_theme || null;
+  if (efectiv === activ) return; // vede sezonul — nimic de explicat
+  const numeSezon = (available.find((t) => t.id === activ) || {}).name || activ;
+  let numeEfectiv = 'Standard';
+  let motiv = 'se propagă — dă Refresh în câteva secunde';
+  if (efectiv) {
+    // Numele temei efective + activarea RAW (api() prefixeaza singur /api;
+    // /auth/me NU expune active_theme, dar /shop da — e singura sursa).
+    const shop = await api('/shop');
+    numeEfectiv = (shop.data?.themes || []).find((t) => t.id === efectiv)?.name || efectiv;
+    if (shop.data?.active_theme) motiv = 'temă personală';
+  }
+  const bold = (s) => { const e = document.createElement('b'); e.textContent = s; return e; };
+  const panel = document.querySelector('#panel-sezon .box');
+  const list = document.getElementById('sezon-list');
+  if (!panel || !list) return;
+  const b = document.createElement('div');
+  b.id = 'sezon-banner';
+  b.className = 'box__hint'; // clasa exista in HTML — zero risc de purge CSS
+  const txt = document.createElement('span');
+  txt.append(
+    document.createTextNode('👁️ Tu vezi acum '),
+    bold(numeEfectiv),
+    document.createTextNode(` (${motiv}) — ceilalți utilizatori pe Standard văd `),
+    bold(numeSezon),
+    document.createTextNode('. '),
+  );
+  const vezi = document.createElement('button');
+  vezi.type = 'button';
+  vezi.id = 'sezon-vezi';
+  vezi.className = 'btn btn--accent btn--sm';
+  vezi.textContent = 'Vezi sezonul';
+  const mea = document.createElement('button');
+  mea.type = 'button';
+  mea.id = 'sezon-mea';
+  mea.className = 'btn btn--ghost btn--sm';
+  mea.textContent = '⟳ Înapoi la tema mea';
+  mea.disabled = true;
+  vezi.addEventListener('click', () => {
+    previewSeasonPersistent(activ);
+    vezi.disabled = true;
+    mea.disabled = false;
+  });
+  mea.addEventListener('click', async () => {
+    const m2 = await getSession(true);
+    applySiteTheme(m2?.site_theme || null);
+    vezi.disabled = false;
+    mea.disabled = true;
+  });
+  b.append(txt, vezi, document.createTextNode(' '), mea);
+  panel.insertBefore(b, list);
+}
+
+/** Previzualizare PERSISTENTA a sezonului (pana la refresh): nu scrie in
+ *  cache-ul de tema, deci la reincarcare revine tema proprie. Motorul canvas
+ *  porneste/opreste singur din MutationObserver la schimbarea clasei. */
+function previewSeasonPersistent(themeId) {
+  document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
+  document.body.classList.add(`theme-${themeId.slice(6)}`);
+  toast('👁️ Vezi sezonul acum — rămâne până reîncarci pagina', 'info', 4000);
 }
 
 function initSeason() {
@@ -364,6 +439,8 @@ function initSeason() {
       const r = await api('/admin/season', { method: 'POST', body: { theme_id: '' } });
       if (!r.ok) { toast(r.data?.error || 'Eroare', 'error'); return; }
       toast('Sezon dezactivat — toată lumea revine la tema proprie/Standard', 'success');
+      const meNow = await getSession(true);
+      applySiteTheme(meNow?.site_theme || null);
       loadSeason();
     });
   });

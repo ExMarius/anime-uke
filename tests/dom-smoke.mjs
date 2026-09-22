@@ -441,6 +441,41 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
 }
 
+console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
+{
+  // Adminul primeste o tema personala (Sakura), ca sa existe diferenta intre
+  // ce vede el si sezon — cazul real „am activat Halloween si vad toamna".
+  const meR = await fetch(`${BASE}/api/auth/me`, { headers: { Cookie: COOKIE } });
+  const adminId = (await meR.json())?.user?.id;
+  const post = (path, body) => fetch(`${BASE}${path}`, { method: 'POST', headers: { Cookie: COOKIE, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await post('/api/admin/users', { action: 'set_gold', user_id: adminId, value: 200000 });
+  await post('/api/shop/buy', { item_id: 'theme_sakura' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+
+  const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const rowsOk = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+  check('Tabul Sezon listeaza cele 4 teme', rowsOk, `randuri=${p.$$('#sezon-list .ranks-row').length}`);
+  const randIarna = p.$$('#sezon-list .ranks-row').find((r) => (r.textContent || '').includes('Iarnă'));
+  randIarna?.querySelectorAll('button')[1]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const setOk = await until(() => /Iarnă/.test(p.text('#sezon-curent') || ''));
+  check('Setarea sezonului din UI (Iarna)', setOk, `curent=${p.text('#sezon-curent')}`);
+  const bannerOk = await until(() => !!p.$('#sezon-banner'));
+  const bannerTxt = p.text('#sezon-banner') || '';
+  check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
+  p.$('#sezon-vezi')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const prevOk = await until(() => [...p.window.document.body.classList].includes('theme-iarna'));
+  check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p.window.document.body.classList].join(','));
+  p.$('#sezon-mea')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const backOk = await until(() => [...p.window.document.body.classList].includes('theme-sakura'));
+  check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p.window.document.body.classList].join(','));
+  check('Nicio eroare de runtime pe tabul Sezon', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+  // Curatenie: sezonul gol + adminul inapoi pe Standard (suitele urmatoare).
+  await post('/api/admin/season', { theme_id: '' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_standard' });
+}
+
 console.log('\n=== DOM: /episode (player, surse, progres) ===');
 // Pagina asta nu era acoperita deloc de dom-smoke, deci un crash la bootstrap
 // ajungea direct in productie ca un spinner vesnic. Acum o montam cu un

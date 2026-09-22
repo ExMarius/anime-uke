@@ -6,6 +6,8 @@
 # sincronizat (npm install --package-lock-only), altfel pica „npm ci" din relay.
 # Fix grandfathering: sezonierele DETINUTE apar inapoi in catalog (doar la
 # posesori), cu eticheta „Deținută (sezon)" — altfel isi pierdeau tema din UI.
+# UX sezon: banner „tu vezi X personal, ceilalti vad sezonul" + previzualizare
+# persistenta + refresh propriu dupa setare (cazul „activ Halloween, vad toamna").
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
