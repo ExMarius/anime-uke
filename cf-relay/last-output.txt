@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 7e83eb8
+comanda: cf-relay/cmd.sh @ 65b57e7
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -8,19 +8,19 @@ comanda: cf-relay/cmd.sh @ 7e83eb8
     [0;32m✓[0m wrangler.toml = configuratie de productie
 
 [1;35m==> 2/5  Schema D1 (remote)[0m
-    [0;32m✓[0m deja aplicata
+    [0;32m✓[0m migrari aplicate
 
 [1;35m==> 3/5  Worker Durable Objects: anime-uke-do[0m
-    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
+    [0;32m✓[0m publicat: anime-uke-do (Total Upload: 15.05)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7e83eb8
+    [0;32m✓[0m assete versionate ?v=65b57e7
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 9 fisiere
-    [0;32m✓[0m publicat: https://15c64c69.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://f6348565.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,7 +29,7 @@ comanda: cf-relay/cmd.sh @ 7e83eb8
 exit deploy: 0
 aștept 60s propagarea…
 
-════════ BUGEte (integrare): commit 7e83eb8 ════════
+════════ BUGEte (integrare): commit 65b57e7 ════════
 ── 1. asset static: Cache-Control dintr-o singură sursă (fără worker în cale)
 cache-control: public, max-age=31536000, immutable
    (înainte de _routes.json ieșea „no-cache, no-cache” = assetul trecea și prin worker)
@@ -88,21 +88,30 @@ cache-control: public, max-age=31536000, immutable
    profil: use_token=1 (≥1) · temă instant în bundle: auk-theme=1 (≥1)
    head /shop: cache-control: no-store
    head / (html): cache-control: public, max-age=0, must-revalidate
-   ?v= live din /: 7e83eb8 · din /shop:  (gol = /shop e în spatele login-ului, normal)
+   ?v= live din /: 65b57e7 · din /shop:  (gol = /shop e în spatele login-ului, normal)
 ── 13. poarta admin (economie) + sezon
    GET /api/admin/users anonim → 401 (trebuie 401)
    GET /api/admin/season anonim → 401 (trebuie 401)
    /admin anonim → 302 (trebuie 302)
+── 14. migrarea 0028: contoarele + planurile de execuție pe D1 de producție
+   0028: coloanele rating_avg/rating_count există pe anime_series
+   0028: contor users_total → "value": 3
+   0028: contor views_total → "value": 7
+   top săptămânal → SEARCH w USING INDEX idx_progress_updated (updated_at>?)|SEARCH e USING INTEGER PRIMARY KEY (rowid=?)|USE TEMP B-TREE FOR GROUP BY|
+   top notate → SCAN anime_series USING COVERING INDEX idx_series_rating|
+   catalog → SCAN s USING COVERING INDEX idx_series_created_id|
+   pulse → SEARCH site_meta USING INDEX sqlite_autoindex_site_meta_1 (key=?)|
+   scanări de watch_progress în topul săptămânal (trebuie 0): 0
 
 ════════ AUDIT LIVE ════════
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T19:35:48.305Z
+data: 2026-09-22T19:57:53.275Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (88 ms)
-  ℹ️  / → 200 · 88 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (349 ms)
+  ℹ️  / → 200 · 349 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -110,7 +119,7 @@ data: 2026-09-22T19:35:48.305Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 34 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 40 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -118,7 +127,7 @@ data: 2026-09-22T19:35:48.305Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 133 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 542 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -128,24 +137,24 @@ data: 2026-09-22T19:35:48.305Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 114 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 118 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 117 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 132 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 122 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 108 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 33 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 63 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 117 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 146 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -200,7 +209,7 @@ data: 2026-09-22T19:35:48.305Z
   ✅ /api/auth/me → 200 (public)
   ✅ /api/auth/register-options → 200 (public)
   ✅ /api/comments?episode_id=1 → 200 (public)
-  ✅ /api/home agregă catalog + top + recent + genuri + pulse (350 ms)
+  ✅ /api/home agregă catalog + top + recent + genuri + pulse (307 ms)
   ✅ /api/admin/stats → 401 (protejat)
   ✅ /api/admin/users → 401 (protejat)
   ✅ /api/admin/series → 401 (protejat)
@@ -255,7 +264,7 @@ data: 2026-09-22T19:35:48.305Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=7e83eb8 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=65b57e7 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 74325 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -314,7 +323,7 @@ data: 2026-09-22T19:35:48.305Z
   ✅ prima pagină referă direct .webp
   ✅ prima pagină nu cere .jpg-ul hero (doar og:image îl folosește, pentru crawlere)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 88 ms · /series 13 ms · /api/series 269 ms
+  ℹ️  timpi: / 349 ms · /series 25 ms · /api/series 252 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -349,10 +358,10 @@ exit audit: 0
 ════════ CONSUM COTE GRATUITE (azi, UTC) ════════
 CONSUM COTE GRATUITE — ziua UTC 2026-09-22 (se resetează la 00:00 UTC)
 
-  🟢 Invocări Functions (Pages)                6.791 /      100.000    7%  █···················
-  🟢 D1 rânduri citite                        20.750 /    5.000.000    0%  ····················
+  🟢 Invocări Functions (Pages)                7.040 /      100.000    7%  █···················
+  🟢 D1 rânduri citite                        22.063 /    5.000.000    0%  ····················
   🟢 D1 rânduri scrise                           219 /      100.000    0%  ····················
-  🟢 Durable Objects requests                  1.024 /      100.000    1%  ····················
+  🟢 Durable Objects requests                  1.096 /      100.000    1%  ····················
   🟢 DO durată (GB-s)                              1 /       13.000    0%  ····················
 
   Reper sănătos: sub 50% în orice moment al zilei. Peste 60% și încă crește → vezi
