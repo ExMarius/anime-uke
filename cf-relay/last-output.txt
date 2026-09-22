@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 2db4976
+comanda: cf-relay/cmd.sh @ 8762bce
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,13 +14,13 @@ comanda: cf-relay/cmd.sh @ 2db4976
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=2db4976
+    [0;32m✓[0m assete versionate ?v=8762bce
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 8 fisiere
-    [0;32m✓[0m publicat: https://3cd1b0fe.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://43ceb468.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -28,7 +28,7 @@ comanda: cf-relay/cmd.sh @ 2db4976
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 
-════════ verificări punctuale BUGEte (commit 2db4976) ════════
+════════ verificări punctuale BUGEte (commit 8762bce) ════════
 ── 1. asset static: Cache-Control trebuie să fie 'public, max-age=31536000, immutable', O SINGURĂ valoare
 cache-control: public, max-age=31536000, immutable
    (înainte de _routes.json ieșea 'no-cache, no-cache' = assetul trecea și prin worker)
@@ -50,24 +50,24 @@ x-frame-options: DENY
    /series → 301 https://anime-uke.pages.dev/ (301 spre /)
    /package.json → 404 (404)
 ── 6. /api/home: prima pagină într-o singură cerere
-{"error":"Trebuie să fii autentificat"}
+{"series":{"series":[{"id":1019,"title":"Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian","description":"În zorii unei epoci industriale alternative, într-o lume asemănătoare erei victoriene, unde tunurile și miste
    chei prezente: series, top, recent, genres, pulse
 ── 7. imagini: .webp direct + og:image rămâne .jpg (rețelele sociale nu acceptă WebP)
    hero-1.webp → 200 image/webp 168738B
    referințe .webp în HTML: 2
    referințe .jpg în afara og/twitter: 0
-── 8. assete versionate în HTML (deploy.sh a aplicat ?v=2db4976)
-   referințe ?v=: assets/js/page-index.js?v=2db4976 assets/js/page-index.js?v=2db4976 
+── 8. assete versionate în HTML (deploy.sh a aplicat ?v=8762bce)
+   referințe ?v=: assets/js/page-index.js?v=8762bce assets/js/page-index.js?v=8762bce 
 
 ════════ AUDIT LIVE ════════
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T17:20:29.562Z
+data: 2026-09-22T17:22:36.610Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (251 ms)
-  ℹ️  / → 200 · 251 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (128 ms)
+  ℹ️  / → 200 · 128 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -75,7 +75,7 @@ data: 2026-09-22T17:20:29.562Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 122 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 72 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -83,7 +83,7 @@ data: 2026-09-22T17:20:29.562Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 85 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 73 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -93,21 +93,21 @@ data: 2026-09-22T17:20:29.562Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 168 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 213 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 137 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 105 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 151 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 115 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 156 ms
+  ℹ️  /episod/4212 → 200 · 146 ms
   ✅ /episod/4212 → 200
-  ℹ️  /episod/4211 → 200 · 165 ms
+  ℹ️  /episod/4211 → 200 · 104 ms
   ✅ /episod/4211 → 200
 
 ── 2. Protecție pagini ──
@@ -156,7 +156,7 @@ data: 2026-09-22T17:20:29.562Z
   ✅ /api/auth/me → 200 (public)
   ✅ /api/auth/register-options → 200 (public)
   ✅ /api/comments?episode_id=1 → 200 (public)
-  ✅ /api/home agregă catalog + top + recent + genuri + pulse (289 ms)
+  ✅ /api/home agregă catalog + top + recent + genuri + pulse (292 ms)
   ✅ /api/admin/stats → 401 (protejat)
   ✅ /api/admin/users → 401 (protejat)
   ✅ /api/admin/series → 401 (protejat)
@@ -211,7 +211,7 @@ data: 2026-09-22T17:20:29.562Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=2db4976 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=8762bce (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 68749 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -270,7 +270,7 @@ data: 2026-09-22T17:20:29.562Z
   ✅ prima pagină referă direct .webp
   ✅ prima pagină nu cere .jpg-ul hero (doar og:image îl folosește, pentru crawlere)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 251 ms · /series 65 ms · /api/series 263 ms
+  ℹ️  timpi: / 128 ms · /series 19 ms · /api/series 174 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -299,3 +299,17 @@ data: 2026-09-22T17:20:29.562Z
 ════════════ TOTAL ════════════
   ✅ 168   🟡 0   🔴 0   ℹ️ 32
 exit audit: 0
+
+════════ CONSUM COTE GRATUITE (azi, UTC) ════════
+CONSUM COTE GRATUITE — ziua UTC 2026-09-22 (se resetează la 00:00 UTC)
+
+  🟢 Invocări Functions (Pages)                6.410 /      100.000    6%  █···················
+  🟢 D1 rânduri citite                        19.210 /    5.000.000    0%  ····················
+  🟢 D1 rânduri scrise                           219 /      100.000    0%  ····················
+  🟢 Durable Objects requests                    952 /      100.000    1%  ····················
+  🟢 DO durată (GB-s)                              1 /       13.000    0%  ····················
+
+  Reper sănătos: sub 50% în orice moment al zilei. Peste 60% și încă crește → vezi
+  „Cât duce planul gratuit" din README (pârghii: poll de notificări, heartbeat de vizionare,
+  Fail open în dashboard, Bot Fight Mode).
+exit usage: 0
