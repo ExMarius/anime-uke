@@ -1892,9 +1892,9 @@ body.theme-portocaliu {
   background: radial-gradient(ellipse at 50% 42%, #cc5500 0%, #7a2e00 55%, #3d1500 100%);
   background-attachment: fixed;
 }
-@media (prefers-reduced-motion: reduce) {
-  body.theme-sunset, body.theme-aurora, body.theme-ocean { animation: none; }
-}
+/* Temele animate NU respecta prefers-reduced-motion: activarea explicita a
+   unei teme animate = consimtamant pentru miscare (vezi anim-bg.js). Restul
+   interfetei (si culorile de nume) respecta in continuare setarea de sistem. */
 body.theme-classic {
   --bg: #0f0a05; --bg-2: #150f08; --surface: #1c1409; --surface-2: #261b0d;
   --surface-3: #31230f; --line: rgba(234, 179, 8, .18);

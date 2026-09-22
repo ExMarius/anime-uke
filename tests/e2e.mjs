@@ -1733,6 +1733,7 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   const ab = await (await fetch(BASE + '/assets/js/anim-bg.js')).text();
   const core = await (await fetch(BASE + '/assets/js/core.js')).text();
   check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'portocaliu', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js') && core.includes('ultimaVerificareBuild'), 'lipseste motorul, legatura sau garda anti-cache din core.js');
+  check('Temele animate ignora reduced-motion (consimtamant explicit)', !css.includes('body.theme-ocean { animation: none') && !ab.includes("matchMedia('(prefers-reduced-motion"), 'poarta reduced-motion inca prezenta');
 }
 
 console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');

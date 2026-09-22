@@ -10,7 +10,8 @@
 //     inainte sa cumperi).
 //   - canvas-ul e transparent si sta FIX sub continut (z-index: -1):
 //     gradientul de dedesubt vine din CSS, particulele din JS.
-//   - fara miscare daca utilizatorul are prefers-reduced-motion.
+//   - NU respecta prefers-reduced-motion: o tema animata cumparata si activata
+//     explicit = consimtamant pentru miscare (temele statice raman alternativa).
 //
 // CUM MODIFICI PARAMETRII (pe tema, in tabelul ANIMS de mai jos):
 //   - numarul de elemente: campul `numar`
@@ -57,6 +58,7 @@ function asiguraCanvas() {
     + 'z-index:-1;pointer-events:none;';
   document.body.appendChild(canvas);
   ctx = canvas.getContext('2d');
+  if (!ctx) { canvas.remove(); canvas = null; return; } // canvas blocat — ramane gradientul
   redimensioneaza();
   window.addEventListener('resize', redimensioneaza);
 }
@@ -255,6 +257,7 @@ function frame(timp) {
 function porneste(slug) {
   opreste();
   asiguraCanvas();
+  if (!canvas || !ctx) return; // canvas indisponibil — ramane gradientul static
   const cfg = ANIMS[slug];
   if (!cfg) return;
   const fabrica = cfg.tip === 'bule' ? bulaNoua : cfg.tip === 'stele' ? steaNoua : petalaNoua;
@@ -288,15 +291,11 @@ function slugDinBody() {
 
 /**
  * Punctul de intrare: se apeleaza o data pe pagina (din core.js).
- * Nu face nimic fara <canvas>, fara rAF sau cu reduced-motion.
+ * Nu face nimic fara suport <canvas> 2D sau fara rAF.
  */
 export function initAnimBg() {
   if (typeof document === 'undefined' || !document.body) return;
   if (typeof requestAnimationFrame === 'undefined') return;
-  // Respectam preferinta de sistem: fara miscare → ramane gradientul static.
-  try {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  } catch { /* matchMedia indisponibil — continuam */ }
 
   // Pornim daca tema curenta e animata (ex: aplicata deja din sesiune).
   const initial = slugDinBody();
