@@ -57,3 +57,8 @@ echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"
+
+echo
+echo "════════ CONSUM COTE GRATUITE (azi, UTC) ════════"
+node scripts/usage.mjs
+echo "exit usage: $?"

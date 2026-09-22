@@ -69,6 +69,9 @@ cat cf-relay/last-output.txt
   bundle/minify JS, versionare `?v=<commit>` și trecerea JS/CSS din `public/_headers` pe `immutable`
   (ele nu mai trec prin worker, deci Cache-Control-ul se decide acolo). Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
+- `node scripts/usage.mjs` (rulează și în `cf-relay/cmd.sh`) arată procentul consumat azi din cotele
+  gratuite (Functions / D1 / DO). Are nevoie de permisiunea „Account Analytics: Read" pe token;
+  fără ea scrie clar ce lipsește, nu crapă.
 - Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl), sau — mai bine,
   pentru că acoperă zeci de probe deodată — `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh`
   (rulează și fără `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.

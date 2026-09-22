@@ -13,6 +13,7 @@
     "migrate:remote": "wrangler d1 migrations apply DB --remote",
     "seed": "node scripts/seed.mjs",
     "test": "./test.sh",
+    "usage": "node scripts/usage.mjs",
     "test:e2e": "node tests/e2e.mjs",
     "deploy": "./deploy.sh",
     "deploy:do": "cd worker-do && npx wrangler deploy",

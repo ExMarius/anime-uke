@@ -60,6 +60,7 @@ migrations/                 schema D1 = suma migrărilor 0001…0025 (NU există
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
 ├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
+├── usage.mjs               „cât din cota gratuită am consumat azi" (GraphQL Analytics, read-only)
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
@@ -113,6 +114,7 @@ cp .dev.vars.example .dev.vars  # JWT_SECRET local
 npm run dev                     # ./dev.sh → http://localhost:8788 (aplică migrările locale)
 npm run seed                    # opțional: catalog de demo (vezi antetul scripts/seed.mjs)
 npm test                        # ./test.sh: e2e + dom + plafoane, pe o bază curată (~1 min)
+npm run usage                   # consumul de azi din cotele gratuite (necesită token + permisiune de analytics)
 ```
 
 Reguli care evită surprize:
@@ -222,6 +224,9 @@ notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în 
    acoperă deja login/register/watch/chat.
 6. **Backup**: D1 are Time Travel (restaurare la un moment din trecut) — nu e
    nevoie de un job de backup. `worker-do` și Pages se pot redeploya din repo.
+7. **Vezi consumul**: `npm run usage` (sau prin relay, la sfârșitul deployului)
+   afișează procentul din fiecare cotă pentru ziua UTC curentă. Cere pe token
+   permisiunea „Account Analytics: Read" — dacă lipsește, scriptul spune exact asta.
 
 ---
 
