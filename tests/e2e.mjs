@@ -1050,11 +1050,51 @@ console.log('\n=== 9. PANOU ADMIN: utilizatori, ban, roluri, protectii ===');
   check('Actiune necunoscuta → 400', badAction.status === 400, `status=${badAction.status}`);
 }
 
+console.log('\n=== 9b. ADMIN: gold/puncte/nivel din panou ===');
+{
+  const j = globalThis.admin;
+  await req(jar(), 'POST', '/api/auth/register', { username: 'econu', email: 'econu@test.ro', password: 'parola123' });
+  const je = jar();
+  await req(je, 'POST', '/api/auth/login', { email: 'econu@test.ro', password: 'parola123' });
+  const list = await req(j, 'GET', '/api/admin/users');
+  const eu = list.data.users.find((u) => u.username === 'econu');
+  check('Lista admin include gold/nivel/xp', eu.gold === 0 && eu.level === 1 && eu.xp === 0, JSON.stringify(eu));
+
+  const p1 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 500 });
+  check('set_points +500', p1.data?.success === true && p1.data?.points === 500, JSON.stringify(p1.data));
+  const p2 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: -200 });
+  check('set_points -200 (scadere)', p2.data?.points === 300, JSON.stringify(p2.data));
+  const p3 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: -999999 });
+  check('set_points nu merge pe negativ (oprire la 0)', p3.data?.points === 0, JSON.stringify(p3.data));
+  const p0 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 0 });
+  const pBig = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 2000000 });
+  const pFrac = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 1.5 });
+  check('set_points invalid (0/prea mare/fractie) → 400', p0.status === 400 && pBig.status === 400 && pFrac.status === 400, `${p0.status}/${pBig.status}/${pFrac.status}`);
+
+  const g1 = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: eu.id, value: 1000 });
+  check('set_gold +1000 pe alt user', g1.data?.gold === 1000, JSON.stringify(g1.data));
+  const g2 = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: eu.id, value: -999999 });
+  check('set_gold negativ mare opreste la 0', g2.data?.gold === 0, JSON.stringify(g2.data));
+
+  const l1 = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 10 });
+  check('set_level 10 → nivel 10, xp 0', l1.data?.success === true && l1.data?.level === 10 && l1.data?.xp === 0, JSON.stringify(l1.data));
+  const l0 = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 0 });
+  const lBig = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 101 });
+  check('set_level invalid (0/101) → 400', l0.status === 400 && lBig.status === 400, `${l0.status}/${lBig.status}`);
+
+  const noAccess = await req(je, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 50 });
+  check('Non-admin nu poate ajusta puncte → 403', noAccess.status === 403, `status=${noAccess.status}`);
+
+  const selfPts = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: 1, value: 50 });
+  check('Economia merge si pe propriul cont (exceptie documentata)', selfPts.data?.success === true, JSON.stringify(selfPts.data));
+  await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: 1, value: -50 }); // curatenie: refacem punctele adminului
+}
+
 console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
-  check('Statistici: total_users=6', s.data?.stats?.total_users === 6, JSON.stringify(s.data?.stats));
+  check('Statistici: total_users=7 (+econu din §9b)', s.data?.stats?.total_users === 7, JSON.stringify(s.data?.stats));
   check('Statistici: plafoanele implicite sunt 1000/1000', s.data?.stats?.limit_users === 1000 && s.data?.stats?.limit_series === 1000, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
@@ -1529,8 +1569,9 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   // --- admin alimenteaza (set_gold e si unealta de suport)
   const grant = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2id, value: 2000 });
   check('Adminul poate acorda gold (set_gold)', grant.data?.success === true && grant.data?.gold === goldBefore + 2000, JSON.stringify(grant.data));
+  const adminRow = (await req(globalThis.admin, 'GET', '/api/admin/users')).data.users.find((u) => u.id === 1);
   const grantSelf = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: 1, value: 100 });
-  check('Adminul nu-si poate modifica propriul cont', grantSelf.status === 400, `status=${grantSelf.status}`);
+  check('Adminul isi poate ajusta propriul gold (economia e exceptata)', grantSelf.data?.success === true && grantSelf.data?.gold === adminRow.gold + 100, JSON.stringify(grantSelf.data));
 
   // --- cumpara consumabila + durabila
   const buyKey = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });

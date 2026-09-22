@@ -103,3 +103,7 @@ echo "  head / (html): $(curl -sI "$B/" | grep -i '^cache-control' | tr -d '\r')
 VS=$(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
 echo "  ?v= live (/shop): $VS"
 echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'petale' /tmp/ps.js) bule=$(grep -c 'bule' /tmp/ps.js) stele=$(grep -c 'stele' /tmp/ps.js) garda=$(grep -c '?v=' /tmp/ps.js) (toate >=1 = motorul + garda anti-cache sunt in bundle-ul din productie)"
+
+echo "=== verificari punctuale (admin economie) ==="
+echo "  GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
+echo "  /admin → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 200)"

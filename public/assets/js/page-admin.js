@@ -144,13 +144,21 @@ async function loadUsers() {
   const tbody = document.querySelector('#users-table tbody');
   tbody.innerHTML = '';
 
-  if (!users.length) { tbody.appendChild(emptyRow(6, 'Niciun utilizator.')); return; }
+  if (!users.length) { tbody.appendChild(emptyRow(9, 'Niciun utilizator.')); return; }
 
   for (const u of users) {
     const isSelf = u.id === currentId;
     const tr = document.createElement('tr');
+    tr.dataset.uid = u.id;
 
     const actions = [];
+    // Economia se poate ajusta si pe propriul cont (gold/puncte/nivel nu
+    // pot bloca panoul); rolul/banul/stergerea raman interzise pe sine.
+    actions.push({
+      label: '💰 Gold/Puncte/Nivel',
+      cls: 'btn btn--sm btn--ghost',
+      onClick: () => toggleEconEditor(u, tr),
+    });
     if (!isSelf) {
       actions.push({
         label: u.is_admin ? 'Fă user' : 'Fă admin',
@@ -173,13 +181,28 @@ async function loadUsers() {
       cell(u.id),
       cell(u.username + (isSelf ? ' (tu)' : '')),
       cell(u.email),
-      cell(u.points),
+      cell(fmtNum(u.points)),
+      cell(`🪙 ${fmtNum(u.gold)}`),
+      cell(`Nv. ${u.level ?? 1} · ${fmtNum(u.xp)} XP`),
       pill(staffLabel(u), u.is_admin ? 'pill--admin' : u.staff_role ? 'pill--staff' : 'pill--user'),
       pill(u.is_banned ? 'Banat' : 'Activ', u.is_banned ? 'pill--banned' : 'pill--user'),
-      actionsCell(actions.length ? actions : [{ label: '—', cls: 'btn btn--ghost btn--sm', disabled: true }]),
+      actionsCell(actions),
     );
     tbody.appendChild(tr);
   }
+  // Dupa o ajustare reusita redeschidem editorul pe acelasi user (valorile
+  // „acum" sunt proaspete, nu trebuie sa-l cauti din nou in lista).
+  if (editorUserId != null) {
+    const row = tbody.querySelector(`tr[data-uid="${editorUserId}"]`);
+    const u = users.find((x) => x.id === editorUserId);
+    if (row && u) openEconEditor(u, row);
+    else editorUserId = null;
+  }
+}
+
+/** Numar cu separatori ro-RO (null/undefined → 0). */
+function fmtNum(v) {
+  return Number(v || 0).toLocaleString('ro-RO');
 }
 
 /** Eticheta de rol din tabelul de utilizatori: Admin / grad de staff / User. */
@@ -211,6 +234,82 @@ async function deleteUser(user) {
   const res = await api('/admin/users', { method: 'POST', body: { action: 'delete', user_id: user.id } });
   if (!res.ok) { toast(res.data?.error || 'Nu am putut șterge contul', 'err'); return; }
   toast(`Contul „${user.username}" a fost șters`, 'ok');
+  loadUsers();
+  loadStats();
+}
+
+// ---------------------------------------------------------------------
+// EDITOR ECONOMIE (gold/puncte/nivel): un rand extensibil sub utilizator,
+// cu trei mini-formulare. Delta-urile (gold/puncte) accepta si negative
+// (scadere, cu oprire la 0); nivelul se seteaza absolut (1-100, XP-ul se
+// reseteaza la pragul nivelului). Dupa fiecare aplicare reusita lista se
+// reincarca si editorul se redeschide pe acelasi user.
+// ---------------------------------------------------------------------
+let editorUserId = null;
+
+function toggleEconEditor(u, tr) {
+  if (editorUserId === u.id) {
+    editorUserId = null;
+    tr.parentNode.querySelector('.econ-edit-row')?.remove();
+    return;
+  }
+  editorUserId = u.id;
+  tr.parentNode.querySelector('.econ-edit-row')?.remove();
+  openEconEditor(u, tr);
+}
+
+function openEconEditor(u, tr) {
+  const row = document.createElement('tr');
+  row.className = 'econ-edit-row';
+  const td = document.createElement('td');
+  td.colSpan = 9;
+  const wrap = document.createElement('div');
+  wrap.className = 'econ-edit';
+  wrap.append(
+    econGroup(`🪙 Gold — acum: ${fmtNum(u.gold)}`, '±delta (ex. 500 sau -200)', 'Adaugă', (v) => applyEcon(u, 'set_gold', v, (d) => `🪙 Gold nou: ${fmtNum(d.gold)}`)),
+    econGroup(`⭐ Puncte — acum: ${fmtNum(u.points)}`, '±delta (ex. 100 sau -50)', 'Adaugă', (v) => applyEcon(u, 'set_points', v, (d) => `⭐ Puncte noi: ${fmtNum(d.points)}`)),
+    econGroup(`🎚️ Nivel — acum: Nv. ${u.level ?? 1}`, 'nivel absolut 1-100', 'Setează', (v) => applyEcon(u, 'set_level', v, (d) => `🎚️ Nivel nou: Nv. ${d.level} (XP resetat)`)),
+  );
+  td.appendChild(wrap);
+  row.appendChild(td);
+  tr.after(row);
+}
+
+/** Un mini-formular: eticheta + input numeric + buton. Fara innerHTML. */
+function econGroup(label, placeholder, btnLabel, onApply) {
+  const grp = document.createElement('div');
+  grp.className = 'econ-edit__grp';
+  const lab = document.createElement('span');
+  lab.className = 'econ-edit__label';
+  lab.textContent = label;
+  const input = document.createElement('input');
+  input.className = 'input input--sm econ-edit__input';
+  input.type = 'number';
+  input.step = '1';
+  input.placeholder = placeholder;
+  input.setAttribute('aria-label', label);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn--accent btn--sm';
+  btn.textContent = btnLabel;
+  btn.addEventListener('click', () => withBusy(btn, async () => {
+    const raw = input.value.trim();
+    if (!raw) { toast('Scrie o valoare mai întâi', 'err'); return; }
+    await onApply(Number(raw));
+  }));
+  const line = document.createElement('div');
+  line.className = 'econ-edit__line';
+  line.append(input, btn);
+  grp.append(lab, line);
+  return grp;
+}
+
+async function applyEcon(u, action, value, okMsg) {
+  if (action === 'set_level' && !confirm(`Îl treci pe ${u.username} la nivelul ${value}? XP-ul i se resetează la pragul nivelului.`)) return;
+  const res = await api('/admin/users', { method: 'POST', body: { action, user_id: u.id, value } });
+  if (!res.ok) { toast(res.data?.error || 'Ajustarea a eșuat', 'err'); return; }
+  toast(okMsg(res.data), 'ok');
+  editorUserId = u.id; // ramane deschis dupa reincarcarea listei
   loadUsers();
   loadStats();
 }

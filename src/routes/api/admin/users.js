@@ -7,16 +7,19 @@ import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 // =====================================================================
 // /api/admin/users — gestionarea utilizatorilor din panoul admin.
 //
-// Actiuni: set_role (admin/user) · set_ban (true/false) · delete
+// Actiuni: set_role (admin/user) · set_ban (true/false) · delete ·
+//   set_gold (delta) · set_points (delta) · set_level (absolut, 1-100)
 //
 // GARANTII din spec + doua plase de siguranta adaugate:
-//  1. Nu iti poti modifica propriul cont (altfel un admin s-ar putea
-//     debana/demota singur din greseala si ar bloca panoul).
+//  1. Nu iti poti modifica propriul rol/ban/cont (altfel un admin s-ar putea
+//     debana/demota singur din greseala si ar bloca panoul). Ajustarile de
+//     economie (gold/puncte/nivel) sunt EXCEPTATE: fara ele adminul nu si-ar
+//     putea testa sau repara propriile valori, iar ele apar oricum in jurnal.
 //  2. Nu poti demota sau bana ULTIMUL admin ramas — altfel nimeni nu ar
 //     mai putea intra vreodata in /admin.html.
 // =====================================================================
 
-const ALLOWED_ACTIONS = ['set_role', 'set_ban', 'delete', 'set_gold'];
+const ALLOWED_ACTIONS = ['set_role', 'set_ban', 'delete', 'set_gold', 'set_points', 'set_level'];
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -29,7 +32,7 @@ export async function onRequestGet(context) {
     // sa paraseasca baza de date. (In v1 /api/admin returna si emailurile
     // catre un tabel care nici macar nu le afisa.)
     const res = await env.DB.prepare(
-      `SELECT id, username, email, points, is_admin, staff_role, is_banned, created_at, last_login_at
+      `SELECT id, username, email, points, gold, level, xp, is_admin, staff_role, is_banned, created_at, last_login_at
        FROM users ORDER BY id ASC LIMIT 1000`
     ).all();
     return json({ users: res.results || [], you: gate.user.id });
@@ -66,8 +69,11 @@ export async function onRequestPost(context) {
   const target = validatePositiveInt(body.user_id, 'ID-ul utilizatorului');
   if (!target.ok) return errorResponse(400, target.error);
 
-  // --- Regula 1: nu iti poti modifica propriul cont ---
-  if (target.value === admin.id) {
+  // --- Regula 1: nu iti poti modifica propriul rol/ban/cont. Economia
+  // (gold/puncte/nivel) e exceptata — nu poate bloca panoul, iar adminul
+  // trebuie sa-si poata testa/repara propriile valori. Totul ajunge in jurnal.
+  const economyAction = action === 'set_gold' || action === 'set_points' || action === 'set_level';
+  if (target.value === admin.id && !economyAction) {
     return errorResponse(400, 'Nu îți poți modifica propriul cont');
   }
 
@@ -110,6 +116,38 @@ export async function onRequestPost(context) {
       const fresh = await env.DB.prepare('SELECT gold FROM users WHERE id = ?').bind(target.value).first();
       await logAdminAction(env, admin, 'adjust_gold', 'user', target.value, `${user.username} ${delta > 0 ? '+' : ''}${delta}`);
       return json({ success: true, action, username: user.username, gold: fresh?.gold || 0 });
+    }
+
+    if (action === 'set_points') {
+      // Delta de puncte (poate fi negativa, oprita la 0). Acelasi tipar ca
+      // gold-ul: compensatii, corectii, recompense manuale din panou.
+      const delta = Number(body.value);
+      if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 1000000) {
+        return errorResponse(400, 'Valoare invalidă pentru puncte');
+      }
+      await env.DB
+        .prepare('UPDATE users SET points = MAX(0, points + ?) WHERE id = ?')
+        .bind(delta, target.value)
+        .run();
+      const fresh = await env.DB.prepare('SELECT points FROM users WHERE id = ?').bind(target.value).first();
+      await logAdminAction(env, admin, 'adjust_points', 'user', target.value, `${user.username} ${delta > 0 ? '+' : ''}${delta}`);
+      return json({ success: true, action, username: user.username, points: fresh?.points || 0 });
+    }
+
+    if (action === 'set_level') {
+      // Nivel ABSOLUT (1-100), nu delta: suportul zice „treci-l la 20".
+      // XP-ul se reseteaza la 0 = pragul nivelului setat (altfel un XP mare
+      // ramas l-ar urca instant mai departe la prima actiune).
+      const lvl = Number(body.value);
+      if (!Number.isInteger(lvl) || lvl < 1 || lvl > 100) {
+        return errorResponse(400, 'Nivel invalid (1-100)');
+      }
+      await env.DB
+        .prepare('UPDATE users SET level = ?, xp = 0 WHERE id = ?')
+        .bind(lvl, target.value)
+        .run();
+      await logAdminAction(env, admin, 'set_level', 'user', target.value, `${user.username} → Nv.${lvl} (xp resetat)`);
+      return json({ success: true, action, username: user.username, level: lvl, xp: 0 });
     }
 
     if (action === 'set_ban') {
