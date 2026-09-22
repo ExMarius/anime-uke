@@ -96,3 +96,10 @@ curl -s "$B/assets/js/page-shop.js?v=$V" -o /tmp/ps.js
 echo "  bundle shop: shop-boost=$(grep -c 'shop-boost' /tmp/ps.js) reward_text=$(grep -c 'reward_text' /tmp/ps.js) nc-sunset=$(grep -c 'nc-sunset' /tmp/ps.js) (toate ≥1)"
 curl -s "$B/assets/js/page-profile.js?v=$V" -o /tmp/pp.js
 echo "  bundle profil: use_token=$(grep -c 'use_token' /tmp/pp.js) (≥1)"
+
+echo "=== diagnostic cache + bundle (teme canvas) ==="
+echo "  head /shop: $(curl -sI "$B/shop" | grep -i '^cache-control' | tr -d '\r')"
+echo "  head / (html): $(curl -sI "$B/" | grep -i '^cache-control' | tr -d '\r')"
+VS=$(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
+echo "  ?v= live (/shop): $VS"
+echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'petale' /tmp/ps.js) bule=$(grep -c 'bule' /tmp/ps.js) stele=$(grep -c 'stele' /tmp/ps.js) (toate >=1 = motorul e in bundle-ul din productie)"
