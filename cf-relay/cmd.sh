@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy tema instant: clasa temei din localStorage inainte de fetch-ul de
-# sesiune (zero flash), verificare ca marcajul e in bundle-ul live.
+# Deploy fix getSession: tema se aplica si pe calea network (prima pagina
+# dupa pauza ramanea netemata, motorul canvas nu pornea). Verificari neschimbate.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"

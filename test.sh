@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          e2e (API) + dom-smoke (pagini in jsdom) + theme-cache + plafoane
+#   ./test.sh          e2e + dom-smoke + theme-cache + theme-flow + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -126,6 +126,17 @@ if [ $THEME_RC -ne 0 ]; then
   grep -nE "Error|at .*\\.mjs|Cannot|is not" /tmp/theme.log | tail -12
 fi
 [ "$THEME_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ theme-flow (flux tema animata, pagina reala) ════════"
+node tests/theme-flow.mjs > /tmp/flow.log 2>&1
+FLOW_RC=$?
+tail -8 /tmp/flow.log
+if [ $FLOW_RC -ne 0 ]; then
+  echo "!! theme-flow s-a oprit cu codul $FLOW_RC — ultimele erori:"
+  grep -nE "Error|at .*\\.mjs|Cannot|is not" /tmp/flow.log | tail -12
+fi
+[ "$FLOW_RC" -eq 0 ] || RC=1
 
 # ---------------------------------------------------------------------
 # Faza 3: plafoanele buget-0. Repornim serverul pe o baza curata cu tavane

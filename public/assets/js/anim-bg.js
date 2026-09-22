@@ -261,8 +261,13 @@ function porneste(slug) {
   const cfg = ANIMS[slug];
   if (!cfg) return;
   const fabrica = cfg.tip === 'bule' ? bulaNoua : cfg.tip === 'stele' ? steaNoua : petalaNoua;
-  particule = [];
-  for (let i = 0; i < cfg.numar; i++) particule.push(fabrica(cfg));
+  try {
+    particule = [];
+    for (let i = 0; i < cfg.numar; i++) particule.push(fabrica(cfg));
+  } catch {
+    opreste(); // canvas partial blocat (ex. extensii) — ramane gradientul, fara erori
+    return;
+  }
   slugCurent = slug;
   timpAnterior = performance.now();
   // Pauza cand tab-ul e ascuns (baterie), reluare la intoarcere.

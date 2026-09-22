@@ -151,6 +151,10 @@ export async function getSession(force = false) {
   if (!res.ok && res.status === 0) return sessionCache ?? null; // retea moarta: nu suprascrie
   sessionCache = res.ok ? (res.data.user || null) : undefined;
   try { sessionStorage.setItem('auk-me', JSON.stringify({ t: Date.now(), user: sessionCache })); } catch { /* ignora */ }
+  // FIX: tema se aplica si pe calea network, nu doar din cache-ul de sesiune.
+  // Fara linia asta, prima pagina dupa >20s de pauza ramanea netemata pana
+  // la urmatoarea navigare (si motorul canvas nu pornea niciodata pe ea).
+  applySiteTheme(sessionCache?.site_theme || null);
   return sessionCache;
 }
 
