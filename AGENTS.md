@@ -160,6 +160,11 @@ Un vizitator fără cont cheltuia ~12 invocări (1 pagină + 6 assete + 5 cereri
    `scripts/audit-live.mjs` a primit probe noi (asset static servit direct, `.webp` direct, `og:image`
    rămâne `.jpg` fiindcă rețelele sociale nu acceptă WebP).
 
+6. **`scripts/usage.mjs`** (`npm run usage`, rulat și la sfârșitul `cf-relay/cmd.sh`) — cât din cotele
+   gratuite s-a consumat azi (UTC): invocări Functions, rânduri D1, requests DO, cu procent și bare.
+   Consumul măsurat în ziua deployului (care a inclus toate testele și auditurile): **6% din invocări**,
+   0% D1, 1% DO — adică exact marja de care ne trebuia ca să nu pice la trafic.
+
 **De făcut de proprietar, o dată (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke` →
 Settings → Runtime → **Fail open** (la epuizarea cotei, catalogul static rămâne vizibil în loc de pagină de eroare).
 
