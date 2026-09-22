@@ -12,7 +12,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
 | 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
 | 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
-| 6 (scara 1000×1000, migrarea 0028) | vezi §1e | o vizită: ~230.000 → ~64 rânduri citite din D1 |
+| 6 (scara 1000×1000, migrarea 0028, build `65b57e7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | o vizită: ~230.000 → ~64 rânduri citite; planurile de execuție confirmate pe D1-ul de producție |
 
 ---
 
@@ -164,11 +164,20 @@ serie și resincronizată în același batch cu votul (`src/lib/ratings.js`), `i
 `idx_series_created_id`, contoarele `users_total`/`views_total` în `site_meta`, cache de o
 oră pentru topul săptămânal în `leaderboard_cache` (`TOP_CACHE_MINUTES=0` în dev/teste).
 
-Dovada pe producție (secțiunea 14 din `cf-relay/cmd.sh`): `EXPLAIN QUERY PLAN` rulat pe D1-ul
-real, pentru cele patru interogări — `SEARCH w USING INDEX idx_progress_updated`, `SCAN
-anime_series USING INDEX idx_series_rating` (parcurgere de index cu oprire după 5 rânduri),
-`SCAN s USING COVERING INDEX idx_series_created_id`, `SEARCH site_meta USING INDEX …`.
-Verificarea „scanări de `watch_progress` în topul săptămânal (trebuie 0)" e în output-ul relay-ului.
+Dovada pe producție (secțiunea 14 din `cf-relay/cmd.sh`, rulată pe build-ul `65b57e7`):
+`EXPLAIN QUERY PLAN` pe D1-ul real, pentru cele patru interogări fierbinți —
+
+```
+top săptămânal → SEARCH w USING INDEX idx_progress_updated (updated_at>?) …
+top notate     → SCAN anime_series USING COVERING INDEX idx_series_rating
+catalog        → SCAN s USING COVERING INDEX idx_series_created_id
+pulse          → SEARCH site_meta USING INDEX sqlite_autoindex_site_meta_1 (key=?)
+scanări de watch_progress în topul săptămânal (trebuie 0): 0
+```
+
+Tot acolo s-a confirmat și migrarea pe producție: coloanele `rating_avg`/`rating_count`
+există pe `anime_series`, iar contoarele au fost inițializate din datele reale
+(`users_total = 3`, `views_total = 7` — câte conturi și câte vizualizări avea site-ul).
 
 Teste noi: `tests/top-cache.mjs` (17 — cache-ul topului: hit, miss, expirare, `TOP_CACHE_MINUTES=0`,
 degradare când D1 pică) și `tests/counters.mjs` (16 — maparea contoarelor pe `pulse` și forma

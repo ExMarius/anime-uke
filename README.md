@@ -229,6 +229,11 @@ pagină, în loc de ~21. Aceeași măsurătoare a arătat și ce NU era o proble
 (heartbeat-ul de vizionare e la 2 minute, vizualizările se bat la 20 înainte de un flush
 D1) și invocările.
 
+Planurile de execuție sunt verificate **pe D1-ul de producție** la fiecare rulare a
+relay-ului (`EXPLAIN QUERY PLAN`, secțiunea 14 din `cf-relay/cmd.sh`): topul săptămânal iese
+`SEARCH w USING INDEX idx_progress_updated`, iar numărătoarea „scanări de `watch_progress`"
+trebuie să fie 0.
+
 Ce a rămas deliberat „scump" și de ce e în regulă: genurile (1.000 rânduri, o dată pe
 oră), sitemap-urile (până la 6.000 rânduri, o dată pe oră, cerute de crawlere) și
 recalculul topului săptămânal (o dată pe oră). Toate trei sunt în afara căii fierbinți,
