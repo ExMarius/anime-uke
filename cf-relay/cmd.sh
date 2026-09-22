@@ -2,6 +2,8 @@
 # Deploy teme de sezon: toamna iese din shop + Halloween/iarna/Paste noi,
 # doar din admin (global); migrare 0027 (site_settings); verificare purge,
 # motor (fulgi), posesori Frunze grandfathered.
+# Lectie 2026-09-22: orice dependenta noua in package.json cere lockfile
+# sincronizat (npm install --package-lock-only), altfel pica „npm ci" din relay.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
