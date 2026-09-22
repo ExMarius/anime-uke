@@ -1,18 +1,18 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 0e5257d
+comanda: cf-relay/cmd.sh @ 525c0e3
 ────────────────────────────────────
 versiune din HTML: ?v=8762bce   (bundle: 42837 B)
 
 ── markeri în bundle-ul live al primei pagini ──
    fetch /api/home          : 1  (așteptat ≥1)
    fără /api/series la start: 0  (0 = nu mai cheltuie o cerere separată)
-   /api/pulse în bundle     : 1  (0 = pulse-ul vine din /api/home)
-   lista HERO .webp         : 1  (≥1)
-   referințe hero .jpg      : 1  (0 = fără cerere dublă)
+   /api/pulse în bundle     : 1  (1 = codul din core.js pentru celelalte pagini; pe / NU se cheltuie, vezi dom-smoke)
+   lista HERO .webp         : 1  (≥1 = imaginea cerută direct)
+   hero .jpg în bundle      : 1  (1 = doar rezerva din scara de erori, nu o cerere la încărcare)
 
 ── /api/home pe live (de două ori, ca să excludem propagarea de edge) ──
-   încercarea 1: 200 0.501739s · {"series":{"series":[{"id":1019,"title":"Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian"
-   încercarea 2: 200 0.365486s · {"series":{"series":[{"id":1019,"title":"Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian"
+   încercarea 1: 200 0.366383s · {"series":{"series":[{"id":1019,"title":"Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian"
+   încercarea 2: 200 0.397388s · {"series":{"series":[{"id":1019,"title":"Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian"
    secțiuni: series, top, recent, genres, pulse · serii: 5 · recent: 5 · genuri: 18
 
 ── cota consumată azi (UTC) ──
