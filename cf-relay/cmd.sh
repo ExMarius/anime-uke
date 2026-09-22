@@ -66,6 +66,46 @@ for s in /sitemap.xml /sitemap.txt /llms.txt /robots.txt; do
   echo "   $s → $(curl -s -o /dev/null -w '%{http_code}' "$B$s")"
 done
 
+echo "── 9. rute moarte + SEO (verificările rândului de lucru #4, păstrate)"
+for p in /404 /admin/serie /covers/x.png /ruta-inexistenta /AGENTS.md /deploy.sh /src/worker.js; do
+  echo "   $p → $(curl -s -o /dev/null -w '%{http_code}' "$B$p")"
+done
+echo "   robots Allow: /series (trebuie 0): $(curl -s "$B/robots.txt" | grep -c 'Allow: /series')"
+echo "   speculationrules prerender: $(curl -s "$B/speculationrules.json" | tr -d ' \n' | head -c 80)"
+echo "   /profile.html (nelogat) → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$B/profile.html")"
+echo "   /series?id=1014 (forma veche) → $(curl -s -o /dev/null -w '%{http_code}' "$B/series?id=1014") (trebuie 200)"
+echo "   /login noindex: $(curl -s "$B/login" | grep -c 'noindex') · canonical: $(curl -s "$B/login" | grep -c 'rel=\"canonical\"')"
+
+echo "── 10. D1 producție: migrările 0026 (shop 2.0) și 0027 (sezon)"
+W="npx wrangler"; [ -x "$PWD/node_modules/.bin/wrangler" ] && W="$PWD/node_modules/.bin/wrangler"
+$W d1 execute DB --remote --command "SELECT xp_boost_until FROM users LIMIT 1" >/dev/null 2>&1 \
+  && echo "   migrare 0026: coloana xp_boost_until există pe D1 producție" \
+  || echo "   migrare 0026: LIPSEȘTE coloana xp_boost_until de pe producție!"
+echo "   migrare 0027 (site_settings.seasonal_theme): $($W d1 execute DB --remote --command "SELECT value FROM site_settings WHERE key = 'seasonal_theme'" --json 2>/dev/null | tr -d ' \n' | head -c 120)"
+echo "   posesori temă de sezon (user_items.theme_sunset): $($W d1 execute DB --remote --command "SELECT COUNT(*) AS n FROM user_items WHERE item_id = 'theme_sunset'" --json 2>/dev/null | tr -d ' \n' | head -c 120)"
+
+echo "── 11. teme animate + sezon în bundle-ul din producție (CSS purgat, motor canvas)"
+VC="$(curl -s "$B/" | grep -oE '[a-z0-9.-]+\.(css|js)\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)"
+curl -s "$B/assets/css/style.css?v=$VC" -o /tmp/st.css
+echo "   css: $(for t in nc-sunset theme-sakura theme-royal theme-sunset theme-aurora theme-ocean theme-petale theme-portocaliu theme-iarna theme-halloween theme-paste; do printf '%s=%s ' "$t" "$(grep -c "$t" /tmp/st.css)"; done)"
+echo "   keyframes: $(grep -o '@keyframes theme-[a-z-]*' /tmp/st.css | sort -u | tr '\n' ' ')(trebuie 3 nume: aurora, ocean, sunset)"
+curl -s "$B/assets/js/anim-bg.js?v=$VC" -o /tmp/ab.js
+echo "   motor canvas: $(for t in requestAnimationFrame petale bule stele portocaliu fulgi iarna halloween paste; do printf '%s=%s ' "$t" "$(grep -c "$t" /tmp/ab.js)"; done)(toate ≥1) · prefers-reduced-motion=$(grep -c 'prefers-reduced-motion' /tmp/ab.js) (trebuie 0)"
+
+echo "── 12. bundle-uri de pagină + diagnostice cache (shop/profil/teme)"
+curl -s "$B/assets/js/page-shop.js?v=$VC" -o /tmp/ps.js
+echo "   shop: $(for t in shop-boost reward_text nc-sunset use_token; do printf '%s=%s ' "$t" "$(grep -c "$t" /tmp/ps.js)"; done)(toate ≥1)"
+curl -s "$B/assets/js/page-profile.js?v=$VC" -o /tmp/pp.js
+echo "   profil: use_token=$(grep -c 'use_token' /tmp/pp.js) (≥1) · temă instant în bundle: auk-theme=$(grep -c 'auk-theme' /tmp/ps.js) (≥1)"
+echo "   head /shop: $(curl -sI "$B/shop" | grep -i '^cache-control' | tr -d '\r')"
+echo "   head / (html): $(curl -sI "$B/" | grep -i '^cache-control' | tr -d '\r')"
+echo "   ?v= live din /: $VC · din /shop: $(curl -s "$B/shop" | grep -oE 'page-shop\.js\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)"
+
+echo "── 13. poarta admin (economie) + sezon"
+echo "   GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
+echo "   GET /api/admin/season anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/season") (trebuie 401)"
+echo "   /admin anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 302)"
+
 echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"

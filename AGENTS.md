@@ -14,7 +14,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
 - **Stare:** stabil, curat, toate testele verzi (e2e 573 · dom 163 · theme-cache 7 ·
-  theme-flow PASS · pixel-teme 8 · plafoane 13), deployat. Audit live: ✅ 168+ · 🟡 0 · 🔴 0
+  theme-flow PASS · pixel-teme 8 · plafoane 13), deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
   (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
@@ -198,7 +198,7 @@ cele două versiuni. Acum e o singură linie, testată împreună:
      (era cod mort după `_routes.json`), la fel și regula `?v=` → `immutable` și `statusOverride()`.
    - `scripts/usage.mjs` — consumul zilei din cotele gratuite, în `cf-relay/cmd.sh`.
 2. **Rezultatul măsurat:** costul unei vizite ~12 → **~2 invocări**; în ziua deployului (cu
-   toate testele și auditurile) consumul a fost **6% din invocări, 0% D1, 1% DO**.
+   toate testele, deploy-urile și auditurile) consumul a fost **7% din invocări, 0% D1, 1% DO**.
 3. **Teste:** e2e 492 → **573** (păstrate toate verificările lor + `/api/home`, `_routes.json`,
    paritatea de headere static↔worker, dovada că assetul nu trece prin worker, logo `.webp`),
    dom-smoke 147 → **163** (numără cererile primei pagini; verificarea flaky a butonului

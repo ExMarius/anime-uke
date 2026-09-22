@@ -11,7 +11,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 2 (după reparări, build `55a3027`) | ✅ 162 · 🟡 0 · 🔴 0 | „niciuna — auditul a trecut curat” |
 | 3 (SSR episod, build `0936caa`) | ✅ 168 · 🟡 0 · 🔴 0 | +6 probe noi (2 episoade × JSON-LD/og:type/200), toate verzi |
 | 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
-| 5 (integrare + buget de invocări, build `<vezi mai jos>`) | vezi §1d | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
+| 5 (integrare + buget de invocări, build `c0ae601`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 
 ---
 
@@ -34,11 +34,15 @@ sitemap-uri GSC) + bugetul de invocări din `arena/01a0ca0d-anime-uke`.
 
 | Cotă gratuită | Consumat | Din plafon |
 |---|---|---|
-| Invocări Functions (Pages) | 6.410 | **6%** |
-| D1 rânduri citite | 19.210 | 0% |
+| Invocări Functions (Pages) | 6.551 | **7%** |
+| D1 rânduri citite | 20.345 | 0% |
 | D1 rânduri scrise | 219 | 0% |
-| Durable Objects requests | 952 | 1% |
+| Durable Objects requests | 998 | 1% |
 | DO durată | 1 GB-s | 0% |
+
+Cifrele de mai sus includ **toată ziua de lucru** (toate rundele de teste, deploy-urile și
+auditurile), nu doar traficul real — de aceea un procent de 7% într-o zi de muncă grea e
+reperul cel mai bun pe care îl avem pentru „cât duce planul gratuit".
 
 **De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke` →
 Settings → Runtime → **Fail open**, ca la epuizarea cotei catalogul static să rămână vizibil.
