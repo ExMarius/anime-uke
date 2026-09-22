@@ -9,6 +9,7 @@
 //   2. Fara handlere inline (onclick="...") — sunt blocate de CSP.
 //      Folosim addEventListener + data-action.
 // =====================================================================
+import { initAnimBg } from './anim-bg.js';
 
 let sessionCache;
 
@@ -738,3 +739,7 @@ export async function startGuestNudge() {
     requestAnimationFrame(() => b.classList.add('nudge--in'));
   }, NUDGE_DELAY_MS);
 }
+
+// Fundaluri animate cu particule (teme canvas): porneste singur pe orice
+// pagina care importa core.js. Modulele ES sunt deferred, deci body exista.
+try { initAnimBg(); } catch { /* fara canvas — ramane gradientul static */ }

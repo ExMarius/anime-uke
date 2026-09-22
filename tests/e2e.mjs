@@ -1615,8 +1615,8 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   check('Culori noi: Argintiu/Bronz/Menta/Apus',
     ['color_silver', 'color_bronze', 'color_mint', 'color_sunset'].every((x) => (cat.data?.colors || []).some((c) => c.id === x)),
     `n=${cat.data?.colors?.length}`);
-  check('Teme noi: Sakura/Royal + animate (Apus/Aurora/Ocean)',
-    ['theme_sakura', 'theme_royal', 'theme_sunset', 'theme_aurora', 'theme_ocean'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+  check('Teme noi: Sakura/Royal + canvas (Frunze/Sakura/Bule/Aurora/Ocean)',
+    ['theme_sakura', 'theme_royal', 'theme_sunset', 'theme_aurora', 'theme_ocean', 'theme_petale', 'theme_portocaliu'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
     `n=${cat.data?.themes?.length}`);
 
   const gone = await req(jb, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
@@ -1677,6 +1677,10 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
   const actA = await req(ja, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_aurora' });
   const shopA = await req(ja, 'GET', '/api/shop');
   check('Aurora animata se cumpara si se activeaza', aur.data?.success === true && actA.data?.active_theme === 'theme_aurora' && shopA.data?.active_theme === 'theme_aurora' && shopA.data?.gold === 600000 - 250000, `gold=${shopA.data?.gold}`);
+  const sak2 = await req(ja, 'POST', '/api/shop/buy', { item_id: 'theme_petale' });
+  const actP = await req(ja, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_petale' });
+  const shopP = await req(ja, 'GET', '/api/shop');
+  check('Sakura canvas se cumpara si se activeaza', sak2.data?.success === true && actP.data?.active_theme === 'theme_petale' && shopP.data?.active_theme === 'theme_petale' && shopP.data?.gold === 600000 - 250000 - 175000, `gold=${shopP.data?.gold}`);
 
   // --- matematica exacta a gold-ului (baseline luat dupa misterios)
   const spent = 500 + 400 + 2500 + 1000 + 2500 + 75000;
@@ -1684,7 +1688,10 @@ console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, tem
 
   // --- CSS-ul claselor noi chiar exista (altfel cumperi ceva invizibil)
   const css = await (await fetch(BASE + '/assets/css/style.css')).text();
-  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
+  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', 'body.theme-petale', 'body.theme-portocaliu', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
+  const ab = await (await fetch(BASE + '/assets/js/anim-bg.js')).text();
+  const core = await (await fetch(BASE + '/assets/js/core.js')).text();
+  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'portocaliu', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js'), 'lipseste motorul sau legatura din core.js');
 }
 
 console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');

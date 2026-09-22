@@ -1817,9 +1817,9 @@ body.theme-royal {
 }
 /* ===================== TEME ANIMATE (fundaluri vii) ===================== */
 /* Modele consacrate (gradient wave, aurora boreala, valuri oceanice), doar
-   din background-position — fara blur, fara JS. Suprafetele sunt usor
-   translucide ca sa se vada miscarea prin ele. Durate lente (18-30s) ca sa
-   nu distraga si sa nu manance baterie. */
+   din background-position — fara blur. Peste ele, particulele reale
+   (petale/bule/stele) vin din canvas — vezi assets/js/anim-bg.js.
+   Suprafetele sunt usor translucide ca sa se vada miscarea prin ele. */
 body.theme-sunset {
   --bg: #160a12; --bg-2: rgba(28, 12, 20, .88);
   --surface: rgba(38, 15, 26, .8); --surface-2: rgba(48, 20, 32, .8);
@@ -1871,6 +1871,26 @@ body.theme-ocean {
 @keyframes theme-ocean-drift {
   from { background-position: 0 0, 0 0, 0 0; }
   to { background-position: 0 0, 400px 400px, 0 0; }
+}
+/* Sakura animata: mov inchis → roz pal; peste cad petale (canvas). */
+body.theme-petale {
+  --bg: #1a0b2e; --bg-2: rgba(42, 18, 52, .88);
+  --surface: rgba(62, 24, 58, .8); --surface-2: rgba(78, 30, 70, .8);
+  --surface-3: rgba(96, 38, 84, .86); --line: rgba(249, 168, 212, .22);
+  --accent: #f472b6; --accent-hi: #f9a8d4; --accent-deep: #be185d;
+  --accent-glow: rgba(244, 114, 182, .4); --accent-soft: rgba(244, 114, 182, .14);
+  background: linear-gradient(180deg, #1a0b2e 0%, #4a1942 45%, #ffb7c5 100%);
+  background-attachment: fixed;
+}
+/* Portocaliu animat: portocaliu ars → maro; peste urca bule (canvas). */
+body.theme-portocaliu {
+  --bg: #3d1500; --bg-2: rgba(74, 28, 2, .88);
+  --surface: rgba(96, 36, 4, .8); --surface-2: rgba(116, 44, 6, .8);
+  --surface-3: rgba(138, 54, 8, .86); --line: rgba(255, 179, 71, .24);
+  --accent: #ffb347; --accent-hi: #ffd699; --accent-deep: #c25e00;
+  --accent-glow: rgba(255, 179, 71, .42); --accent-soft: rgba(255, 179, 71, .15);
+  background: radial-gradient(ellipse at 50% 42%, #cc5500 0%, #7a2e00 55%, #3d1500 100%);
+  background-attachment: fixed;
 }
 @media (prefers-reduced-motion: reduce) {
   body.theme-sunset, body.theme-aurora, body.theme-ocean { animation: none; }

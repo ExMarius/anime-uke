@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy teme animate: Apus/Aurora/Ocean (fundaluri vii din gradienti) +
-# verificare purge (clasele si keyframes-urile supravietuiesc).
+# Deploy teme canvas: particule reale (petale/bule/stele) peste gradienti +
+# verificare purge (clase noi) + prezenta motorului anim-bg.js pe productie.
 set -uo pipefail
 ./deploy.sh
 echo "exit deploy: $?"
@@ -89,7 +89,9 @@ $W d1 execute DB --remote --command "SELECT xp_boost_until FROM users LIMIT 1" >
   || echo "  migrare 0026: LIPSESTE coloana xp_boost_until de pe productie!"
 V=$(curl -s "$B/" | grep -oE '[a-z-]+\.(css|js)\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)
 curl -s "$B/assets/css/style.css?v=$V" -o /tmp/st.css
-echo "  css (purge): nc-sunset=$(grep -c 'nc-sunset' /tmp/st.css) theme-sakura=$(grep -c 'theme-sakura' /tmp/st.css) theme-royal=$(grep -c 'theme-royal' /tmp/st.css) anim-sunset=$(grep -c 'theme-sunset' /tmp/st.css) anim-aurora=$(grep -c 'theme-aurora' /tmp/st.css) anim-ocean=$(grep -c 'theme-ocean' /tmp/st.css) keyframes: $(grep -o '@keyframes theme-[a-z-]*' /tmp/st.css | sort -u | tr '\n' ' ') (trebuie 3 nume)"
+echo "  css (purge): nc-sunset=$(grep -c 'nc-sunset' /tmp/st.css) theme-sakura=$(grep -c 'theme-sakura' /tmp/st.css) theme-royal=$(grep -c 'theme-royal' /tmp/st.css) anim-sunset=$(grep -c 'theme-sunset' /tmp/st.css) anim-aurora=$(grep -c 'theme-aurora' /tmp/st.css) anim-ocean=$(grep -c 'theme-ocean' /tmp/st.css) anim-petale=$(grep -c 'theme-petale' /tmp/st.css) anim-portocaliu=$(grep -c 'theme-portocaliu' /tmp/st.css) keyframes: $(grep -o '@keyframes theme-[a-z-]*' /tmp/st.css | sort -u | tr '\n' ' ') (trebuie 3 nume)"
+curl -s "$B/assets/js/anim-bg.js?v=$V" -o /tmp/ab.js
+echo "  motor canvas: rAF=$(grep -c 'requestAnimationFrame' /tmp/ab.js) petale=$(grep -c 'petalaNoua' /tmp/ab.js) bule=$(grep -c 'bulaNoua' /tmp/ab.js) stele=$(grep -c 'steaNoua' /tmp/ab.js) (toate ≥1)"
 curl -s "$B/assets/js/page-shop.js?v=$V" -o /tmp/ps.js
 echo "  bundle shop: shop-boost=$(grep -c 'shop-boost' /tmp/ps.js) reward_text=$(grep -c 'reward_text' /tmp/ps.js) nc-sunset=$(grep -c 'nc-sunset' /tmp/ps.js) (toate ≥1)"
 curl -s "$B/assets/js/page-profile.js?v=$V" -o /tmp/pp.js
