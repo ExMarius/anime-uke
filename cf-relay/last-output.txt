@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ fb9e2f5
+comanda: cf-relay/cmd.sh @ b072eb9
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,11 +14,11 @@ comanda: cf-relay/cmd.sh @ fb9e2f5
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 14.21)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=fb9e2f5
+    [0;32m✓[0m assete versionate ?v=b072eb9
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m pagini bundle-uite: 10
     [0;32m✓[0m assete minificate: 9 fisiere
-    [0;32m✓[0m publicat: https://085102f9.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://88891c82.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,13 +29,13 @@ aștept 60s propagarea…
 
 === AUDIT LIVE dupa deploy ===
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-22T07:58:48.540Z
+data: 2026-09-22T08:01:23.974Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (202 ms)
-  ℹ️  / → 200 · 202 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (248 ms)
+  ℹ️  / → 200 · 248 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -43,7 +43,7 @@ data: 2026-09-22T07:58:48.540Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 109 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 125 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -51,7 +51,7 @@ data: 2026-09-22T07:58:48.540Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 90 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 130 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -61,24 +61,24 @@ data: 2026-09-22T07:58:48.540Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 191 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 158 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 99 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 93 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 99 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 89 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 190 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 179 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 100 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 90 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -186,7 +186,7 @@ data: 2026-09-22T07:58:48.540Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=fb9e2f5 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=b072eb9 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 73144 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -241,7 +241,7 @@ data: 2026-09-22T07:58:48.540Z
   ✅ negocierea WebP funcționează
   ✅ imaginile au cache lung (public, max-age=2592000, immutable)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 202 ms · /series 10 ms · /api/series 255 ms
+  ℹ️  timpi: / 248 ms · /series 22 ms · /api/series 195 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -309,7 +309,7 @@ exit audit: 0
   robots Allow: /series? (trebuie 0): 0
   speculationrules prerender: {'href_matches': '/serie/*'}
   prima pagina → 200  · /api/pulse → {"series":5,"episodes":5,"members":3,"views":7,"online":0}
-  ?v= din / (trebuie build-ul curent): ?v=fb9e2f5 
+  ?v= din / (trebuie build-ul curent): ?v=b072eb9 
 === verificari punctuale (logo V7) ===
   /assets/img/logo.png → 200 (trebuie 200)
   /assets/img/logo-icon.png → 200 (trebuie 200)
@@ -333,15 +333,15 @@ exit audit: 0
 === inspectie bytes sitemap (GSC 'nu a putut fi citit') ===
 --- headere complete ---
 HTTP/2 200 
-date: Tue, 22 Sep 2026 07:59:21 GMT
+date: Tue, 22 Sep 2026 08:01:57 GMT
 content-type: text/xml; charset=utf-8
 content-length: 797
 access-control-allow-origin: *
 cache-control: no-store
-report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=KQfxO9W4gLcS0YZAa52JY4KrndggJqpVfopcEwur27BNIjhY4Rrsz2HCGxwx0%2BoWbDJ1JoAD094jQqDHAm6FLJn8D0ryDiH4IeDTY8VToDJ7eGFvHYKOJOm6vxnyFUimZ0ETJmdM"}]}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=EwRnSMLWhjY%2FVXk0wj0FhR3XGsCIJWK0M2KXNjjJlFOzxjJygM2mz68SLH2wjrM8CR8mdpHfrAWSCGbEmfmMFNZcZE76Wxaezj0svovKuiA5bFncdpDVlNfiAAx60oDCoIHFbfuT"}]}
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-cf-ray: a3efc50fbd375629-IAD
+cf-ray: a3efc8df6eb79a31-ORD
 alt-svc: h3=":443"; ma=86400
 
 --- primii 120 bytes (hex+text, trebuie sa inceapa cu 3c 3f 78 6d = '<?xm') ---
@@ -381,4 +381,4 @@ linii: 11 | invalide: NICIUNA
   bundle live: anim-bg=1 petale=1 bule=1 stele=1 garda=1 (toate >=1 = motorul + garda anti-cache sunt in bundle-ul din productie)
 === verificari punctuale (admin economie) ===
   GET /api/admin/users anonim → 401 (trebuie 401)
-  /admin → 302 (trebuie 200)
+  /admin anonim → 302 (trebuie 302 catre /login)
