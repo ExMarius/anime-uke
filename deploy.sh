@@ -101,6 +101,19 @@ sed -i -E 's#(/assets/(css|js)/[A-Za-z0-9_.-]+\.(css|js))(\?v=[A-Za-z0-9_.-]+)?#
 grep -q "?v=${BUILD_V}" public/index.html || die "index.html nu a primit ?v=${BUILD_V}"
 ok "assete versionate ?v=${BUILD_V}"
 
+# Assetele NU mai trec prin worker (public/_routes.json le scoate de sub
+# Functions: fiecare cerere de asset consuma altfel o invocare din cota
+# gratuita de 100.000/zi). Deci Cache-Control vine din public/_headers, unde
+# valoarea de dezvoltare e „no-cache” — o inlocuim cu immutable 1 an DOAR
+# pentru JS/CSS, care sunt versionate ?v=<commit>. Restul fisierului
+# (imagini, subtitrari, coperți) isi pastreaza regulile.
+sed -i '/assets-versioned:start/,/assets-versioned:end/ s|Cache-Control: no-cache|Cache-Control: public, max-age=31536000, immutable|' public/_headers \
+  || die "nu am putut versiona Cache-Control din _headers"
+grep -q 'max-age=31536000, immutable' public/_headers || die "public/_headers nu a primit immutable"
+ok "Cache-Control immutable pentru JS/CSS (public/_headers)"
+[ -f public/_routes.json ] || die "lipseste public/_routes.json — assetele ar intra in cota de Functions"
+ok "assetele statice ocolesc workerul (_routes.json)"
+
 # Purge: reguli CSS care nu mai apar nicăieri în HTML/JS/worker (clase
 # dinamice sunt în safelist, vezi scripts/purge-css.mjs). Rulat DOAR pe
 # style.css — foile per-pagină sunt deja fără resturi.
@@ -152,7 +165,9 @@ $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=tr
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
-find public/covers public/assets/img -name '*.webp' -delete 2>/dev/null || true
+# (Frații .webp ai imaginilor sunt COMISAȚI în repo: runner-ul GitHub nu are
+# ImageMagick, iar workerul nu mai negociaza WebP — paginile refera direct
+# .webp. De aceea NU se mai sterge nimic aici.)
 git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------

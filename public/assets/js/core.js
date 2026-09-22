@@ -542,10 +542,22 @@ export function onPulse(fn) {
 async function fetchPulse() {
   const res = await api('/pulse');
   if (!res.ok || res.status === 0) return;
-  pulseData = res.data;
+  pushPulse(res.data);
+}
+
+/** Publică date de pulse venite pe altă cale decât /api/pulse — pagina
+ *  principală le primește deja în /api/home, deci nu mai facem o cerere. */
+export function pushPulse(data) {
+  if (!data) return;
+  pulseData = data;
   for (const fn of pulseWaiters.splice(0)) fn(pulseData);
   updatePulseChip(pulseData);
 }
+
+/** Anunță că pagina își aduce singură datele de pulse (vezi pushPulse):
+ *  startPulse nu mai pornește cu o cerere imediată către /api/pulse. */
+let pulseClaimed = false;
+export function claimPulse() { pulseClaimed = true; }
 
 function updatePulseChip(data) {
   const chip = document.getElementById('pulse-chip');
@@ -580,7 +592,9 @@ export function startPulse() {
   if (!nav) return;
   nav.appendChild(buildPulseChip());
   const tick = () => { if (!document.hidden) fetchPulse(); };
-  tick();
+  // Pagina care și-a luat deja datele din /api/home nu mai plătește o cerere;
+  // dacă totuși ele nu ajung, primul tick de la 90 s le aduce.
+  if (!pulseClaimed) tick();
   setInterval(tick, 90000);
   document.addEventListener('visibilitychange', tick);
 }

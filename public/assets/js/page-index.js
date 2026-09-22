@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
+import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge, claimPulse, pushPulse } from './core.js';
 import { initChat, openChat } from './chat.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
@@ -9,6 +9,35 @@ import { initChat, openChat } from './chat.js';
 // randuri din D1. Acum cerem cate o pagina si cautarea se face pe server.
 
 const PER_PAGE = 24;
+
+// ---------------------------------------------------------------------
+// PRIMA PAGINĂ = O SINGURĂ CERERE
+//
+// Înainte, ca să se încarce prima pagină, browserul cheltuia 5 invocări de
+// Worker: /series, /top, /recent, /genres și /pulse. Cota gratuită e de
+// 100.000 de invocări pe zi, iar prima pagină e cea mai vizitată — deci
+// conta de 5 ori. Toate vin acum din /api/home (un singur apel), iar datele
+// de „pulse" sunt publicate direct în nav, fără /api/pulse separat.
+// ---------------------------------------------------------------------
+let homePromise = null;
+
+function homeData() {
+  if (!homePromise) {
+    homePromise = api('/home')
+      .then((res) => {
+        if (!res.ok) {
+          return { ok: false, error: res.data?.error || 'Nu am putut încărca seriile' };
+        }
+        pushPulse(res.data.pulse);
+        return { ok: true, data: res.data };
+      })
+      .catch(() => ({ ok: false, error: 'Eroare de rețea' }));
+  }
+  return homePromise;
+}
+
+claimPulse();
+
 
 let allSeries = [];      // seriile incarcate pana acum (toate paginile)
 let page = 1;
@@ -191,10 +220,11 @@ function initCatalogFilters() {
   const reset = document.getElementById('filter-reset');
   if (!gsel || !ssel || !reset) return;
 
-  // Genurile vin o singura data, din cache-ul serverului (10 min).
-  api('/genres').then((res) => {
-    if (!res.ok || !res.data?.genres?.length) return;
-    for (const g of res.data.genres) {
+  // Genurile vin o singura data, din cache-ul serverului (10 min) — deja
+  // incluse in raspunsul primei pagini (/api/home).
+  homeData().then((home) => {
+    if (!home.ok || !home.data.genres?.length) return;
+    for (const g of home.data.genres) {
       const o = document.createElement('option');
       o.value = g;
       o.textContent = g;
@@ -227,8 +257,8 @@ async function loadRecent() {
   const row = document.getElementById('recent-row');
   if (!section || !row) return;
 
-  const res = await api('/recent');
-  const items = res.ok ? res.data?.items || [] : [];
+  const home = await homeData();
+  const items = home.ok ? home.data.recent || [] : [];
   if (!items.length) { section.hidden = true; return; }
 
   row.innerHTML = '';
@@ -277,19 +307,32 @@ async function load({ append = false, silent = false } = {}) {
   if (genreFilter) params.set('gen', genreFilter);
   if (statusFilter) params.set('status', statusFilter);
 
-  const res = await api(`/series?${params}`);
+  // Catalogul implicit (pagina 1, fără căutare/filtre) e deja în răspunsul
+  // primei pagini → îl refolosim. Pentru „încarcă mai multe", căutare și
+  // filtre cerem în continuare /api/series cu parametrii potriviți.
+  const useHome = !append && !query && !genreFilter && !statusFilter && page === 1 && sort === 'latest';
 
-  if (!res.ok) {
-    if (!append) {
-      grid.innerHTML = '';
-      grid.appendChild(emptyState('Nu am putut încărca seriile', res.data?.error || 'Verifică conexiunea și reîncearcă.'));
-      document.getElementById('series-count').textContent = '';
-    }
-    toast(res.data?.error || 'Eroare la încărcarea seriilor', 'err');
-    return;
+  let data = null;
+  let errText = '';
+  if (useHome) {
+    const home = await homeData();
+    if (home.ok) data = home.data.series;
+    else errText = home.error;
+  } else {
+    const res = await api(`/series?${params}`);
+    if (res.ok) data = res.data;
+    else errText = res.data?.error || 'Eroare la încărcarea seriilor';
   }
 
-  const data = res.data;
+  if (!data) {
+    if (!append) {
+      grid.innerHTML = '';
+      grid.appendChild(emptyState('Nu am putut încărca seriile', errText || 'Verifică conexiunea și reîncearcă.'));
+      document.getElementById('series-count').textContent = '';
+    }
+    toast(errText || 'Eroare la încărcarea seriilor', 'err');
+    return;
+  }
   fillSorts(data.sorts);
 
   if (!append) {
@@ -381,9 +424,11 @@ async function pickSpotSeries(salt) {
   // Mereu din CELE MAI NOI 24 de serii: orice serie adăugată recent intră
   // automat în rotația bannerului la fereastra următoare (sau la click pe
   // „Alt anime"), fără niciun pas manual.
-  const res = await api('/series?per_page=24&page=1&sort=latest');
-  if (!res.ok || !res.data?.series?.length) return null;
-  const list = res.data.series;
+  // Lista „cele mai noi 24" e exact ce aduce /api/home pentru prima pagină:
+  // o refolosim, ca bannerul să nu coste o a doua invocare de Worker.
+  const home = await homeData();
+  const list = home.ok ? home.data.series?.series || [] : [];
+  if (!list.length) return null;
   const pick = list[hashStr(`spot-item-${bucket}-${salt}`) % list.length];
   try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
   return pick;
@@ -419,23 +464,35 @@ async function renderHero(salt = spotSalt()) {
   // Fara coperta proprie: una din imaginile anime bundled (arta originala),
   // aleasa determinist din aceeasi sare ca si seria — bannerul arata mereu
   // „cu totul”, nu ca un placeholder.
-  const HERO_ART = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
-  const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
+  // Referim direct .webp (cu .jpg ca rezervă pentru browsere vechi): înainte
+  // se cerea .jpg, iar workerul răspundea din mers cu .webp — adică două
+  // cereri și o invocare de Worker pentru fiecare imagine.
+  const HERO_ART = ['/assets/img/hero-1.webp', '/assets/img/hero-2.webp', '/assets/img/hero-3.webp'];
+  const HERO_ART_LEGACY = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
+  const artIdx = hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length;
+  const artUrl = HERO_ART[artIdx];
+  const artLegacy = HERO_ART_LEGACY[artIdx];
   img.fetchPriority = 'high';
-  let heroErr = 0;
-  img.onerror = () => {
-    heroErr++;
-    // treapta 1: varianta redimensionata a picat -> originalul exact din DB
-    if (heroErr === 1 && cover && cover !== '#' && img.src !== cover) {
-      img.srcset = ''; img.sizes = ''; img.src = cover;
-    // treapta 2: si originalul a picat -> arta bundled
-    } else if (heroErr === 2 && img.src !== artUrl) {
-      img.src = artUrl;
-    // treapta 3: nimic nu merge -> poster generat local
-    } else {
-      img.remove(); bg.appendChild(genHeroArt(pick.title));
+  // O SINGURĂ scară de rezervă, ca să nu se bată două handlere de eroare
+  // una pe alta (înainte exista și `onerror`, și un `addEventListener`, iar
+  // al doilea anula prima treaptă): coperta redimensionată → coperta
+  // originală din DB → arta .webp bundled → arta .jpg (browsere vechi) →
+  // poster generat local. Ultima treaptă nu mai poate eșua.
+  const ladder = [];
+  if (cover && cover !== '#') ladder.push({ src: cover, clear: true });
+  ladder.push({ src: artUrl, clear: true }, { src: artLegacy, clear: true }, { gen: true });
+  let step = 0;
+  img.addEventListener('error', () => {
+    const next = ladder[step++];
+    if (!next) return;
+    if (next.gen) { img.remove(); bg.appendChild(genHeroArt(pick.title)); return; }
+    if (img.src === new URL(next.src, location.origin).href) {  // deja încercat
+      img.dispatchEvent(new Event('error'));
+      return;
     }
-  };
+    if (next.clear) { img.srcset = ''; img.sizes = ''; }
+    img.src = next.src;
+  });
   if (cover && cover !== '#') {
     // srcset responsive: IMDb livreaza la latimea potrivita ecranului
     // (telefon ~400w, tableta 800w, desktop 1280w) — nicio imagine mai mare
@@ -449,12 +506,6 @@ async function renderHero(salt = spotSalt()) {
     img.src = artUrl;
   }
   if (img.parentNode !== bg) bg.appendChild(img);
-  img.addEventListener('error', () => {
-    // coperta seriei a picat -> arta bundled; arta bundled a picat -> poster generat
-    if (img.src.endsWith(artUrl.slice(artUrl.lastIndexOf('/')))) { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
-    else { img.src = artUrl; }
-  }, { once: true });
-  bg.appendChild(img);
 
   box.hidden = false;
   box.classList.remove('hban--loading');   // la revedere, skeleton
@@ -547,10 +598,10 @@ skeletons(10);
 // efectiv activa, ca un tab prerenderat sa nu deschida socket degeaba
 async function loadTops() {
   const sec = document.getElementById('tops-section');
-  const res = await api('/top');
-  if (!res.ok || !sec) { if (sec) sec.hidden = true; return; }
-  const week = res.data.weekly || [];
-  const rated = res.data.rated || [];
+  const home = await homeData();
+  if (!home.ok || !sec) { if (sec) sec.hidden = true; return; }
+  const week = home.data.top?.weekly || [];
+  const rated = home.data.top?.rated || [];
   if (!week.length && !rated.length) { sec.hidden = true; return; }
 
   const fill = (id, rows, meta) => {

@@ -73,9 +73,13 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
 
   // fetch: jsdom nu are unul care sa mearga in retea, deci il punem pe al
   // nostru si rezolvam URL-urile relative fata de serverul local.
+  // Retinem si CAILE cerute: testele de buget (buget 0 = cota de 100.000 de
+  // invocari/zi) verifica exact ce cereri face pagina.
+  const requests = [];
   const realFetch = globalThis.fetch;
   window.fetch = async (input, init = {}) => {
     const path = typeof input === 'string' ? input : input.url;
+    requests.push(path);
     const abs = path.startsWith('http') ? path : `${BASE}${path}`;
     const headers = { ...(init.headers || {}) };
     if (cookie) headers.Cookie = cookie;
@@ -154,7 +158,7 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
   }
 
   return {
-    dom, window, errors, importError,
+    dom, window, errors, importError, requests,
     doc: window.document,
     $: (sel) => window.document.querySelector(sel),
     $$: (sel) => [...window.document.querySelectorAll(sel)],
@@ -197,6 +201,24 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   }
   const sel = p.$('#sort-select');
   check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 4, `optiuni=${sel?.options.length}`);
+
+  // -------------------------------------------------------------------
+  // BUGET 0: prima pagină = O SINGURĂ cerere de API.
+  // Înainte se făceau 5 (/series, /top, /recent, /genres, /pulse), adică 5
+  // invocări din cota gratuită de 100.000/zi pentru fiecare vizitator.
+  // -------------------------------------------------------------------
+  {
+    const apiCalls = p.requests.filter((u) => u.startsWith('/api/'));
+    const pathOf = (u) => u.split('?')[0];
+    check('Prima pagină cere catalogul o singură dată, prin /api/home',
+      apiCalls.filter((u) => pathOf(u) === '/api/home').length === 1, apiCalls.join(' '));
+    const redundante = apiCalls.filter((u) => ['/api/series', '/api/top', '/api/recent', '/api/genres', '/api/pulse'].includes(pathOf(u)));
+    check('  ...și nu mai cheltuie cereri separate pentru top/recent/genuri/pulse',
+      redundante.length === 0, redundante.join(' ') || 'niciuna');
+    check('  ...sesiunea rămâne singura cerere în plus (nav, notificări)',
+      apiCalls.every((u) => pathOf(u) === '/api/home' || pathOf(u).startsWith('/api/auth') || pathOf(u).startsWith('/api/notifications') || pathOf(u) === '/api/continue'),
+      apiCalls.join(' '));
+  }
   // Vizibilitatea butonului trebuie sa fie congruenta cu has_more de pe
   // server, indiferent daca baza are 1 serie sau 1000.
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
@@ -504,9 +526,12 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
 
   // ---- PLAYER v4: navigare jos, modal, cinema, auto-next
   check('Bara de navigare intre episoade exista jos', !!p.$('#ep-prev') && !!p.$('#ep-list') && !!p.$('#ep-next'), 'lipseste ep-nav');
-  const navReady = await until(() => p.$('#ep-next') && !p.$('#ep-next').disabled);
-  check('Butonul „următorul” e activ când exista episod după', navReady, `disabled=${p.$('#ep-next')?.disabled}`);
-  check('Butonul „anterior” e dezactivat pe primul episod', p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
+  // Ambele butoane sunt desenate de acelasi paintEpNav(): asteptam starea
+  // finala (urmatorul activ, anteriorul dezactivat) inainte sa o asertam,
+  // altfel verificarea putea cadea pe prima randare.
+  const navReady = await until(() => p.$('#ep-next')?.disabled === false && p.$('#ep-prev')?.disabled === true);
+  check('Butonul „următorul” e activ când exista episod după', p.$('#ep-next')?.disabled === false, `disabled=${p.$('#ep-next')?.disabled}`);
+  check('Butonul „anterior” e dezactivat pe primul episod', navReady && p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
   check('Modalul „Alte episoade” e invizibil cat e hidden (CSS [hidden])', p.window.getComputedStyle(p.$('#eplist-modal')).display === 'none', p.window.getComputedStyle(p.$('#eplist-modal')).display);
   p.$('#ep-list')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const listOn = await until(() => p.$('#eplist-modal')?.hidden === false && p.$$('#eplist-grid .eplist__ep').length >= 1 && p.window.getComputedStyle(p.$('#eplist-modal')).display !== 'none');

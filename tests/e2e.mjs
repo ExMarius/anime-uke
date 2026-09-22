@@ -1,4 +1,5 @@
 import WS from 'ws';
+import { readFileSync } from 'node:fs';
 // Test end-to-end impotriva serverului local wrangler.
 // BASE se poate suprascrie pentru a rula suita impotriva productiei:
 //   node tests/e2e.mjs https://anime-uke.pages.dev
@@ -76,6 +77,25 @@ console.log('\n=== 1. VIZITATOR ===');
 
   const rec = await req(j, 'GET', '/api/recent');
   check('Ultimele episoade publice → 200, max 8', rec.status === 200 && (rec.data?.items || []).length <= 8, JSON.stringify(rec.data)?.slice(0, 140));
+
+  // Prima pagina vine dintr-o SINGURA cerere (buget 0: cota gratuita e de
+  // 100.000 de invocari/zi, iar inainte index.html cheltuia 5 pentru fiecare
+  // vizitator: /series, /top, /recent, /genres, /pulse).
+  {
+    const home = await req(j, 'GET', '/api/home');
+    check('GET /api/home fara cont → 200 (prima pagina intr-o singura cerere)', home.status === 200, `status=${home.status} ${JSON.stringify(home.data)?.slice(0, 120)}`);
+    check('  ...aduna catalog + top + recent + genuri + pulse',
+      Array.isArray(home.data?.series?.series) && !!home.data?.top && Array.isArray(home.data?.recent)
+        && Array.isArray(home.data?.genres) && typeof home.data?.pulse?.views === 'number',
+      JSON.stringify(Object.keys(home.data || {})));
+    check('  ...are metadatele de paginare ale catalogului (has_more, sorts)',
+      home.data?.series?.per_page === 24 && typeof home.data?.series?.has_more === 'boolean' && Array.isArray(home.data?.series?.sorts),
+      JSON.stringify(home.data?.series)?.slice(0, 180));
+    check('  ...respecta parametrii de catalog (per_page, cautare)',
+      (await req(j, 'GET', '/api/home?per_page=2')).data?.series?.per_page === 2
+        && (await req(j, 'GET', '/api/home?q=zzz-nimic')).data?.series?.q === 'zzz-nimic',
+      'per_page/cautarea nu se propaga');
+  }
 
   const f1 = await req(j, 'GET', '/api/series?status=completed');
   check('Filtru status=completed → 200', f1.status === 200 && (f1.data?.series || []).every((x) => x.status === 'completed'), `n=${f1.data?.series?.length}`);
@@ -155,6 +175,55 @@ console.log('\n=== 1. VIZITATOR ===');
   check('GET /assets/css/style.css → 200 public', css.status === 200);
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
+
+  // -------------------------------------------------------------------
+  // BUGET 0: ce NU trece prin worker.
+  //
+  // Fiecare cerere care ajunge in Pages Functions consuma o invocare din
+  // cota gratuita (100.000/zi). public/_routes.json scoate de sub worker
+  // assetele si paginile publice statice; headerele de securitate vin atunci
+  // din public/_headers, deci trebuie sa fie identice cu cele pe care le pune
+  // workerul pe rutele lui — altfel „optimizarea” ar subtia securitatea.
+  // -------------------------------------------------------------------
+  {
+    const routes = JSON.parse(readFileSync(new URL('../public/_routes.json', import.meta.url), 'utf8'));
+    const ex = routes.exclude || [];
+    check('_routes.json: versiunea 1 si include ["/*"]',
+      routes.version === 1 && routes.include?.join() === '/*', JSON.stringify(routes).slice(0, 140));
+    check('_routes.json: /assets/* ocoleste workerul (cel mai mare castig)',
+      ex.includes('/assets/*'), ex.join(' '));
+    check('_routes.json: prima pagina si paginile publice statice ocolesc workerul',
+      ['/', '/login', '/register', '/episode'].every((p) => ex.includes(p)), ex.join(' '));
+    // Ce NU are voie sa ocoleasca: API-ul, chatul, SSR-ul de serie/episod,
+    // paginile din spatele portii de autentificare, sitemap-ul.
+    const mustStay = ['/api/*', '/chat', '/serie/*', '/episod/*', '/profile', '/shop', '/admin/*', '/sitemap.xml'];
+    check('_routes.json: API, chat, SSR si paginile protejate raman pe worker',
+      mustStay.every((p) => !ex.includes(p)), `exclude=${ex.join(' ')}`);
+
+    // Paritatea de headere intre calea statica si cea care trece prin worker.
+    const staticRes = await fetch(BASE + '/assets/css/style.css');
+    const workerRes = await fetch(BASE + '/api/auth/me');
+    const names = ['content-security-policy', 'x-frame-options', 'x-content-type-options',
+      'referrer-policy', 'permissions-policy', 'cross-origin-opener-policy', 'cross-origin-resource-policy'];
+    const mismatch = names.filter((n) => staticRes.headers.get(n) !== workerRes.headers.get(n));
+    check('Header-ele de securitate sunt identice pe asset (static) si pe API (worker)',
+      mismatch.length === 0,
+      mismatch.map((n) => `${n}: static=${staticRes.headers.get(n)} worker=${workerRes.headers.get(n)}`).join(' | '));
+    const staticCsp = staticRes.headers.get('content-security-policy') || '';
+    check('Asset-ul static are CSP strict (din public/_headers)',
+      staticCsp.includes("default-src 'self'") && !staticCsp.includes('unsafe-inline'), staticCsp.slice(0, 80));
+    check('Asset-ul static are HSTS (din public/_headers)',
+      /max-age=31536000/.test(staticRes.headers.get('strict-transport-security') || ''),
+      staticRes.headers.get('strict-transport-security') || 'lipseste');
+
+    // Dovada de runtime ca assetul NU trece prin worker: cand trece, headerele
+    // din _headers se aplica de doua ori si valoarea se dubleaza
+    // („no-cache, no-cache”, vazut exact asa inainte de _routes.json).
+    const cc = staticRes.headers.get('cache-control') || '';
+    const isDev = /no-cache/.test(cc);
+    check('Assetul e servit direct din stratul static (fara worker)',
+      isDev ? (cc.match(/no-cache/g) || []).length === 1 : /immutable/.test(cc), `cache-control=${cc}`);
+  }
 }
 
 {

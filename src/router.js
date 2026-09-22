@@ -46,6 +46,7 @@ import * as reportRoute from './routes/api/report.js';
 import * as subtitleRoute from './routes/api/subtitle.js';
 import * as genresRoute from './routes/api/genres.js';
 import * as recentRoute from './routes/api/recent.js';
+import * as homeRoute from './routes/api/home.js';
 import * as commentsVoteRoute from './routes/api/comments-vote.js';
 import * as reviewsRoute from './routes/api/reviews.js';
 import * as topRoute from './routes/api/top.js';
@@ -102,6 +103,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/subtitle', mod: subtitleRoute },
   { method: 'GET', path: '/api/genres', mod: genresRoute },
   { method: 'GET', path: '/api/recent', mod: recentRoute },
+  { method: 'GET', path: '/api/home', mod: homeRoute },
   { method: 'POST', path: '/api/comments/vote', mod: commentsVoteRoute },
   { method: 'GET', path: '/api/reviews', mod: reviewsRoute },
   { method: 'POST', path: '/api/reviews', mod: reviewsRoute },

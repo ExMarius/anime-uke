@@ -66,7 +66,8 @@ cat cf-relay/last-output.txt
 ```
 
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
-  bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
+  bundle/minify JS, versionare `?v=<commit>` și trecerea JS/CSS din `public/_headers` pe `immutable`
+  (ele nu mai trec prin worker, deci Cache-Control-ul se decide acolo). Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
 - Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl), sau — mai bine,
   pentru că acoperă zeci de probe deodată — `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh`
@@ -88,6 +89,10 @@ cat cf-relay/last-output.txt
 | Register 403 local | plafonul `LIMIT_USERS` | folosește un cont existent sau `LIMIT_USERS=50 ./dev.sh` |
 | `dev.sh`/`test.sh` mor instant: „This Worker requires compatibility date \"2026-05-01\", but the newest date supported by this server binary is …” | wrangler/workerd din `package-lock.json` e mai vechi decât `compatibility_date` din configurii | `npm i -D wrangler@latest` (≥ 4.131.2) și comite `package-lock.json`. Alternativ, coboară data în toate cele 5 fișiere `.toml` |
 | `git push` pe tag → 403 | token-ul GitHub al sandbox-ului nu are drept pe tags | folosește `gh api` (refs) sau lasă tag-urile |
+| Un asset n-are CSP/HSTS pe live (sau are alt set decât API-ul) | assetul e servit din stratul static (`public/_routes.json`), iar headerele lui vin din `public/_headers`, nu din worker | ține cele două seturi identice (`SECURITY_HEADERS` ↔ `public/_headers`); `tests/e2e.mjs` verifică paritatea |
+| `Cache-Control: no-cache, no-cache` (valoare dublată) pe un asset | assetul a trecut ȘI prin worker → `public/_routes.json` lipsește sau nu-l mai exclude | verifică `public/_routes.json` (deploy.sh refuză să publice fără el) |
+| Hero-ul apare fără WebP / 404 pe `/assets/img/hero-*.webp` | frații `.webp` sunt COMISAȚI în repo, nu generați la deploy | `git add public/assets/img/*.webp`; nu adăuga `find -delete` în deploy.sh |
+| `/api/series`, `/api/top`, `/api/recent`, `/api/genres`, `/api/pulse` cerute de prima pagină | cineva a desfăcut agregarea din `/api/home` | `tests/dom-smoke.mjs` numără cererile paginii („Prima pagină cere catalogul o singură dată") |
 
 ## 5. Modelul de date pe care trebuie să-l respecți
 
@@ -124,9 +129,44 @@ cat cf-relay/last-output.txt
   - `/login` și `/register`: `noindex` + canonical. Header nou `Cross-Origin-Resource-Policy: same-origin`.
   - `tests/e2e.mjs` a crescut de la 455 la **474** de verificări (toate cazurile de mai sus).
 
+### Sesiunea „buget 0 / să nu pice la trafic” (2026-09-22)
+
+Fiecare cerere care ajunge în Pages Functions consumă o invocare din cota gratuită de **100.000/zi**.
+Un vizitator fără cont cheltuia ~12 invocări (1 pagină + 6 assete + 5 cereri de API). Acum cheltuie ~2:
+
+1. **`public/_routes.json`** — `/assets/*`, `/`, `/login`, `/register`, `/episode` sunt servite direct de
+   stratul static (0 invocări). Securitatea nu a scăzut: headerele cailor ocolite vin din `public/_headers`,
+   cu valori IDENTICE cu `SECURITY_HEADERS`, iar `tests/e2e.mjs` verifică paritatea la fiecare rulare.
+   `deploy.sh` refuză să publice dacă `_routes.json` lipsește și trece JS/CSS din `_headers` pe
+   `immutable` 1 an (aceleași căi sunt versionate cu `?v=<commit>`).
+   *Atenție la mentenanță:* orice rută adăugată în `exclude` scapă de poarta de autentificare din worker
+   (de aceea acolo sunt doar pagini publice).
+2. **`/api/home`** — prima pagină (catalog + top weekly/rated + ultimele episoade + genuri + pulse)
+   într-o singură invocare, în loc de cinci. `page-index.js` o cere o dată (`homeData()`, memoizat) și
+   distribuie datele către grilă, topuri, „ultimele episoade", filtre și chip-ul de „online"
+   (`claimPulse()`/`pushPulse()` din `core.js`); hero-ul refolosește aceeași listă.
+3. **Imagini** — pagina referă direct `.webp` (frați comiși în repo), deci nu mai există negociere
+   `Accept: image/webp` în worker: una-două cereri mai puțin per vizită, una mai puțin sigură.
+   Scara de rezervă a bannerului trăiește acum într-un SINGUR handler (înainte `onerror` + `addEventListener`
+   se băteau cap în cap și prima treaptă — coperta din DB — nu se aplica niciodată).
+4. **Curățenie în `src/worker.js`**: scoase negocierea WebP și regula `?v=` → `immutable` (moarte, fiindcă
+   assetul nu mai ajunge în worker). `statusOverride()` a rămas fără consumatori → șters.
+5. **Teste**: `tests/e2e.mjs` **486** (+12: `/api/home`, `_routes.json`, paritatea de headere, dovada că
+   assetul nu trece prin worker), `dom-smoke.mjs` **150** (+3: numărătoarea cererilor paginii; reparată și
+   verificarea flaky „anterior dezactivat pe primul episod" — butoanele pornesc acum `disabled` în HTML).
+   `scripts/audit-live.mjs` a primit probe noi (asset static servit direct, `.webp` direct, `og:image`
+   rămâne `.jpg` fiindcă rețelele sociale nu acceptă WebP).
+
+**De făcut de proprietar, o dată (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke` →
+Settings → Runtime → **Fail open** (la epuizarea cotei, catalogul static rămâne vizibil în loc de pagină de eroare).
+
+---
+
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
 - Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): SSR SEO pe `/episod/<id>` (title generic azi;
+  se poate face liniștit — URL-ul pretty NU e în `_routes.json`, deci trece prin worker; doar shell-ul
+  `/episode` e servit static;
   e cea mai mare oportunitate de trafic organic — cere JSON-LD `VideoObject`/`BreadcrumbList` + cache ca la serii);
   canonical/og hardcodate pe `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe
   `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);

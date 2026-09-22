@@ -54,6 +54,7 @@ const PUBLIC_API = new Set([
   '/api/pulse',          // doar un contor agregat („N online”), fara date personale
   '/api/genres',         // lista de genuri pentru filtre (zero date personale)
   '/api/recent',         // ultimele episoade adaugate (date de catalog)
+  '/api/home',           // prima pagina intr-o singura cerere (series+top+recent+genres+pulse)
   '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
   '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
 ]);
@@ -428,20 +429,10 @@ async function serveStatic(request, env) {
   try {
     const res = await env.ASSETS.fetch(assetRequest);
 
-    // Negociere WebP: daca exista o versiune .webp langa jpg/png-ul cerut
-    // (generata la deploy), o servim pe ea — ~40% mai putini bytes, aceeasi
-    // imagine. Doar pentru browsere care anunta image/webp (toate moderne).
-    if (res.status === 200) {
-      const m = /^\/assets\/img\/.+\.(jpg|jpeg|png)$/i.exec(path);
-      const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
-      if (m && acceptsWebp) {
-        const webpUrl = new URL(path.replace(/\.(jpg|jpeg|png)$/i, '.webp'), url.origin);
-        const webpRes = await env.ASSETS.fetch(new Request(webpUrl.toString(), { method: 'GET', headers: request.headers }));
-        if (webpRes.status === 200 && (webpRes.headers.get('content-type') || '').includes('webp')) {
-          return webpRes;
-        }
-      }
-    }
+    // NOTA: /assets/* nu mai ajunge aici in mod normal — public/_routes.json
+    // le serveste direct din stratul static (zero invocari Functions), cu
+    // headerele din public/_headers. Imaginile hero sunt referite direct ca
+    // .webp din HTML/JS, deci nu mai e nevoie de negociere Accept aici.
 
     if (assetPath && res.status >= 300 && res.status < 400) {
       const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
@@ -471,33 +462,15 @@ async function serveStatic(request, env) {
       if (!exists) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
     }
 
-    // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
-    // „immutable" 1 an. Fara ?v= (ex. importurile relative dintre modulele
-    // /assets/js) lasam regula din _headers (no-cache + ETag → 304 ieftin):
-    // asa un deploy nu lasa module vechi blocate in cache un an.
-    const versioned = path.startsWith('/assets/') && url.searchParams.has('v');
-    if (versioned && res.status === 200) {
-      const headers = new Headers(res.headers);
-      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-      return statusOverride(res, 200, headers);
-    }
-
+    // Cache-Control pentru JS/CSS vine din public/_headers (no-cache local,
+    // immutable in productie — deploy.sh face inlocuirea), nu de aici:
+    // assetele nu mai trec prin worker.
     return res;
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);
     return jsonResponse({ error: 'Not found' }, 404);
   }
-}
-
-// Răspuns al cărui body l-am citit deja (ex. HTML prelucrat): trebuie să
-// reconstruim Response fără content-length/etag vechi, altfel Cloudflare
-// raportează un mismatch și browserul trunchiază pagina.
-function statusOverride(res, status, headers) {
-  const h = new Headers(headers || res.headers);
-  h.delete('content-length');
-  h.delete('etag');
-  return new Response(res.body, { status, statusText: res.statusText, headers: h });
 }
 
 /**

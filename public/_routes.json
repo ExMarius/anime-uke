@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/robots.txt",
+    "/llms.txt",
+    "/speculationrules.json",
+    "/favicon.ico",
+    "/",
+    "/login",
+    "/register",
+    "/episode"
+  ]
+}

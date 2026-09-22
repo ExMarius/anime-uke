@@ -1,23 +1,52 @@
+# =====================================================================
+# Headere pentru raspunsurile servite DIRECT din stratul static Pages.
+#
+# De ce exista si nu sunt doar in worker (src/lib/http.js SECURITY_HEADERS):
+# public/_routes.json scoate assetele si paginile publice statice de sub
+# worker (fiecare cerere care ajunge in worker = o invocare din cota
+# gratuita de 100.000/zi). Raspunsurile acelea nu mai trec prin
+# applySecurityHeaders(), deci headerele de securitate trebuie sa vina de
+# aici. Setul de mai jos e IDENTIC cu SECURITY_HEADERS din src/lib/http.js —
+# tests/e2e.mjs verifica paritatea dintre cele doua.
+#
+# ATENTIE: doua reguli care se potrivesc pe aceeasi cale NU se suprascriu,
+# valorile se CONCATENEAZA („no-cache, no-cache”). O cale = o singura
+# regula pentru un header.
+# =====================================================================
 /*
   Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' wss:; frame-src 'self' https:; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
 
-# JS/CSS: mereu proaspete — browserul revalideaza cu ETag (304 ieftin),
-# deci dupa fiecare deploy utilizatorii primesc codul nou fara hard-refresh.
-/assets/*.js
+# assets-versioned:start
+# JS/CSS. In dezvoltare (dev.sh) ramane „no-cache”: browserul revalideaza cu
+# ETag (304 ieftin), deci orice editare se vede la refresh. deploy.sh
+# inlocuieste valoarea cu `public, max-age=31536000, immutable` INAINTE de
+# publicare: in productie fiecare referinta din HTML poarta ?v=<commit> si
+# page-*.js sunt bundle-uite (fara importuri relative), deci un URL versionat
+# nu isi schimba niciodata continutul. Rezultat: zero revalidari si zero
+# cereri care sa ajunga in worker.
+/assets/js/*
   Cache-Control: no-cache
 
-/assets/*.css
+/assets/css/*
   Cache-Control: no-cache
+# assets-versioned:end
 
-/assets/js/*.js
-  Cache-Control: no-cache
-
-/assets/css/*.css
-  Cache-Control: no-cache
-
-# Imagini/fonturi: cache lung (nu se schimba la deploy)
+# Imagini: cache lung (nu se schimba la deploy; nume nou = fisier nou).
+# Cele bundled sunt .webp, referite direct din HTML/JS; .jpg-urile raman
+# ca rezerva pentru browsere vechi (vezi pagina principala).
 /assets/img/*
   Cache-Control: public, max-age=2592000, immutable
+
+# Subtitrari demo si alte fisiere mici din assets: revalidare ieftina
+/assets/subs/*
+  Cache-Control: no-cache
 
 # Coperțile: numele se poate refolosi (adminul înlocuiește imaginea), deci
 # o săptămână — propagarea unei înlocuiri rămâne rezonabil de rapidă.
