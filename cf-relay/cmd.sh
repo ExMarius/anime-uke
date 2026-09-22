@@ -106,4 +106,4 @@ echo "  bundle live: anim-bg=$(grep -c 'anim-bg' /tmp/ps.js) petale=$(grep -c 'p
 
 echo "=== verificari punctuale (admin economie) ==="
 echo "  GET /api/admin/users anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/users") (trebuie 401)"
-echo "  /admin → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 200)"
+echo "  /admin anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/admin") (trebuie 302 catre /login)"
