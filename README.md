@@ -234,6 +234,11 @@ relay-ului (`EXPLAIN QUERY PLAN`, secțiunea 14 din `cf-relay/cmd.sh`): topul s�
 `SEARCH w USING INDEX idx_progress_updated`, iar numărătoarea „scanări de `watch_progress`"
 trebuie să fie 0.
 
+Spațiul nu e o problemă la scara asta: baza sintetică de mai sus (1.000 de serii, 19.788 de
+episoade, un an de istoric de vizionare pentru 1.000 de conturi) are **26 MB**, iar plafonul
+gratuit e 500 MB pe bază. Crește cu istoricul de vizionare (o linie per utilizator+episod),
+deci `npm run bench -- --keep` e modul cel mai rapid de a vedea unde ajungi.
+
 Ce a rămas deliberat „scump" și de ce e în regulă: genurile (1.000 rânduri, o dată pe
 oră), sitemap-urile (până la 6.000 rânduri, o dată pe oră, cerute de crawlere) și
 recalculul topului săptămânal (o dată pe oră). Toate trei sunt în afara căii fierbinți,

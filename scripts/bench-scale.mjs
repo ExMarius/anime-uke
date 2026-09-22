@@ -12,6 +12,7 @@
 //   node scripts/bench-scale.mjs --views 6000       # proiecția pe zi pentru alt trafic
 //   node scripts/bench-scale.mjs --users 200 --progress 60   # scenariu mic
 //   node scripts/bench-scale.mjs --json             # tabelul, pentru prelucrare
+//   node scripts/bench-scale.mjs --keep             # păstrează baza sintetică pe disc
 //
 // Rezultatul de referință (22.09.2026, înainte de migrarea 0028):
 //   ~230.000 de rânduri citite pentru O vizită pe prima pagină → ~21 vizite/zi.
@@ -24,7 +25,7 @@
 // =====================================================================
 
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,6 +42,9 @@ const numArg = (name, dflt) => {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : dflt;
 };
 const JSON_OUT = argv.includes('--json');
+// --keep: nu șterge baza sintetică la final (utilă la inspectat: dimensiune,
+// planuri cu EXPLAIN, teste de SQL pe scara maximă).
+const KEEP = argv.includes('--keep');
 
 const SERIES = numArg('series', 1000);
 const USERS = numArg('users', 1000);
@@ -464,4 +468,9 @@ if (JSON_OUT) {
 }
 
 db.close();
-rmSync(dir, { recursive: true, force: true });
+if (KEEP) {
+  const bytes = statSync(join(dir, 'bench.sqlite')).size;
+  if (!JSON_OUT) console.log(`\n  baza sintetică păstrată: ${join(dir, 'bench.sqlite')} (${(bytes / 1048576).toFixed(1)} MB)`);
+} else {
+  rmSync(dir, { recursive: true, force: true });
+}
