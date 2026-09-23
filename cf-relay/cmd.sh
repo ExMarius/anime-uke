@@ -192,6 +192,10 @@ q "DELETE FROM chat_messages WHERE user_id IN (SELECT id FROM users WHERE userna
 q "DELETE FROM users WHERE username LIKE 'canar%'" >/dev/null
 q "UPDATE site_meta SET value = (SELECT COUNT(*) FROM users) WHERE key = 'users_total'" >/dev/null
 echo "   după curățenie: $(q 'SELECT COUNT(*) AS n FROM chat_messages') rânduri în chat_messages, $(q 'SELECT COUNT(*) AS n FROM users') conturi"
+# Canarul nu are voie să lase urme: dacă a rămas vreun cont sau vreun mesaj
+# „canar%” în tabel, îl raportăm aici (curățenia a eșuat, nu testul de chat).
+RAMASE="$(q "SELECT COUNT(*) AS n FROM chat_messages WHERE username LIKE 'canar%'")"
+case "$RAMASE" in *'"n":0'*) echo "   urme rămase după canar: 0 (curat)" ;; *) echo "   !! urme rămase după canar: $RAMASE" ;; esac
 
 echo
 echo "════════ AUDIT LIVE ════════"
