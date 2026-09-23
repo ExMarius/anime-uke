@@ -151,6 +151,16 @@ case "$NOTA_RAW" in
 esac
 
 
+echo "── 16. chat: ce e SALVAT de fapt în producție (D1)"
+W2="npx wrangler"; [ -x "$PWD/node_modules/.bin/wrangler" ] && W2="$PWD/node_modules/.bin/wrangler"
+q() { $W2 d1 execute DB --remote --json --command "$1" 2>/dev/null | grep -o '"results":\[[^]]*\]' | head -c 700; echo; }
+echo "   total rânduri:      $(q 'SELECT COUNT(*) AS n FROM chat_messages')"
+echo "   în ultimele 24h:    $(q "SELECT COUNT(*) AS n FROM chat_messages WHERE created_at >= datetime('now','-1 day')")"
+echo "   în ultimele 7 zile: $(q "SELECT COUNT(*) AS n FROM chat_messages WHERE created_at >= datetime('now','-7 days')")"
+echo "   primele/ultimele id: $(q 'SELECT MIN(id) AS min_id, MAX(id) AS max_id FROM chat_messages')"
+echo "   ultimele 8 mesaje:"
+q 'SELECT id, username, substr(message,1,28) AS mesaj, created_at FROM chat_messages ORDER BY id DESC LIMIT 8' | sed 's/^/     /'
+
 echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
