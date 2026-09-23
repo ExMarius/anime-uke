@@ -153,7 +153,9 @@ esac
 
 echo "── 16. chat: ce e SALVAT de fapt în producție (D1)"
 W2="npx wrangler"; [ -x "$PWD/node_modules/.bin/wrangler" ] && W2="$PWD/node_modules/.bin/wrangler"
-q() { $W2 d1 execute DB --remote --json --command "$1" 2>/dev/null | grep -o '"results":\[[^]]*\]' | head -c 700; echo; }
+# wrangler --json scrie JSON INDENTAT (pe mai multe linii), deci nu se poate
+# extrage cu grep linie-cu-linie: îl parcurge node și scoate doar results.
+q() { $W2 d1 execute DB --remote --json --command "$1" 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);process.stdout.write(JSON.stringify((j[0]&&j[0].results)||[]))}catch(e){process.stdout.write("(raspuns necitit)")}})'; echo; }
 echo "   total rânduri:      $(q 'SELECT COUNT(*) AS n FROM chat_messages')"
 echo "   în ultimele 24h:    $(q "SELECT COUNT(*) AS n FROM chat_messages WHERE created_at >= datetime('now','-1 day')")"
 echo "   în ultimele 7 zile: $(q "SELECT COUNT(*) AS n FROM chat_messages WHERE created_at >= datetime('now','-7 days')")"
