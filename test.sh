@@ -2,7 +2,7 @@
 # Ruleaza toate suitele locale pe baze de date curate.
 #
 #   ./test.sh          scripts-health + e2e + dom-smoke + theme-cache + top-cache +
-#                      counters + theme-flow + pixel-teme + plafoane
+#                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -14,11 +14,19 @@ PORT=8788
 LOG=/tmp/anime-uke-dev.log
 DEV_PID=""
 
+# Copie de siguranta pentru wrangler.toml (fisier generat; vezi cleanup()).
+[ -f wrangler.toml ] && cp -f wrangler.toml /tmp/anime-uke-wrangler-start.toml
+
 cleanup() {
   if [ -n "${DEV_PID:-}" ] && kill -0 "$DEV_PID" 2>/dev/null; then
-    pkill -P "$DEV_PID" 2>/dev/null
-    kill "$DEV_PID" 2>/dev/null
+    kill_tree "$DEV_PID"
     wait "$DEV_PID" 2>/dev/null
+  fi
+  # wrangler.toml e un fisier GENERAT (dev.sh il inlocuieste cat ruleaza,
+  # deploy.sh il reface pentru productie). Il punem la loc exact cum era la
+  # pornire, ca suita sa nu lase modificari in git diff.
+  if [ -f /tmp/anime-uke-wrangler-start.toml ]; then
+    cp -f /tmp/anime-uke-wrangler-start.toml wrangler.toml
   fi
 }
 trap cleanup EXIT
@@ -37,6 +45,16 @@ kill_tree() {
     next=""
     for c in $children; do next="$next $(pgrep -P "$c" 2>/dev/null || true)"; done
     children="$(echo $next | xargs)"
+  done
+  # Intai TERM: dev.sh are un trap pe EXIT care pune la loc wrangler.toml.
+  # Cu -9 din prima, trap-ul nu mai apuca sa ruleze si fisierul rămâne
+  # in varianta locala (murdareste git diff dupa fiecare rulare).
+  # shellcheck disable=SC2086
+  kill -TERM $all 2>/dev/null || true
+  local i
+  for i in 1 2 3 4 5 6; do
+    kill -0 "$root" 2>/dev/null || break
+    sleep 0.5
   done
   # shellcheck disable=SC2086
   kill -9 $all 2>/dev/null || true
@@ -77,14 +95,33 @@ start_server() {
     sleep 1
   done
   grep -qE "Ready on|updated and ready" "$LOG" || { echo "dev.sh nu a pornit in 90s:"; tail -20 "$LOG"; exit 1; }
+  # Linia „Ready" nu garanteaza ca ne raspunde NOUĂ instanta: daca un
+  # workerd strain a furat portul, logul e verde si testele primesc
+  # ECONNREFUSED/date straine. Deci verificam efectiv, cu un request.
+  local ok=""
+  for _ in $(seq 1 30); do
+    if curl -s -o /dev/null --max-time 3 "http://127.0.0.1:$PORT/api/genres"; then ok=1; break; fi
+    sleep 1
+  done
+  if [ -z "$ok" ]; then
+    echo "! serverul nu raspunde pe /api/genres dupa 30s (log: $LOG):"
+    tail -20 "$LOG"
+    free_port
+    exit 1
+  fi
 }
 
 stop_server() {
   if [ -n "${DEV_PID:-}" ] && kill -0 "$DEV_PID" 2>/dev/null; then
-    pkill -P "$DEV_PID" 2>/dev/null
-    kill "$DEV_PID" 2>/dev/null
+    kill_tree "$DEV_PID"
     wait "$DEV_PID" 2>/dev/null
     DEV_PID=""
+  fi
+  # Portul trebuie sa fie liber DUPA oprire: daca nu e, un supervizor
+  # straina a supravietuit si faza urmatoare ar testa alt server.
+  if ss -tln 2>/dev/null | grep -q ":$PORT "; then
+    echo "! portul $PORT e inca ocupat dupa oprirea serverului — il eliberez"
+    free_port
   fi
 }
 
@@ -154,6 +191,17 @@ fi
 [ "$TOPC_RC" -eq 0 ] || RC=1
 
 echo
+echo "════════ chat-persist (chatul supravietuieste evictiei DO, fara server) ════════"
+node tests/chat-persist.mjs > /tmp/chatpersist.log 2>&1
+CHATP_RC=$?
+tail -6 /tmp/chatpersist.log
+if [ $CHATP_RC -ne 0 ]; then
+  echo "!! chat-persist s-a oprit cu codul $CHATP_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/chatpersist.log | tail -12
+fi
+[ "$CHATP_RC" -eq 0 ] || RC=1
+
+echo
 echo "════════ counters (contoare denormalizate, fara server) ════════"
 node tests/counters.mjs > /tmp/counters.log 2>&1
 COUNTERS_RC=$?
@@ -163,6 +211,17 @@ if [ $COUNTERS_RC -ne 0 ]; then
   grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/counters.log | tail -12
 fi
 [ "$COUNTERS_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ chat-d1 (mesajul ajunge in tabelul D1, fisier real) ════════"
+node tests/chat-d1.mjs > /tmp/chatd1.log 2>&1
+CHATD1_RC=$?
+tail -8 /tmp/chatd1.log
+if [ $CHATD1_RC -ne 0 ]; then
+  echo "!! chat-d1 s-a oprit cu codul $CHATD1_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/chatd1.log | tail -12
+fi
+[ "$CHATD1_RC" -eq 0 ] || RC=1
 
 echo
 echo "════════ theme-flow (flux tema animata, pagina reala) ════════"

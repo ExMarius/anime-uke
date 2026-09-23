@@ -13,8 +13,9 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 23 · e2e 576 · dom 169 ·
-  theme-cache 7 · top-cache 17 · counters 16 · theme-flow PASS · pixel-teme 8 · plafoane 13),
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 27 · e2e 576 · dom 169 ·
+  theme-cache 7 · top-cache 17 · chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS ·
+  pixel-teme 8 · plafoane 13),
   deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
@@ -116,6 +117,8 @@ cat cf-relay/last-output.txt
 | Clasamentul „cele mai bine notate" arată medii vechi | o cale nouă scrie în `series_ratings` fără să resincronizeze contoarele | folosește `saveRating()` din `src/lib/ratings.js`; `tests/counters.mjs` verifică forma batch-ului |
 | `pulse` arată 0 serii / 0 membri | contoarele din `site_meta` nu se întrețin pe o cale de scriere nouă | contoarele se bat cu `bumpMetaStmt` (serii/episoade: `admin/*`; conturi: `register.js`; vizualizări: `StatsDO.flush`) |
 | Testele e2e nu văd o vizionare în „top săptămânal" | topul e ținut o oră în `leaderboard_cache` | rulați cu `TOP_CACHE_MINUTES=0` (o face `test.sh`/`dev.sh`); cache-ul propriu-zis e testat în `tests/top-cache.mjs` |
+| Chatul nu salvează nimic în producție, deși mesajele se văd live | două cauze suprapuse: (1) `INSERT INTO chat_messages` avea 11 coloane dar 10 `?` → D1 răspundea „10 values for 11 columns” la fiecare flush, eroare doar logată; (2) bufferul era în memorie, iar evicția DO-ului îl golea înainte de alarmă | două garduri noi: `tests/scripts-health.mjs` compară numărul de coloane cu numărul de valori la TOATE instrucțiunile `INSERT` din `src/` (prinde greșeala în 50 ms, fără server), iar `tests/chat-d1.mjs` citește **fișierul SQLite al D1-ului local** după ce scrie un mesaj pe chat — un test care nu poate fi păcălit de o bază falsă |
+| Mesajele de chat (și stickerele) nu se salvează în producție, deși local testele trec | bufferul de mesaje era în MEMORIE, iar WebSocket Hibernation evacuează DO-ul între mesaje: alarma suna pe o instanță nouă, cu buffer gol. Miniflare nu evacuează niciodată, deci local bug-ul e invizibil | fiecare mesaj se scrie întâi în `state.storage` (durabil), lotul se citește din storage la flush, iar istoricul = D1 ∪ buffer, fără dubluri. `tests/chat-persist.mjs` simulează evicția (instanță nouă peste același storage); relay-ul are „canarul" din secțiunea 17 (cont temporar, mesaj + sticker real, citite apoi din D1) |
 | Deploy-ul de pe runner nu pornește, deși local totul e verde | sintaxă invalidă în `cf-relay/cmd.sh` (ex. o ghilimea tipografică `"` care închide un șir bash deschis cu `„`) | `node tests/scripts-health.mjs` rulează `bash -n` pe toate scripturile; e prima suită din `test.sh` |
 | O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
 | Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |

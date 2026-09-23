@@ -163,6 +163,36 @@ echo "   primele/ultimele id: $(q 'SELECT MIN(id) AS min_id, MAX(id) AS max_id F
 echo "   ultimele 8 mesaje:"
 q 'SELECT id, username, substr(message,1,28) AS mesaj, created_at FROM chat_messages ORDER BY id DESC LIMIT 8' | sed 's/^/     /'
 
+# ── 17. CANARUL DE CHAT ───────────────────────────────────────────────
+# Bug-ul de azi („nu se salvează mesajele, nici stickerele") a trecut prin
+# TOATE suitele locale: în miniflare DO-ul nu e evacuat niciodată, deci
+# bufferul din memorie ajungea mereu în D1. Dovada reală e un mesaj scris pe
+# chat-ul viu, cu UN mesaj (nu un lot de 10), apoi citit din baza de date.
+# Contul canar se șterge la final, împreună cu mesajele lui.
+echo
+echo "── 17. chat: canar end-to-end (mesaj + sticker pe site-ul viu)"
+CANAR_OUT="$(node cf-relay/chat-canar.mjs "$B" 2>&1)"
+CANAR_RC=$?
+echo "$CANAR_OUT" | sed 's/^/     /'
+CANAR_USER="$(echo "$CANAR_OUT" | sed -n 's/^  __CANAR_USER__=//p' | head -1)"
+CANAR_TEXT="$(echo "$CANAR_OUT" | sed -n 's/^  __CANAR_TEXT__=//p' | head -1)"
+if [ "$CANAR_RC" -ne 0 ]; then
+  echo "   !! canarul a picat (exit $CANAR_RC) — chatul NU salvează în producție"
+else
+  echo "   dovezi în D1 (rândurile canarului, citite direct din baza de date):"
+  q "SELECT id, username, message, created_at FROM chat_messages WHERE username = '$CANAR_USER' ORDER BY id" | sed 's/^/     /'
+  N_TEXT="$(q "SELECT COUNT(*) AS n FROM chat_messages WHERE username = '$CANAR_USER' AND message = '$CANAR_TEXT'")"
+  N_STICK="$(q "SELECT COUNT(*) AS n FROM chat_messages WHERE username = '$CANAR_USER' AND message = '[sticker:naruto]'")"
+  case "$N_TEXT" in *'"n":1'*) echo "   mesajul e ÎN D1: da" ;; *) echo "   mesajul e ÎN D1: NU ($N_TEXT)" ;; esac
+  case "$N_STICK" in *'"n":1'*) echo "   stickerul e ÎN D1: da" ;; *) echo "   stickerul e ÎN D1: NU ($N_STICK)" ;; esac
+fi
+# Curățenie: dispare contul, mesajele lui și contorul se reface din COUNT(*)
+# (contorul users_total e denormalizat — îl realiniem exact, nu pe încredere).
+q "DELETE FROM chat_messages WHERE user_id IN (SELECT id FROM users WHERE username LIKE 'canar%')" >/dev/null
+q "DELETE FROM users WHERE username LIKE 'canar%'" >/dev/null
+q "UPDATE site_meta SET value = (SELECT COUNT(*) FROM users) WHERE key = 'users_total'" >/dev/null
+echo "   după curățenie: $(q 'SELECT COUNT(*) AS n FROM chat_messages') rânduri în chat_messages, $(q 'SELECT COUNT(*) AS n FROM users') conturi"
+
 echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"

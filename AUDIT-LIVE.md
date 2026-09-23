@@ -209,6 +209,66 @@ scripturile, `node --check` pe `scripts/`+`tests/`, rutele probate de relay
 există, fără ghilimele tipografice nepereche) — garda asta a prins în timpul
 lucrului o eroare de sintaxă în `cmd.sh` care ar fi picat deploy-ul pe runner.
 
+## 1g. Runda 8 (2026-09-23): chatul care nu se salva (bug de producție)
+
+Raportat de proprietar: „nu se salvează mesajele, nici stickerele”. Diagnosticul,
+citit direct din producție (secțiunea 16 din `cf-relay/cmd.sh`):
+
+| Dovada | Valoare |
+|---|---|
+| rânduri în `chat_messages` | 30 (din care `max_id` = 30) |
+| mesaje în ultimele 24h / 7 zile | **0 / 0** |
+| ultimul mesaj salvat | 2026-09-14 |
+
+**Cauza:** `ChatDO` ținea mesajele într-un buffer **în memorie** și le scria în D1
+în loturi (10 mesaje sau alarma de 15 secunde). Cu WebSocket Hibernation, Cloudflare
+evacuează DO-ul când nu se întâmplă nimic — iar alarma sună pe o **instanță nouă**,
+cu bufferul gol. Pe un site mic (câteva mesaje pe oră) asta însemna practic zero
+mesaje salvate, deși toți utilizatorii le vedeau live. Stickerele sunt mesaje
+`[sticker:id]` pe exact același drum, deci un singur fix le acoperă pe amândouă.
+
+**De ce nu a prins nimic:** în miniflare (local) DO-ul **nu e evacuat niciodată**,
+deci bufferul ajungea mereu la D1 și toate suitele treceau. Bug-ul era invizibil
+prin construcție, nu prin lipsă de teste.
+
+**Fix:** bufferul s-a mutat în **storage-ul durabil al DO-ului**:
+
+1. fiecare mesaj se scrie cu `state.storage.put` **înainte** de broadcast (chei
+   ordonabile `m:<seq>` zero-padded) — storage-ul DO supraviețuiește evicției;
+2. lotul pentru D1 se **citește din storage** la flush, deci alarma scrie corect
+   chiar dacă sună pe o instanță proaspăt trezită;
+3. cheile se șterg **doar după** un `DB.batch()` reușit; dacă D1 pică, mesajele
+   rămân durabile și se scriu la următoarea ocazie (catch-up la conectare, la
+   următorul mesaj sau la următoarea alarmă);
+4. istoricul de la conectare = arhiva D1 ∪ bufferul durabil, în ordine
+   cronologică, fără dubluri, ultimele 30;
+5. plafon de siguranță: bufferul nu crește peste 1.000 de mesaje dacă D1 e jos
+   mult timp; arhiva păstrează singură ultimele 500 (curățenie rară, contor ținut
+   în storage).
+
+**Al doilea bug, ascuns în spatele primului:** `INSERT INTO chat_messages` avea
+**11 coloane și doar 10 parametri** — D1 răspundea „10 values for 11 columns” la
+fiecare flush, eroarea era prinsă și doar logată, iar tabelul rămânea gol. Chiar
+dacă bufferul ar fi supraviețuit evicției, mesajele tot nu ajungeau în D1. (Rândurile
+cu id 1–30 din producție au fost scrise de versiunea dinainte de 15 septembrie;
+după deploy-ul din 15 septembrie nu a mai intrat nimic în tabel.)
+
+**Verificare:** `tests/chat-persist.mjs` (nou, 14 verificări, în `./test.sh`)
+simulează evicția — instanță nouă de `ChatDO` peste **același** storage și aceeași
+bază — deci prinde regresia în secunde, local. Refuză explicit designul „buffer în
+memorie + flush periodic”: la baseline, pe codul vechi, 11 din 14 verificări picau.
+`tests/chat-d1.mjs` (nou, 8 verificări) scrie un mesaj pe chatul local și apoi
+citește **fișierul SQLite al D1-ului** din `.wrangler/state` — nu o bază falsă, nu
+un mock: ori rândul e în tabel, ori testul pică. O bază falsă nu se plânge de SQL
+greșit, iar exact asta a lăsat bug-ul nevăzut o săptămână. În plus,
+`tests/scripts-health.mjs` compară acum numărul de coloane cu numărul de valori la
+toate instrucțiunile `INSERT` din `src/` (28 verificate) — garda statică prinde
+greșeala în 50 ms, înainte de orice deploy.
+
+Pe live, dovada o dă **canarul** din secțiunea 17 a relay-ului: cont temporar,
+un mesaj normal + un sticker scrise pe chatul real, așteptate 20 de secunde (o
+alarmă întreagă), apoi citite din D1 și șterse.
+
 ---
 
 ## 4. Cum se re-rulează auditul

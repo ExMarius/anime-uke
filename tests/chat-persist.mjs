@@ -26,6 +26,9 @@ const check = (name, ok, detail = '') => {
 };
 const tick = (n = 6) => new Promise((r) => setTimeout(r, n));
 
+/** Câte MESAJЕ sunt în bufferul durabil (nu contoarele interne ale DO-ului). */
+const msgKeys = (storage) => [...storage.map.keys()].filter((k) => k.startsWith('m:')).length;
+
 // ---------------------------------------------------------------------
 // Storage fals, în stilul API-ului DO (put/get/list/delete + alarme).
 // Obiectul se partajează între „instanțe" (evicție = instanță nouă, storage
@@ -58,16 +61,23 @@ function fakeStorage(initial = new Map()) {
 }
 
 function fakeState(storage, sockets = []) {
-  return {
+  const state = {
     storage,
     sockets,
-    acceptWebSocket(ws) { sockets.push(ws); if (!sockets.includes(ws)) sockets.push(ws); },
+    pending: [],      // promisiunile din waitUntil (ca să putem aștepta finalizarea)
+    acceptWebSocket(ws) { if (!sockets.includes(ws)) sockets.push(ws); },
     getWebSockets() { return sockets; },
-    waitUntil(p) { (state.pending ||= []).push(Promise.resolve(p).catch(() => {})); },
-    _pending: [],
-    get pending() { return this._pending; },
-    set pending(v) { this._pending = v; },
+    waitUntil(p) { state.pending.push(Promise.resolve(p).catch(() => {})); },
   };
+  return state;
+}
+
+/** Așteaptă ca toate promisiunile din waitUntil să se termine (flush-uri). */
+async function settle(state) {
+  for (let i = 0; i < 5; i++) {
+    await Promise.allSettled(state.pending.splice(0));
+    await tick(5);
+  }
 }
 
 function fakeSocket(attachment) {
@@ -89,20 +99,23 @@ function fakeDB(seed = []) {
     writes: 0,
     failures: 0,
     failMode: false,
+    // bind() întoarce un statement NOU (ca în D1 real): dacă ar muta același
+    // obiect, toate rândurile dintr-un batch ar primi ultimii parametri —
+    // exact bug-ul care a făcut testul de mai jos să pară că pierde mesaje.
     prepare(sql) {
-      const stmt = {
+      const make = (args) => ({
         _sql: sql,
-        _args: [],
-        bind(...a) { stmt._args = a; return stmt; },
+        _args: args,
+        bind(...a) { return make(a); },
         async all() {
-          if (/SELECT .* FROM chat_messages/i.test(sql)) {
-            return { results: [...rows].slice(-Number(stmt._args[0] || 30)).reverse() };
+          if (/SELECT[\s\S]*FROM chat_messages/i.test(sql)) {
+            return { results: [...rows].slice(-Number(args[0] || 30)).reverse() };
           }
           return { results: [] };
         },
         async run() { return { meta: { changes: 1 } }; },
-      };
-      return stmt;
+      });
+      return make([]);
     },
     async batch(stmts) {
       if (db.failMode) { db.failures++; throw new Error('D1 indisponibil'); }
@@ -122,6 +135,9 @@ function fakeDB(seed = []) {
 }
 
 const USER = { id: 7, username: 'marius' };
+// Forma pe care o pune handleUpgrade în attachment (userId, nu id!) — altfel
+// webSocketMessage închide socketul cu „Sesiune invalida" și nu testăm nimic.
+const ATT = { userId: USER.id, username: USER.username, rank_label: '', rank_icon: '', staff_role: '' };
 const msg = (m) => JSON.stringify({ type: 'chat', message: m });
 
 /** Simulează „evicția + trezirea": instanță nouă peste același storage. */
@@ -139,17 +155,17 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const storage = fakeStorage();
   const db = fakeDB();
   const a = revive(storage, db);
-  const ws1 = fakeSocket({ ...USER });
+  const ws1 = fakeSocket({ ...ATT });
   a.state.acceptWebSocket(ws1);
   await a.id.onConnected(ws1, USER);
   await a.id.webSocketMessage(ws1, msg('salut din chat'));
 
   check('Mesajul se scrie durabil ÎNAINTE de orice flush (nu doar în memorie)',
-    storage.map.size >= 1, `chei în storage=${storage.map.size}`);
+    msgKeys(storage) >= 1, `chei de mesaj în storage=${msgKeys(storage)}`);
 
   // evicție: instanță nouă, storage-ul rămâne
   const b = revive(storage, db);
-  const ws2 = fakeSocket({ ...USER });
+  const ws2 = fakeSocket({ ...ATT });
   b.state.acceptWebSocket(ws2);
   await b.id.onConnected(ws2, USER);
   const init = ws2.sent.find((m) => m.type === 'init');
@@ -157,11 +173,11 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   check('După evicție, la reconectare mesajul e în istoric (nu dispare)', areMesajul,
     JSON.stringify((init?.history || []).map((m) => m.message)));
 
-  await tick(20);
+  await settle(b.state);
   check('Recuperarea scrie mesajul și în arhiva D1 (fără să aștepte 10 mesaje)',
     db.rows.some((r) => r.message === 'salut din chat'), `rânduri D1=${db.rows.length}`);
-  check('După un flush reușit, bufferul durabil se golește', storage.map.size === 0,
-    `chei rămase=${storage.map.size}`);
+  check('După un flush reușit, bufferul durabil se golește', msgKeys(storage) === 0,
+    `chei rămase=${msgKeys(storage)}`);
 }
 
 // 2. Stikerele urmează exact același drum (sunt mesaje cu tag).
@@ -169,19 +185,19 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const storage = fakeStorage();
   const db = fakeDB();
   const a = revive(storage, db);
-  const ws = fakeSocket({ ...USER });
+  const ws = fakeSocket({ ...ATT });
   a.state.acceptWebSocket(ws);
   await a.id.onConnected(ws, USER);
   await a.id.webSocketMessage(ws, msg('[sticker:salut]'));
 
   const b = revive(storage, db);
-  const ws2 = fakeSocket({ ...USER });
+  const ws2 = fakeSocket({ ...ATT });
   b.state.acceptWebSocket(ws2);
   await b.id.onConnected(ws2, USER);
   const hist = ws2.sent.find((m) => m.type === 'init')?.history || [];
   check('Stickerul supraviețuiește evicției (e în istoric după reconectare)',
     hist.some((m) => m.message === '[sticker:salut]'), JSON.stringify(hist.map((m) => m.message)));
-  await tick(20);
+  await settle(b.state);
   check('Stickerul ajunge și în arhiva D1', db.rows.some((r) => r.message === '[sticker:salut]'));
 }
 
@@ -191,23 +207,26 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const db = fakeDB();
   db.failMode = true;
   const a = revive(storage, db);
-  const ws = fakeSocket({ ...USER });
+  const ws = fakeSocket({ ...ATT });
+  const wsAlt = fakeSocket({ ...ATT, userId: 8, username: 'ana' });
   a.state.acceptWebSocket(ws);
+  a.state.acceptWebSocket(wsAlt);
   await a.id.onConnected(ws, USER);
   await a.id.webSocketMessage(ws, msg('scris cat timp D1 e jos'));
-  await a.id.webSocketMessage(ws, msg('[sticker:lol]'));
-  await tick(20);
+  await a.id.webSocketMessage(wsAlt, msg('[sticker:lol]'));
+  await settle(a.state);
 
-  check('Când D1 pică, mesajele rămân în bufferul durabil', storage.map.size === 2, `chei=${storage.map.size}`);
+  check('Când D1 pică, mesajele rămân în bufferul durabil', msgKeys(storage) === 2,
+    `chei=${msgKeys(storage)} (${[...storage.map.keys()].join(',')})`);
 
   db.failMode = false;
   const b = revive(storage, db);
-  const ws2 = fakeSocket({ ...USER });
+  const ws2 = fakeSocket({ ...ATT });
   b.state.acceptWebSocket(ws2);
   await b.id.onConnected(ws2, USER);
-  await tick(30);
+  await settle(b.state);
   check('Când D1 revine, mesajele se scriu automat (catch-up)',
-    db.rows.length === 2 && storage.map.size === 0, `D1=${db.rows.length} storage=${storage.map.size}`);
+    db.rows.length === 2 && msgKeys(storage) === 0, `D1=${db.rows.length} storage=${msgKeys(storage)}`);
 }
 
 // 4. Istoricul complet: ce e în D1 (arhivă) + ce e încă în buffer se combină,
@@ -220,13 +239,13 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const storage = fakeStorage();
   const db = fakeDB(seed);
   const a = revive(storage, db);
-  const ws = fakeSocket({ ...USER });
+  const ws = fakeSocket({ ...ATT });
   a.state.acceptWebSocket(ws);
   await a.id.onConnected(ws, USER);
   await a.id.webSocketMessage(ws, msg('nou, încă neflush-uit'));
 
   const b = revive(storage, db);
-  const ws2 = fakeSocket({ ...USER });
+  const ws2 = fakeSocket({ ...ATT });
   b.state.acceptWebSocket(ws2);
   await b.id.onConnected(ws2, USER);
   const hist = ws2.sent.find((m) => m.type === 'init')?.history || [];
@@ -244,17 +263,27 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const storage = fakeStorage();
   const db = fakeDB();
   const a = revive(storage, db);
-  const ws = fakeSocket({ ...USER });
+  const ws = fakeSocket({ ...ATT });
   a.state.acceptWebSocket(ws);
   await a.id.onConnected(ws, USER);
-  for (let i = 1; i <= 40; i++) await a.id.webSocketMessage(ws, msg(`mesaj ${i}`));
+  for (let i = 1; i <= 40; i++) {
+    const wsI = fakeSocket({ ...ATT, userId: 100 + i, username: `user${i}` });
+    a.state.acceptWebSocket(wsI);
+    await a.id.webSocketMessage(wsI, msg(`mesaj ${i}`));
+  }
 
+  await settle(a.state);
+  if (process.env.DEBUG_CHAT) {
+    console.log('   [debug] storage:', [...storage.map.keys()].join(','),
+      '\n   [debug] D1:', db.rows.map((r) => r.message).join(','));
+  }
   const b = revive(storage, db);
-  const ws2 = fakeSocket({ ...USER });
+  const ws2 = fakeSocket({ ...ATT });
   b.state.acceptWebSocket(ws2);
   await b.id.onConnected(ws2, USER);
+  await settle(b.state);
   const hist = ws2.sent.find((m) => m.type === 'init')?.history || [];
-  check('Istoricul de la conectare e limitat la 30', hist.length === 30, `lungime=${hist.length}`);
+  check('Istoricul de la conectare e limitat la 30', hist.length === 30, `lungime=${hist.length}: ${hist.map(m=>m.message).join(' ')}`);
   check('Se păstrează cele mai RECENTE 30', hist.at(-1)?.message === 'mesaj 40' && hist[0]?.message === 'mesaj 11',
     `${hist[0]?.message} … ${hist.at(-1)?.message}`);
 }
@@ -264,11 +293,11 @@ console.log('=== CHAT: DURABILITATE LA EVICȚIA DO-ULUI ===');
   const storage = fakeStorage();
   const db = fakeDB();
   const a = revive(storage, db);
-  const ws = fakeSocket({ ...USER });
+  const ws = fakeSocket({ ...ATT });
   a.state.acceptWebSocket(ws);
   await a.id.onConnected(ws, USER);
   await a.id.webSocketMessage(ws, msg('un singur mesaj'));
-  await tick(10);
+  await settle(a.state);
   check('După un mesaj rămâne o alarmă de flush programată', typeof storage._alarm === 'number',
     `alarm=${storage._alarm}`);
 }

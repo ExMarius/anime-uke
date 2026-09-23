@@ -16,7 +16,7 @@
 // Rulează: node tests/scripts-health.mjs
 // =====================================================================
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,7 +67,7 @@ for (const f of jsFiles) {
 // ------------------------------------------------- relay: fișiere invocate
 {
   const cmd = readFileSync(join(ROOT, 'cf-relay/cmd.sh'), 'utf8');
-  for (const f of ['deploy.sh', 'scripts/audit-live.mjs', 'scripts/usage.mjs']) {
+  for (const f of ['deploy.sh', 'scripts/audit-live.mjs', 'scripts/usage.mjs', 'cf-relay/chat-canar.mjs']) {
     check(`relay-ul invocă ${f}, iar fișierul există`,
       cmd.includes(f) && existsSync(join(ROOT, f)),
       cmd.includes(f) ? 'lipsește din repo' : 'nu mai e invocat');
@@ -92,11 +92,85 @@ for (const f of jsFiles) {
   // problemă de producție, deși e doar verificarea rămasă în urmă.
   const cmd = readFileSync(join(ROOT, 'cf-relay/cmd.sh'), 'utf8');
   const routes = readFileSync(join(ROOT, 'src/router.js'), 'utf8');
-  const probate = [...new Set([...cmd.matchAll(/\$B(\/api\/[a-z0-9\/\-]*)/gi)].map((m) => m[1]))]
-    .filter((p) => !p.includes('/:'));
+  // Și scripturile .mjs din cf-relay chem rute (canarul de chat: register/login).
+  // Fără ele, o rută greșită (ex. /api/register în loc de /api/auth/register)
+  // ar da 401 abia în producție, pe runner — exact ce s-a întâmplat o dată.
+  const mjs = readdirSync(join(ROOT, 'cf-relay'))
+    .filter((f) => f.endsWith('.mjs'))
+    .map((f) => readFileSync(join(ROOT, 'cf-relay', f), 'utf8'))
+    .join('\n');
+  const probate = [...new Set([
+    ...[...cmd.matchAll(/\$B(\/api\/[a-z0-9\/\-]*)/gi)].map((m) => m[1]),
+    ...[...mjs.matchAll(/['"`](\/api\/[a-z0-9\/\-]*)['"`]/gi)].map((m) => m[1]),
+  ])].filter((p) => !p.includes('/:'));
   const necunoscute = probate.filter((p) => !routes.includes(`'${p}'`));
   check(`rutele de API probate de relay sunt înregistrate (${probate.length} rute)`,
     necunoscute.length === 0, necunoscute.join(', '));
+}
+
+// ------------------------------------- INSERT-urile au cate un parametru pe coloana
+{
+  // Bug-ul de producție din 2026-09-23: `INSERT INTO chat_messages (...11 coloane...)`
+  // cu doar 10 `?`. D1 a răspuns „10 values for 11 columns” la fiecare flush,
+  // eroarea era prinsă și logată, iar chatul nu salva NIMIC — o săptămână întreagă.
+  // Un test care doar citește codul prinde asta în 50 ms, înainte de deploy.
+  const argsTopLevel = (tuple) => {
+    const inner = tuple.slice(1, -1);
+    const out = [];
+    let depth = 0, quote = null, cur = '';
+    for (const ch of inner) {
+      if (quote) { cur += ch; if (ch === quote) quote = null; continue; }
+      if (ch === "'" || ch === '"') { quote = ch; cur += ch; continue; }
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+
+  let verificate = 0;
+  const rele = [];
+  const jsFiles2 = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(join(ROOT, dir))) {
+      if (e === 'node_modules' || e.startsWith('.')) continue;
+      const rel = join(dir, e);
+      if (statSync(join(ROOT, rel)).isDirectory()) walk(rel);
+      else if (rel.endsWith('.js')) jsFiles2.push(rel);
+    }
+  };
+  walk('src');
+  walk('worker-do/src');
+
+  for (const f of jsFiles2) {
+    const code = readFileSync(join(ROOT, f), 'utf8');
+    for (const lit of code.matchAll(/`([^`]*)`/g)) {
+      const sql = lit[1];
+      if (!/INSERT\s+(?:OR\s+\w+\s+)?INTO/i.test(sql)) continue;
+      const m = sql.match(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+([\w.]+)\s*\(([^)]*)\)\s*VALUES\s*([\s\S]*)$/i);
+      if (!m) continue;
+      const cols = m[2].split(',').map((x) => x.trim()).filter(Boolean).length;
+      const body = m[3].trim();
+      let depth = 0, end = -1, quote = null;
+      for (let i = 0; i < body.length; i++) {
+        const ch = body[i];
+        if (quote) { if (ch === quote) quote = null; continue; }
+        if (ch === "'" || ch === '"') { quote = ch; continue; }
+        if (ch === '(') depth++;
+        else if (ch === ')') { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end < 0) continue;
+      const args = argsTopLevel(body.slice(0, end + 1));
+      verificate++;
+      if (args.length !== cols) {
+        rele.push(`${f}: ${m[1]} are ${cols} coloane dar ${args.length} valori`);
+      }
+    }
+  }
+  check(`INSERT-urile au un parametru pe coloana (${verificate} verificate)`,
+    rele.length === 0 && verificate > 20, rele.join(' · '));
 }
 
 console.log(`\nREZULTAT: ${passed} trecute, ${failed} esuate`);

@@ -67,7 +67,9 @@ scripts/
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
-├── dom-smoke.mjs           paginile în jsdom (local)           ├─ ./test.sh le rulează pe toate
+├── dom-smoke.mjs           paginile în jsdom (local)           │
+├── chat-persist.mjs        chatul supraviețuiește evicției DO  │
+├── chat-d1.mjs             mesajul ajunge chiar în tabelul D1  ├─ ./test.sh le rulează pe toate
 └── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
     (verificarea pe producție = scripts/audit-live.mjs, prin relay; vechiul
     prod-smoke.mjs a fost șters — descria site-ul privat cu invitații.)
@@ -174,9 +176,20 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
    Headerele de securitate pentru căile ocolite vin din `public/_headers` (identice cu
    `SECURITY_HEADERS` din worker — `tests/e2e.mjs` verifică paritatea la fiecare rulare).
    `deploy.sh` refuză publicarea fără `_routes.json`.
-1. **Chat-ul nu scrie în D1 la fiecare mesaj.** Mesajele se buffer-izează în `ChatDO` și se scriu în loturi (la 10 mesaje sau 15 secunde prin alarmă). ~10× mai puține scrieri.
+1. **Chat-ul nu scrie în D1 la fiecare mesaj, dar nici nu pierde nimic.** Fiecare mesaj se scrie instant în
+   **storage-ul durabil al DO-ului** (`state.storage.put` — operațiile de storage nu sunt cereri facturate),
+   iar arhivarea în D1 se face în loturi, la 10 mesaje sau prin alarma de 15 secunde. Bufferul trăiește în
+   storage, nu în memorie: la evicția DO-ului (WebSocket Hibernation) mesajele sunt tot acolo, iar alarma le
+   scrie dintr-o instanță nouă. ~10× mai puține scrieri în D1, zero mesaje pierdute.
+   *De ce a fost nevoie de asta:* varianta veche ținea bufferul în memorie, iar în producție DO-ul e evacuat
+   între mesaje — deci pe un site mic nimic nu ajungea în D1, deși local (miniflare, fără evicție) toate
+   testele treceau. Vezi `tests/chat-persist.mjs` și secțiunea „canar" din `cf-relay/cmd.sh`.
+   *(Al doilea bug, ascuns în spatele primului: `INSERT INTO chat_messages` avea 11 coloane și doar 10
+   parametri, deci D1 refuza fiecare scriere — acum e prins static de `tests/scripts-health.mjs` și
+   „pe viu" de `tests/chat-d1.mjs`, care citește tabelul din fișierul SQLite local.)*
 2. **Contorul de vizualizări nu scrie în D1 la fiecare view.** `StatsDO` acumulează și scrie o dată la 20 views / 30 secunde, cu deduplicare pe 10 minute. ~20× mai puține scrieri.
-3. **Istoricul chat-ului se citește din D1 o dată pe viața DO-ului**, nu la fiecare conectare (v1 făcea un `SELECT` la fiecare socket nou).
+3. **Istoricul chat-ului vine din storage-ul DO-ului** (ultimele 30 de mesaje, o listare de chei — milisecunde,
+   zero rânduri D1); D1 e consultat doar pentru completarea arhivei mai vechi. v1 făcea un `SELECT` la fiecare socket nou.
 4. **Rate limiting doar pe rute sensibile** (login, register, watch, admin). Fiecare verificare costă 1 request DO, deci GET-urile publice nu trec pe acolo.
 5. **Endpoint-uri combinate**: `/api/series/:id` returnează seria *și* episoadele ei
    într-un singur apel; `/api/home` aduce TOATĂ prima pagină (catalog + topuri + ultimele
@@ -341,8 +354,11 @@ merită atinse:
 
 ## Testare
 
-- `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/e2e.mjs`, `tests/dom-smoke.mjs`,
-  `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
+- `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
+  `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
+  `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
+- `node cf-relay/chat-canar.mjs [url]`: canarul de chat — cont temporar, un mesaj + un sticker pe chatul viu,
+  apoi citirea lor din D1 și curățenie totală. Rulează automat pe runner, în secțiunea 17 din `cf-relay/cmd.sh`.
 - Pe producție **nu rula e2e.mjs** — zecile de înregistrări rapide declanșează protecția anti-brute-force
   de la marginea Cloudflare. Verificarea pe live = `audit-live.mjs` prin relay (mai jos).
 - `node scripts/audit-live.mjs [baseUrl]`: audit read-only — statusuri pagini, SEO (title/description/canonical/og/
@@ -355,7 +371,9 @@ merită atinse:
 
 ## Întreținere
 
-Istoricul chat-ului crește nelimitat. Rulează periodic:
+Istoricul chat-ului se curăță singur: `ChatDO` păstrează doar ultimele 500 de mesaje în arhivă (șterge rar,
+la fiecare 200 de mesaje scrise — contorul stă tot în storage, ca să nu se repete după evicție). Pentru o
+curățenie manuală mai agresivă:
 
 ```sql
 DELETE FROM chat_messages WHERE id NOT IN
