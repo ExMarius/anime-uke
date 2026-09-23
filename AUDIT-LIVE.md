@@ -269,6 +269,25 @@ Pe live, dovada o dă **canarul** din secțiunea 17 a relay-ului: cont temporar,
 un mesaj normal + un sticker scrise pe chatul real, așteptate 20 de secunde (o
 alarmă întreagă), apoi citite din D1 și șterse.
 
+**Rezultatul canarului, pe producție** (rularea relay din 2026-09-23, commit `1dff223`):
+
+```
+✅ cont temporar creat: canar74bc674a (id 23)
+✅ WebSocket deschis pe chat-ul live
+✅ mesajul a fost difuzat live        ✅ stickerul a fost difuzat live
+   … aștept 20s (fereastra de flush)
+✅ istoricul de la reconectare conține ambele (30 mesaje)
+dovezi în D1 (rândurile canarului, citite direct din baza de date):
+   id 31  canar-2026-09-23T21:43:21   2026-09-23 21:43:23
+   id 32  [sticker:naruto]            2026-09-23 21:43:25
+mesajul e ÎN D1: da        stickerul e ÎN D1: da
+după curățenie: 30 rânduri în chat_messages, 3 conturi
+```
+
+Cu o săptămână înainte, aceleași două mesaje nu lăsau **nimic** în tabel
+(`0 în ultimele 24h`), iar cel mai recent rând era din 14 septembrie. Deploy-ul
+care a urcat fix-ul: worker `anime-uke-do` republicat + Pages `?v=1dff223`.
+
 ---
 
 ## 4. Cum se re-rulează auditul

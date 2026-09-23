@@ -361,6 +361,9 @@ export class ChatDO {
       console.error('ChatDO flush esuat (mesajele rămân în bufferul durabil):', e?.message || e);
       this.buffered = map.size;
       await this.enforceCap();
+      // Reprogramam alarma: daca D1 cadea si flush-ul pornit de un mesaj
+      // (nu de alarma) a esuat, mesajele ar astepta urmatorul eveniment.
+      await this.scheduleFlush();
       return;
     }
 
