@@ -138,14 +138,16 @@ echo "   filtre lipicioase (cat-filters sticky): $(grep -c 'position:sticky\|pos
 curl -s "$B/assets/js/core.js?v=$VC2" -o /tmp/u-core.js
 echo "   core.js: butonul „înapoi sus” prezent: $(grep -c 'to-top' /tmp/u-core.js) · rAF folosit: $(grep -c 'requestAnimationFrame' /tmp/u-core.js)"
 curl -s "$B/assets/js/page-index.js?v=$VC2" -o /tmp/u-idx.js
-echo "   page-index.js: nota pe card=$(grep -c 'badge-rating' /tmp/u-idx.js) · minute văzute=$(grep -c 'min văzute' /tmp/u-idx.js) · scurtatura /= $(grep -cF "key !== '/'" /tmp/u-idx.js)"
+# Esbuild scrie non-ASCII escapat („min v\u0103zute") și normalizează
+# ghilimelele, deci verificările de mai jos caută numai formei ASCII sigure.
+echo "   page-index.js: nota pe card=$(grep -c 'badge-rating' /tmp/u-idx.js) · minute văzute=$(grep -c 'min v' /tmp/u-idx.js) · scurtatura /= $(grep -c '!=="/"' /tmp/u-idx.js)"
 echo "   html: <kbd> scurtătura = $(curl -s "$B/" | grep -c 'search__kbd')"
 # Fără node inline aici: ghilimelele amestecate într-un $( ) lung sunt o
 # capcană pentru următoarea persoană care editează scriptul (a mușcat deja).
-NOTA_RAW="$(curl -s "$B/api/series?per_page=1" | head -c 500)"
+NOTA_RAW="$(curl -s "$B/api/series?per_page=1")"
 case "$NOTA_RAW" in
   *'"rating_avg"'*'"rating_count"'*) echo "   /api/series aduce nota pe randul seriei: da" ;;
-  *) echo "   /api/series aduce nota pe randul seriei: NU — $NOTA_RAW" ;;
+  *) echo "   /api/series aduce nota pe randul seriei: NU — ${NOTA_RAW:0:160}" ;;
 esac
 
 

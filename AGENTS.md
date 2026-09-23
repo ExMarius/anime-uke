@@ -13,8 +13,9 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 574 · dom 163 · theme-cache 7 ·
-  top-cache 17 · counters 16 · theme-flow PASS · pixel-teme 8 · plafoane 13), deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 23 · e2e 576 · dom 169 ·
+  theme-cache 7 · top-cache 17 · counters 16 · theme-flow PASS · pixel-teme 8 · plafoane 13),
+  deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
   (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
@@ -115,6 +116,9 @@ cat cf-relay/last-output.txt
 | Clasamentul „cele mai bine notate" arată medii vechi | o cale nouă scrie în `series_ratings` fără să resincronizeze contoarele | folosește `saveRating()` din `src/lib/ratings.js`; `tests/counters.mjs` verifică forma batch-ului |
 | `pulse` arată 0 serii / 0 membri | contoarele din `site_meta` nu se întrețin pe o cale de scriere nouă | contoarele se bat cu `bumpMetaStmt` (serii/episoade: `admin/*`; conturi: `register.js`; vizualizări: `StatsDO.flush`) |
 | Testele e2e nu văd o vizionare în „top săptămânal" | topul e ținut o oră în `leaderboard_cache` | rulați cu `TOP_CACHE_MINUTES=0` (o face `test.sh`/`dev.sh`); cache-ul propriu-zis e testat în `tests/top-cache.mjs` |
+| Deploy-ul de pe runner nu pornește, deși local totul e verde | sintaxă invalidă în `cf-relay/cmd.sh` (ex. o ghilimea tipografică `"` care închide un șir bash deschis cu `„`) | `node tests/scripts-health.mjs` rulează `bash -n` pe toate scripturile; e prima suită din `test.sh` |
+| O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
+| Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |
 
 ## 5. Modelul de date pe care trebuie să-l respecți
 
@@ -209,6 +213,18 @@ cele două versiuni. Acum e o singură linie, testată împreună:
    „anterior" a fost reparată — butoanele pornesc `disabled` în HTML).
 4. **De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke`
    → Settings → Runtime → **Fail open** (la epuizarea cotei, catalogul static rămâne vizibil).
+
+---
+
+### Aspect: runda de UX (2026-09-23)
+
+Prima rundă din „mai fain la site" (aspect → funcționalități → viteză). Toate
+schimbările sunt gratuite în buget: zero cereri noi, zero imagini noi, zero
+biblioteci. Nota pe carduri vine din coloanele denormalizate ale seriei (0028),
+deci nu costă o cerere per card; „Continuă vizionarea" folosește `ep_duration`
+din același rând de serie și scrie minutele reale când durata lipsește;
+filtrele de catalog sunt lipicioase sub navbar; `initToTop()` din `core.js`
+adaugă butonul „înapoi sus" pe toate paginile; `/` sare în căutare.
 
 ---
 

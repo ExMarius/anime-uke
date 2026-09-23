@@ -13,6 +13,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 4 (fix-uri verificare totală, build `1a11f03`) | ✅ 168 · 🟡 0 · 🔴 0 | CSP per-directivă, HSTS pe API, rute moarte scoase — curat |
 | 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 | 6 (scara 1000×1000, migrarea 0028, build `65b57e7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | o vizită: ~230.000 → ~64 rânduri citite; planurile de execuție confirmate pe D1-ul de producție |
+| 7 (aspect, build `9f8606a`) | vezi §1f | nota pe carduri, progres la continuare, filtre lipicioase, „înapoi sus", scurtatura `/` |
 
 ---
 
@@ -183,6 +184,30 @@ Teste noi: `tests/top-cache.mjs` (17 — cache-ul topului: hit, miss, expirare, 
 degradare când D1 pică) și `tests/counters.mjs` (16 — maparea contoarelor pe `pulse` și forma
 batch-ului care resincronizează media), plus în e2e verificarea că media denormalizată din
 clasament e identică cu cea calculată live din note.
+
+---
+
+## 1f. Runda 7 (2026-09-23): aspect (nota pe carduri, progres, filtre lipicioase)
+
+Rundă de UX, cu cost zero în buget. Verificată în relay (secțiunea 15 din
+`cf-relay/cmd.sh`), pe CSS-ul **purjat și minificat** care ajunge la utilizator —
+nu pe sursă — pentru că PurgeCSS e cel care poate șterge o clasă nouă:
+
+| Ce s-a adăugat | Dovada pe live |
+|---|---|
+| nota comunității pe carduri (`★ 8.7`, doar seriile cu voturi) | `.badge-rating` prezent în CSS-ul publicat; `/api/series` întoarce `rating_avg` + `rating_count` |
+| bară de progres + procent/min min văzute la „Continuă vizionarea" | `.continue-card__prog` în CSS; bundle-ul conține șirul (escapat de esbuild: `min v\u0103zute`) |
+| filtre de catalog lipicioase sub navbar | `position: sticky` în CSS-ul publicat |
+| buton „înapoi sus" pe toate paginile | `to-top` în `core.js` din producție + `requestAnimationFrame` |
+| scurtătura `/` pentru căutare | `<kbd class="search__kbd">` în HTML-ul live + `!=="/"` în bundle |
+
+Teste: dom-smoke 163 → 169 (nota apare exact pe cardurile cu voturi, butonul
+pornit ascuns, cardurile de continuare spun unde ai rămas) și e2e 574 → 576
+(nota în catalog, `ep_duration` în `/api/continue`). În plus, `test.sh` începe
+acum cu `tests/scripts-health.mjs` (23 de verificări: `bash -n` pe toate
+scripturile, `node --check` pe `scripts/`+`tests/`, rutele probate de relay
+există, fără ghilimele tipografice nepereche) — garda asta a prins în timpul
+lucrului o eroare de sintaxă în `cmd.sh` care ar fi picat deploy-ul pe runner.
 
 ---
 

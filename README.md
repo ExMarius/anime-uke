@@ -117,7 +117,7 @@ npm install                     # Node 22+
 cp .dev.vars.example .dev.vars  # JWT_SECRET local
 npm run dev                     # ./dev.sh → http://localhost:8788 (aplică migrările locale)
 npm run seed                    # opțional: catalog de demo (vezi antetul scripts/seed.mjs)
-npm test                        # ./test.sh: e2e + dom + teme + plafoane, pe o bază curată (~1 min)
+npm test                        # ./test.sh: sănătatea scripturilor + e2e + dom + teme + plafoane (~1 min)
 npm run usage                   # consumul de azi din cotele gratuite (token + permisiune de analytics)
 ```
 
@@ -193,6 +193,21 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
     înlocuiește „no-cache" cu `immutable` 1 an pentru JS/CSS (toate referințele din HTML
     poartă `?v=<commit>`, iar `page-*.js` sunt bundle-uite). Zero revalidări, zero cereri
     care să ajungă în worker.
+
+---
+
+## Cum arată site-ul (runda de aspect, 2026-09-23)
+
+Detalii care fac diferența la folosire zilnică, toate cu cost zero în buget
+(zero cereri noi, zero imagini noi, zero biblioteci):
+
+| Unde | Ce vezi | De ce |
+|---|---|---|
+| Cardurile de serie | **★ 8.7** lângă gen și an | nota vine în același răspuns de catalog (coloane denormalizate pe serie); apare doar dacă seria are voturi |
+| „Continuă vizionarea" | bară de progres peste copertă + `40%` sau `12 min văzute` | durata vine din serie; fără durată completată scriem minutele reale, nu un procent inventat. `✓ Văzut` (verde) după pragul de 15 minute |
+| Catalogul | filtrele (gen/status/sortare) rămân lipite sub navbar | la 1000 de serii nu mai urci până sus ca să schimbi genul; pe telefon rămân în flux |
+| Orice pagină | buton **↑ înapoi sus** după două ecrane derulate | ascultător pasiv + rAF, deci nu încarcă derularea; ascuns pe paginile scurte |
+| Căutarea | scurtătura **`/`** (scrie și sare în câmp), **Esc** golește | ca la GitHub/YouTube; indicată de un `<kbd>` vizibil doar pe desktop |
 
 ---
 
