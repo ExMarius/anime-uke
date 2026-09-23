@@ -1375,6 +1375,59 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 /* --- „acum 2 ore” pe cardurile de continuare ------------------------- */
 .continue-card__ago { font-size: .68rem; color: var(--dim-2); font-style: italic; }
 
+/* --- nota comunitatii pe card (★ 8.7) --------------------------------- */
+.badge-rating {
+  display: inline-flex; align-items: center; gap: .2rem;
+  padding: .1rem .45rem; border-radius: 99px;
+  background: rgba(251, 191, 36, .12);
+  border: 1px solid rgba(251, 191, 36, .34);
+  color: var(--warn); font-weight: 800; font-size: .74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- bara de progres de pe cardurile „Continua vizionarea" ------------ */
+.continue-card__art { position: relative; }
+.continue-card__prog {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: rgba(8, 4, 6, .72);
+}
+.continue-card__prog > i {
+  display: block; height: 100%; background: var(--accent, #DC143C);
+  box-shadow: 0 0 12px -2px var(--accent-glow, rgba(220,20,60,.38));
+}
+.continue-card__prog > i.is-done { background: var(--ok, #34d399); box-shadow: none; }
+.continue-card__ago { font-variant-numeric: tabular-nums; }
+
+/* --- „inapoi sus" ------------------------------------------------------ */
+.to-top {
+  position: fixed; z-index: 45; left: 1.15rem; bottom: 1.15rem;
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(18, 11, 14, .88);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--text); font-size: 1.15rem; font-weight: 800; line-height: 1;
+  box-shadow: 0 14px 34px -14px rgba(0,0,0,.9);
+  animation: toTopIn .22s cubic-bezier(.2,.8,.3,1);
+}
+.to-top:hover { border-color: var(--accent); color: var(--accent-hi); transform: translateY(-2px); }
+@keyframes toTopIn { from { opacity: 0; transform: translateY(10px) scale(.92); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) {
+  .to-top { width: 40px; height: 40px; left: .8rem; bottom: .8rem; }
+}
+
+/* --- scurtatura „/" din caseta de cautare ----------------------------- */
+.search__kbd {
+  position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);
+  min-width: 1.5rem; padding: .1rem .35rem; border-radius: 6px;
+  border: 1px solid var(--line-soft); background: rgba(255,255,255,.05);
+  color: var(--dim-2); font-size: .72rem; font-weight: 700; text-align: center;
+  pointer-events: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.search input { padding-right: 2.6rem; }
+.search:focus-within .search__kbd { opacity: 0; }
+/* Fara tastatura (touch), indicatia nu are sens. */
+@media (hover: none) { .search__kbd { display: none; } }
+
 /* --- scroll reveal ---------------------------------------------------- */
 .rv { opacity: 0; transform: translateY(14px); }
 .rv.in {
@@ -1572,8 +1625,24 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   align-items: center;
   flex-wrap: wrap;
   margin: 0 0 .9rem;
+  /* Lipicioasa sub navbar: la un catalog de 1000 de serii, filtrele ieseau din
+     ecran dupa primul rand de carduri, iar utilizatorul trebuia sa deruleze
+     sus ca sa schimbe genul. z-index peste carduri, sub navbar si sub
+     sugestiile de cautare (60). */
+  position: sticky; top: calc(var(--nav-h) + .35rem); z-index: 30;
+  padding: .5rem .6rem;
+  border-radius: 99px;
+  background: rgba(12, 7, 9, .82);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid var(--line-soft);
 }
+.cat-filters { box-shadow: 0 10px 30px -20px rgba(0,0,0,.95); }
 .cat-filters .select { min-width: 160px; }
+/* Pe ecrane mici bara lipicioasa ar acoperi prea mult: ramane in flux. */
+@media (max-width: 640px) {
+  .cat-filters { position: static; border-radius: var(--r-md); }
+}
 
 /* Badge „RO SUB" — eticheta de nișă a site-urilor românești */
 .pill-ro {

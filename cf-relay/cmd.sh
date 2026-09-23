@@ -130,6 +130,25 @@ plan "pulse"          "SELECT key, value FROM site_meta WHERE key IN ('series_to
 SCANS="$($W d1 execute DB --remote --command "EXPLAIN QUERY PLAN SELECT e.series_id FROM watch_progress w JOIN episodes e ON e.id = w.episode_id WHERE w.updated_at >= datetime('now','-7 days') GROUP BY e.series_id LIMIT 5" --json 2>/dev/null | grep -c 'SCAN watch_progress')"
 echo "   scanări de watch_progress în topul săptămânal (trebuie 0): $SCANS"
 
+echo "── 15. aspect: regulile noi trec de PurgeCSS și ajung în bundle-ul live"
+VC2="$(curl -s "$B/" | grep -oE '[a-z0-9.-]+\.(css|js)\?v=[A-Za-z0-9._-]+' | head -1 | cut -d= -f2)"
+curl -s "$B/assets/css/style.css?v=$VC2" -o /tmp/ux.css
+echo "   css: badge-rating=$(grep -c 'badge-rating' /tmp/ux.css) to-top=$(grep -c '\.to-top' /tmp/ux.css) prog=$(grep -c 'continue-card__prog' /tmp/ux.css) kbd=$(grep -c 'search__kbd' /tmp/ux.css) (toate ≥1)"
+echo "   filtre lipicioase (cat-filters sticky): $(grep -c 'position:sticky\|position: sticky' /tmp/ux.css) ocurențe de sticky în CSS"
+curl -s "$B/assets/js/core.js?v=$VC2" -o /tmp/u-core.js
+echo "   core.js: butonul „înapoi sus” prezent: $(grep -c 'to-top' /tmp/u-core.js) · rAF folosit: $(grep -c 'requestAnimationFrame' /tmp/u-core.js)"
+curl -s "$B/assets/js/page-index.js?v=$VC2" -o /tmp/u-idx.js
+echo "   page-index.js: nota pe card=$(grep -c 'badge-rating' /tmp/u-idx.js) · minute văzute=$(grep -c 'min văzute' /tmp/u-idx.js) · scurtatura /= $(grep -cF "key !== '/'" /tmp/u-idx.js)"
+echo "   html: <kbd> scurtătura = $(curl -s "$B/" | grep -c 'search__kbd')"
+# Fără node inline aici: ghilimelele amestecate într-un $( ) lung sunt o
+# capcană pentru următoarea persoană care editează scriptul (a mușcat deja).
+NOTA_RAW="$(curl -s "$B/api/series?per_page=1" | head -c 500)"
+case "$NOTA_RAW" in
+  *'"rating_avg"'*'"rating_count"'*) echo "   /api/series aduce nota pe randul seriei: da" ;;
+  *) echo "   /api/series aduce nota pe randul seriei: NU — $NOTA_RAW" ;;
+esac
+
+
 echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"

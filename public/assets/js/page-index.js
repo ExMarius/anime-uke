@@ -136,6 +136,17 @@ function seriesCard(s, idx = 0) {
     m.textContent = bits.join(' · ');
     meta.appendChild(m);
   }
+  // Nota comunitatii, cand exista: „★ 8.7" + numarul de voturi in tooltip.
+  // Vine in acelasi raspuns de catalog (coloane denormalizate pe serie), deci
+  // nu costa o cerere in plus — vezi comentariul din src/routes/api/series.js.
+  const votes = Number(s.rating_count) || 0;
+  if (votes > 0) {
+    const r = document.createElement('span');
+    r.className = 'badge-rating';
+    r.textContent = `★ ${(Number(s.rating_avg) || 0).toFixed(1)}`;
+    r.title = `${votes} ${votes === 1 ? 'vot' : 'voturi'} de la comunitate`;
+    meta.appendChild(r);
+  }
   body.appendChild(meta);
 
   if (s.description) {
@@ -569,6 +580,27 @@ async function renderContinue() {
     } else {
       art.appendChild(genPoster(it.series_title));
     }
+
+    // Bara de progres peste arta, ca la platformele de streaming: cat la suta
+    // din episod s-a vazut. Durata vine din serie (ep_duration, in minute);
+    // daca nu e completata, aratam „Ai inceput" in loc de un procent inventat.
+    const done = it.seconds >= WATCH_DONE_SECONDS;
+    const durMin = Number(it.ep_duration) || 0;
+    const totalSec = durMin > 0 ? durMin * 60 : 0;
+    // Fara durata completata pe serie nu inventam un procent: scriem cate
+    // minute s-au acumulat efectiv (valoarea vine din watch_progress).
+    const watchedMin = Math.max(1, Math.round(it.seconds / 60));
+    const pct = done ? 100 : (totalSec > 0 ? Math.min(99, Math.max(3, Math.round((it.seconds / totalSec) * 100))) : 0);
+    if (pct > 0) {
+      const prog = document.createElement('span');
+      prog.className = 'continue-card__prog';
+      const fill = document.createElement('i');
+      fill.style.width = `${pct}%`;
+      if (done) fill.className = 'is-done';
+      prog.appendChild(fill);
+      prog.title = done ? 'Episod terminat' : `Ai văzut ~${pct}% din episod`;
+      art.appendChild(prog);
+    }
     a.appendChild(art);
 
     const meta = document.createElement('div');
@@ -585,13 +617,20 @@ async function renderContinue() {
     if (it.updated_at) {
       const t3 = document.createElement('span');
       t3.className = 'continue-card__ago';
-      t3.textContent = relativeTime(it.updated_at);
+      const stare = done ? '✓ Văzut' : (pct > 0 ? `${pct}%` : `${watchedMin} min văzute`);
+      t3.textContent = `${stare} · ${relativeTime(it.updated_at)}`;
       meta.appendChild(t3);
     }
     a.appendChild(meta);
     row.appendChild(a);
   }
 }
+
+// Acelasi prag ca pe server (WATCH_THRESHOLD_SECONDS din
+// src/routes/api/progress.js): sub el, punctele si marcajul „vizionat" nu se
+// acorda. Pagina il foloseste doar ca sa stie cum arata cardul din
+// „Continuă vizionarea" — decizia rămâne a serverului.
+const WATCH_DONE_SECONDS = 15 * 60;
 
 skeletons(10);
 // nav-ul si lista merg in paralel; chat-ul (WebSocket) doar cand pagina e
@@ -764,6 +803,32 @@ document.getElementById('search-input')?.addEventListener('keydown', (e) => {
   } else if (e.key === 'Escape') {
     sugClose();
   }
+});
+
+// Escape curata cautarea cand nu e nimic de inchis deasupra (comportamentul
+// de bara de adrese, pe care utilizatorii il asteapta instinctiv).
+document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+  const box = sugBox();
+  if (e.key !== 'Escape' || (box && !box.hidden)) return;
+  const input = e.currentTarget;
+  if (!input.value) return;
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Scurtatura „/": sare in cautare de oriunde din pagina (ca pe GitHub/YouTube).
+// Ignorata cand scrii deja intr-un camp sau cand ai modificatori — altfel ar
+// fura tastele din chat, din formulare sau din comenzile browserului.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const el = document.activeElement;
+  const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable || el.tagName === 'SELECT');
+  if (typing) return;
+  const input = document.getElementById('search-input');
+  if (!input) return;
+  e.preventDefault();
+  input.focus();
+  input.select?.();
 });
 
 document.addEventListener('click', (e) => {

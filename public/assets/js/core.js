@@ -786,6 +786,49 @@ try {
 try { initAnimBg(); } catch { /* fara canvas — ramane gradientul static */ }
 
 // ---------------------------------------------------------------------
+// BUTONUL „INAPOI SUS": apare dupa ce ai coborat doua ecrane, pe orice
+// pagina. Fara el, un catalog de 1000 de serii se rasfoieste urat pe
+// telefon. Ascultatorul e passiv si lucreaza doar intr-un rAF, deci nu
+// incurca scroll-ul; pe paginile scurte butonul nu se arata deloc.
+// ---------------------------------------------------------------------
+export function initToTop() {
+  if (typeof document === 'undefined' || !document.body) return null;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'to-top';
+  btn.className = 'to-top';
+  btn.hidden = true;
+  btn.setAttribute('aria-label', 'Înapoi sus');
+  btn.textContent = '↑';
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Focusul ramane pe un element care nu mai e vizibil dupa derulare: il
+    // mutam pe inceputul paginii, ca navigarea cu tastatura sa nu se rupa.
+    document.getElementById('nav')?.scrollIntoView?.({ block: 'start' });
+  });
+  document.body.appendChild(btn);
+
+  let scheduled = false;
+  const apply = () => {
+    scheduled = false;
+    const show = window.scrollY > 700;
+    if (show === btn.hidden) btn.hidden = !show;
+  };
+  window.addEventListener('scroll', () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(apply);
+  }, { passive: true });
+  apply();
+  return btn;
+}
+
+// Fiecare pagina care incarca core.js primeste butonul; paginile care nu au
+// nevoie (autentificare, admin scurt) il vor tine ascuns singure.
+try { initToTop(); } catch { /* fara scroll-to-top — pagina merge mai departe */ }
+
+// ---------------------------------------------------------------------
 // GARDA ANTI-CACHE: daca tab-ul ramane deschis peste un deploy, shell-ul
 // vechi + API-ul nou inseamna butoane/teme care „nu merg" (codul vechi nu
 // cunoaste temele noi). La revenirea in tab — cel mult o data pe minut —

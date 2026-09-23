@@ -1395,6 +1395,16 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   const ser = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
   check('Ruta seriei expune media, numarul si nota proprie', ser.data?.rating_average === 10 && ser.data?.rating_count === 1 && ser.data?.my_rating === 10, JSON.stringify({ a: ser.data?.rating_average, n: ser.data?.rating_count, m: ser.data?.my_rating }));
 
+  // Catalogul (si /api/home care il foloseste) aduce nota denormalizata, ca
+  // cardurile sa poata scrie „★ 10.0" fara o cerere per card.
+  {
+    const list = await req(j, 'GET', '/api/series?per_page=60');
+    const row = (list.data?.series || []).find((r) => r.id === globalThis.seriesId);
+    check('Catalogul aduce nota si numarul de voturi pe randul seriei',
+      row && Number(row.rating_avg) === 10 && Number(row.rating_count) === 1,
+      JSON.stringify({ a: row?.rating_avg, n: row?.rating_count }));
+  }
+
   // --- comentarii: postare, spoiler pastrat ca text, minim de lungime,
   //     stergere proprie vs a altcuiva
   const c1 = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Primul comentariu [spoiler]Zoro iar moare[/spoiler]' });
@@ -1420,6 +1430,10 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   const hit = (cont.data?.items || []).find((it) => it.episode_id === globalThis.epId);
   check('Rândul „Continua vizionarea" contine episodul cu progres', !!hit && hit.seconds >= 900, JSON.stringify(cont.data?.items?.[0]));
   check('Itemul are serie si numar de episod pentru card', !!hit?.series_title && Number.isInteger(hit?.episode_number), JSON.stringify(hit)?.slice(0, 120));
+  // Cardul deseneaza bara de progres din durata seriei: daca durata nu vine
+  // in raspuns, pagina ar scrie „N min vazute" in loc de procent (deci am
+  // pierde bara pe toate seriile cu durata completata).
+  check('Raspunsul aduce durata seriei pentru bara de progres', 'ep_duration' in (hit || {}), JSON.stringify(hit)?.slice(0, 120));
 }
 
 console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ===');

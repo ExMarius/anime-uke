@@ -278,6 +278,58 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Bannerul ramane ascuns cand catalogul e gol', true);
   }
 
+  // --- aspect: nota pe carduri, butonul „inapoi sus", scurtatura „/"
+  {
+    // Nota comunitatii trebuie sa apara EXACT pe cardurile care au voturi:
+    // numaram din API si comparam cu ce s-a randat (nu depinde de date).
+    const lista = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
+    const rows = lista.series || [];
+    const cuVoturi = rows.filter((r) => Number(r.rating_count) > 0);
+    check('Catalogul aduce nota si numarul de voturi pe fiecare rand',
+      rows.every((r) => 'rating_avg' in r && 'rating_count' in r),
+      `chei: ${Object.keys(rows[0] || {}).join(',')}`);
+    check('Nota are formatul ★ x.x pe cardurile cu voturi',
+      cuVoturi.every((r) => {
+        const card = p.$(`#series-grid .card[href$="id=${r.id}"]`);
+        const b = card?.querySelector('.badge-rating');
+        return b && b.textContent.trim() === `★ ${Number(r.rating_avg).toFixed(1)}`;
+      }),
+      `${cuVoturi.length} carduri cu voturi din ${rows.length}`);
+    check('Cardurile fara voturi nu inventeaza o nota',
+      p.$$('#series-grid .badge-rating').length === cuVoturi.length,
+      `badge-uri=${p.$$('#series-grid .badge-rating').length} voturi=${cuVoturi.length}`);
+
+    // Scurtatura „/" e doar o indicatie vizuala pe desktop.
+    check('Caseta de cautare arata scurtatura „/"', p.$('.search__kbd')?.textContent === '/', p.$('.search__kbd')?.outerHTML?.slice(0, 60));
+
+    // Butonul „inapoi sus": exista pe pagina, dar e ascuns cat timp nu s-a derulat.
+    const top = p.$('#to-top');
+    check('Butonul „inapoi sus" exista si porneste ascuns', !!top && top.hidden === true, top ? `hidden=${top.hidden}` : 'lipseste #to-top');
+
+    // „Continua vizionarea": fiecare card spune unde a ramas utilizatorul —
+    // procent (cand seria are durata completata) sau minutele vazute, fara sa
+    // inventeze un procent. Verificarea e conditionala: randul depinde de
+    // progresul contului, care poate lipsi pe o baza proaspat seed-uita.
+    const cards = p.$$('#continue-row .continue-card');
+    if (cards.length) {
+      const areStare = cards.every((c) => {
+        const txt = c.querySelector('.continue-card__ago')?.textContent || '';
+        const bar = c.querySelector('.continue-card__prog');
+        const eCorect = txt === '✓ Văzut · ' ? false : /(✓ Văzut|\d+%|\d+ min văzute)/.test(txt);
+        // Bara exista doar cand avem procent (procent ⇒ bara).
+        return eCorect && (bar ? /\d+%|✓/.test(txt) : true);
+      });
+      check('Cardurile „Continua vizionarea" spun unde ai ramas', areStare,
+        cards.slice(0, 2).map((c) => c.textContent.trim().slice(0, 60)).join(' | '));
+      check('Bara de progres are latime setata cand exista', cards.every((c) => {
+        const fill = c.querySelector('.continue-card__prog > i');
+        return !fill || /%$/.test(fill.style.width || '');
+      }), cards.map((c) => c.querySelector('.continue-card__prog > i')?.style.width).join(','));
+    } else {
+      check('Randul „Continua vizionarea" lipseste cand nu exista progres (comportament corect)', true);
+    }
+  }
+
   // cautarea trebuie sa ajunga pe server, nu sa filtreze in browser
   const input = p.$('#search-input');
   input.value = 'zzz_inexistent';

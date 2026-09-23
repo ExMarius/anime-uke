@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          e2e + dom-smoke + theme-cache + top-cache + counters + theme-flow + pixel-teme + plafoane
+#   ./test.sh          scripts-health + e2e + dom-smoke + theme-cache + top-cache +
+#                      counters + theme-flow + pixel-teme + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -86,6 +87,17 @@ stop_server() {
     DEV_PID=""
   fi
 }
+
+# ---------------------------------------------------------------------
+# Faza 0: sănătatea scripturilor. Rulează INAINTE de a porni serverul —
+# prinde o eroare de sintaxă în cmd.sh/deploy.sh în două secunde, nu după
+# un ciclu întreg de deploy picat pe runnerul GitHub.
+# ---------------------------------------------------------------------
+echo "════════ scripts-health (sintaxa scripturilor, fara server) ════════"
+node tests/scripts-health.mjs > /tmp/scripts.log 2>&1
+SCRIPTS_RC=$?
+tail -4 /tmp/scripts.log
+[ "$SCRIPTS_RC" -eq 0 ] || { echo "!! scripts-health a picat:"; cat /tmp/scripts.log; exit 1; }
 
 echo "── reset baza locala ──"
 rm -rf .wrangler/state

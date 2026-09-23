@@ -20,6 +20,13 @@ import { parsePaging, parseQuery, parseSort, sortSql, sortOptions, escapeLike, r
 //   episoade ale seriei. Pentru o serie lunga (One Piece, 1100+ episoade)
 //   asta insemna o scanare de index la fiecare vizualizare a listei.
 //   Coloana se actualizeaza doar cand un admin adauga/sterge un episod.
+//
+// DE CE rating_avg/rating_count SUNT IN LISTA (adăugate 2026-09-23)
+//   Cardurile arată „★ 8.7 (12)" doar dacă nota vine o dată cu catalogul.
+//   Alternativa (o cerere per card) ar fi însemnat 24 de invocări în plus
+//   pentru fiecare vizită — exact ce a scos /api/home. Coloanele sunt
+//   denormalizate pe serie (migrarea 0028), deci vin din ACELAȘI rând citit
+//   oricum: zero rânduri în plus din D1, zero cereri în plus din browser.
 // =====================================================================
 
 // Pragul pana la care numarăm rezultatele unei cautari. Un COUNT(*) exact pe
@@ -71,7 +78,7 @@ export async function onRequestGet(context) {
     const res = await env.DB
       .prepare(
         `SELECT s.id, s.title, s.description, s.cover_image, s.status, s.genre, s.year,
-                s.episode_count, s.created_at
+                s.episode_count, s.rating_avg, s.rating_count, s.created_at
          FROM anime_series s
          ${whereSql}
          ORDER BY ${sortSql(sort)}
