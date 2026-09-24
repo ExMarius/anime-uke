@@ -288,6 +288,12 @@ Cu o săptămână înainte, aceleași două mesaje nu lăsau **nimic** în tabe
 (`0 în ultimele 24h`), iar cel mai recent rând era din 14 septembrie. Deploy-ul
 care a urcat fix-ul: worker `anime-uke-do` republicat + Pages `?v=1dff223`.
 
+**Dovada din viața reală** (rularea relay din 2026-09-24, secțiunea 16):
+proprietarul a scris el însuși un sticker pe chatul live la 18:02, iar baza de
+date îl arăta la 18:24 — `id 35 · mariusuke · [sticker:chopper] · 2026-09-24 18:02:12`,
+singurul rând din ultimele 24 de ore și din ultimele 7 zile (restul tabelelor
+erau deja curățate de canar, care își șterge mesajele după fiecare verificare).
+
 ## 1h. Runda 9 (2026-09-24): funcționalități noi (catalog partajabil, episodul următor, „văzut")
 
 Cerute de proprietar ca pasul 2 din „mai fain la site" (după aspect). Toate cu
