@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ d8ad136
+comanda: cf-relay/cmd.sh @ bc2dce6
 ────────────────────────────────────
 
 [1;35m==> 1/5  Baza de date D1[0m
@@ -14,13 +14,13 @@ comanda: cf-relay/cmd.sh @ d8ad136
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 19.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=d8ad136
+    [0;32m✓[0m assete versionate ?v=bc2dce6
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m assete minificate: 9 fisiere
     [0;32m✓[0m pagini bundle-uite: 10 (chunk-uri comune: 3)
-    [0;32m✓[0m publicat: https://c7d56a97.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://dc70f034.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -29,7 +29,7 @@ comanda: cf-relay/cmd.sh @ d8ad136
 exit deploy: 0
 aștept 60s propagarea…
 
-════════ BUGEte (integrare): commit d8ad136 ════════
+════════ BUGEte (integrare): commit bc2dce6 ════════
 ── 1. asset static: Cache-Control dintr-o singură sursă (fără worker în cale)
 cache-control: public, max-age=31536000, immutable
    (înainte de _routes.json ieșea „no-cache, no-cache” = assetul trecea și prin worker)
@@ -88,7 +88,7 @@ cache-control: public, max-age=31536000, immutable
    profil: use_token=1 (≥1) · temă instant în bundle: auk-theme=0 (≥1)
    head /shop: cache-control: no-store
    head / (html): cache-control: public, max-age=0, must-revalidate
-   ?v= live din /: d8ad136 · din /shop:  (gol = /shop e în spatele login-ului, normal)
+   ?v= live din /: bc2dce6 · din /shop:  (gol = /shop e în spatele login-ului, normal)
 ── 13. poarta admin (economie) + sezon
    GET /api/admin/users anonim → 401 (trebuie 401)
    GET /api/admin/season anonim → 401 (trebuie 401)
@@ -119,7 +119,7 @@ cache-control: public, max-age=31536000, immutable
 
 ── 17. chat: canar end-to-end (mesaj + sticker pe site-ul viu)
      ══ CANAR CHAT (https://anime-uke.pages.dev) ══
-       ✅ cont temporar creat: canar502dde79 (id 30)
+       ✅ cont temporar creat: canarb6f757aa (id 31)
        ✅ login reușit (cookie HttpOnly primit)
        ✅ WebSocket deschis pe chat-ul live
        ✅ mesajul a fost difuzat live
@@ -131,13 +131,13 @@ cache-control: public, max-age=31536000, immutable
        __CANAR_SERIE__=1014
        … aștept 20s (fereastra de flush) — exact scenariul care se pierdea
        ✅ istoricul de la reconectare conține ambele (30 mesaje)
-       (user_id pentru curățenie: 30)
-       __CANAR_USER__=canar502dde79
-       __CANAR_ID__=30
-       __CANAR_TEXT__=canar-2026-09-24T20:09:06
+       (user_id pentru curățenie: 31)
+       __CANAR_USER__=canarb6f757aa
+       __CANAR_ID__=31
+       __CANAR_TEXT__=canar-2026-09-24T23:23:32
      CANAR: OK (mesajul si stickerul sunt in istoricul servit de DO)
    dovezi în D1 (rândurile canarului, citite direct din baza de date):
-     [{"id":49,"username":"canar502dde79","message":"canar-2026-09-24T20:09:06","created_at":"2026-09-24 20:09:07"},{"id":50,"username":"canar502dde79","message":"[sticker:naruto]","created_at":"2026-09-24 20:09:09"}]
+     [{"id":51,"username":"canarb6f757aa","message":"canar-2026-09-24T23:23:32","created_at":"2026-09-24 23:23:34"},{"id":52,"username":"canarb6f757aa","message":"[sticker:naruto]","created_at":"2026-09-24 23:23:36"}]
    mesajul e ÎN D1: da
    stickerul e ÎN D1: da
    după curățenie: [{"n":34}] rânduri în chat_messages, [{"n":3}] conturi
@@ -168,13 +168,13 @@ cache-control: public, max-age=31536000, immutable
 
 ════════ AUDIT LIVE ════════
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-24T20:09:48.465Z
+data: 2026-09-24T23:24:16.962Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (131 ms)
-  ℹ️  / → 200 · 131 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (89 ms)
+  ℹ️  / → 200 · 89 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -182,7 +182,7 @@ data: 2026-09-24T20:09:48.465Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 63 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 32 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -190,7 +190,7 @@ data: 2026-09-24T20:09:48.465Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 179 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 171 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -200,24 +200,24 @@ data: 2026-09-24T20:09:48.465Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 77 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 80 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 49 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 68 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 44 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 78 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 55 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 75 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 55 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 72 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -272,7 +272,7 @@ data: 2026-09-24T20:09:48.465Z
   ✅ /api/auth/me → 200 (public)
   ✅ /api/auth/register-options → 200 (public)
   ✅ /api/comments?episode_id=1 → 200 (public)
-  ✅ /api/home agregă catalog + top + recent + genuri + pulse (177 ms)
+  ✅ /api/home agregă catalog + top + recent + genuri + pulse (213 ms)
   ✅ /api/admin/stats → 401 (protejat)
   ✅ /api/admin/users → 401 (protejat)
   ✅ /api/admin/series → 401 (protejat)
@@ -327,7 +327,7 @@ data: 2026-09-24T20:09:48.465Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=d8ad136 (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=bc2dce6 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 77449 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -401,7 +401,7 @@ data: 2026-09-24T20:09:48.465Z
   ✅ o singură referință la .jpg-ul hero (rezerva din <picture>, 1×)
   ✅ fără preload pe arta hero (imaginea e deja inline în HTML)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 131 ms · /series 14 ms · /api/series 68 ms
+  ℹ️  timpi: / 89 ms · /series 14 ms · /api/series 137 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -436,10 +436,10 @@ exit audit: 0
 ════════ CONSUM COTE GRATUITE (azi, UTC) ════════
 CONSUM COTE GRATUITE — ziua UTC 2026-09-24 (se resetează la 00:00 UTC)
 
-  🟢 Invocări Functions (Pages)                1.468 /      100.000    1%  ····················
-  🟢 D1 rânduri citite                        10.178 /    5.000.000    0%  ····················
-  🟢 D1 rânduri scrise                           317 /      100.000    0%  ····················
-  🟢 Durable Objects requests                    340 /      100.000    0%  ····················
+  🟢 Invocări Functions (Pages)                1.630 /      100.000    2%  ····················
+  🟢 D1 rânduri citite                        11.661 /    5.000.000    0%  ····················
+  🟢 D1 rânduri scrise                           356 /      100.000    0%  ····················
+  🟢 Durable Objects requests                    373 /      100.000    0%  ····················
   🟢 DO durată (GB-s)                              1 /       13.000    0%  ····················
 
   Reper sănătos: sub 50% în orice moment al zilei. Peste 60% și încă crește → vezi
