@@ -14,8 +14,10 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 | 6 (scara 1000×1000, migrarea 0028, build `65b57e7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | o vizită: ~230.000 → ~64 rânduri citite; planurile de execuție confirmate pe D1-ul de producție |
 | 7 (aspect, build `9f8606a`) | vezi §1f | nota pe carduri, progres la continuare, filtre lipicioase, „înapoi sus", scurtatura `/` |
-| 8 (funcționalități noi, build `77d17b7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | catalog partajabil, sortare după notă, episodul următor, „văzut" — vezi §1h |
-| 9 (viteză, build `4b65b07`) | ✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35 | chat scos de pe calea critică (chunk la cerere), arta hero 168 → 94 KB, coperți dimensionate — vezi §1i |
+| 8 (chatul care nu se salva, build `8f0c1b9`) | vezi §1g | buffer de DO pierdut la evictie: mesajele și stickerele ajung acum în D1 la fiecare trimitere |
+| 9 (funcționalități noi, build `77d17b7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | catalog partajabil, sortare după notă, episodul următor, „văzut" — vezi §1h |
+| 10 (viteză, build `4b65b07`) | ✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35 | chat scos de pe calea critică (chunk la cerere), arta hero 168 → 94 KB (pasul 1), coperți dimensionate — vezi §1i |
+| 11 (viteză, pasul 2: AVIF, build `d8ad136`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | arta hero în AVIF (`<picture>`): 224 → 151 KB, −40% comprimat pe live; două buguri de hero reparate — vezi §1j |
 
 ---
 
@@ -358,6 +360,44 @@ D1 (id 45/46), curățenie completă.
 Ce NU s-a putut verifica din exterior: cât de repede se simte site-ul într-un
 browser real (LCP/TBT). Ce s-a verificat: octeții care se descarcă și numărul
 de cereri de pe calea critică — restul ține de rețea și de dispozitiv.
+
+## 1j. Runda 11 (2026-09-24): viteză, pasul 2 — arta hero în AVIF
+
+Continuarea pasului 3 din „mai fain la site". Aici imaginea hero (cea care dă
+LCP-ul primei pagini) a trecut de la WebP la AVIF, cu `<picture>`:
+
+```html
+<picture>
+  <source type="image/avif" srcset="/assets/img/hero-1.avif">
+  <source type="image/webp" srcset="/assets/img/hero-1.webp">
+  <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
+       alt="" fetchpriority="high">
+</picture>
+```
+
+| Ce s-a schimbat | Dovada pe live (build `d8ad136`) |
+|---|---|
+| **AVIF (q50) înaintea WebP-ului** | §19 din relay: `hero-1.avif: 56.083 B (image/avif)` lângă `hero-1.webp: 94.014 B` · audit: `AVIF mai mic decât WebP (53.136 vs 88.983 B, −40%)` |
+| **Trei formate, un singur drum** | audit: „prima pagină folosește `<picture>` cu AVIF → WebP → JPEG" ✅ |
+| **Rezerva JPEG nu mai e o a doua cerere** | cel mult o referință la `.jpg` în HTML (rezerva din `<img src>`) și **fără** `rel=preload as=image` pe hero — ambele verificate de audit |
+| **Pe disc** | hero 1/2/3: 94+65+70 KB (WebP q72) → **56+45+54 KB** (AVIF q50), −33% |
+
+Două buguri reale, prinse pentru că blocul de hero a început să ruleze în
+dom-smoke (lipsurile din jsdom — WAAPI și layout — le ascundeau):
+
+1. `bg.appendChild(img)` detașa `<img>`-ul din `<picture>`, deci sursele
+   AVIF/WebP nu se aplicau niciodată și browserul descărca JPEG-ul de rezervă.
+   Reparat: re-atașare doar dacă e detașat (`if (!img.parentNode)`).
+2. Când hero-ul arată coperta seriei, sursele din HTML (AVIF/WebP de bundle) ar
+   fi bătut coperta. Reparat: `clearHeroArt()` golește sursele în starea de
+   copertă.
+
+Testele intră de acum în CI (`tests.yml`, la fiecare push, fără secrete):
+dom-smoke a urcat de la 193 la **201** verificări (hero-ul e verificat în ambele
+stări: artă din bundle și copertă de serie), iar `measure-weight` are buget de
+AVIF (≤70 KB) separat de rezerva WebP (≤110 KB).
+
+Auditul complet pe build-ul de producție: **✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36**.
 
 ## 4. Cum se re-rulează auditul
 
