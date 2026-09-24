@@ -232,6 +232,32 @@ case "$(curl -s -o /dev/null -w '%{http_code}' "$B/?gen=Actiune&status=ongoing")
 esac
 
 echo
+echo "── 19. viteza: chunk-uri comune in build-ul publicat"
+# Bundle-ul paginii cere codul comun (core.js, anim-bg.js) dintr-un chunk
+# separat, cu hash de continut in nume, iar chatul e AMANAT: importul lui
+# dinamic sta in chunk-ul comun, nu in bundle-ul paginii. Verificam pe LIVE ca
+# graful chiar exista si se serveste corect - daca un chunk lipseste, pagina
+# ramane fara JS si nimeni nu-si da seama de ce.
+# Fara ghilimele tipografice si fara ghilimele drepte in echo (capcana deja
+# cunoscuta a acestui fisier).
+JS_IDX="$(curl -s "$B/assets/js/page-index.js")"
+CHUNK="$(printf '%s' "$JS_IDX" | grep -oE 'from"\./c-[A-Za-z0-9_-]+\.js"' | head -1 | grep -oE 'c-[A-Za-z0-9_-]+\.js')"
+if [ -n "$CHUNK" ]; then
+  echo "   chunk comun cerut de bundle-ul paginii: $CHUNK -> $(curl -s -o /dev/null -w '%{http_code} %{size_download}B' "$B/assets/js/$CHUNK")"
+  echo "   cache: $(curl -s -o /dev/null -D - "$B/assets/js/$CHUNK" | grep -i '^cache-control' | tr -d '\r' | head -1)"
+  CH_TEXT="$(curl -s "$B/assets/js/$CHUNK")"
+  AMANAT="$(printf '%s' "$CH_TEXT" | grep -oE 'import\("\./c-[A-Za-z0-9_-]+\.js"\)' | head -1 | grep -oE 'c-[A-Za-z0-9_-]+\.js')"
+  if [ -n "$AMANAT" ]; then
+    echo "   chat amanat (import dinamic in chunk-ul comun): $AMANAT -> $(curl -s -o /dev/null -w '%{http_code} %{size_download}B' "$B/assets/js/$AMANAT")"
+  else
+    echo "   !! niciun chunk amanat: chatul a intrat pe calea critica"
+  fi
+else
+  echo "   !! bundle-ul paginii nu importa niciun chunk (code splitting inactiv?)"
+fi
+case "$JS_IDX" in *'auk-continue-next'*) echo "   markerii rundei 2 supravietuiesc split-ului = da" ;; *) echo "   !! markerii rundei 2 au disparut din bundle-ul paginii" ;; esac
+
+echo
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"
