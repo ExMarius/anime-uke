@@ -17,6 +17,11 @@
 // Rulare:  node scripts/audit-live.mjs [https://anime-uke.pages.dev]
 // =====================================================================
 
+import { gzipSync } from 'node:zlib';
+
+/** Cât ar ocupa textul comprimat cu gzip (folosit când răspunsul vine bucăți). */
+const gzipSize = (text) => gzipSync(Buffer.from(text, 'utf8'), { level: 9 }).length;
+
 const BASE = (process.argv[2] || 'https://anime-uke.pages.dev').replace(/\/$/, '');
 const TIMEOUT_MS = 20000;
 // Minificarea/bundling-ul/?v= se întâmplă DOAR în deploy.sh, deci pe local
@@ -351,35 +356,55 @@ async function main() {
   // chat.js e cerut abia la nevoie (import dinamic). Verificăm pe build-ul
   // PUBLICAT că graful de chunk-uri chiar există și se servește corect: dacă
   // un chunk lipsește sau e blocat de cache-ul greșit, pagina rămâne fără JS.
-  const entry = await req(`/assets/js/page-index.js${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
-  const statice = [...entry.text.matchAll(/from\s*"\.\/(c-[\w-]+\.js)"/g)].map((m) => m[1]);
-  const dinamice = [...new Set([...entry.text.matchAll(/import\(\s*"\.\/(c-[\w-]+\.js)"\s*\)/g)].map((m) => m[1]))];
-  expect(S9, statice.length >= 1,
-    `bundle-ul paginii își ia codul comun din ${statice.length} chunk-uri separate (${statice.join(', ') || '—'})`,
-    'page-index.js nu importă niciun chunk — code splitting-ul nu e activ în build-ul publicat', 'WARN');
-  expect(S9, dinamice.length >= 1,
-    `chat.js e amânat: ${dinamice.join(', ') || '—'} se cere doar la nevoie`,
-    'niciun chunk amânat: chat.js a intrat înapoi pe calea critică (fiecare vizitator îl descarcă degeaba)', 'WARN');
+  // Local (dev.sh) fișierele sunt SURSE, fără bundle — nu are ce verifica.
+  if (!IS_PROD) {
+    info(S9, 'code splitting: se verifică doar pe build-ul publicat (local rulează sursele)');
+  } else {
+    const entry = await req(`/assets/js/page-index.js${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+    const statice = [...entry.text.matchAll(/from\s*"\.\/(c-[\w-]+\.js)"/g)].map((m) => m[1]);
+    expect(S9, statice.length >= 1,
+      `bundle-ul paginii își ia codul comun din ${statice.length} chunk-uri separate (${statice.join(', ') || '—'})`,
+      'page-index.js nu importă niciun chunk — code splitting-ul nu e activ în build-ul publicat', 'WARN');
 
-  let eagerBytes = Number(entry.headers['content-length'] || entry.text.length || 0);
-  for (const c of [...new Set([...statice, ...dinamice])]) {
-    const r = await req(`/assets/js/${c}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
-    const bytes = Number(r.headers['content-length'] || r.text.length || 0);
-    if (statice.includes(c)) eagerBytes += bytes;
-    const cache = r.headers['cache-control'] || '—';
-    info(S9, `chunk ${c} → ${r.status} · ${bytes} B · enc=${r.headers['content-encoding'] || 'identity'} · cache=${cache} · ${statice.includes(c) ? 'cale critică' : 'amânat'}`);
-    expect(S9, r.status === 200, `chunk-ul ${c} se servește (${r.status})`, `chunk-ul ${c} → ${r.status}: bundle-ul publicat e rupt`, 'FAIL');
-    // Numele chunk-ului E hash-ul conținutului, deci cache-ul imutabil e corect
-    // chiar fără ?v= (importurile din bundle sunt relative, fără query).
-    expect(S9, /immutable/.test(cache),
-      `chunk-ul ${c} are cache imutabil (${cache})`, `chunk-ul ${c} are cache „${cache}” (așteptat immutable)`, 'WARN');
-    expect(S9, !/\n\s*\n/.test(r.text.slice(0, 4000)),
-      `chunk-ul ${c} e minificat`, `chunk-ul ${c} NU pare minificat`, 'WARN');
+    // Octeții chiar descărcați: când răspunsul vine bucăți (br fără
+    // content-length, cum face Cloudflare), măsurăm textul decomprimat cu gzip.
+    // Altfel raportul amestecă 18 KB comprimat cu 39 KB necomprimat.
+    const octeti = (r) => Number(r.headers['content-length']) || gzipSize(r.text);
+
+    // Importul dinamic al chatului stă în chunk-ul COMUN (acolo e loadChat()),
+    // nu în bundle-ul paginii — deci căutăm în tot graful static.
+    const texte = [entry.text];
+    let eagerBytes = octeti(entry);
+    for (const c of [...new Set(statice)]) {
+      const r = await req(`/assets/js/${c}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+      const bytes = octeti(r);
+      eagerBytes += bytes;
+      texte.push(r.text);
+      const cache = r.headers['cache-control'] || '—';
+      info(S9, `chunk ${c} → ${r.status} · ${bytes} B · enc=${r.headers['content-encoding'] || 'identity'} · cache=${cache} · cale critică`);
+      expect(S9, r.status === 200, `chunk-ul ${c} se servește (${r.status})`, `chunk-ul ${c} → ${r.status}: bundle-ul publicat e rupt`, 'FAIL');
+      // Numele chunk-ului E hash-ul conținutului, deci cache-ul imutabil e corect
+      // chiar fără ?v= (importurile din bundle sunt relative, fără query).
+      expect(S9, /immutable/.test(cache),
+        `chunk-ul ${c} are cache imutabil (${cache})`, `chunk-ul ${c} are cache „${cache}” (așteptat immutable)`, 'WARN');
+      expect(S9, !/\n\s*\n/.test(r.text.slice(0, 4000)),
+        `chunk-ul ${c} e minificat`, `chunk-ul ${c} NU pare minificat`, 'WARN');
+    }
+
+    const dinamice = [...new Set(texte.flatMap((x) => [...x.matchAll(/import\(\s*"\.\/(c-[\w-]+\.js)"\s*\)/g)].map((m) => m[1])))];
+    expect(S9, dinamice.length >= 1,
+      `chat.js e amânat: ${dinamice.join(', ') || '—'} se cere doar la nevoie`,
+      'niciun chunk amânat: chat.js a intrat înapoi pe calea critică (fiecare vizitator îl descarcă degeaba)', 'WARN');
+    for (const c of dinamice.filter((x) => !statice.includes(x))) {
+      const r = await req(`/assets/js/${c}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+      info(S9, `chunk ${c} → ${r.status} · ${octeti(r)} B · enc=${r.headers['content-encoding'] || 'identity'} · cache=${r.headers['cache-control'] || '—'} · amânat`);
+      expect(S9, r.status === 200, `chunk-ul amânat ${c} se servește (${r.status})`, `chunk-ul amânat ${c} → ${r.status}: chatul nu s-ar mai încărca`, 'FAIL');
+    }
+    info(S9, `cale critică JS (prima pagină, comprimat): ${(eagerBytes / 1024).toFixed(1)} KB = entry + ${statice.length} chunk-uri statice; chat-ul (${dinamice.join(', ')}) e în afara ei`);
+    expect(S9, eagerBytes < 40 * 1024,
+      `JS pe calea critică: ${(eagerBytes / 1024).toFixed(1)} KB comprimat`,
+      `JS pe calea critică prea greu: ${(eagerBytes / 1024).toFixed(1)} KB`, 'WARN');
   }
-  info(S9, `cale critică JS (prima pagină, comprimat): ${(eagerBytes / 1024).toFixed(1)} KB = entry + ${statice.length} chunk-uri statice; chat-ul (${dinamice.join(', ')}) e în afara ei`);
-  expect(S9, eagerBytes < 40 * 1024,
-    `JS pe calea critică: ${(eagerBytes / 1024).toFixed(1)} KB comprimat`,
-    `JS pe calea critică prea greu: ${(eagerBytes / 1024).toFixed(1)} KB`, 'WARN');
 
   // Imaginile: pagina referă direct .webp (comis în repo), deci nu mai există
   // negociere Accept pe server — un .jpg ar însemna două cereri și o invocare

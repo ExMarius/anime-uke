@@ -256,6 +256,19 @@ else
   echo "   !! bundle-ul paginii nu importa niciun chunk (code splitting inactiv?)"
 fi
 case "$JS_IDX" in *'auk-continue-next'*) echo "   markerii rundei 2 supravietuiesc split-ului = da" ;; *) echo "   !! markerii rundei 2 au disparut din bundle-ul paginii" ;; esac
+# Runda 3 a redimensionat arta hero (era 168 738 B), a scos preload-ul
+# redundant (imaginea e deja inline in HTML) si a adaugat preconnect la hostul
+# coperților. Toate trei se vad doar pe build-ul publicat.
+HERO_B="$(curl -s -o /dev/null -w '%{size_download}' "$B/assets/img/hero-1.webp")"
+echo "   hero-1.webp: ${HERO_B} B (inainte de runda 3: 168738 B)"
+HOME_HTML="$(curl -s "$B/")"
+case "$HOME_HTML" in *'as="image" href="/assets/img/hero-1.webp"'*) echo "   !! preload-ul redundant pe arta hero a revenit" ;; *) echo "   fara preload redundant pe arta hero = da" ;; esac
+case "$HOME_HTML" in *'preconnect'*'media-amazon.com'*) echo "   preconnect la hostul coperților = da" ;; *) echo "   !! lipseste preconnect-ul la m.media-amazon.com" ;; esac
+# Bundle-ul trebuie sa fie IDENTIC cu si fara ?v=: daca diferă, cineva serveste
+# o copie veche de la margine (si un vizitator nou poate primi cod vechi).
+H1="$(curl -s "$B/assets/js/page-index.js" | md5sum | cut -d' ' -f1)"
+H2="$(curl -s "$B/assets/js/page-index.js?v=1" | md5sum | cut -d' ' -f1)"
+if [ -n "$H1" ] && [ "$H1" = "$H2" ]; then echo "   acelasi bundle cu si fara ?v= = da (${H1})"; else echo "   !! bundle diferit cu/fara ?v= ($H1 vs $H2) - copie veche la margine?"; fi
 
 echo
 echo "════════ AUDIT LIVE ════════"
