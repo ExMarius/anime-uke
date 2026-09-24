@@ -119,6 +119,54 @@ else bad(`mesajul NU a fost difuzat (primite: ${echoed.length})`);
 if (echoed.some((m) => m.message === stickerMsg)) ok('stickerul a fost difuzat live');
 else bad('stickerul NU a fost difuzat');
 
+// --- 3b. MARCAJELE DE PROGRES (runda 2: „văzut", „episodul următor") -----
+// Se foloseste ACELASI cont canar (fara o a doua inregistrare: limita de
+// 5 conturi/ora per IP ar putea transforma o rulare repetata in fals rosu).
+// Se verifica exact ce vede un utilizator real: progres trimis prin API-ul de
+// heartbeat, apoi marcajele in lista seriei si „episodul următor" in rândul de
+// continuare. Contul (si progresul lui, prin ON DELETE CASCADE) se sterge la final.
+{
+  const getJson = async (path, cookie) => {
+    const r = await fetch(`${BASE}${path}`, { headers: { cookie, origin: BASE } });
+    try { return await r.json(); } catch { return null; }
+  };
+
+  const catalog = await getJson('/api/series?per_page=1');
+  const serieId = catalog?.series?.[0]?.id;
+  const detaliu = serieId ? await getJson(`/api/series/${serieId}?per_page=3`) : null;
+  const eps = detaliu?.episodes || [];
+
+  if (eps.length >= 2) {
+    // 8 heartbeat-uri x 120s = 960s, peste pragul de 15 minute
+    for (let i = 0; i < 8; i++) {
+      await post('/api/progress', { episode_id: eps[0].id, seconds: 120 }, login.cookie);
+    }
+    const cont = await getJson('/api/continue', login.cookie);
+    const item = (cont?.items || []).find((x) => x.episode_id === eps[0].id);
+    if (item && Number(item.next_episode_id) === Number(eps[1].id)) {
+      ok(`rândul de continuare: episodul următor e corect (id ${item.next_episode_id})`);
+    } else {
+      bad(`episodul următor greșit: ${JSON.stringify(item)} (așteptat ${eps[1].id})`);
+    }
+
+    const detaliu2 = await getJson(`/api/series/${serieId}?per_page=3`, login.cookie);
+    const m1 = (detaliu2?.episodes || []).find((e) => e.id === eps[0].id);
+    const m2 = (detaliu2?.episodes || []).find((e) => e.id === eps[1].id);
+    if (m1?.watched === true && Number(m1?.progress_seconds) >= 900) ok('episodul cu 15+ minute apare ca VĂZUT în listă');
+    else bad(`marcajul de văzut lipsește: ${JSON.stringify(m1)}`);
+    if (m2?.watched === false) ok('episodul neatins rămâne nemarcat');
+    else bad(`episod nemarcat greșit: ${JSON.stringify(m2)}`);
+
+    const anon = await getJson(`/api/series/${serieId}?per_page=2`);
+    if ((anon?.episodes || []).every((e) => !('watched' in e))) ok('fără sesiune lista nu cheltuie nicio citire de progres');
+    else bad('răspunsul public conține marcaje de progres');
+
+    log(`  __CANAR_SERIE__=${serieId}`);
+  } else {
+    log('  (catalog prea mic pentru verificarea progresului — sărită)');
+  }
+}
+
 // --- 4. asteptam alarma (15s) si recitim -----------------------------
 log(`  … aștept ${WAIT_MS / 1000}s (fereastra de flush) — exact scenariul care se pierdea`);
 await sleep(WAIT_MS);

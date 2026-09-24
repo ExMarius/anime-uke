@@ -196,6 +196,37 @@ echo "   după curățenie: $(q 'SELECT COUNT(*) AS n FROM chat_messages') rând
 # „canar%” în tabel, îl raportăm aici (curățenia a eșuat, nu testul de chat).
 RAMASE="$(q "SELECT COUNT(*) AS n FROM chat_messages WHERE username LIKE 'canar%'")"
 case "$RAMASE" in *'"n":0'*) echo "   urme rămase după canar: 0 (curat)" ;; *) echo "   !! urme rămase după canar: $RAMASE" ;; esac
+# Progresul canarului (watch_progress) se șterge în cascada odată cu contul:
+RAMASE_WP="$(q "SELECT COUNT(*) AS n FROM watch_progress wp JOIN users u ON u.id = wp.user_id WHERE u.username LIKE 'canar%'")"
+case "$RAMASE_WP" in *'"n":0'*) echo "   progres rămas după canar: 0 (curat)" ;; *) echo "   !! progres rămas după canar: $RAMASE_WP" ;; esac
+
+# ── 18. FUNCȚIONALITĂȚI NOI (runda 2) ─────────────────────────────────
+# Verificăm pe CSS-ul/JS-ul PUBLICAT (nu pe sursă): PurgeCSS poate șterge o
+# clasă nouă, iar esbuild escapează non-ASCII, deci căutăm doar ace ASCII.
+# Fără ghilimele tipografice aici: „...” amestecat cu " într-un echo închide
+# șirul bash (capcana care a mușcat deja de două ori în acest fișier).
+echo
+echo "── 18. catalog partajabil, notare, marcaje de episoade (build publicat)"
+CSS_NEW="$(curl -s "$B/assets/css/style.css")"
+case "$CSS_NEW" in *ep-seen*) echo "   CSS: marcajele de episoade (ep-seen) = da" ;; *) echo "   CSS: marcajele de episoade (ep-seen) = NU" ;; esac
+case "$CSS_NEW" in *continue-card__next*) echo "   CSS: butonul de episod urmator (continue-card__next) = da" ;; *) echo "   CSS: butonul de episod urmator = NU" ;; esac
+case "$CSS_NEW" in *is-watched*) echo "   CSS: bara laterala a episoadelor vazute = da" ;; *) echo "   CSS: bara laterala a episoadelor vazute = NU" ;; esac
+JS_NEW="$(curl -s "$B/assets/js/page-index.js")"
+case "$JS_NEW" in *auk-continue-next*) echo "   JS: preferinta de episod urmator (localStorage) = da" ;; *) echo "   JS: preferinta de episod urmator = NU" ;; esac
+case "$JS_NEW" in *pushState*) echo "   JS: filtrele scriu URL-ul (pushState) = da" ;; *) echo "   JS: filtrele scriu URL-ul = NU" ;; esac
+# Sortarea noua trebuie sa existe in lista servita de API...
+SORTS_RAW="$(curl -s "$B/api/series?per_page=1")"
+case "$SORTS_RAW" in *'"value":"rating"'*) echo "   API: sortarea rating e listata = da" ;; *) echo "   API: sortarea rating lipseste" ;; esac
+# ...si chiar sa ordoneze: seriile notate înaintea celor fara voturi.
+RATED_RAW="$(curl -s "$B/api/series?sort=rating&per_page=4")"
+RATED_OK="$(printf '%s' "$RATED_RAW" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);const r=j.series||[];const primulFara=r.findIndex(x=>!(Number(x.rating_count)>0));const primulCu=r.findIndex(x=>Number(x.rating_count)>0);process.stdout.write((r.length>0&&(primulCu===-1||primulFara===-1||primulCu<primulFara))?"da":"NU")}catch(e){process.stdout.write("necited")}})')"
+RATED_INFO="$(printf '%s' "$RATED_RAW" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);const r=j.series||[];const primulFara=r.findIndex(x=>!(Number(x.rating_count)>0));const primulCu=r.findIndex(x=>Number(x.rating_count)>0);const ok=r.length>0&&(primulCu===-1||primulFara===-1||primulCu<primulFara);process.stdout.write((ok?"da":"NU")+" ["+r.map(x=>x.id+":"+(x.rating_count||0)).join(" ")+"]")}catch(e){process.stdout.write("necited")}})')"
+echo "   API: sort=rating pune seriile notate primele = $RATED_INFO"
+# Pagina cu filtru trebuie sa serveasca shell-ul normal (SPA), nu 404.
+case "$(curl -s -o /dev/null -w '%{http_code}' "$B/?gen=Actiune&status=ongoing")" in
+  200) echo "   pagina cu filtru in URL raspunde 200" ;;
+  *) echo "   !! pagina cu filtru in URL NU raspunde 200" ;;
+esac
 
 echo
 echo "════════ AUDIT LIVE ════════"
