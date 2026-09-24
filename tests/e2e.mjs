@@ -1,4 +1,5 @@
 import WS from 'ws';
+import { readFileSync } from 'node:fs';
 // Test end-to-end impotriva serverului local wrangler.
 // BASE se poate suprascrie pentru a rula suita impotriva productiei:
 //   node tests/e2e.mjs https://anime-uke.pages.dev
@@ -77,6 +78,25 @@ console.log('\n=== 1. VIZITATOR ===');
   const rec = await req(j, 'GET', '/api/recent');
   check('Ultimele episoade publice → 200, max 8', rec.status === 200 && (rec.data?.items || []).length <= 8, JSON.stringify(rec.data)?.slice(0, 140));
 
+  // Prima pagina vine dintr-o SINGURA cerere (buget 0: cota gratuita e de
+  // 100.000 de invocari/zi, iar inainte index.html cheltuia 5 pentru fiecare
+  // vizitator: /series, /top, /recent, /genres, /pulse).
+  {
+    const home = await req(j, 'GET', '/api/home');
+    check('GET /api/home fara cont → 200 (prima pagina intr-o singura cerere)', home.status === 200, `status=${home.status} ${JSON.stringify(home.data)?.slice(0, 120)}`);
+    check('  ...aduna catalog + top + recent + genuri + pulse',
+      Array.isArray(home.data?.series?.series) && !!home.data?.top && Array.isArray(home.data?.recent)
+        && Array.isArray(home.data?.genres) && typeof home.data?.pulse?.views === 'number',
+      JSON.stringify(Object.keys(home.data || {})));
+    check('  ...are metadatele de paginare ale catalogului (has_more, sorts)',
+      home.data?.series?.per_page === 24 && typeof home.data?.series?.has_more === 'boolean' && Array.isArray(home.data?.series?.sorts),
+      JSON.stringify(home.data?.series)?.slice(0, 180));
+    check('  ...respecta parametrii de catalog (per_page, cautare)',
+      (await req(j, 'GET', '/api/home?per_page=2')).data?.series?.per_page === 2
+        && (await req(j, 'GET', '/api/home?q=zzz-nimic')).data?.series?.q === 'zzz-nimic',
+      'per_page/cautarea nu se propaga');
+  }
+
   const f1 = await req(j, 'GET', '/api/series?status=completed');
   check('Filtru status=completed → 200', f1.status === 200 && (f1.data?.series || []).every((x) => x.status === 'completed'), `n=${f1.data?.series?.length}`);
   const f2 = await req(j, 'GET', '/api/series?gen=acțiune');
@@ -131,14 +151,30 @@ console.log('\n=== 1. VIZITATOR ===');
   // Rute necunoscute → 404 onest. Până acum cădeau pe poarta de autentificare și
   // răspundeau 302 → /login?next=/package.json, adică dezvăluiau că fișierul
   // există în repo (conținutul nu scăpa, dar nici 302 nu e răspunsul corect).
-  for (const unknown of ['/package.json', '/AGENTS.md', '/deploy.sh', '/src/worker.js', '/ruta-inexistenta', '/admin/ceva-ciudat']) {
+  for (const unknown of ['/package.json', '/AGENTS.md', '/deploy.sh', '/src/worker.js', '/ruta-inexistenta', '/admin/ceva-ciudat', '/404', '/admin/serie']) {
     const r = await fetch(BASE + unknown, { redirect: 'manual' });
     check(`GET ${unknown} → 404 (nu 302 spre /login)`, r.status === 404, `status=${r.status} location=${r.headers.get('location') || '—'}`);
+  }
+  // /covers/ nu există pe disc (coperțile sunt URL-uri externe) → pagina 404 a
+  // site-ului, nu 404-ul generic al routerului de assete.
+  {
+    const r = await fetch(BASE + '/covers/logo.png', { redirect: 'manual' });
+    const body = await r.text();
+    check('GET /covers/logo.png → 404 cu pagina site-ului', r.status === 404 && body.includes('Mergi la catalog'), `status=${r.status}`);
   }
   const login = await fetch(BASE + '/login');
   check('Header CSP prezent pe pagina publica', !!login.headers.get('content-security-policy'));
   check('Header X-Content-Type-Options prezent', login.headers.get('x-content-type-options') === 'nosniff');
-  check('CSP nu contine unsafe-inline', !String(login.headers.get('content-security-policy')).includes('unsafe-inline'));
+  // CSP pe directive: script-src STRICT (fără unsafe-inline/unsafe-eval — zero JS
+  // inline în site), style-src cu 'unsafe-inline' deliberat (snippet A-Ads +
+  // pagina 404 generată în worker + layout admin — comentariul din http.js).
+  {
+    const csp = String(login.headers.get('content-security-policy') || '');
+    const scriptSrc = (csp.match(/script-src[^;]*/)?.[0] || '');
+    const styleSrc = (csp.match(/style-src[^;]*/)?.[0] || '');
+    check('CSP script-src strict (fără unsafe-*)', scriptSrc.includes("'self'") && !/unsafe-inline|unsafe-eval/.test(scriptSrc), scriptSrc);
+    check("CSP style-src permite 'unsafe-inline' (decizie documentată)", styleSrc.includes("'unsafe-inline'"), styleSrc);
+  }
   check('Header Cross-Origin-Resource-Policy prezent', login.headers.get('cross-origin-resource-policy') === 'same-origin',
     `corp=${login.headers.get('cross-origin-resource-policy')}`);
 
@@ -153,8 +189,160 @@ console.log('\n=== 1. VIZITATOR ===');
   // Assetele raman publice: fara ele pagina de login ar fi nefunctionala
   const css = await fetch(BASE + '/assets/css/style.css');
   check('GET /assets/css/style.css → 200 public', css.status === 200);
+
+  // HSTS și pe răspunsurile JSON ale workerului (nu doar pe assete via _headers).
+  {
+    const pulse = await fetch(BASE + '/api/pulse');
+    check('API JSON are Strict-Transport-Security', String(pulse.headers.get('strict-transport-security') || '').includes('max-age=31536000'),
+      `hsts=${pulse.headers.get('strict-transport-security')}`);
+    const pdata = await pulse.json().catch(() => ({}));
+    check('Pulse expune contorul online ca număr', typeof pdata?.online === 'number', JSON.stringify(pdata).slice(0, 100));
+  }
+
+  // robots.txt: fără /series (face 301 spre /), cu Sitemap declarat.
+  {
+    const robots = await (await fetch(BASE + '/robots.txt')).text();
+    check('robots.txt nu mai anunță /series', !robots.includes('Allow: /series'), robots.split('\n').filter((l) => l.includes('/series')).join(';'));
+    check('robots.txt declară Sitemap:', /Sitemap:/i.test(robots), '');
+  }
+
+  // Speculation Rules: prerender pe URL-urile pretty reale (/serie/*), nu pe
+  // /series* care nu mai lovea nimic.
+  {
+    const spec = await (await fetch(BASE + '/speculationrules.json')).json().catch(() => null);
+    const pre = JSON.stringify(spec?.prerender || []);
+    check('prerender pe /serie/*', pre.includes('/serie/'), pre.slice(0, 120));
+  }
+
+  // Logo: assete publice + referințe în HTML + negociere WebP (ca la hero).
+  {
+    for (const asset of ['/assets/img/logo.png', '/assets/img/logo-icon.png']) {
+      const r = await fetch(BASE + asset);
+      check(`GET ${asset} → 200 public`, r.status === 200, `status=${r.status}`);
+    }
+    // Fara negociere pe server (assetul nu mai trece prin worker): pagina
+    // refera direct .webp, iar fisierul trebuie sa existe si sa fie servit.
+    const webp = await fetch(BASE + '/assets/img/logo-icon.webp');
+    const png = await fetch(BASE + '/assets/img/logo-icon.png');
+    check('Logo-ul .webp se servește direct (fără negociere pe server)',
+      webp.status === 200 && (webp.headers.get('content-type') || '').includes('webp'),
+      `${webp.status} ${webp.headers.get('content-type')}`);
+    check('Logo-ul .webp e mai mic decât PNG-ul (fallback păstrat)',
+      Number(webp.headers.get('content-length') || 0) < Number(png.headers.get('content-length') || 1),
+      `webp=${webp.headers.get('content-length')} png=${png.headers.get('content-length')}`);
+    const homeHtml = await (await fetch(BASE + '/')).text();
+    check('Pagina cere logo-ul ca .webp, nu ca .png',
+      homeHtml.includes('src="/assets/img/logo-icon.webp"') && !homeHtml.includes('src="/assets/img/logo-icon.png"'),
+      (homeHtml.match(/<img class="nav__brand__mark"[^>]*>/) || ['-'])[0]);
+    check('faviconul și og:image rămân PNG (WebP nu e acceptat de iOS/crawlere)',
+      homeHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && homeHtml.includes('/assets/img/logo.png'), 'verifică <link rel=icon> și og:image');
+    check('og:image de pe / e logo-ul', homeHtml.includes('/assets/img/logo.png'), homeHtml.match(/og:image[^>]*>/)?.[0]);
+    const loginHtml = await (await fetch(BASE + '/login')).text();
+    check('Login folosește logo-ul (favicon + marca auth)',
+      loginHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && loginHtml.includes('auth-logo__mark'),
+      loginHtml.match(/<link rel="icon"[^>]*>/)?.[0]);
+  }
+
+  // Favicon real la rădăcină: fără el, Cloudflare Pages servea iconița
+  // proprie la /favicon.ico, iar Google o arăta în rezultatele de căutare.
+  {
+    const ico = await fetch(BASE + '/favicon.ico');
+    const icoBuf = Buffer.from(await ico.arrayBuffer());
+    check('GET /favicon.ico → 200 cu content-type icon',
+      ico.status === 200 && (ico.headers.get('content-type') || '').includes('icon'),
+      `status=${ico.status} ct=${ico.headers.get('content-type')}`);
+    check('favicon.ico e al nostru, nu cel implicit Cloudflare (dimensiune)',
+      icoBuf.length > 4000, `bytes=${icoBuf.length}`);
+    const apple = await fetch(BASE + '/apple-touch-icon.png');
+    check('GET /apple-touch-icon.png → 200 PNG (iOS)',
+      apple.status === 200 && (apple.headers.get('content-type') || '').includes('png'),
+      `status=${apple.status} ct=${apple.headers.get('content-type')}`);
+  }
+
+  // Sitemap-uri pentru Google Search Console: XML + TXT + /sitemap fara
+  // extensie, iesite direct fara headerele de securitate (CORP/CSP), cu
+  // serii SI episoade. Pe baza goala intra fallback-ul static, deci
+  // asertiunile sunt deterministe indiferent de starea DB-ului.
+  {
+    const sm = await fetch(BASE + '/sitemap.xml');
+    const smText = await sm.text();
+    check('GET /sitemap.xml → 200 text/xml valid',
+      sm.status === 200 && (sm.headers.get('content-type') || '').includes('text/xml') && smText.startsWith('<?xml'),
+      `status=${sm.status} ct=${sm.headers.get('content-type')}`);
+    check('Sitemap-ul XML contine serii si episoade (URL-uri pretty)',
+      smText.includes('/serie/') && smText.includes('/episod/'), `${(smText.match(/<loc>/g) || []).length} URL-uri`);
+    check('Sitemap-ul iese fara CORP (fara headere de securitate)',
+      !sm.headers.get('cross-origin-resource-policy') && !sm.headers.get('content-security-policy'),
+      `corp=${sm.headers.get('cross-origin-resource-policy')}`);
+    const txt = await fetch(BASE + '/sitemap.txt');
+    const txtText = await txt.text();
+    check('GET /sitemap.txt → 200 text/plain, un URL pe linie',
+      txt.status === 200 && (txt.headers.get('content-type') || '').includes('text/plain')
+      && txtText.split('\n')[0].startsWith('http') && txtText.includes('/serie/'),
+      `status=${txt.status} linii=${txtText.split('\n').length}`);
+    const noext = await fetch(BASE + '/sitemap');
+    check('GET /sitemap (fara extensie) → acelasi XML',
+      noext.status === 200 && (noext.headers.get('content-type') || '').includes('text/xml'),
+      `status=${noext.status}`);
+    const dbl = await fetch(BASE + '//sitemap.xml');
+    check('GET //sitemap.xml (slash dublu) → 200, nu 404', dbl.status === 200, `status=${dbl.status}`);
+  }
   const mod = await fetch(BASE + '/assets/js/core.js');
   check('GET /assets/js/core.js → 200 public', mod.status === 200);
+
+  // -------------------------------------------------------------------
+  // BUGET 0: ce NU trece prin worker.
+  //
+  // Fiecare cerere care ajunge in Pages Functions consuma o invocare din
+  // cota gratuita (100.000/zi). public/_routes.json scoate de sub worker
+  // assetele si paginile publice statice; headerele de securitate vin atunci
+  // din public/_headers, deci trebuie sa fie identice cu cele pe care le pune
+  // workerul pe rutele lui — altfel „optimizarea” ar subtia securitatea.
+  // -------------------------------------------------------------------
+  {
+    const routes = JSON.parse(readFileSync(new URL('../public/_routes.json', import.meta.url), 'utf8'));
+    const ex = routes.exclude || [];
+    check('_routes.json: versiunea 1 si include ["/*"]',
+      routes.version === 1 && routes.include?.join() === '/*', JSON.stringify(routes).slice(0, 140));
+    check('_routes.json: /assets/* ocoleste workerul (cel mai mare castig)',
+      ex.includes('/assets/*'), ex.join(' '));
+    check('_routes.json: prima pagina si paginile publice statice ocolesc workerul',
+      ['/', '/login', '/register', '/episode'].every((p) => ex.includes(p)), ex.join(' '));
+    // Ce NU are voie sa ocoleasca: API-ul, chatul, SSR-ul de serie/episod,
+    // paginile din spatele portii de autentificare, sitemap-ul.
+    const mustStay = ['/api/*', '/chat', '/serie/*', '/episod/*', '/profile', '/shop', '/admin/*', '/sitemap.xml'];
+    check('_routes.json: API, chat, SSR si paginile protejate raman pe worker',
+      mustStay.every((p) => !ex.includes(p)), `exclude=${ex.join(' ')}`);
+
+    // Paritatea de headere intre calea statica si cea care trece prin worker.
+    const staticRes = await fetch(BASE + '/assets/css/style.css');
+    const workerRes = await fetch(BASE + '/api/auth/me');
+    const names = ['content-security-policy', 'x-frame-options', 'x-content-type-options',
+      'referrer-policy', 'permissions-policy', 'cross-origin-opener-policy', 'cross-origin-resource-policy',
+      'strict-transport-security'];
+    const mismatch = names.filter((n) => staticRes.headers.get(n) !== workerRes.headers.get(n));
+    check('Header-ele de securitate sunt identice pe asset (static) si pe API (worker)',
+      mismatch.length === 0,
+      mismatch.map((n) => `${n}: static=${staticRes.headers.get(n)} worker=${workerRes.headers.get(n)}`).join(' | '));
+    const staticCsp = staticRes.headers.get('content-security-policy') || '';
+    const staticScriptSrc = staticCsp.match(/script-src[^;]*/)?.[0] || '';
+    check('Asset-ul static are script-src strict (din public/_headers)',
+      staticScriptSrc.includes("'self'") && !/unsafe-inline|unsafe-eval/.test(staticScriptSrc),
+      staticScriptSrc || staticCsp.slice(0, 80));
+    check("  ...si style-src cu 'unsafe-inline' (decizia documentata pentru A-Ads)",
+      (staticCsp.match(/style-src[^;]*/)?.[0] || '').includes("'unsafe-inline'"), staticCsp.slice(0, 120));
+    check('Asset-ul static are HSTS (din public/_headers)',
+      /max-age=31536000/.test(staticRes.headers.get('strict-transport-security') || ''),
+      staticRes.headers.get('strict-transport-security') || 'lipseste');
+
+    // Dovada de runtime ca assetul NU trece prin worker: cand trece, headerele
+    // din _headers se aplica de doua ori si valoarea se dubleaza
+    // („no-cache, no-cache”, vazut exact asa inainte de _routes.json).
+    const cc = staticRes.headers.get('cache-control') || '';
+    const isDev = /no-cache/.test(cc);
+    check('Assetul e servit direct din stratul static (fara worker)',
+      isDev ? (cc.match(/no-cache/g) || []).length === 1 : /immutable/.test(cc), `cache-control=${cc}`);
+  }
 }
 
 {
@@ -286,6 +474,8 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
       epMissingHtml.includes('noindex') && String(epMissing.headers.get('x-robots-tag') || '').includes('noindex'),
       `x-robots-tag=${epMissing.headers.get('x-robots-tag')}`);
     check('   ...404 e HTML de pagină, nu JSON gol', epMissingHtml.includes('<!DOCTYPE html>') && epMissingHtml.includes('Mergi la catalog'), epMissingHtml.slice(0, 80));
+    const epAgain = await fetch(`${BASE}/episod/999999`, { redirect: 'manual' });
+    check('   ...al doilea apel dă tot 404 (cache negativ stabil)', epAgain.status === 404, `status=${epAgain.status}`);
 
     const serMissing = await fetch(`${BASE}/serie/999999`, { redirect: 'manual' });
     const serMissingHtml = await serMissing.text();
@@ -310,10 +500,27 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
     legacy.status === 201 && legacy.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/abc123' && legacy.data.episode.sources[0].kind === 'embed',
     JSON.stringify(legacy.data).slice(0, 200));
 
-  // Contrapartea verificării de 404: un episod REAL trebuie să rămână 200.
+  // Contrapartea verificării de 404: un episod REAL trebuie să rămână 200,
+  // cu head plin (SSR SEO), ca la serii.
   {
-    const epReal = await fetch(`${BASE}/episod/${legacy.data.episode.id}`, { redirect: 'manual' });
+    const epIdReal = legacy.data.episode.id;
+    const epReal = await fetch(`${BASE}/episod/${epIdReal}`, { redirect: 'manual' });
     check('Pretty URL /episod/:id existent → 200', epReal.status === 200, `status=${epReal.status}`);
+    const epHtml = await epReal.text();
+    check('SSR episod: titlul conține seria + numărul episodului',
+      epHtml.includes('One Piece') && epHtml.includes('Episodul 1') && epHtml.includes('subtitrat în română'),
+      epHtml.match(/<title[^>]*>[\s\S]*?<\/title>/i)?.[0]?.slice(0, 120) || 'fără <title>');
+    check('SSR episod: titlul generic a dispărut (un singur <title>)',
+      !epHtml.includes('<title>Episod • anime-uke</title>') && (epHtml.match(/<title>/gi) || []).length === 1,
+      `titluri=${(epHtml.match(/<title>/gi) || []).length}`);
+    check('SSR episod: meta description injectată', epHtml.includes('meta name="description"'), '');
+    check('SSR episod: JSON-LD TVEpisode + BreadcrumbList injectate',
+      epHtml.includes('"TVEpisode"') && epHtml.includes('"BreadcrumbList"'), '');
+    check('SSR episod: canonical pe /episod/:id',
+      epHtml.includes(`/episod/${epIdReal}`) && epHtml.includes('rel="canonical"'), '');
+    check('SSR episod: og:type video.episode', epHtml.includes('video.episode'), '');
+    check('SSR episod: JSON-LD leagă seria (partOfTVSeries)',
+      epHtml.includes('"partOfTVSeries"') && epHtml.includes(`/serie/${seriesId}`), '');
   }
 
   const badEp2 = await req(j, 'POST', '/api/admin/episodes', { series_id: 9999, episode_number: 2, title: 'x', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/abc123' }] });
@@ -332,6 +539,7 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('Etichetele si ordinea sunt pastrate', ep.data?.episode?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern', JSON.stringify(ep.data?.episode?.sources));
   check('DoodStream /d/ normalizat la /e/ chiar si in lista de surse', ep.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/xyz789', ep.data?.episode?.sources?.[0]?.url);
   const epId = ep.data?.id;
+  globalThis.ep2Id = epId;   // episodul 2 din seria de test („următorul")
 
   const dupEp = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 2, title: 'Duplicat', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/q' }] });
   check('Episod duplicat (UNIQUE series+numar) → 409', dupEp.status === 409, `status=${dupEp.status} ${dupEp.data?.error}`);
@@ -423,7 +631,16 @@ console.log('\n=== 5c. SCALARE: paginare, cautare, contoare, editare, postare in
   const p1 = await req(j, 'GET', '/api/series?per_page=2&page=1');
   check('Lista publica e paginata', p1.status === 200 && p1.data?.series?.length <= 2, `status=${p1.status} n=${p1.data?.series?.length}`);
   check('Raspunsul include meta de paginare', p1.data?.per_page === 2 && typeof p1.data?.has_more === 'boolean' && p1.data?.page === 1, JSON.stringify({ ...p1.data, series: undefined }));
-  check('Optiunile de sortare vin de pe server', Array.isArray(p1.data?.sorts) && p1.data.sorts.length === 4, JSON.stringify(p1.data?.sorts));
+  check('Optiunile de sortare vin de pe server', Array.isArray(p1.data?.sorts) && p1.data.sorts.length === 5, JSON.stringify(p1.data?.sorts));
+  // Sortarea „cele mai bine notate" (migrarea 0028 a denormalizat media pe
+  // serie): seriile FARA voturi nu au voie sa vina inaintea celor cu nota.
+  const rated = await req(j, 'GET', '/api/series?sort=rating&per_page=6');
+  const ratedRows = rated.data?.series || [];
+  const primulCuVoturi = ratedRows.findIndex((x) => Number(x.rating_count) > 0);
+  const primulFara = ratedRows.findIndex((x) => !(Number(x.rating_count) > 0));
+  check('Sortarea „cele mai bine notate" pune seriile notate primele',
+    rated.status === 200 && (primulCuVoturi === -1 || primulFara === -1 || primulCuVoturi < primulFara),
+    JSON.stringify(ratedRows.map((x) => `${x.id}:${x.rating_count ?? 0}`)));
 
   if (p1.data?.has_more) {
     const p2 = await req(j, 'GET', '/api/series?per_page=2&page=2');
@@ -930,11 +1147,98 @@ console.log('\n=== 9. PANOU ADMIN: utilizatori, ban, roluri, protectii ===');
   check('Actiune necunoscuta → 400', badAction.status === 400, `status=${badAction.status}`);
 }
 
+console.log('\n=== 9b. ADMIN: gold/puncte/nivel din panou ===');
+{
+  const j = globalThis.admin;
+  await req(jar(), 'POST', '/api/auth/register', { username: 'econu', email: 'econu@test.ro', password: 'parola123' });
+  const je = jar();
+  await req(je, 'POST', '/api/auth/login', { email: 'econu@test.ro', password: 'parola123' });
+  const list = await req(j, 'GET', '/api/admin/users');
+  const eu = list.data.users.find((u) => u.username === 'econu');
+  check('Lista admin include gold/nivel/xp', eu.gold === 0 && eu.level === 1 && eu.xp === 0, JSON.stringify(eu));
+
+  const p1 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 500 });
+  check('set_points +500', p1.data?.success === true && p1.data?.points === 500, JSON.stringify(p1.data));
+  const p2 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: -200 });
+  check('set_points -200 (scadere)', p2.data?.points === 300, JSON.stringify(p2.data));
+  const p3 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: -999999 });
+  check('set_points nu merge pe negativ (oprire la 0)', p3.data?.points === 0, JSON.stringify(p3.data));
+  const p0 = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 0 });
+  const pBig = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 2000000 });
+  const pFrac = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 1.5 });
+  check('set_points invalid (0/prea mare/fractie) → 400', p0.status === 400 && pBig.status === 400 && pFrac.status === 400, `${p0.status}/${pBig.status}/${pFrac.status}`);
+
+  const g1 = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: eu.id, value: 1000 });
+  check('set_gold +1000 pe alt user', g1.data?.gold === 1000, JSON.stringify(g1.data));
+  const g2 = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: eu.id, value: -999999 });
+  check('set_gold negativ mare opreste la 0', g2.data?.gold === 0, JSON.stringify(g2.data));
+
+  const l1 = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 10 });
+  check('set_level 10 → nivel 10, xp 0', l1.data?.success === true && l1.data?.level === 10 && l1.data?.xp === 0, JSON.stringify(l1.data));
+  const l0 = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 0 });
+  const lBig = await req(j, 'POST', '/api/admin/users', { action: 'set_level', user_id: eu.id, value: 101 });
+  check('set_level invalid (0/101) → 400', l0.status === 400 && lBig.status === 400, `${l0.status}/${lBig.status}`);
+
+  const noAccess = await req(je, 'POST', '/api/admin/users', { action: 'set_points', user_id: eu.id, value: 50 });
+  check('Non-admin nu poate ajusta puncte → 403', noAccess.status === 403, `status=${noAccess.status}`);
+
+  const selfPts = await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: 1, value: 50 });
+  check('Economia merge si pe propriul cont (exceptie documentata)', selfPts.data?.success === true, JSON.stringify(selfPts.data));
+  await req(j, 'POST', '/api/admin/users', { action: 'set_points', user_id: 1, value: -50 }); // curatenie: refacem punctele adminului
+}
+
+console.log('\n=== 9c. ADMIN: tema de sezon globala ===');
+{
+  const j = globalThis.admin;
+  const g0 = await req(j, 'GET', '/api/admin/season');
+  check('GET sezon: 4 teme disponibile, initial gol', (g0.data?.available || []).length === 4 && g0.data?.seasonal_theme === null, JSON.stringify(g0.data));
+  const bad = await req(j, 'POST', '/api/admin/season', { theme_id: 'theme_aurora' });
+  check('Sezon cu tema NON-sezoniera → 400', bad.status === 400, `status=${bad.status}`);
+
+  // user2 isi ia o tema personala (Sakura statica), econu ramane pe Standard
+  const u2row = (await req(j, 'GET', '/api/admin/users')).data.users.find((u) => u.username === 'user2');
+  const goldInainte = Number(u2row.gold) || 0;
+  await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2row.id, value: 200000 });
+  const j2b = jar();
+  await req(j2b, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  await req(j2b, 'POST', '/api/shop/buy', { item_id: 'theme_sakura' });
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const je = jar();
+  await req(je, 'POST', '/api/auth/login', { email: 'econu@test.ro', password: 'parola123' });
+
+  const set = await req(j, 'POST', '/api/admin/season', { theme_id: 'theme_iarna' });
+  check('Setare sezon iarna (global, cu reset)', set.data?.success === true && set.data?.seasonal_theme === 'theme_iarna' && Number(set.data?.reset_users) >= 1, JSON.stringify(set.data));
+  const meDef = await req(je, 'GET', '/api/auth/me');
+  check('User pe Standard vede sezonul', meDef.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meDef.data?.user?.site_theme));
+  const meReset = await req(j2b, 'GET', '/api/auth/me');
+  check('Tema personala se RESETEAZA la setarea sezonului', meReset.data?.user?.site_theme === 'theme_iarna', JSON.stringify(meReset.data?.user?.site_theme));
+  // ...dar ce e cumparat nu se pierde: user2 isi alege singur la loc Sakura.
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const meRealeg = await req(j2b, 'GET', '/api/auth/me');
+  check('Dupa realegere, personala bate sezonul', meRealeg.data?.user?.site_theme === 'theme_sakura', JSON.stringify(meRealeg.data?.user?.site_theme));
+  const shopSeas = await req(je, 'GET', '/api/shop');
+  check('Shop expune sezonul curent (eticheta Standard)', shopSeas.data?.seasonal?.id === 'theme_iarna', JSON.stringify(shopSeas.data?.seasonal));
+  const noAccess = await req(je, 'POST', '/api/admin/season', { theme_id: 'theme_paste' });
+  check('Non-admin nu poate seta sezonul → 403', noAccess.status === 403, `status=${noAccess.status}`);
+  const buySeas = await req(je, 'POST', '/api/shop/buy', { item_id: 'theme_iarna' });
+  const buyOld = await req(je, 'POST', '/api/shop/buy', { item_id: 'theme_sunset' });
+  check('Temele de sezon nu se pot cumpara → 400', buySeas.status === 400 && buyOld.status === 400, `${buySeas.status}/${buyOld.status}`);
+  const clr = await req(j, 'POST', '/api/admin/season', { theme_id: '' });
+  const meClr = await req(je, 'GET', '/api/auth/me');
+  const meClr2 = await req(j2b, 'GET', '/api/auth/me');
+  check('Golire sezon → Standardul revine, realegerile raman', clr.data?.seasonal_theme === null && meClr.data?.user?.site_theme === null && meClr2.data?.user?.site_theme === 'theme_sakura', `${clr.data?.seasonal_theme}/${meClr.data?.user?.site_theme}/${meClr2.data?.user?.site_theme}`);
+  await req(j2b, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_standard' }); // user2 la loc pe Standard (starea de dinainte de §9c)
+  // Curatenie: §13i cere user2 lefter — readucem gold-ul la valoarea de dinainte
+  const u2acum = (await req(j, 'GET', '/api/admin/users')).data.users.find((u) => u.username === 'user2');
+  const back = await req(j, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2row.id, value: goldInainte - Number(u2acum.gold) });
+  check('Restore gold user2 dupa §9c', back.data?.gold === goldInainte, `gold=${back.data?.gold} (era ${goldInainte})`);
+}
+
 console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
-  check('Statistici: total_users=6', s.data?.stats?.total_users === 6, JSON.stringify(s.data?.stats));
+  check('Statistici: total_users=7 (+econu din §9b)', s.data?.stats?.total_users === 7, JSON.stringify(s.data?.stats));
   check('Statistici: plafoanele implicite sunt 1000/1000', s.data?.stats?.limit_users === 1000 && s.data?.stats?.limit_series === 1000, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
@@ -1002,6 +1306,11 @@ console.log('\n=== 13. CHAT WEBSOCKET ===');
     check('init contine username-ul din JWT (nu de la client)', init?.you?.username === 'marius', JSON.stringify(init?.you));
     check('init contine lista online', Array.isArray(init.online), JSON.stringify(init.online));
     check('init contine istoric (array)', Array.isArray(init.history));
+
+    // REGRESIE: pulse citea DO-ul 'global' în loc de 'global-chat' → online era
+    // mereu 0. Cu socket-ul deschis, pulse trebuie să vadă măcar 1 utilizator.
+    const pulseLive = await req(j, 'GET', '/api/pulse');
+    check('Pulse vede socket-ul deschis (online ≥ 1)', (pulseLive.data?.online ?? 0) >= 1, JSON.stringify(pulseLive.data));
 
     ws.send(JSON.stringify({ type: 'chat', message: 'Salut din test!' }));
     const msg = await new Promise((resolve, reject) => {
@@ -1096,6 +1405,16 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   const ser = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
   check('Ruta seriei expune media, numarul si nota proprie', ser.data?.rating_average === 10 && ser.data?.rating_count === 1 && ser.data?.my_rating === 10, JSON.stringify({ a: ser.data?.rating_average, n: ser.data?.rating_count, m: ser.data?.my_rating }));
 
+  // Catalogul (si /api/home care il foloseste) aduce nota denormalizata, ca
+  // cardurile sa poata scrie „★ 10.0" fara o cerere per card.
+  {
+    const list = await req(j, 'GET', '/api/series?per_page=60');
+    const row = (list.data?.series || []).find((r) => r.id === globalThis.seriesId);
+    check('Catalogul aduce nota si numarul de voturi pe randul seriei',
+      row && Number(row.rating_avg) === 10 && Number(row.rating_count) === 1,
+      JSON.stringify({ a: row?.rating_avg, n: row?.rating_count }));
+  }
+
   // --- comentarii: postare, spoiler pastrat ca text, minim de lungime,
   //     stergere proprie vs a altcuiva
   const c1 = await req(j, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Primul comentariu [spoiler]Zoro iar moare[/spoiler]' });
@@ -1121,6 +1440,43 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   const hit = (cont.data?.items || []).find((it) => it.episode_id === globalThis.epId);
   check('Rândul „Continua vizionarea" contine episodul cu progres', !!hit && hit.seconds >= 900, JSON.stringify(cont.data?.items?.[0]));
   check('Itemul are serie si numar de episod pentru card', !!hit?.series_title && Number.isInteger(hit?.episode_number), JSON.stringify(hit)?.slice(0, 120));
+  // Cardul deseneaza bara de progres din durata seriei: daca durata nu vine
+  // in raspuns, pagina ar scrie „N min vazute" in loc de procent (deci am
+  // pierde bara pe toate seriile cu durata completata).
+  check('Raspunsul aduce durata seriei pentru bara de progres', 'ep_duration' in (hit || {}), JSON.stringify(hit)?.slice(0, 120));
+  // „Episodul următor" (2026-09-24): cardul terminat duce direct la episodul
+  // următor. Serverul îl trimite în același răspuns — pagina nu face o a doua
+  // cerere și nu ghicește din numere (episoadele pot avea goluri).
+  check('Raspunsul aduce si episodul următor pentru card',
+    'next_episode_id' in (hit || {}) && 'next_episode_number' in (hit || {}),
+    JSON.stringify(hit)?.slice(0, 160));
+  check('Episodul următor chiar există în serie (nu un id inventat)',
+    Number(hit?.next_episode_id) === Number(globalThis.ep2Id) || Number(hit?.next_episode_id) > 0,
+    JSON.stringify({ next: hit?.next_episode_id, ep2: globalThis.ep2Id }));
+
+  // Marcajul „văzut" din lista de episoade: o singură interogare pentru toată
+  // pagina, doar cu sesiune. Fără el, utilizatorul trebuia să intre în fiecare
+  // episod ca să afle ce a văzut.
+  const detailMarks = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+  const listaEps = detailMarks.data?.episodes || [];
+  const marcate = listaEps.filter((e) => e.watched);
+  check('Lista de episoade marcheaza ce s-a vazut', marcate.length >= 1 && marcate.every((e) => Number(e.progress_seconds) >= 900),
+    JSON.stringify(marcate.map((e) => `${e.id}:${e.progress_seconds}`)));
+  check('Episodul chiar vizionat e marcat in lista', marcate.some((e) => e.id === globalThis.epId),
+    JSON.stringify({ marcate: marcate.map((e) => e.id), vazut: globalThis.epId }));
+  // Contraproba: un episod cu zero secunde nu are voie sa apara ca văzut.
+  const neatins = listaEps.find((e) => Number(e.progress_seconds) === 0);
+  check('Episoadele neatinse rămân nemarcate', !neatins || neatins.watched === false, JSON.stringify(neatins));
+  // Cruce cu pagina episodului: aceeasi realitate citita din doua locuri.
+  const epCross = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
+  const dinLista = listaEps.find((e) => e.id === globalThis.epId);
+  check('Marcajul din lista coincide cu cel din pagina episodului',
+    epCross.data?.watched === dinLista?.watched && Number(epCross.data?.progress_seconds) === Number(dinLista?.progress_seconds),
+    JSON.stringify({ ep: epCross.data?.watched, lista: dinLista?.watched, s1: epCross.data?.progress_seconds, s2: dinLista?.progress_seconds }));
+  const anonDetail = await req(jar(), 'GET', `/api/series/${globalThis.seriesId}`);
+  check('Fara sesiune, lista nu cheltuie nicio citire de progres',
+    (anonDetail.data?.episodes || []).every((e) => !('watched' in e)),
+    JSON.stringify(anonDetail.data?.episodes?.[0] || {}));
 }
 
 console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ===');
@@ -1393,7 +1749,8 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   const anonShop = await req(jar(), 'GET', '/api/shop');
   check('Shop-ul anonim → 401', anonShop.status === 401, `status=${anonShop.status}`);
   const shop = await req(j, 'GET', '/api/shop');
-  check('Catalogul are 3 articole cu preturi si flag-uri', shop.data?.items?.length === 3 && shop.data.items.every((i) => i.price > 0 && typeof i.can_buy === 'boolean'), JSON.stringify(shop.data?.items?.map((i) => [i.id, i.price]))?.slice(0, 140));
+  check('Catalogul are 8 articole cu preturi si flag-uri (Shop 2.0)', shop.data?.items?.length === 8 && shop.data.items.every((i) => i.price > 0 && typeof i.can_buy === 'boolean'), JSON.stringify(shop.data?.items?.map((i) => [i.id, i.price]))?.slice(0, 200));
+  check('Numele de aur nu se mai vinde (era duplicat cu Auriu)', !(shop.data?.items || []).some((i) => i.id === 'name_gold'), (shop.data?.items || []).map((i) => i.id).join(','));
 
   // --- fara gold nu cumperi nimic
   const poor = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
@@ -1403,20 +1760,21 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   // --- admin alimenteaza (set_gold e si unealta de suport)
   const grant = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: u2id, value: 2000 });
   check('Adminul poate acorda gold (set_gold)', grant.data?.success === true && grant.data?.gold === goldBefore + 2000, JSON.stringify(grant.data));
+  const adminRow = (await req(globalThis.admin, 'GET', '/api/admin/users')).data.users.find((u) => u.id === 1);
   const grantSelf = await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: 1, value: 100 });
-  check('Adminul nu-si poate modifica propriul cont', grantSelf.status === 400, `status=${grantSelf.status}`);
+  check('Adminul isi poate ajusta propriul gold (economia e exceptata)', grantSelf.data?.success === true && grantSelf.data?.gold === adminRow.gold + 100, JSON.stringify(grantSelf.data));
 
   // --- cumpara consumabila + durabila
   const buyKey = await req(j, 'POST', '/api/shop/buy', { item_id: 'chest_key' });
   check('Cheia de cufar se cumpara si scade gold-ul atomic', buyKey.data?.success === true && buyKey.data?.qty === 1 && buyKey.data?.gold === goldBefore + 2000 - 150, JSON.stringify(buyKey.data));
-  const buyName = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
-  check('Numele de aur se cumpara', buyName.data?.success === true && buyName.data?.gold === goldBefore + 2000 - 150 - 400, JSON.stringify(buyName.data));
-  const dupe = await req(j, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  const buySup = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
+  check('Suporterul se cumpara', buySup.data?.success === true && buySup.data?.gold === goldBefore + 2000 - 150 - 1000, JSON.stringify(buySup.data));
+  const dupe = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
   check('Articolul permanent nu se poate cumpara de doua ori → 409', dupe.status === 409, `status=${dupe.status}`);
   const ghost = await req(j, 'POST', '/api/shop/buy', { item_id: 'yacht' });
   check('Articolul inexistent → 400', ghost.status === 400, `status=${ghost.status}`);
   const shop2 = await req(j, 'GET', '/api/shop');
-  check('GET /shop reflecta proprietatea si gold-ul ramas', shop2.data?.items?.find((i) => i.id === 'name_gold')?.owned === true && shop2.data?.items?.find((i) => i.id === 'chest_key')?.qty === 1, JSON.stringify(shop2.data?.items?.map((i) => [i.id, i.owned, i.qty]))?.slice(0, 140));
+  check('GET /shop reflecta proprietatea si gold-ul ramas', shop2.data?.items?.find((i) => i.id === 'flair_supporter')?.owned === true && shop2.data?.items?.find((i) => i.id === 'chest_key')?.qty === 1, JSON.stringify(shop2.data?.items?.map((i) => [i.id, i.owned, i.qty]))?.slice(0, 140));
 
   // --- cheia sare peste cooldown-ul cufarului
   const cState = await req(j, 'GET', '/api/chest');
@@ -1432,12 +1790,9 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   const noKey = await req(j, 'POST', '/api/chest', { use_key: 1 });
   check('Fara chei in inventar, use_key → 409', noKey.status === 409, `status=${noKey.status}`);
 
-  // --- cosmeticele se vad pe profil
+  // --- cosmeticele se vad pe profil (Suporterul e deja cumparat mai sus)
   const prof2 = await req(j, 'GET', '/api/profile/user2');
-  check('Profilul arata flair 💎 si numele de aur', prof2.data?.flair === '' && prof2.data?.name_gold === true, JSON.stringify({ f: prof2.data?.flair, g: prof2.data?.name_gold }));
-  const buyFlair = await req(j, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
-  const prof3 = await req(j, 'GET', '/api/profile/user2');
-  check('Dupa cumpararea Suporterului apare 💎', buyFlair.data?.success === true && prof3.data?.flair === '💎', JSON.stringify(prof3.data?.flair));
+  check('Profilul arata flair-ul 💎', prof2.data?.flair === '💎', JSON.stringify({ f: prof2.data?.flair, g: prof2.data?.name_gold }));
 
   // ================= RAPORTARE SURSE =================
   const epFull = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
@@ -1472,6 +1827,152 @@ console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
   check('Respingerea functioneaza', dismiss.data?.status === 'dismissed', JSON.stringify(dismiss.data));
   const userReports = await req(j, 'GET', '/api/admin/reports');
   check('Lista de raportari e doar pentru admin → 403', userReports.status === 403, `status=${userReports.status}`);
+}
+
+console.log('\n=== 13i2. SHOP 2.0: instant, pachete, jetoane, boost, culori, teme ===');
+// Toate pe useri proaspeti: boost-ul ×2 si XP-ul aleator din misterios ar
+// strica asertiunile exacte de XP ale celorlalte sectiuni.
+{
+  const regB = await req(jar(), 'POST', '/api/auth/register', { username: 'shopb', email: 'shopb@test.ro', password: 'parola123' });
+  const jb = jar();
+  await req(jb, 'POST', '/api/auth/login', { email: 'shopb@test.ro', password: 'parola123' });
+  check('User proaspat pentru Shop 2.0', regB.status === 201, `status=${regB.status}`);
+  const profB = await req(jb, 'GET', '/api/profile/shopb');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profB.data?.user?.id, value: 100000 });
+  const cat = await req(jb, 'GET', '/api/shop');
+  const ids = (cat.data?.items || []).map((i) => i.id);
+  check('Catalog Shop 2.0: 8 articole, fara name_gold',
+    ids.length === 8 && !ids.includes('name_gold') && ['mystery_box', 'xp_boost', 'xp_tome', 'faction_token', 'chest_keys_3', 'flair_nova'].every((x) => ids.includes(x)),
+    ids.join(','));
+  check('Culori noi: Argintiu/Bronz/Menta/Apus',
+    ['color_silver', 'color_bronze', 'color_mint', 'color_sunset'].every((x) => (cat.data?.colors || []).some((c) => c.id === x)),
+    `n=${cat.data?.colors?.length}`);
+  check('Teme de vanzare (Sakura/Royal + canvas, fara sezon)',
+    ['theme_sakura', 'theme_royal', 'theme_aurora', 'theme_ocean', 'theme_petale', 'theme_portocaliu'].every((x) => (cat.data?.themes || []).some((t) => t.id === x)),
+    `n=${cat.data?.themes?.length}`);
+  check('Sezonul NU apare in catalog (toamna/Halloween/iarna/Paste), 13 teme',
+    ['theme_sunset', 'theme_halloween', 'theme_iarna', 'theme_paste'].every((x) => !(cat.data?.themes || []).some((t) => t.id === x)) && cat.data?.themes?.length === 13,
+    `n=${cat.data?.themes?.length}`);
+
+  const gone = await req(jb, 'POST', '/api/shop/buy', { item_id: 'name_gold' });
+  check('Numele de aur nu se mai poate cumpara → 400', gone.status === 400, `status=${gone.status}`);
+
+  // --- misteriosul primul: eventualul gold castigat nu trebuie sa strice
+  // matematica exacta de dupa (luam baseline dupa el, nu inainte).
+  const eco0 = await req(jb, 'GET', '/api/economy');
+  const box = await req(jb, 'POST', '/api/shop/buy', { item_id: 'mystery_box' });
+  const eco1 = await req(jb, 'GET', '/api/economy');
+  const r = box.data;
+  const dg = eco1.data.gold - eco0.data.gold;
+  const dx = eco1.data.xp - eco0.data.xp;
+  const consistent = r?.success === true && (
+    (r.reward === 'gold' && dg === r.reward_amount - 200) ||
+    (r.reward === 'xp' && dx === r.reward_amount && dg === -200) ||
+    (r.reward === 'key' && eco1.data.chest_keys === eco0.data.chest_keys + 1 && dg === -200) ||
+    (r.reward === 'nothing' && r.reward_amount === 0 && dg === -200)
+  );
+  check('Cufarul misterios se deschide pe loc, cu efectul promis', consistent, JSON.stringify({ r, dg, dx }));
+  const goldBase = eco1.data.gold;
+
+  // --- tomul: +200 XP exact (fara boost pe userul asta)
+  const tome = await req(jb, 'POST', '/api/shop/buy', { item_id: 'xp_tome' });
+  const eco2 = await req(jb, 'GET', '/api/economy');
+  check('Tomul da +200 XP exact', tome.data?.xp_granted === 200 && eco2.data.xp - eco1.data.xp === 200, `dx=${eco2.data.xp - eco1.data.xp}`);
+
+  // --- setul de chei crediteaza 3× chest_key
+  const keys = await req(jb, 'POST', '/api/shop/buy', { item_id: 'chest_keys_3' });
+  const eco3 = await req(jb, 'GET', '/api/economy');
+  check('Setul de 3 chei intra in inventar', keys.data?.linked?.id === 'chest_key' && eco3.data.chest_keys === eco2.data.chest_keys + 3, `chei=${eco3.data.chest_keys}`);
+
+  // --- Nova primeaza peste Suporter
+  const nova = await req(jb, 'POST', '/api/shop/buy', { item_id: 'flair_nova' });
+  const profNova = await req(jb, 'GET', '/api/profile/shopb');
+  check('Nova pune flair 🌠 pe profil', nova.data?.success === true && profNova.data?.flair === '🌠', profNova.data?.flair);
+  await req(jb, 'POST', '/api/shop/buy', { item_id: 'flair_supporter' });
+  const profSup = await req(jb, 'GET', '/api/profile/shopb');
+  check('Dupa Suporter, tot Nova se vede (precedenta)', profSup.data?.flair === '🌠', profSup.data?.flair);
+
+  // --- culoare + tema noua: cumparare + activare
+  const silv = await req(jb, 'POST', '/api/shop/buy', { item_id: 'color_silver' });
+  const actS = await req(jb, 'POST', '/api/shop/activate', { type: 'color', id: 'color_silver' });
+  const profCol = await req(jb, 'GET', '/api/profile/shopb');
+  check('Argintiu se cumpara si se activeaza', silv.data?.success === true && actS.data?.active_name_color === 'color_silver' && profCol.data?.name_color === 'color_silver', profCol.data?.name_color);
+  const sak = await req(jb, 'POST', '/api/shop/buy', { item_id: 'theme_sakura' });
+  const actT = await req(jb, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+  const shopAfter = await req(jb, 'GET', '/api/shop');
+  check('Sakura se cumpara si se activeaza', sak.data?.success === true && actT.data?.active_theme === 'theme_sakura' && shopAfter.data?.active_theme === 'theme_sakura', shopAfter.data?.active_theme);
+
+  // --- tema animata: cumparare + activare pe user separat (e scumpa)
+  await req(jar(), 'POST', '/api/auth/register', { username: 'animu', email: 'animu@test.ro', password: 'parola123' });
+  const ja = jar();
+  await req(ja, 'POST', '/api/auth/login', { email: 'animu@test.ro', password: 'parola123' });
+  const profA = await req(ja, 'GET', '/api/profile/animu');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profA.data?.user?.id, value: 600000 });
+  const aur = await req(ja, 'POST', '/api/shop/buy', { item_id: 'theme_aurora' });
+  const actA = await req(ja, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_aurora' });
+  const shopA = await req(ja, 'GET', '/api/shop');
+  check('Aurora animata se cumpara si se activeaza', aur.data?.success === true && actA.data?.active_theme === 'theme_aurora' && shopA.data?.active_theme === 'theme_aurora' && shopA.data?.gold === 600000 - 250000, `gold=${shopA.data?.gold}`);
+  const sak2 = await req(ja, 'POST', '/api/shop/buy', { item_id: 'theme_petale' });
+  const actP = await req(ja, 'POST', '/api/shop/activate', { type: 'theme', id: 'theme_petale' });
+  const shopP = await req(ja, 'GET', '/api/shop');
+  check('Sakura canvas se cumpara si se activeaza', sak2.data?.success === true && actP.data?.active_theme === 'theme_petale' && shopP.data?.active_theme === 'theme_petale' && shopP.data?.gold === 600000 - 250000 - 175000, `gold=${shopP.data?.gold}`);
+
+  // --- matematica exacta a gold-ului (baseline luat dupa misterios)
+  const spent = 500 + 400 + 2500 + 1000 + 2500 + 75000;
+  check('Gold-ul ramas e exact pretul total', shopAfter.data?.gold === goldBase - spent, `${goldBase} - ${spent} = ${goldBase - spent} vs ${shopAfter.data?.gold}`);
+
+  // --- CSS-ul claselor noi chiar exista (altfel cumperi ceva invizibil)
+  const css = await (await fetch(BASE + '/assets/css/style.css')).text();
+  check('CSS pentru culorile/temele noi', ['.nc-silver', '.nc-bronze', '.nc-mint', '.nc-sunset', 'body.theme-sakura', 'body.theme-royal', 'body.theme-sunset', 'body.theme-aurora', 'body.theme-ocean', 'body.theme-petale', 'body.theme-portocaliu', 'body.theme-iarna', 'body.theme-halloween', 'body.theme-paste', '@keyframes theme-sunset-drift', '@keyframes theme-aurora-drift', '@keyframes theme-ocean-drift'].every((s) => css.includes(s)), 'lipseste o clasa');
+  const ab = await (await fetch(BASE + '/assets/js/anim-bg.js')).text();
+  const core = await (await fetch(BASE + '/assets/js/core.js')).text();
+  check('Motor canvas anim-bg.js (petale/bule/stele + rAF)', ['requestAnimationFrame', 'petalaNoua', 'bulaNoua', 'steaNoua', 'fulgNou', 'portocaliu', 'halloween', 'MutationObserver'].every((s) => ab.includes(s)) && core.includes('./anim-bg.js') && core.includes('ultimaVerificareBuild'), 'lipseste motorul, legatura sau garda anti-cache din core.js');
+  check('Temele animate ignora reduced-motion (consimtamant explicit)', !css.includes('body.theme-ocean { animation: none') && !ab.includes("matchMedia('(prefers-reduced-motion"), 'poarta reduced-motion inca prezenta');
+  check('Tema instant din localStorage (fara flash)', core.includes('auk-theme'), 'lipseste cache-ul de tema din core.js');
+}
+
+console.log('\n=== 13i3. BOOST XP ×2 si JETOANE DE FACTIUNE ===');
+{
+  // --- boost-ul dubleaza XP-ul din orice sursa, 24h, prelungibil
+  await req(jar(), 'POST', '/api/auth/register', { username: 'boostu', email: 'boostu@test.ro', password: 'parola123' });
+  const ju = jar();
+  await req(ju, 'POST', '/api/auth/login', { email: 'boostu@test.ro', password: 'parola123' });
+  const profU = await req(ju, 'GET', '/api/profile/boostu');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profU.data?.user?.id, value: 1000 });
+  const boost = await req(ju, 'POST', '/api/shop/buy', { item_id: 'xp_boost' });
+  check('Boost-ul seteaza expirarea ~24h in viitor', boost.data?.success === true && boost.data?.boost_until > Date.now() + 23 * 3600000, `until=${boost.data?.boost_until}`);
+  const ecoB = await req(ju, 'GET', '/api/economy');
+  check('Economy arata boost-ul activ', ecoB.data?.xp_boost_ms > 23 * 3600000, `ms=${ecoB.data?.xp_boost_ms}`);
+  const cm = await req(ju, 'POST', '/api/comments', { episode_id: globalThis.epId, body: 'Comentariu pentru testul de boost XP dublu' });
+  const xpB1 = (await req(ju, 'GET', '/api/economy')).data.xp;
+  check('Cu boost, comentariul da +10 XP in loc de +5', cm.data?.success === true && xpB1 === ecoB.data.xp + 10, `${ecoB.data.xp}->${xpB1}`);
+  await req(ju, 'DELETE', `/api/comments?id=${cm.data?.id}`);
+  const boost2 = await req(ju, 'POST', '/api/shop/buy', { item_id: 'xp_boost' });
+  check('Al doilea boost prelungeste expirarea', boost2.data?.boost_until > (boost.data?.boost_until || 0), `${boost.data?.boost_until} -> ${boost2.data?.boost_until}`);
+
+  // --- jetonul sare peste blocajul lunar al factiunilor
+  await req(jar(), 'POST', '/api/auth/register', { username: 'toku', email: 'toku@test.ro', password: 'parola123' });
+  const jt = jar();
+  await req(jt, 'POST', '/api/auth/login', { email: 'toku@test.ro', password: 'parola123' });
+  const profT = await req(jt, 'GET', '/api/profile/toku');
+  await req(globalThis.admin, 'POST', '/api/admin/users', { action: 'set_gold', user_id: profT.data?.user?.id, value: 2000 });
+  const fac0 = await req(jt, 'GET', '/api/factions');
+  const fa = fac0.data?.factions?.[1]?.slug;
+  const fb = fac0.data?.factions?.[2]?.slug;
+  check('Userul nou n-are jetoane', fac0.data?.faction_tokens === 0, `n=${fac0.data?.faction_tokens}`);
+  await req(jt, 'POST', '/api/factions', { faction: fa });
+  const locked = await req(jt, 'POST', '/api/factions', { faction: fb });
+  check('Fara jeton, a doua alegere in luna → 409', locked.status === 409, `status=${locked.status}`);
+  const noTok = await req(jt, 'POST', '/api/factions', { faction: fb, use_token: 1 });
+  check('use_token fara jeton → 409', noTok.status === 409, `status=${noTok.status}`);
+  await req(jt, 'POST', '/api/shop/buy', { item_id: 'faction_token' });
+  const fac1 = await req(jt, 'GET', '/api/factions');
+  check('Dupa cumparare, GET arata 1 jeton', fac1.data?.faction_tokens === 1, `n=${fac1.data?.faction_tokens}`);
+  const sw = await req(jt, 'POST', '/api/factions', { faction: fb, use_token: 1 });
+  const fac2 = await req(jt, 'GET', '/api/factions');
+  check('Cu jeton, schimbarea reuseste si jetonul se consuma',
+    sw.data?.success === true && sw.data?.used_token === true && fac2.data?.my_faction === fb && fac2.data?.faction_tokens === 0,
+    `f=${fac2.data?.my_faction} t=${fac2.data?.faction_tokens}`);
 }
 
 console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
@@ -1531,6 +2032,16 @@ console.log('\n=== 13j. COMMUNITY v2: VOTURI, RASPUNSURI, RECENZII ===');
   check('Clasamentul de voturi are media si numarul de voturi', !!ratedRow && Number(ratedRow.average) === 8 && ratedRow.votes >= 1, JSON.stringify(ratedRow));
   const weekRow = (top.data?.weekly || []).find((r) => r.id === globalThis.seriesId);
   check('Topul saptamanal numara privitori unici din progresul real', !!weekRow && weekRow.watchers >= 1 && typeof weekRow.seconds === 'number', JSON.stringify(weekRow));
+  // Media din clasament e cea denormalizata pe serie (0028), iar ruta seriei o
+  // calculeaza live din series_ratings: daca cele doua surse nu spun acelasi
+  // lucru, cineva a scris note pe o cale care nu resincronizeaza contoarele.
+  {
+    const serLive = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+    check('Media denormalizata = media calculata live din note',
+      Number(ratedRow?.average) === Number(serLive.data?.rating_average)
+      && Number(ratedRow?.votes) === Number(serLive.data?.rating_count),
+      `top=${ratedRow?.average}/${ratedRow?.votes} serie=${serLive.data?.rating_average}/${serLive.data?.rating_count}`);
+  }
   check('Topurile sunt limitate la 5 intrari', (top.data?.weekly || []).length <= 5 && (top.data?.rated || []).length <= 5, `w=${top.data?.weekly?.length} r=${top.data?.rated?.length}`);
 }
 

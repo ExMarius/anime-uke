@@ -1,5 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, optimizeCover } from './core.js';
-import { initChat } from './chat.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, coverImg, initChat } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -35,11 +34,10 @@ function setHead(series) {
   const poster = document.getElementById('series-poster');
   poster.innerHTML = '';
   if (series.cover_image) {
-    const img = document.createElement('img');
-    img.src = optimizeCover(safeUrl(series.cover_image, ''), 600);
-    img.alt = series.title || 'Poster';
-    img.loading = 'eager';
-    img.decoding = 'async';
+    const img = coverImg(series.cover_image, {
+      w: 300, widths: [200, 300, 600], loading: 'eager',
+      sizes: '(max-width: 640px) 100px, 150px', alt: series.title || 'Poster',
+    });
     img.addEventListener('error', () => img.replaceWith(genPoster(series.title)), { once: true });
     poster.appendChild(img);
     poster.hidden = false;
@@ -176,6 +174,18 @@ function episodeCard(ep) {
   num.className = 'ep-num';
   num.textContent = ep.episode_number;
 
+  // Marcajul „văzut" (adăugat 2026-09-24): inainte, lista de episoade nu
+  // spunea nimic despre ce ai vazut deja — trebuia sa intri in episod ca sa
+  // afli. Serverul trimite `watched` + `progress_seconds` doar cand exista
+  // sesiune (o singura interogare pentru toata pagina, pe cheia primara a
+  // lui watch_progress), deci pentru vizitatorii nelogati randul e identic
+  // cu inainte.
+  // Prag de 30s, acelasi ca în /api/continue: o clipa de 5 secunde nu
+  // merita un marcaj „Început" (ar face jumătate din listă să pară atinsă).
+  const inceput = !ep.watched && Number(ep.progress_seconds) >= 30;
+  if (ep.watched) a.classList.add('is-watched');
+  else if (inceput) a.classList.add('is-started');
+
   const body = document.createElement('div');
   body.className = 'card__body';
 
@@ -189,6 +199,14 @@ function episodeCard(ep) {
   views.className = 'views';
   views.textContent = `👁 ${Number(ep.views || 0).toLocaleString('ro-RO')}`;
   meta.appendChild(views);
+
+  if (ep.watched || inceput) {
+    const st = document.createElement('span');
+    st.className = ep.watched ? 'ep-seen' : 'ep-progress';
+    st.textContent = ep.watched ? '✓ Văzut' : 'Început';
+    if (!ep.watched) st.title = `Ai acumulat ${Math.max(1, Math.round(Number(ep.progress_seconds) / 60))} min`;
+    meta.appendChild(st);
+  }
 
   body.append(title, meta);
   a.append(num, body);

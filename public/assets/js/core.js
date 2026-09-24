@@ -9,6 +9,7 @@
 //   2. Fara handlere inline (onclick="...") — sunt blocate de CSP.
 //      Folosim addEventListener + data-action.
 // =====================================================================
+import { initAnimBg } from './anim-bg.js';
 
 let sessionCache;
 
@@ -50,6 +51,39 @@ export function optimizeCover(value, w = 400) {
   } catch {
     return value;
   }
+}
+
+/**
+ * <img> pentru o copertă, cu lățimea potrivită slotului în care intră.
+ *
+ * De ce nu ajungea `optimizeCover`: acolo cerem O singură lățime, aleasă de
+ * noi. Cardul din grilă are 184 px pe desktop și 142 px pe telefon, dar
+ * cerea 400 px — de ~2-3x mai mulți octeți pe fiecare poster; thumbnail-ul
+ * din admin are 34 px și cerea coperta întreagă. Aici îi dăm browserului
+ * `srcset` + `sizes` (exact ca la bannerul din pagina principală): alege el
+ * treapta, ținând cont și de ecranul retina, iar `decoding=async` scoate
+ * decodarea JPEG/WebP de pe firul principal (mai puțin TBT la scroll).
+ *
+ * `w` rămâne lățimea de bază din `src` (fallback pentru browsere fără
+ * srcset) și e plafonul: nu cerem niciodată mai mult decât înainte.
+ */
+export function coverImg(cover, opts = {}) {
+  const { w = 400, widths, sizes, alt = '', loading = 'lazy', className = '' } = opts;
+  const img = document.createElement('img');
+  const url = safeUrl(cover, '');
+  if (className) img.className = className;
+  img.alt = alt;
+  img.loading = loading;
+  img.decoding = 'async';
+  const steps = [...new Set((widths || [w]).map((x) => Math.min(x, w)))].sort((a, b) => a - b);
+  if (url && url !== '#') {
+    if (steps.length > 1) {
+      img.srcset = steps.map((x) => `${optimizeCover(url, x)} ${x}w`).join(', ');
+      img.sizes = sizes || `${w}px`;
+    }
+    img.src = optimizeCover(url, w);
+  }
+  return img;
 }
 
 export function safeUrl(value, fallback = '#') {
@@ -117,9 +151,17 @@ const ME_TTL_MS = 20 * 1000;
 export function applySiteTheme(theme) {
   try {
     document.body.classList.remove(...[...document.body.classList].filter((c) => c.startsWith('theme-') && c !== 'theme-rank'));
-    if (theme && /^theme_[a-z]+$/.test(theme) && theme !== 'theme_standard') {
+    const valid = theme && /^theme_[a-z]+$/.test(theme) && theme !== 'theme_standard';
+    if (valid) {
       document.body.classList.add(`theme-${theme.slice(6)}`);
     }
+    // Sincronizam cache-ul instant: la urmatoarea pagina tema se aplica din
+    // localStorage inainte de fetch-ul de sesiune (zero flash). Sursa
+    // adevarului ramane serverul — getSession rescrie la fiecare raspuns.
+    try {
+      if (valid) localStorage.setItem('auk-theme', theme);
+      else localStorage.removeItem('auk-theme');
+    } catch { /* mod privat — ramanem pe aplicarea din sesiune */ }
   } catch { /* body indisponibil la momentul apelului — ignorăm */ }
 }
 
@@ -142,6 +184,10 @@ export async function getSession(force = false) {
   if (!res.ok && res.status === 0) return sessionCache ?? null; // retea moarta: nu suprascrie
   sessionCache = res.ok ? (res.data.user || null) : undefined;
   try { sessionStorage.setItem('auk-me', JSON.stringify({ t: Date.now(), user: sessionCache })); } catch { /* ignora */ }
+  // FIX: tema se aplica si pe calea network, nu doar din cache-ul de sesiune.
+  // Fara linia asta, prima pagina dupa >20s de pauza ramanea netemata pana
+  // la urmatoarea navigare (si motorul canvas nu pornea niciodata pe ea).
+  applySiteTheme(sessionCache?.site_theme || null);
   return sessionCache;
 }
 
@@ -167,6 +213,7 @@ export function whenActive(fn) {
 export async function logout() {
   await api('/auth/logout', { method: 'POST' });
   clearSession();
+  try { localStorage.removeItem('auk-theme'); } catch { /* ignora */ }
   location.href = '/';
 }
 
@@ -207,9 +254,15 @@ export async function renderNav(active = '') {
   const brand = document.createElement('a');
   brand.className = 'nav__brand';
   brand.href = '/';
-  const mark = document.createElement('span');
+  const mark = document.createElement('img');
   mark.className = 'nav__brand__mark';
-  mark.textContent = '鬼';
+  // .webp direct: assetul nu mai trece prin worker (public/_routes.json), deci
+  // nu mai exista negociere Accept: image/webp pe server. Toate browserele care
+  // ruleaza acest site (module ES, WebP din 2020) il afiseaza.
+  mark.src = '/assets/img/logo-icon.webp';
+  mark.alt = '';                    // decorativ: numele e în .nav__brand__text
+  mark.setAttribute('aria-hidden', 'true');
+  mark.width = 34; mark.height = 34; // fără CLS: spațiul e rezervat din start
   const btext = document.createElement('span');
   btext.className = 'nav__brand__text';
   btext.textContent = 'anime-uke';
@@ -542,10 +595,22 @@ export function onPulse(fn) {
 async function fetchPulse() {
   const res = await api('/pulse');
   if (!res.ok || res.status === 0) return;
-  pulseData = res.data;
+  pushPulse(res.data);
+}
+
+/** Publică date de pulse venite pe altă cale decât /api/pulse — pagina
+ *  principală le primește deja în /api/home, deci nu mai facem o cerere. */
+export function pushPulse(data) {
+  if (!data) return;
+  pulseData = data;
   for (const fn of pulseWaiters.splice(0)) fn(pulseData);
   updatePulseChip(pulseData);
 }
+
+/** Anunță că pagina își aduce singură datele de pulse (vezi pushPulse):
+ *  startPulse nu mai pornește cu o cerere imediată către /api/pulse. */
+let pulseClaimed = false;
+export function claimPulse() { pulseClaimed = true; }
 
 function updatePulseChip(data) {
   const chip = document.getElementById('pulse-chip');
@@ -557,8 +622,38 @@ function updatePulseChip(data) {
   chip.classList.toggle('pulse-chip--live', n > 0);
 }
 
-/** Chip-ul de pulse din nav. Click → deschide chat-ul (eveniment global,
- *  ca să nu importăm chat.js din core — ar fi ciclu de module). */
+// ---------------------------------------------------------------------
+// CHAT LA CERERE („code splitting”)
+// ---------------------------------------------------------------------
+// chat.js cântărește ~14 KB minificat (socket, stikere, regulament, istoric)
+// și era importat STATIC de fiecare pagină — deci fiecare vizitator îl
+// descărca și-și deschidea socket-ul chiar dacă nu intra niciodată în chat.
+// Deploy-ul rulează esbuild cu --splitting: modulul ajunge într-un singur
+// chunk comun (nume cu hash de conținut → cache 1 an), cerut abia când e
+// nevoie. Importul e dinamic și NU creează ciclu de module (core ← chat
+// rămâne singura direcție de import static).
+let chatMod;   // promisiunea de încărcare a modulului
+let chatOn;    // promisiunea de pornire (initChat rulează o singură dată)
+
+function loadChat() {
+  return (chatMod ||= import('./chat.js'));
+}
+
+/** Pornește chat-ul (fab, modal, socket) — o singură dată per pagină. */
+export function initChat() {
+  return (chatOn ||= loadChat()
+    .then((m) => m.initChat())
+    .catch((err) => { chatOn = undefined; throw err; }));   // reîncearcă la următorul apel
+}
+
+/** Deschide fereastra de chat, pornind-o dacă încă nu e pornită. */
+export async function openChat() {
+  await initChat();
+  (await loadChat()).openChat();
+}
+
+/** Chip-ul de pulse din nav. Click → deschide chat-ul (prin wrapper-ul de mai
+ *  sus, ca chat.js să rămână încărcat la cerere). */
 function buildPulseChip() {
   const chip = document.createElement('button');
   chip.id = 'pulse-chip';
@@ -569,7 +664,7 @@ function buildPulseChip() {
   chip.innerHTML = '<span class="pulse-chip__dot" aria-hidden="true"></span>' +
     '<span class="pulse-chip__n">online</span>';
   chip.addEventListener('click', () => {
-    document.dispatchEvent(new CustomEvent('auk:open-chat'));
+    openChat().catch(() => { /* chat opțional */ });
   });
   return chip;
 }
@@ -580,7 +675,9 @@ export function startPulse() {
   if (!nav) return;
   nav.appendChild(buildPulseChip());
   const tick = () => { if (!document.hidden) fetchPulse(); };
-  tick();
+  // Pagina care și-a luat deja datele din /api/home nu mai plătește o cerere;
+  // dacă totuși ele nu ajung, primul tick de la 90 s le aduce.
+  if (!pulseClaimed) tick();
   setInterval(tick, 90000);
   document.addEventListener('visibilitychange', tick);
 }
@@ -734,4 +831,96 @@ export async function startGuestNudge() {
     document.body.appendChild(b);
     requestAnimationFrame(() => b.classList.add('nudge--in'));
   }, NUDGE_DELAY_MS);
+}
+
+// Fundaluri animate cu particule (teme canvas): porneste singur pe orice
+// pagina care importa core.js. Modulele ES sunt deferred, deci body exista.
+// TEMA INSTANT LA INTRAREA PE PAGINA: fetch-ul de sesiune (getSession) ia
+// sute de ms, timp in care pagina ar clipi in tema implicita. Aplicam
+// sincron ultima tema cunoscuta din localStorage; getSession o confirma sau
+// o corecteaza imediat ce soseste raspunsul (sursa adevarului = serverul).
+try {
+  const temaCache = localStorage.getItem('auk-theme');
+  if (temaCache && /^theme_[a-z]+$/.test(temaCache) && temaCache !== 'theme_standard') {
+    document.body.classList.add(`theme-${temaCache.slice(6)}`);
+  }
+} catch { /* mod privat / body indisponibil — asteptam sesiunea */ }
+
+try { initAnimBg(); } catch { /* fara canvas — ramane gradientul static */ }
+
+// ---------------------------------------------------------------------
+// BUTONUL „INAPOI SUS": apare dupa ce ai coborat doua ecrane, pe orice
+// pagina. Fara el, un catalog de 1000 de serii se rasfoieste urat pe
+// telefon. Ascultatorul e passiv si lucreaza doar intr-un rAF, deci nu
+// incurca scroll-ul; pe paginile scurte butonul nu se arata deloc.
+// ---------------------------------------------------------------------
+export function initToTop() {
+  if (typeof document === 'undefined' || !document.body) return null;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'to-top';
+  btn.className = 'to-top';
+  btn.hidden = true;
+  btn.setAttribute('aria-label', 'Înapoi sus');
+  btn.textContent = '↑';
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Focusul ramane pe un element care nu mai e vizibil dupa derulare: il
+    // mutam pe inceputul paginii, ca navigarea cu tastatura sa nu se rupa.
+    document.getElementById('nav')?.scrollIntoView?.({ block: 'start' });
+  });
+  document.body.appendChild(btn);
+
+  let scheduled = false;
+  const apply = () => {
+    scheduled = false;
+    const show = window.scrollY > 700;
+    if (show === btn.hidden) btn.hidden = !show;
+  };
+  window.addEventListener('scroll', () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(apply);
+  }, { passive: true });
+  apply();
+  return btn;
+}
+
+// Fiecare pagina care incarca core.js primeste butonul; paginile care nu au
+// nevoie (autentificare, admin scurt) il vor tine ascuns singure.
+try { initToTop(); } catch { /* fara scroll-to-top — pagina merge mai departe */ }
+
+// ---------------------------------------------------------------------
+// GARDA ANTI-CACHE: daca tab-ul ramane deschis peste un deploy, shell-ul
+// vechi + API-ul nou inseamna butoane/teme care „nu merg" (codul vechi nu
+// cunoaste temele noi). La revenirea in tab — cel mult o data pe minut —
+// comparam ?v= din tag-urile paginii curente cu ?v= din HTML-ul proaspat
+// de pe server; daca difera, anuntam si reincarcam automat. In dev (fara
+// ?v=) si pe paginile fara assete versionate garda sta inactiva.
+// ---------------------------------------------------------------------
+let ultimaVerificareBuild = 0;
+function vDinTaguri() {
+  const el = document.querySelector('script[src*="?v="], link[href*="?v="]');
+  const url = el?.getAttribute('src') || el?.getAttribute('href') || '';
+  const m = url.match(/[?&]v=([A-Za-z0-9._-]+)/);
+  return m ? m[1] : null;
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) return;
+    const acum = Date.now();
+    if (acum - ultimaVerificareBuild < 60000) return;
+    ultimaVerificareBuild = acum;
+    try {
+      const vCurent = vDinTaguri();
+      if (!vCurent) return;
+      const html = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+      const m = html.match(/[?&]v=([A-Za-z0-9._-]+)/);
+      if (m && m[1] !== vCurent) {
+        toast('A apărut o versiune nouă — reîncarc pagina…', 'info', 2500);
+        setTimeout(() => location.reload(), 1200);
+      }
+    } catch { /* offline sau raspuns neasteptat — ignoram */ }
+  });
 }

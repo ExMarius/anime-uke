@@ -14,6 +14,15 @@ import { JSDOM } from 'jsdom';
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8788';
 const ROOT = new URL('..', import.meta.url).pathname;
+// Cu AUK_JS_DIR rulezi EXACT artefactele de deploy (minificate + chunk-uri),
+// nu sursele: `node scripts/build-artifacts.mjs /tmp/auk-art && AUK_JS_DIR=... node tests/dom-smoke.mjs`.
+// Așa prindem o rupere în graful de chunk-uri (import relativ către un chunk
+// inexistent) înainte de deploy, nu în producție.
+const JSDIR = process.env.AUK_JS_DIR || `${ROOT}public/assets/js`;
+// Pe artefactele de deploy (AUK_JS_DIR) codul e împachetat în chunk-uri: nu mai
+// putem reseta sesiunea din exterior (vezi mai jos), deci 3 verificări care
+// depind de trucul acela se sar — sunt acoperite de rularea pe surse.
+const PE_BUILD = !!process.env.AUK_JS_DIR;
 
 let passed = 0;
 let failed = 0;
@@ -73,9 +82,13 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
 
   // fetch: jsdom nu are unul care sa mearga in retea, deci il punem pe al
   // nostru si rezolvam URL-urile relative fata de serverul local.
+  // Retinem si CAILE cerute: testele de buget (buget 0 = cota de 100.000 de
+  // invocari/zi) verifica exact ce cereri face pagina.
+  const requests = [];
   const realFetch = globalThis.fetch;
   window.fetch = async (input, init = {}) => {
     const path = typeof input === 'string' ? input : input.url;
+    requests.push(path);
     const abs = path.startsWith('http') ? path : `${BASE}${path}`;
     const headers = { ...(init.headers || {}) };
     if (cookie) headers.Cookie = cookie;
@@ -90,6 +103,15 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
       throw e;
     }
   };
+
+  // Web Animations API: jsdom nu o implementeaza, iar paginile o folosesc
+  // pentru animatii de intrare (hero, carduri). Fara polyfill, apelul ar
+  // arunca si codul de eroare al paginii ar ascunde elementul — adica testul
+  // ar valida calea de EROARE, nu pe cea reala (exact asta s-a intamplat cu
+  // bannerul din prima pagina, ani de zile nevazut de teste).
+  if (typeof window.Element.prototype.animate !== 'function') {
+    window.Element.prototype.animate = () => ({ finished: Promise.resolve(), cancel() {}, finish() {}, play() {}, pause() {} });
+  }
 
   // Chat-ul deschide un WebSocket; intr-un test DOM nu ne intereseaza,
   // dar lipsa constructorului ar opri executia paginii principale.
@@ -147,14 +169,14 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
   try {
     // ?t=… forteaza reimportul: fara asta, a doua pagina ar primi modulul
     // deja executat din cache si nu ar randa nimic.
-    await import(`file://${ROOT}public/assets/js/${module}?t=${Date.now()}${Math.random()}`);
+    await import(`file://${JSDIR.replace(/^\//, '/')}/${module}?t=${Date.now()}${Math.random()}`);
   } catch (e) {
     importError = e;
     errors.push(`import ${module}: ${e.message}`);
   }
 
   return {
-    dom, window, errors, importError,
+    dom, window, errors, importError, requests,
     doc: window.document,
     $: (sel) => window.document.querySelector(sel),
     $$: (sel) => [...window.document.querySelectorAll(sel)],
@@ -196,7 +218,26 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Statistica din hero vine din meta, nu din pagina curenta', p.text('#stat-series') === asteptat, `stat-series=${p.text('#stat-series')} asteptat=${asteptat}`);
   }
   const sel = p.$('#sort-select');
-  check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 4, `optiuni=${sel?.options.length}`);
+  check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 5, `optiuni=${sel?.options.length}`);
+  check('  ...inclusiv „Cele mai bine notate"', [...(sel?.options || [])].some((o) => o.value === 'rating'), [...(sel?.options || [])].map((o) => o.value).join(','));
+
+  // -------------------------------------------------------------------
+  // BUGET 0: prima pagină = O SINGURĂ cerere de API.
+  // Înainte se făceau 5 (/series, /top, /recent, /genres, /pulse), adică 5
+  // invocări din cota gratuită de 100.000/zi pentru fiecare vizitator.
+  // -------------------------------------------------------------------
+  {
+    const apiCalls = p.requests.filter((u) => u.startsWith('/api/'));
+    const pathOf = (u) => u.split('?')[0];
+    check('Prima pagină cere catalogul o singură dată, prin /api/home',
+      apiCalls.filter((u) => pathOf(u) === '/api/home').length === 1, apiCalls.join(' '));
+    const redundante = apiCalls.filter((u) => ['/api/series', '/api/top', '/api/recent', '/api/genres', '/api/pulse'].includes(pathOf(u)));
+    check('  ...și nu mai cheltuie cereri separate pentru top/recent/genuri/pulse',
+      redundante.length === 0, redundante.join(' ') || 'niciuna');
+    check('  ...sesiunea rămâne singura cerere în plus (nav, notificări)',
+      apiCalls.every((u) => pathOf(u) === '/api/home' || pathOf(u).startsWith('/api/auth') || pathOf(u).startsWith('/api/notifications') || pathOf(u) === '/api/continue'),
+      apiCalls.join(' '));
+  }
   // Vizibilitatea butonului trebuie sa fie congruenta cu has_more de pe
   // server, indiferent daca baza are 1 serie sau 1000.
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
@@ -205,10 +246,20 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('link[rel="speculationrules"][href="/speculationrules.json"]'), 'lipseste <link rel=speculationrules>');
   const bellOn = await until(() => !!p.$('#nav-bell'));
   check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
+  // Nav-ul e randat aici (dovada: clopoțelul) — verificăm și brandul.
+  const brandImg = p.$('#nav .nav__brand__mark');
+  // Logo-ul din nav e .webp (assetul nu mai trece prin worker, deci nu există
+  // negociere Accept pe server); faviconul rămâne .png, pentru iOS/crawlere.
+  check('Brandul din nav e logo-ul .webp (img, nu glifă)', brandImg?.tagName === 'IMG' && (brandImg.getAttribute('src') || '').endsWith('logo-icon.webp'), `${brandImg?.tagName} ${brandImg?.getAttribute('src')}`);
+  check('Faviconul e logo-ul', (p.$('link[rel="icon"]')?.getAttribute('href') || '').includes('logo-icon.png'), p.$('link[rel="icon"]')?.getAttribute('href'));
   p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const popOn = await until(() => p.$('#notif-pop')?.hidden === false);
   check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));
-  check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
+  // chat.js se încarcă la nevoie (import dinamic în core.js, vezi „Viteză"):
+  // butonul de stikere apare după ce modulul ajunge, deci îl așteptăm — și
+  // tot aici verificăm că pagina chiar pornește chat-ul singură.
+  const chatGata = await until(() => !!p.$('#chat-sticker-btn'));
+  check('Butonul de stikere exista in chat', chatGata, 'lipseste #chat-sticker-btn (chat.js nu s-a încărcat)');
   p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   // Regulamentul chat-ului apare la prima deschidere si dispare dupa accept.
   const rulesOn = await until(() => !!p.$('.chat-rules'));
@@ -242,12 +293,108 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Titlul anime-ului e afisat in banner', (p.text('#hero-title') || '').length > 1, p.text('#hero-title'));
     check('Bannerul vizibil are eticheta editoriala', (p.text('#hero-tag') || '').length > 3, p.text('#hero-tag'));
     check('Bannerul are arta de fundal (coperta, arta bundled sau poster generat)', !!p.$('#hero-bg img, #hero-bg .hban__bg-gen'), p.$('#hero-bg')?.innerHTML?.slice(0, 80));
+    // Runda 4 (viteză, pasul 2): arta bundled vine în trei formate, iar shuffle-ul
+    // trebuie să schimbe TOATE sursele o dată — altfel browserul poate rămâne cu
+    // AVIF-ul poziției vechi (imaginea nu se schimba la click, deși seria da).
+    // Două stări valide, în funcție de seria afișată:
+    //   (a) seria NU are copertă → toate cele trei surse arată spre ACEEAȘI artă bundled;
+    //   (b) seria ARE copertă → <source>-urile sunt golite, iar <img> poartă coperta
+    //       (altfel AVIF-ul bundled ar bate coperta — bug real, prins de testul ăsta).
+    const picture = () => p.$('#hero-bg picture');
+    const stareHero = () => {
+      const pic = picture();
+      const surse = pic ? [...pic.querySelectorAll('source')] : [];
+      const img = pic?.querySelector('img');
+      const avif = surse[0]?.getAttribute('srcset') || '';
+      const webp = surse[1]?.getAttribute('srcset') || '';
+      const src = img?.getAttribute('src') || '';
+      const idx = (u) => (u || '').match(/hero-(\d)\./)?.[1] || '';
+      const bundled = idx(avif) && idx(avif) === idx(webp) && idx(webp) === idx(src);
+      const coperta = !avif && !webp && !!src && !idx(src);
+      return { avif, webp, src, tip: avif ? 'arta bundled' : 'coperta seriei', ok: bundled || coperta };
+    };
+    check('Arta bannerului are <picture> cu AVIF apoi WebP',
+      [...(picture()?.querySelectorAll('source') || [])].map((s) => s.getAttribute('type')).join(',') === 'image/avif,image/webp',
+      [...(picture()?.querySelectorAll('source') || [])].map((s) => s.getAttribute('type')).join(','));
+    const s1 = stareHero();
+    check(`Sursele de format sunt consecvente (${s1.tip})`,
+      s1.ok, `avif=${s1.avif} webp=${s1.webp} src=${s1.src.slice(0, 60)}`);
+    p.$('#hero-shuffle')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const schimbat = await until(() => {
+      const s = stareHero();
+      return (s.src && s.src !== s1.src) || s.tip !== s1.tip;
+    });
+    const s2 = stareHero();
+    check('După shuffle, sursele de format se schimbă împreună',
+      schimbat && s2.ok, `înainte: ${s1.tip} · după: ${s2.tip} src=${s2.src.slice(0, 60)} avif=${s2.avif}`);
     check('CTA-ul vizual „Vezi seria” exista', !!p.$('#hero-open'), 'lipseste #hero-open');
     p.$('#hero-shuffle')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 400));
     check('Shuffle-ul re-randeaza fara sa navigheze si fara erori', /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || '') && p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
   } else {
-    check('Bannerul ramane ascuns cand catalogul e gol', true);
+    // Bannerul poate lipsi din două motive FOARTE diferite: catalogul chiar e
+    // gol (comportament corect), sau randarea a aruncat și `initHero` l-a
+    // ascuns. A doua variantă a trecut neobservată o dată (un `HERO_ART`
+    // mutat greșit a făcut fix asta) — deci întrebăm serverul care e cazul.
+    const total = Number((await (await fetch(`${BASE}/api/series?per_page=1`, { headers: { Cookie: COOKIE } })).json()).total) || 0;
+    if (total === 0) {
+      check('Bannerul ramane ascuns cand catalogul e gol', true);
+    } else {
+      check(`Bannerul se randeaza cand catalogul are serii (are ${total})`, false,
+        `banner ascuns deși există serii; erori de runtime: ${p.errors.slice(0, 3).join(' | ') || '(niciuna)'}`);
+    }
+  }
+
+  // --- aspect: nota pe carduri, butonul „inapoi sus", scurtatura „/"
+  {
+    // Nota comunitatii trebuie sa apara EXACT pe cardurile care au voturi:
+    // numaram din API si comparam cu ce s-a randat (nu depinde de date).
+    const lista = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();
+    const rows = lista.series || [];
+    const cuVoturi = rows.filter((r) => Number(r.rating_count) > 0);
+    check('Catalogul aduce nota si numarul de voturi pe fiecare rand',
+      rows.every((r) => 'rating_avg' in r && 'rating_count' in r),
+      `chei: ${Object.keys(rows[0] || {}).join(',')}`);
+    check('Nota are formatul ★ x.x pe cardurile cu voturi',
+      cuVoturi.every((r) => {
+        const card = p.$(`#series-grid .card[href$="id=${r.id}"]`);
+        const b = card?.querySelector('.badge-rating');
+        return b && b.textContent.trim() === `★ ${Number(r.rating_avg).toFixed(1)}`;
+      }),
+      `${cuVoturi.length} carduri cu voturi din ${rows.length}`);
+    check('Cardurile fara voturi nu inventeaza o nota',
+      p.$$('#series-grid .badge-rating').length === cuVoturi.length,
+      `badge-uri=${p.$$('#series-grid .badge-rating').length} voturi=${cuVoturi.length}`);
+
+    // Scurtatura „/" e doar o indicatie vizuala pe desktop.
+    check('Caseta de cautare arata scurtatura „/"', p.$('.search__kbd')?.textContent === '/', p.$('.search__kbd')?.outerHTML?.slice(0, 60));
+
+    // Butonul „inapoi sus": exista pe pagina, dar e ascuns cat timp nu s-a derulat.
+    const top = p.$('#to-top');
+    check('Butonul „inapoi sus" exista si porneste ascuns', !!top && top.hidden === true, top ? `hidden=${top.hidden}` : 'lipseste #to-top');
+
+    // „Continua vizionarea": fiecare card spune unde a ramas utilizatorul —
+    // procent (cand seria are durata completata) sau minutele vazute, fara sa
+    // inventeze un procent. Verificarea e conditionala: randul depinde de
+    // progresul contului, care poate lipsi pe o baza proaspat seed-uita.
+    const cards = p.$$('#continue-row .continue-card');
+    if (cards.length) {
+      const areStare = cards.every((c) => {
+        const txt = c.querySelector('.continue-card__ago')?.textContent || '';
+        const bar = c.querySelector('.continue-card__prog');
+        const eCorect = txt === '✓ Văzut · ' ? false : /(✓ Văzut|\d+%|\d+ min văzute)/.test(txt);
+        // Bara exista doar cand avem procent (procent ⇒ bara).
+        return eCorect && (bar ? /\d+%|✓/.test(txt) : true);
+      });
+      check('Cardurile „Continua vizionarea" spun unde ai ramas', areStare,
+        cards.slice(0, 2).map((c) => c.textContent.trim().slice(0, 60)).join(' | '));
+      check('Bara de progres are latime setata cand exista', cards.every((c) => {
+        const fill = c.querySelector('.continue-card__prog > i');
+        return !fill || /%$/.test(fill.style.width || '');
+      }), cards.map((c) => c.querySelector('.continue-card__prog > i')?.style.width).join(','));
+    } else {
+      check('Randul „Continua vizionarea" lipseste cand nu exista progres (comportament corect)', true);
+    }
   }
 
   // cautarea trebuie sa ajunga pe server, nu sa filtreze in browser
@@ -336,6 +483,65 @@ console.log('\n=== DOM: /admin/serie/<id> (episoade + surse + bulk) ===');
   await p.teardown();
 }
 
+console.log('\n=== DOM: catalog partajabil prin URL (filtre + sortare) ===');
+{
+  // Un link ca „/?gen=Acțiune&status=ongoing" trebuie să deschidă pagina
+  // DIRECT pe rezultatele filtrate: fără el, un catalog filtrat nu putea fi
+  // trimis cuiva, iar butonul Înapoi ieșea de pe site în loc să scoată filtrul.
+  // Un gen propriu, ca testul sa nu depinda de catalogul de la acel moment
+  // (baza de test poate avea sau nu serii cu genuri). Numele e unic, deci
+  // filtrarea „LIKE %gen%" nu poate prinde altceva din întâmplare.
+  const gen = 'GenURLTest';
+  const created = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ title: 'Serie pentru link de catalog', status: 'ongoing', genre: gen, year: 2026 }),
+  })).json();
+  check('Seria de test pentru linkul de catalog a fost creata', Number.isInteger(created.id), JSON.stringify(created).slice(0, 120));
+
+  const p = await mountPage({
+    htmlFile: 'public/index.html',
+    url: `/?gen=${encodeURIComponent(gen)}&status=ongoing&sort=title`,
+    module: 'page-index.js',
+  });
+  const loadedUrl = await until(() => p.$$('#series-grid .card, #series-grid .poster-card').length > 0 || p.text('#series-count')?.includes('afișate'));
+  check('Pagina se incarca pe filtrele din URL', loadedUrl, p.text('#series-count'));
+  check('Selectul de gen preia valoarea din URL', p.$('#genre-select')?.value === gen, `valoare=${p.$('#genre-select')?.value}`);
+  check('  ...chiar daca genul nu era in lista adusa de server (devine opțiune)',
+    [...(p.$('#genre-select')?.options || [])].some((o) => o.value === gen),
+    [...(p.$('#genre-select')?.options || [])].map((o) => o.value).join(','));
+  check('Selectul de status preia valoarea din URL', p.$('#status-select')?.value === 'ongoing', `valoare=${p.$('#status-select')?.value}`);
+  check('Sortarea din URL ajunge in selector', p.$('#sort-select')?.value === 'title', `valoare=${p.$('#sort-select')?.value}`);
+  check('Butonul de resetare a filtrelor e vizibil', p.$('#filter-reset')?.hidden === false, `hidden=${p.$('#filter-reset')?.hidden}`);
+  // Catalogul filtrat NU are voie sa vina din /api/home (acela e doar primul
+  // ecran, nefiltrat): trebuie o cerere cu parametrii.
+  const filtrat = p.requests.find((u) => u.startsWith('/api/series?') && /gen=/.test(u));
+  check('Filtrele merg la server, nu se aplica in browser', !!filtrat, p.requests.filter((u) => u.startsWith('/api/series')).join(' ') || 'nicio cerere');
+  // /api/home rămâne cerut (hero, topuri, pulse — restul paginii), dar GRILA
+  // trebuie să vină din cererea filtrată: comparam numarul de carduri cu ce
+  // intoarce serverul pentru exact acel filtru.
+  const filtratApi = await (await fetch(`${BASE}/api/series?gen=${encodeURIComponent(gen)}&status=ongoing&per_page=24`)).json();
+  const asteptate = (filtratApi.series || []).length;
+  const carduri = p.$$('#series-grid .card, #series-grid .poster-card').length;
+  check('Grila arata exact rezultatele filtrului de pe server', asteptate >= 1 && carduri === asteptate, `dom=${carduri} api=${asteptate}`);
+  check('  ...si catalogul nefiltrat nu mai e cerut de grila', p.requests.filter((u) => u.startsWith('/api/series') && !/gen=/.test(u)).length === 0, p.requests.filter((u) => u.startsWith('/api/series')).join(' '));
+  check('URL-ul pastreaza filtrele (linkul poate fi trimis mai departe)',
+    /gen=/.test(p.window.location.search) && /status=ongoing/.test(p.window.location.search), p.window.location.search);
+
+  // Schimbarea unui filtru trebuie sa scrie URL-ul si sa dea o intrare noua in
+  // istoric (pushState), ca butonul Înapoi sa scoata filtrul, nu sa iasa de pe site.
+  const gsel = p.$('#genre-select');
+  gsel.value = '';
+  gsel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
+  const scos = await until(() => !/gen=/.test(p.window.location.search));
+  check('Scoaterea filtrului se reflecta in URL (pushState)', scos, p.window.location.search);
+  check('  ...si statusul ramas e tot in URL', /status=ongoing/.test(p.window.location.search), p.window.location.search);
+  check('Nicio eroare de runtime la navigarea cu filtre', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+
+  await fetch(`${BASE}/api/admin/series?id=${created.id}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
+}
+
 console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ===');
 // Creeaza o serie de 150 de episoade ca sa treaca de pragul de 100/page.
 // Fara paginare, pagina asta ar citi toate episoadele la fiecare vizita.
@@ -410,6 +616,67 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Nicio eroare de runtime pe pagina seriei', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
 
+  // -------------------------------------------------------------------
+  // MARCAJUL „VAZUT" + EPISODUL URMATOR (2026-09-24)
+  //
+  // Progresul se creeaza prin API-ul real (nu inselat in DOM): episodul 1
+  // pana la pragul de 15 min (8 heartbeat-uri, limita e 120s/cerere), iar
+  // episodul 2 abia inceput. Apoi aceeasi pagina trebuie sa arate, pentru
+  // fiecare card, starea lui reala.
+  // -------------------------------------------------------------------
+  const eps = await (await fetch(`${BASE}/api/series/${sid}?per_page=5`, { headers: { Cookie: COOKIE } })).json();
+  const ep1 = (eps.episodes || []).find((e) => e.episode_number === 1);
+  const ep2 = (eps.episodes || []).find((e) => e.episode_number === 2);
+  for (let i = 0; i < 8; i++) {
+    await fetch(`${BASE}/api/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+      body: JSON.stringify({ episode_id: ep1.id, seconds: 120 }),
+    });
+  }
+  await fetch(`${BASE}/api/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ episode_id: ep2.id, seconds: 30 }),
+  });
+
+  const p2 = await mountPage({ htmlFile: 'public/series.html', url: `/series?id=${sid}`, module: 'page-series.js' });
+  await until(() => p2.$$('#episodes-grid > *').length > 0);
+  const card1 = p2.$(`#episodes-grid .card[href$="id=${ep1.id}"]`);
+  const card2 = p2.$(`#episodes-grid .card[href$="id=${ep2.id}"]`);
+  check('Episodul vazut e marcat in lista (bara + eticheta)',
+    card1?.classList.contains('is-watched') === true && /Văzut/.test(card1?.textContent || ''),
+    `${card1?.className} | ${card1?.textContent?.slice(0, 40)}`);
+  check('Episodul abia inceput apare ca „Început", nu ca vazut',
+    card2?.classList.contains('is-started') === true && !card2?.classList.contains('is-watched') && /Început/.test(card2?.textContent || ''),
+    `${card2?.className} | ${card2?.textContent?.slice(0, 40)}`);
+  check('Nicio eroare de runtime la marcajele de episoade', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+  await p2.teardown();
+
+  // Cardul din „Continua vizionarea": episodul 1 e terminat si are un
+  // urmator, deci cardul trebuie sa ofere butonul de comutare.
+  const p3 = await mountPage({ htmlFile: 'public/index.html', url: '/', module: 'page-index.js' });
+  const card = await until(() => p3.$$('#continue-row .continue-card').length > 0);
+  check('Rândul „Continua vizionarea" se randeaza pentru userul cu progres', card, `n=${p3.$$('#continue-row .continue-card').length}`);
+  const first = p3.$$('#continue-row .continue-card').find((c) => /id=/.test(c.getAttribute('href') || ''));
+  check('Cardul duce la un episod real', !!first && /\/episode\?id=\d+/.test(first.getAttribute('href') || ''), first?.getAttribute('href'));
+  const nextBtn = p3.$('#continue-row .continue-card__next');
+  check('Cardul terminat ofera butonul „Episodul următor"', !!nextBtn && /următor/i.test(nextBtn.textContent || ''), nextBtn?.textContent);
+  if (nextBtn) {
+    // Comutarea tine minte preferinta si re-randeaza cardul cu tinta noua.
+    const inainte = first.getAttribute('href');
+    nextBtn.dispatchEvent(new p3.window.Event('click', { bubbles: true }));
+    const schimbat = await until(() => {
+      const c = p3.$('#continue-row .continue-card[data-next]');
+      return !!c && c.getAttribute('href') !== inainte;
+    });
+    check('Click pe buton duce cardul la episodul următor', schimbat, p3.$('#continue-row .continue-card')?.getAttribute('href'));
+    const reia = p3.$('#continue-row .continue-card__next');
+    check('Butonul își schimba sensul (poți reveni la episodul văzut)', /Reia/i.test(reia?.textContent || ''), reia?.textContent);
+  }
+  check('Nicio eroare de runtime pe prima pagina cu progres', p3.errors.length === 0, p3.errors.slice(0, 3).join(' | '));
+  await p3.teardown();
+
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
@@ -435,6 +702,74 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   check('Tabul de raportari deschide panoul', repTabOn, `hidden=${p.$('#panel-reports')?.hidden}`);
   const repListOn = await until(() => p.$$('#reports-list .report-row-admin').length > 0 || /Nicio raportare|Nu am putut/.test(p.text('#reports-list') || ''));
   check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
+}
+
+console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
+{
+  // Adminul primeste o tema personala (Sakura), ca sa existe diferenta intre
+  // ce vede el si sezon — cazul real „am activat Halloween si vad toamna".
+  const meR = await fetch(`${BASE}/api/auth/me`, { headers: { Cookie: COOKIE } });
+  const adminId = (await meR.json())?.user?.id;
+  const post = (path, body) => fetch(`${BASE}${path}`, { method: 'POST', headers: { Cookie: COOKIE, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await post('/api/admin/users', { action: 'set_gold', user_id: adminId, value: 200000 });
+  await post('/api/shop/buy', { item_id: 'theme_sakura' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+
+  const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+  const seteaza = async (nume) => {
+    p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const ok = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+    if (!ok) return false;
+    p.$$('#sezon-list .ranks-row').find((r) => (r.textContent || '').includes(nume))
+      ?.querySelectorAll('button')[1]?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    return until(() => new RegExp(nume).test(p.text('#sezon-curent') || ''));
+  };
+  p.$('#tab-sezon')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const rowsOk = await until(() => p.$$('#sezon-list .ranks-row').length === 4);
+  check('Tabul Sezon listeaza cele 4 teme', rowsOk, `randuri=${p.$$('#sezon-list .ranks-row').length}`);
+  // Setarea e globala: adminul (resetat de pe Sakura) vede sezonul LIVE, fara banner.
+  const setOk = await seteaza('Iarnă');
+  check('Setarea sezonului din UI (Iarna)', setOk, `curent=${p.text('#sezon-curent')}`);
+  const liveOk = await until(() => [...p.window.document.body.classList].includes('theme-iarna'));
+  check('Adminul vede sezonul live pe pagina proprie (reset global)', liveOk, [...p.window.document.body.classList].join(','));
+  await wait(600);
+  check('Fara banner cand adminul vede sezonul', !p.$('#sezon-banner'), p.text('#sezon-banner') || '(absent)');
+  check('Nicio eroare de runtime pe tabul Sezon (setare)', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+  // Realegere personala DUPA setare → la urmatoarea vizita bannerul explica diferenta.
+  if (PE_BUILD) {
+    // HARNESS (doar pe build): core-ul sta într-un chunk comun, iar Node ține
+    // minte modulul între mount-uri — cache-ul de sesiune al chunk-ului
+    // supraviețuiește, iar din exterior nu-l putem goli (exporturile sunt
+    // minificate: `zt as a`). În producție nu există problema: fiecare încărcare
+    // de pagină e un graf JS nou. Cele 3 verificări de mai jos sunt acoperite
+    // de rularea pe surse (test.sh rulează dom-smoke și pe surse, și pe build).
+    console.log('  ⏭  3 verificări sărite pe artefactele de build (reset de sesiune prin identitatea modulului core.js — imposibil prin chunk-uri)');
+  } else {
+    await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+    const p2 = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+    // HARNESS: core.js se importa o singura data per proces (modulele de pagina
+    // il refera fara ?t=), deci cache-ul lui de sesiune supravietuieste intre
+    // mount-uri — p2 ar mosteni sesiunea veche (cu sezonul) a lui p1. Il golim
+    // explicit. In productie nu exista problema: fiecare pagina e un graf proaspat.
+    await import(`${JSDIR}/core.js`).then((m) => m.clearSession());
+    p2.$('#tab-sezon')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    await until(() => p2.$$('#sezon-list .ranks-row').length === 4);
+    const bannerOk = await until(() => !!p2.$('#sezon-banner'));
+    const bannerTxt = p2.text('#sezon-banner') || '';
+    check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
+    p2.$('#sezon-vezi')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    const prevOk = await until(() => [...p2.window.document.body.classList].includes('theme-iarna'));
+    check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p2.window.document.body.classList].join(','));
+    p2.$('#sezon-mea')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    const backOk = await until(() => [...p2.window.document.body.classList].includes('theme-sakura'));
+    check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p2.window.document.body.classList].join(','));
+    check('Nicio eroare de runtime pe tabul Sezon (banner)', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+    await p2.teardown();
+  }
+  // Curatenie: sezonul gol + adminul inapoi pe Standard (suitele urmatoare).
+  await post('/api/admin/season', { theme_id: '' });
+  await post('/api/shop/activate', { type: 'theme', id: 'theme_standard' });
 }
 
 console.log('\n=== DOM: /episode (player, surse, progres) ===');
@@ -504,9 +839,12 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
 
   // ---- PLAYER v4: navigare jos, modal, cinema, auto-next
   check('Bara de navigare intre episoade exista jos', !!p.$('#ep-prev') && !!p.$('#ep-list') && !!p.$('#ep-next'), 'lipseste ep-nav');
-  const navReady = await until(() => p.$('#ep-next') && !p.$('#ep-next').disabled);
-  check('Butonul „următorul” e activ când exista episod după', navReady, `disabled=${p.$('#ep-next')?.disabled}`);
-  check('Butonul „anterior” e dezactivat pe primul episod', p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
+  // Ambele butoane sunt desenate de acelasi paintEpNav(): asteptam starea
+  // finala (urmatorul activ, anteriorul dezactivat) inainte sa o asertam,
+  // altfel verificarea putea cadea pe prima randare.
+  const navReady = await until(() => p.$('#ep-next')?.disabled === false && p.$('#ep-prev')?.disabled === true);
+  check('Butonul „următorul” e activ când exista episod după', p.$('#ep-next')?.disabled === false, `disabled=${p.$('#ep-next')?.disabled}`);
+  check('Butonul „anterior” e dezactivat pe primul episod', navReady && p.$('#ep-prev')?.disabled === true, `disabled=${p.$('#ep-prev')?.disabled}`);
   check('Modalul „Alte episoade” e invizibil cat e hidden (CSS [hidden])', p.window.getComputedStyle(p.$('#eplist-modal')).display === 'none', p.window.getComputedStyle(p.$('#eplist-modal')).display);
   p.$('#ep-list')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const listOn = await until(() => p.$('#eplist-modal')?.hidden === false && p.$$('#eplist-grid .eplist__ep').length >= 1 && p.window.getComputedStyle(p.$('#eplist-modal')).display !== 'none');
@@ -637,10 +975,12 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
 {
   console.log('=== DOM: /shop (vitrina de gold) ===');
   const p = await mountPage({ htmlFile: 'public/shop.html', url: '/shop', module: 'page-shop.js' });
-  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 3);
-  check('Shop-ul randeaza cele 3 articole', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
+  const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 8);
+  check('Shop-ul randeaza cele 8 articole (Shop 2.0)', cardsOn, `n=${p.$$('#shop-grid .shop-card').length}`);
   check('Gold-ul curent e afisat in antet', /🪙\s*\d/.test(p.text('#shop-gold') || ''), p.text('#shop-gold'));
-  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 3, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Preturile sunt vizibile pe toate cardurile', p.$$('#shop-grid .shop-card__price').length === 8, `n=${p.$$('#shop-grid .shop-card__price').length}`);
+  check('Bannerul de boost exista (ascuns cand e inactiv)', !!p.$('#shop-boost'), 'lipseste #shop-boost');
+  check('Temele se randeaza (13 in shop; sezonul e ascuns)', p.$$('#themes-grid .theme-card').length === 13, `n=${p.$$('#themes-grid .theme-card').length}`);
   check('Linkul catre shop exista in nav', !!p.$('#nav a[href="/shop"]'), 'lipseste linkul din nav');
   check('Shop explica economia: cel puțin 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length >= 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));

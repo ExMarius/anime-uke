@@ -3,39 +3,73 @@
 //
 // Validarea mesajelor vine din lib/validate.js (o singura sursa de adevar).
 //
-// DECIZII DE BUGET (plan gratuit, 1000+ utilizatori/zi):
+// BUG REPARAT (2026-09-23, raportat din productie: „nu se salveaza mesajele,
+// nici stikerele"):
 //
-// 1. WebSocket Hibernation API (ctx.acceptWebSocket) in loc de ws.accept().
-//    DO-ul nu ruleaza cat timp e idle, deci nu consuma CPU/durata.
+//   Varianta veche tinea mesajele intr-un buffer IN MEMORIE si le scria in D1
+//   la 10 mesaje sau la alarma de 15 secunde. Cu WebSocket Hibernation API,
+//   insa, Cloudflare poate evacua DO-ul ORICAND — asta e chiar ideea: nu
+//   platesti durata cat timp nu se intampla nimic. La trezire constructorul
+//   ruleaza din nou, deci bufferul in memorie era GOL:
 //
-// 2. Istoricul e tinut IN MEMORIE si incarcat din D1 o singura data la
-//    prima trezire. In v1 se facea un SELECT din D1 la FIECARE conectare —
-//    la 1000 utilizatori asta insemna mii de citiri inutile pe zi.
+//     mesaj → broadcast (toata lumea il vede) → buffer in memorie
+//           → evictie → alarma suna pe un DO cu buffer gol
+//           → flush() nu avea ce scrie → MESAJUL SE PIERDEA PENTRU TOTDEAUNA
 //
-// 3. Scrierile in D1 sunt BUFFER-izate si facute in loturi (flush la 10
-//    mesaje sau la 15 secunde prin alarma). Cerinta „istoric salvat in D1"
-//    e pastrata, dar numarul de scrieri scade de ~10x. E esential: din
-//    1 sept. 2026 depasirea cotei D1 (100k scrieri/zi) face query-urile sa
-//    PICCE, nu doar sa incetineasca — un flood pe chat ar fi dat jos tot
-//    site-ul pana la 00:00 UTC.
+//   Pe un site mic (cateva mesaje pe ora) DO-ul e evacuat intre mesaje aproape
+//   mereu, deci practic NICIUN mesaj nu ajungea in D1. Local, in miniflare,
+//   DO-ul nu e evacuat niciodata — de aceea toate testele treceau.
 //
-// 4. Rate limiting per utilizator AICI, in DO — gratuit, pentru ca oricum
-//    suntem in acelasi request. Nu consuma cota altui DO.
+// DE CE NU SE MAI POATE PIERDE CEVA:
+//   1. Fiecare mesaj se scrie IMEDIAT in storage-ul durabil al DO-ului
+//      (`storage.put`), inainte de broadcast. Storage-ul e transactional si
+//      supravietuieste evictiei/restartului, spre deosebire de memorie.
+//   2. Arhivarea in D1 (pentru istoricul de durata) se face tot in loturi,
+//      dar lotul se CITESTE DIN STORAGE, nu din memorie: alarma poate suna pe
+//      un DO proaspat trezit si tot stie exact ce are de scris.
+//   3. Dupa un flush reusit, cheile se sterg din storage; daca D1 pica,
+//      mesajele raman acolo si se scriu la urmatoarea incercare (catch-up la
+//      reconectare, la urmatorul mesaj sau la urmatoarea alarma).
+//   4. Istoricul de la conectare combina arhiva D1 cu ce e inca in buffer,
+//      fara dubluri — deci ce vezi dupa un reload e exact ce s-a scris.
 //
-// 5. Mesajele de sistem (intrare/iesire) se difuzeaza dar NU se persista
-//    in D1. Ar dubla scrierile fara valoare reala.
+// Costul ramane zero in plus: operatiile de storage nu sunt cereri facturate,
+// iar scrierile in D1 raman in loturi (10 mesaje / 15 secunde), la fel ca
+// inainte. In plus, istoricul se citeste acum din storage (cateva milisecunde,
+// zero rânduri D1) atata timp cat bufferul e plin — D1 e consultat doar
+// pentru partea de arhiva.
+//
+// Alte decizii de buget (neschimbate):
+//   - WebSocket Hibernation API (ctx.acceptWebSocket): DO-ul nu ruleaza cat
+//     timp e idle, deci nu consuma CPU/durata.
+//   - Rate limiting per utilizator AICI, in DO — gratuit, suntem oricum in
+//     acelasi request.
+//   - Mesajele de sistem (intrare/iesire) se difuzeaza dar NU se persista.
 // =====================================================================
 
 const HISTORY_LIMIT = 30;        // cerinta din spec: ultimele 30 la conectare
-const HISTORY_MEMORY_CAP = 60;   // pastram putin mai multe in memorie
 const CHAT_KEEP_LAST = 500;      // plafon buget 0: tabelul pastreaza doar ultimele 500
-const FLUSH_BATCH_SIZE = 10;
+const FLUSH_BATCH_SIZE = 10;     // peste atatea mesaje in buffer, scriem imediat
 const FLUSH_ALARM_MS = 15_000;
+const FLUSH_MAX_PER_ROUND = 100; // cat scrie intr-o singura runda catre D1
+const STORAGE_CAP = 1000;        // cat poate creste bufferul durabil daca D1 e jos
+const PRUNE_EVERY = 200;         // cate mesaje intre curateniile tabelului D1
 const MAX_TOTAL_CONNECTIONS = 200;
 const MAX_CONNECTIONS_PER_USER = 2;
 const RATE_MIN_INTERVAL_MS = 1500;   // minim 1.5s intre mesaje
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_PER_WINDOW = 20;      // max 20 mesaje/minut
+
+const MSG_PREFIX = 'm:';          // cheia unui mesaj inca nescis in D1
+const SEQ_KEY = 'seqmax';         // ultimul numar de ordine scris in D1
+const PRUNE_KEY = 'sinceprune';   // cate mesaje de la ultima curatenie
+
+/** Cheie ordonabila (zero-padded) pentru un mesaj din bufferul durabil. */
+const msgKey = (seq) => MSG_PREFIX + String(seq).padStart(12, '0');
+const seqOf = (key) => Number(key.slice(MSG_PREFIX.length)) || 0;
+
+/** Amprenta unui mesaj, pentru a nu-l afisa de doua ori (arhiva + buffer). */
+const fingerprint = (m) => `${m.created_at}|${m.user_id}|${m.message}`;
 
 import { validateChatMessage } from '../lib/validate.js';
 
@@ -43,8 +77,9 @@ export class ChatDO {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.history = null;        // incarcat lazy din D1
-    this.pending = [];          // buffer de scrieri catre D1
+    this.seq = null;            // ultimul numar de ordine folosit (lazy)
+    this.buffered = null;       // cate mesaje sunt in bufferul durabil (lazy)
+    this.flushPromise = null;   // un singur flush odata (altfel se dubleaza scrierile)
     this.rate = new Map();      // userId -> { last, stamps: [] }
   }
 
@@ -67,7 +102,7 @@ export class ChatDO {
   }
 
   handleUpgrade(request, url) {
-    // Utilizatorul e validat in functions/chat.js (JWT + is_banned) INAINTE
+    // Utilizatorul e validat in routes/chat.js (JWT + is_banned) INAINTE
     // sa ajunga aici, deci putem avea incredere in parametru.
     let user;
     try {
@@ -110,7 +145,7 @@ export class ChatDO {
   }
 
   async onConnected(ws, user) {
-    const history = await this.ensureHistory();
+    const history = await this.loadHistory();
 
     ws.send(JSON.stringify({
       type: 'init',
@@ -120,6 +155,11 @@ export class ChatDO {
     }));
 
     this.broadcast({ type: 'system', text: `${user.username} a intrat în chat`, online: this.onlineList() }, ws);
+
+    // CATCH-UP: daca DO-ul tocmai s-a trezit (evictie/restart) si are mesaje
+    // in bufferul durabil, le scrie acum in arhiva. Fara asta, un DO fara
+    // trafic ar astepta o alarma care poate suna pe o instanta noua.
+    this.state.waitUntil(this.flush());
   }
 
   // -------------------------------------------------------------------
@@ -168,18 +208,18 @@ export class ChatDO {
       avatar: att.avatar || '',
     };
 
-    // --- broadcast imediat (fara sa asteptam D1) ---
+    // --- 1. DURABIL, inainte de orice: storage-ul DO-ului supravietuieste
+    //     evictiei, spre deosebire de memorie (vezi antetul modulului) ---
+    await this.ensureSeq();
+    const seq = ++this.seq;     // sincron: ordinea cheilor = ordinea mesajelor
+    await this.state.storage.put(msgKey(seq), entry);
+    this.buffered = (this.buffered || 0) + 1;
+
+    // --- 2. Broadcast imediat (fara sa asteptam D1) ---
     this.broadcast({ type: 'message', ...entry, online: this.onlineList() });
 
-    // --- buffer pentru D1 ---
-    this.history = this.history || [];
-    this.history.push(entry);
-    if (this.history.length > HISTORY_MEMORY_CAP) {
-      this.history.splice(0, this.history.length - HISTORY_MEMORY_CAP);
-    }
-
-    this.pending.push(entry);
-    if (this.pending.length >= FLUSH_BATCH_SIZE) {
+    // --- 3. Arhivarea in D1, in loturi ---
+    if (this.buffered >= FLUSH_BATCH_SIZE) {
       this.state.waitUntil(this.flush());
     } else {
       this.state.waitUntil(this.scheduleFlush());
@@ -196,8 +236,8 @@ export class ChatDO {
         online: this.onlineList(),
       });
     }
-    // Flusam ce a ramas in buffer la deconectare
-    if (this.pending.length) this.state.waitUntil(this.flush());
+    // Scriem ce a ramas in buffer (o listare de storage cand nu e nimic de scris)
+    this.state.waitUntil(this.flush());
   }
 
   webSocketError(ws, error) {
@@ -206,69 +246,173 @@ export class ChatDO {
 
   async alarm() {
     await this.flush();
+    // Daca D1 a fost jos si au ramas mesaje, reprogramam (nu asteptam
+    // urmatorul mesaj ca sa reincercam).
+    const left = await this.state.storage.list({ prefix: MSG_PREFIX, limit: 1 });
+    if (left.size > 0) await this.scheduleFlush();
   }
 
   // -------------------------------------------------------------------
   // Logica
   // -------------------------------------------------------------------
-  async ensureHistory() {
-    if (this.history) return this.history.slice(-HISTORY_LIMIT);
+
+  /**
+   * Ultimul numar de ordine folosit, luat din storage (nu din memorie!) si
+   * numarul de mesaje inca nescrise in D1. Se executa o data per instanta.
+   *
+   * Cheile sunt zero-padded, deci ordinea lor lexicografica = ordinea reala,
+   * iar `reverse: true` + `limit` ne da exact cele mai noi chei fara sa
+   * listam tot bufferul (care poate avea pana la STORAGE_CAP intrari).
+   */
+  async ensureSeq() {
+    if (this.seq !== null) return this.seq;
+    const stored = Number(await this.state.storage.get(SEQ_KEY)) || 0;
+    const newest = await this.state.storage.list({
+      prefix: MSG_PREFIX, reverse: true, limit: FLUSH_BATCH_SIZE,
+    });
+    this.buffered = newest.size;
+    let maxKey = 0;
+    for (const key of newest.keys()) maxKey = Math.max(maxKey, seqOf(key));
+    // Cheile ramase pot fi mai noi decat contorul (mesaje scrise dar
+    // neflush-uite inainte de evictie), deci luam maximul.
+    this.seq = Math.max(stored, maxKey);
+    return this.seq;
+  }
+
+  /**
+   * Istoricul de la conectare: bufferul durabil (ce inca nu e in D1) peste
+   * arhiva D1, fara dubluri. Nu se bazeaza pe nicio stare din memorie, deci
+   * e corect si pe un DO proaspat trezit.
+   */
+  async loadHistory() {
+    let recent = [];
+    try {
+      const map = await this.state.storage.list({
+        prefix: MSG_PREFIX, reverse: true, limit: HISTORY_LIMIT,
+      });
+      recent = [...map.values()].reverse();      // cronologic
+      this.buffered = map.size;
+    } catch (e) {
+      console.error('ChatDO: citirea bufferului durabil a esuat:', e?.message || e);
+    }
+
+    const need = HISTORY_LIMIT - recent.length;
+    const older = need > 0 ? await this.historyFromD1(need) : [];
+    if (need > 0 && older.length) this.buffered = this.buffered || 0;
+
+    // O cheie poate aparea si in arhiva si in buffer daca stergerea cheilor a
+    // esuat dupa un flush reusit (retry-ul ar scrie din nou randul, dar
+    // istoricul nu are voie sa arate dubluri).
+    const seen = new Set(older.map(fingerprint));
+    return [...older, ...recent.filter((m) => !seen.has(fingerprint(m)))];
+  }
+
+  /** Ultimele `limit` mesaje din arhiva D1, in ordine cronologica. */
+  async historyFromD1(limit) {
     try {
       const res = await this.env.DB.prepare(
         `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar
          FROM chat_messages ORDER BY id DESC LIMIT ?`
-      ).bind(HISTORY_LIMIT).all();
-
-      // D1 il punem in memorie in ordine cronologica
-      this.history = (res.results || []).slice().reverse();
+      ).bind(limit).all();
+      this.buffered = this.buffered || 0;
+      return (res.results || []).slice().reverse();
     } catch (e) {
-      console.error('ChatDO istoric esuat:', e?.message || e);
-      this.history = [];
+      console.error('ChatDO istoric D1 esuat:', e?.message || e);
+      return [];
     }
-    return this.history;
   }
 
-  /** Scrie buffer-ul in D1 intr-un singur batch (1 tranzactie = putine scrieri). */
+  /**
+   * Scrie in D1 tot ce e in bufferul durabil, apoi sterge cheile scrise.
+   * Un singur flush odata: doua flush-uri paralele ar lista aceleasi chei si
+   * ar insera randurile de doua ori.
+   */
   async flush() {
-    if (!this.pending.length) return;
-    const batch = this.pending;
-    this.pending = [];
+    if (this.flushPromise) return this.flushPromise;
+    this.flushPromise = this.flushOnce().finally(() => { this.flushPromise = null; });
+    return this.flushPromise;
+  }
 
+  async flushOnce() {
+    const map = await this.state.storage.list({
+      prefix: MSG_PREFIX, limit: FLUSH_MAX_PER_ROUND,
+    });
+    if (map.size === 0) {
+      this.buffered = 0;
+      return;
+    }
+
+    const entries = [...map.entries()];     // [cheie, mesaj], in ordine cronologica
+    const stmt = this.env.DB.prepare(
+      `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    // Ordinea bind-urilor TREBUIE sa fie identica cu ordinea coloanelor de
+    // mai sus (bug istoric: avatarul ajungea in rank_label, iar avatarul
+    // salvat era „0"/„1" — istoricul de dupa reconectare era amestecat).
     try {
-      const stmt = this.env.DB.prepare(
-        `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      );
-      // Ordinea bind-urilor TREBUIE sa fie identica cu ordinea coloanelor de
-      // mai sus (bug istoric: avatarul ajungea in rank_label, iar avatarul
-      // salvat era „0"/„1" — istoricul de dupa reconectare era amestecat).
-      await this.env.DB.batch(batch.map((m) =>
+      await this.env.DB.batch(entries.map(([, m]) =>
         stmt.bind(m.user_id, m.username, m.message, m.created_at,
           m.rank_label || '', m.rank_icon || '', m.staff_role || '',
           m.flair || '', m.name_gold ? 1 : 0, m.name_color || '', m.avatar || '')
       ));
     } catch (e) {
-      console.error('ChatDO flush esuat:', e?.message || e);
-      // Repunem in buffer ca sa nu pierdem mesajele (max o data, ca sa nu creasca la infinit)
-      if (batch.length <= FLUSH_BATCH_SIZE * 3) this.pending.unshift(...batch);
+      // NU pierdem nimic: cheile raman in storage, se reincearca mai tarziu.
+      console.error('ChatDO flush esuat (mesajele rămân în bufferul durabil):', e?.message || e);
+      this.buffered = map.size;
+      await this.enforceCap();
+      // Reprogramam alarma: daca D1 cadea si flush-ul pornit de un mesaj
+      // (nu de alarma) a esuat, mesajele ar astepta urmatorul eveniment.
+      await this.scheduleFlush();
       return;
     }
 
-    // --- plafon de stocare (buget 0) ---
-    // Pastram doar ultimele CHAT_KEEP_LAST mesaje, ca tabelul sa nu creasca
-    // nelimitat intr-o comunitate de 1000 de oameni. Nu „uitam" istoria:
-    // interogarea de istoric citeaza oricum ultimele 30. O facem rar (1 din
-    // 20 flush-uri) ca sa nu ardem citiri D1 degeaba.
-    this.flushCount = (this.flushCount || 0) + 1;
-    if (this.flushCount % 20 === 1) {
-      try {
-        await this.env.DB.prepare(
-          `DELETE FROM chat_messages
-           WHERE id <= (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 1 OFFSET ?)`
-        ).bind(CHAT_KEEP_LAST - 1).run();
-      } catch (e) {
-        console.error('ChatDO prune esuat:', e?.message || e);
+    // Scrise cu succes → ies din bufferul durabil.
+    const maxSeq = entries.reduce((mx, [key]) => Math.max(mx, seqOf(key)), 0);
+    await this.state.storage.delete(entries.map(([key]) => key));
+    await this.state.storage.put(SEQ_KEY, maxSeq);
+    this.buffered = Math.max(0, (this.buffered || entries.length) - entries.length);
+
+    await this.maybePrune(entries.length);
+  }
+
+  /**
+   * Plafon de stocare (buget 0): pastram doar ultimele CHAT_KEEP_LAST mesaje
+   * in arhiva. Se face rar — o stergere la fiecare PRUNE_EVERY mesaje scrise,
+   * contor tinut in storage (nu in memorie, ca sa nu se repete dupa evictie).
+   */
+  async maybePrune(inserted) {
+    try {
+      const since = (Number(await this.state.storage.get(PRUNE_KEY)) || 0) + inserted;
+      if (since < PRUNE_EVERY) {
+        await this.state.storage.put(PRUNE_KEY, since);
+        return;
       }
+      await this.state.storage.put(PRUNE_KEY, 0);
+      await this.env.DB.prepare(
+        `DELETE FROM chat_messages
+         WHERE id <= (SELECT id FROM chat_messages ORDER BY id DESC LIMIT 1 OFFSET ?)`
+      ).bind(CHAT_KEEP_LAST - 1).run();
+    } catch (e) {
+      console.error('ChatDO prune esuat:', e?.message || e);
+    }
+  }
+
+  /**
+   * Daca D1 e jos mult timp, bufferul durabil nu are voie sa creasca la
+   * infinit (spatiul DO se plateste). Pastram cele mai noi STORAGE_CAP mesaje
+   * si aruncam ce e mai vechi — sunt mesaje care oricum nu mai apar in
+   * istoricul de 30 de la conectare.
+   */
+  async enforceCap() {
+    try {
+      const all = await this.state.storage.list({ prefix: MSG_PREFIX });
+      if (all.size <= STORAGE_CAP) return;
+      const excess = [...all.keys()].slice(0, all.size - STORAGE_CAP);
+      await this.state.storage.delete(excess);
+      console.error(`ChatDO: buffer durabil plin (${all.size} mesaje) — am aruncat ${excess.length} vechi`);
+    } catch (e) {
+      console.error('ChatDO enforceCap esuat:', e?.message || e);
     }
   }
 

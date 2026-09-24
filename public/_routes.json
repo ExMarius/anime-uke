@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/robots.txt",
+    "/llms.txt",
+    "/speculationrules.json",
+    "/favicon.ico",
+    "/apple-touch-icon.png",
+    "/",
+    "/login",
+    "/register",
+    "/episode"
+  ]
+}

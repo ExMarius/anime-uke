@@ -1,5 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge } from './core.js';
-import { initChat, openChat } from './chat.js';
+import { api, renderNav, toast, getSession, safeUrl, coverImg, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge, claimPulse, pushPulse, initChat, openChat } from './core.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
 //
@@ -10,6 +9,35 @@ import { initChat, openChat } from './chat.js';
 
 const PER_PAGE = 24;
 
+// ---------------------------------------------------------------------
+// PRIMA PAGINĂ = O SINGURĂ CERERE
+//
+// Înainte, ca să se încarce prima pagină, browserul cheltuia 5 invocări de
+// Worker: /series, /top, /recent, /genres și /pulse. Cota gratuită e de
+// 100.000 de invocări pe zi, iar prima pagină e cea mai vizitată — deci
+// conta de 5 ori. Toate vin acum din /api/home (un singur apel), iar datele
+// de „pulse" sunt publicate direct în nav, fără /api/pulse separat.
+// ---------------------------------------------------------------------
+let homePromise = null;
+
+function homeData() {
+  if (!homePromise) {
+    homePromise = api('/home')
+      .then((res) => {
+        if (!res.ok) {
+          return { ok: false, error: res.data?.error || 'Nu am putut încărca seriile' };
+        }
+        pushPulse(res.data.pulse);
+        return { ok: true, data: res.data };
+      })
+      .catch(() => ({ ok: false, error: 'Eroare de rețea' }));
+  }
+  return homePromise;
+}
+
+claimPulse();
+
+
 let allSeries = [];      // seriile incarcate pana acum (toate paginile)
 let page = 1;
 let query = '';
@@ -18,6 +46,61 @@ let genreFilter = '';
 let statusFilter = '';
 let sortsLoaded = false;
 let searchTimer = null;
+
+// ---------------------------------------------------------------------
+// STARE ÎN URL (adăugat 2026-09-24): ?q=naruto&gen=Acțiune&status=ongoing&sort=rating&page=2
+//
+// De ce: un catalog filtrat trebuie să poată fi trimis cuiva („uite lista de
+// acțiune în difuzare") și să supraviețuiască unui reload sau unui share pe
+// telefon. Înainte, filtrele trăiau doar în memorie: linkul era mereu „/", iar
+// butonul Înapoi al browserului ieșea de pe site în loc să scoată filtrul.
+//
+// Fiecare schimbare a filtrelor scrie URL-ul cu pushState (o intrare nouă în
+// istoric, ca „Înapoi" să scoată filtrul), iar popstate re-citește URL-ul și
+// reîncarcă lista. La încărcarea paginii, filtrele vin din URL.
+// ---------------------------------------------------------------------
+function readUrlState() {
+  const p = new URLSearchParams(location.search);
+  query = (p.get('q') || '').trim().slice(0, 60);
+  genreFilter = (p.get('gen') || '').trim().slice(0, 40);
+  statusFilter = ['ongoing', 'completed'].includes(p.get('status')) ? p.get('status') : '';
+  const s = p.get('sort');
+  sort = ['latest', 'oldest', 'title', 'episodes', 'rating'].includes(s) ? s : 'latest';
+  const n = Number(p.get('page'));
+  page = Number.isInteger(n) && n > 0 ? n : 1;
+}
+
+/** Scrie starea curenta in URL (fara sa reincarce pagina). */
+function writeUrlState({ push = true } = {}) {
+  const p = new URLSearchParams();
+  if (query) p.set('q', query);
+  if (genreFilter) p.set('gen', genreFilter);
+  if (statusFilter) p.set('status', statusFilter);
+  if (sort !== 'latest') p.set('sort', sort);
+  if (page > 1) p.set('page', String(page));
+  const qs = p.toString();
+  const url = qs ? `?${qs}` : location.pathname;
+  try {
+    if (push) history.pushState({ catalog: true }, '', url);
+    else history.replaceState({ catalog: true }, '', url);
+  } catch { /* mod privat / file:// — filtrele merg in continuare, doar fara URL */ }
+}
+
+/** Un singur punct de intrare pentru orice schimbare de filtru. */
+function applyFilters({ reload = true } = {}) {
+  const gsel = document.getElementById('genre-select');
+  const ssel = document.getElementById('status-select');
+  const reset = document.getElementById('filter-reset');
+  if (gsel) gsel.value = genreFilter;
+  if (ssel) ssel.value = statusFilter;
+  if (reset) reset.hidden = !genreFilter && !statusFilter;
+  const inp = document.getElementById('search-input');
+  if (inp && inp.value !== query) inp.value = query;
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel && sortSel.value !== sort) sortSel.value = sort;
+  writeUrlState();
+  if (reload) load();
+}
 
 // ---------------- skeleton loading ----------------
 function skeletons(n = 10) {
@@ -61,11 +144,11 @@ function seriesCard(s, idx = 0) {
   poster.className = 'poster';
 
   if (s.cover_image) {
-    const img = document.createElement('img');
-    img.src = optimizeCover(safeUrl(s.cover_image, ''), 400);
-    img.alt = s.title || 'Poster';
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    const img = coverImg(s.cover_image, {
+      w: 400, widths: [200, 300, 400],
+      sizes: '(min-width: 640px) 184px, 142px',
+      alt: s.title || 'Poster',
+    });
     img.addEventListener('error', () => img.replaceWith(fallback(s.title)), { once: true });
     poster.appendChild(img);
   } else {
@@ -106,6 +189,17 @@ function seriesCard(s, idx = 0) {
     const m = document.createElement('i');
     m.textContent = bits.join(' · ');
     meta.appendChild(m);
+  }
+  // Nota comunitatii, cand exista: „★ 8.7" + numarul de voturi in tooltip.
+  // Vine in acelasi raspuns de catalog (coloane denormalizate pe serie), deci
+  // nu costa o cerere in plus — vezi comentariul din src/routes/api/series.js.
+  const votes = Number(s.rating_count) || 0;
+  if (votes > 0) {
+    const r = document.createElement('span');
+    r.className = 'badge-rating';
+    r.textContent = `★ ${(Number(s.rating_avg) || 0).toFixed(1)}`;
+    r.title = `${votes} ${votes === 1 ? 'vot' : 'voturi'} de la comunitate`;
+    meta.appendChild(r);
   }
   body.appendChild(meta);
 
@@ -191,10 +285,11 @@ function initCatalogFilters() {
   const reset = document.getElementById('filter-reset');
   if (!gsel || !ssel || !reset) return;
 
-  // Genurile vin o singura data, din cache-ul serverului (10 min).
-  api('/genres').then((res) => {
-    if (!res.ok || !res.data?.genres?.length) return;
-    for (const g of res.data.genres) {
+  // Genurile vin o singura data, din cache-ul serverului (10 min) — deja
+  // incluse in raspunsul primei pagini (/api/home).
+  homeData().then((home) => {
+    if (!home.ok || !home.data.genres?.length) return;
+    for (const g of home.data.genres) {
       const o = document.createElement('option');
       o.value = g;
       o.textContent = g;
@@ -205,17 +300,31 @@ function initCatalogFilters() {
   const apply = () => {
     genreFilter = gsel.value;
     statusFilter = ssel.value;
-    reset.hidden = !genreFilter && !statusFilter;
     page = 1;
-    load();
+    applyFilters();
   };
   gsel.addEventListener('change', apply);
   ssel.addEventListener('change', apply);
   reset.addEventListener('click', () => {
-    gsel.value = '';
-    ssel.value = '';
-    apply();
+    genreFilter = '';
+    statusFilter = '';
+    applyFilters();
   });
+  // Genurile vin asincron: daca URL-ul cere un gen, selectia se face dupa ce
+  // opțiunile exista. Iar daca genul cerut NU e in listă (link vechi, un gen
+  // ieșit din top 40, sau lista încă neîncărcată), îl adăugam noi ca opțiune:
+  // serverul aplică filtrul oricum, deci <select>-ul nu are voie să pară gol
+  // și să sugereze că filtrul nu există.
+  homeData().then(() => {
+    if (!genreFilter) return;
+    if (![...gsel.options].some((o) => o.value === genreFilter)) {
+      const o = document.createElement('option');
+      o.value = genreFilter;
+      o.textContent = genreFilter;
+      gsel.appendChild(o);
+    }
+    gsel.value = genreFilter;
+  }).catch(() => { /* filtrul rămâne scris în URL, doar selectia nu se aplica */ });
 }
 
 // ---------------------------------------------------------------------
@@ -227,8 +336,8 @@ async function loadRecent() {
   const row = document.getElementById('recent-row');
   if (!section || !row) return;
 
-  const res = await api('/recent');
-  const items = res.ok ? res.data?.items || [] : [];
+  const home = await homeData();
+  const items = home.ok ? home.data.recent || [] : [];
   if (!items.length) { section.hidden = true; return; }
 
   row.innerHTML = '';
@@ -240,11 +349,10 @@ async function loadRecent() {
     const art = document.createElement('div');
     art.className = 'recent-card__art';
     if (it.cover_image) {
-      const img = document.createElement('img');
-      img.src = optimizeCover(safeUrl(it.cover_image, ''), 400);
-      img.alt = '';
-      img.loading = 'lazy';
-      img.decoding = 'async';
+      const img = coverImg(it.cover_image, {
+        w: 400, widths: [200, 300, 400],
+        sizes: '(min-width: 900px) 180px, 45vw',
+      });
       art.appendChild(img);
     } else {
       art.appendChild(genPoster(it.series_title));
@@ -277,19 +385,32 @@ async function load({ append = false, silent = false } = {}) {
   if (genreFilter) params.set('gen', genreFilter);
   if (statusFilter) params.set('status', statusFilter);
 
-  const res = await api(`/series?${params}`);
+  // Catalogul implicit (pagina 1, fără căutare/filtre) e deja în răspunsul
+  // primei pagini → îl refolosim. Pentru „încarcă mai multe", căutare și
+  // filtre cerem în continuare /api/series cu parametrii potriviți.
+  const useHome = !append && !query && !genreFilter && !statusFilter && page === 1 && sort === 'latest';
 
-  if (!res.ok) {
-    if (!append) {
-      grid.innerHTML = '';
-      grid.appendChild(emptyState('Nu am putut încărca seriile', res.data?.error || 'Verifică conexiunea și reîncearcă.'));
-      document.getElementById('series-count').textContent = '';
-    }
-    toast(res.data?.error || 'Eroare la încărcarea seriilor', 'err');
-    return;
+  let data = null;
+  let errText = '';
+  if (useHome) {
+    const home = await homeData();
+    if (home.ok) data = home.data.series;
+    else errText = home.error;
+  } else {
+    const res = await api(`/series?${params}`);
+    if (res.ok) data = res.data;
+    else errText = res.data?.error || 'Eroare la încărcarea seriilor';
   }
 
-  const data = res.data;
+  if (!data) {
+    if (!append) {
+      grid.innerHTML = '';
+      grid.appendChild(emptyState('Nu am putut încărca seriile', errText || 'Verifică conexiunea și reîncearcă.'));
+      document.getElementById('series-count').textContent = '';
+    }
+    toast(errText || 'Eroare la încărcarea seriilor', 'err');
+    return;
+  }
   fillSorts(data.sorts);
 
   if (!append) {
@@ -323,6 +444,11 @@ async function load({ append = false, silent = false } = {}) {
 function search(q) {
   query = q.trim();
   page = 1;
+  // Cautarea scrie si ea URL-ul: „/?q=naruto" e un link care merge trimis.
+  // replaceState, nu pushState: search() ruleaza la fiecare tasta (debounce
+  // 180 ms), iar 10 litere ar insemna 10 intrari in istoric — butonul Înapoi
+  // ar scoate litera cu litera.
+  writeUrlState({ push: false });
   load();
 }
 
@@ -333,6 +459,9 @@ function search(q) {
 // deci shuffle-ul nu loveste serverul de fiecare data (cache in sessionStorage).
 // ---------------------------------------------------------------------
 const SPOT_WINDOW_MS = 3 * 60 * 60 * 1000;
+/** Numele imaginilor bundled pentru banner (fiecare are .avif/.webp/.jpg). */
+const HERO_ART = ['hero-1', 'hero-2', 'hero-3'];
+
 const SPOT_TAGS = [
   'Recomandarea intervalului', 'De maratonat diseară', 'Ascunsă în catalog',
   'Alegerea comunității', 'Perla neștiută', 'Revăzut și aprobat',
@@ -381,9 +510,11 @@ async function pickSpotSeries(salt) {
   // Mereu din CELE MAI NOI 24 de serii: orice serie adăugată recent intră
   // automat în rotația bannerului la fereastra următoare (sau la click pe
   // „Alt anime"), fără niciun pas manual.
-  const res = await api('/series?per_page=24&page=1&sort=latest');
-  if (!res.ok || !res.data?.series?.length) return null;
-  const list = res.data.series;
+  // Lista „cele mai noi 24" e exact ce aduce /api/home pentru prima pagină:
+  // o refolosim, ca bannerul să nu coste o a doua invocare de Worker.
+  const home = await homeData();
+  const list = home.ok ? home.data.series?.series || [] : [];
+  if (!list.length) return null;
   const pick = list[hashStr(`spot-item-${bucket}-${salt}`) % list.length];
   try { sessionStorage.setItem(cacheKey, JSON.stringify(pick)); } catch { /* ignora */ }
   return pick;
@@ -419,23 +550,35 @@ async function renderHero(salt = spotSalt()) {
   // Fara coperta proprie: una din imaginile anime bundled (arta originala),
   // aleasa determinist din aceeasi sare ca si seria — bannerul arata mereu
   // „cu totul”, nu ca un placeholder.
-  const HERO_ART = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
-  const artUrl = HERO_ART[hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length];
+  // Trei formate per imagine, declarate în HTML (fără negociere pe server):
+  // AVIF e cel mai mic (~33% sub WebP), WebP acoperă browserele ceva mai vechi,
+  // JPEG rămâne rezerva. setHeroArt schimbă TOATE sursele o dată, ca browserul
+  // să nu rămână cu AVIF-ul poziției vechi după un shuffle.
+  const artIdx = hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length;
+  const artUrl = `/assets/img/${HERO_ART[artIdx]}.webp`;
+  const artLegacy = `/assets/img/${HERO_ART[artIdx]}.jpg`;
   img.fetchPriority = 'high';
-  let heroErr = 0;
-  img.onerror = () => {
-    heroErr++;
-    // treapta 1: varianta redimensionata a picat -> originalul exact din DB
-    if (heroErr === 1 && cover && cover !== '#' && img.src !== cover) {
-      img.srcset = ''; img.sizes = ''; img.src = cover;
-    // treapta 2: si originalul a picat -> arta bundled
-    } else if (heroErr === 2 && img.src !== artUrl) {
-      img.src = artUrl;
-    // treapta 3: nimic nu merge -> poster generat local
-    } else {
-      img.remove(); bg.appendChild(genHeroArt(pick.title));
+  // O SINGURĂ scară de rezervă, ca să nu se bată două handlere de eroare
+  // una pe alta (înainte exista și `onerror`, și un `addEventListener`, iar
+  // al doilea anula prima treaptă): coperta redimensionată → coperta
+  // originală din DB → arta .webp bundled → arta .jpg (browsere vechi) →
+  // poster generat local. Ultima treaptă nu mai poate eșua.
+  const ladder = [];
+  if (cover && cover !== '#') ladder.push({ src: cover, clear: true, cover: true });
+  ladder.push({ art: artIdx, clear: true }, { art: artIdx, legacy: true }, { gen: true });
+  let step = 0;
+  img.addEventListener('error', () => {
+    const next = ladder[step++];
+    if (!next) return;
+    if (next.gen) { img.remove(); bg.appendChild(genHeroArt(pick.title)); return; }
+    if (img.src === new URL(next.src, location.origin).href) {  // deja încercat
+      img.dispatchEvent(new Event('error'));
+      return;
     }
-  };
+    if (next.clear) { img.srcset = ''; img.sizes = ''; }
+    if (next.art !== undefined) setHeroArt(img, next.art);
+    else { if (next.cover) clearHeroArt(img); img.src = next.src; }
+  });
   if (cover && cover !== '#') {
     // srcset responsive: IMDb livreaza la latimea potrivita ecranului
     // (telefon ~400w, tableta 800w, desktop 1280w) — nicio imagine mai mare
@@ -443,27 +586,59 @@ async function renderHero(salt = spotSalt()) {
     img.srcset = [400, 800, 1000].map((w) => `${optimizeCover(cover, w)} ${w}w`).join(', ');
     img.sizes = '100vw';
     img.src = optimizeCover(cover, 1000);
+    clearHeroArt(img);   // coperta seriei bate arta bundled (nu invers)
   } else {
     img.srcset = '';
     img.sizes = '';
-    img.src = artUrl;
+    setHeroArt(img, artIdx);
   }
-  if (img.parentNode !== bg) bg.appendChild(img);
-  img.addEventListener('error', () => {
-    // coperta seriei a picat -> arta bundled; arta bundled a picat -> poster generat
-    if (img.src.endsWith(artUrl.slice(artUrl.lastIndexOf('/')))) { img.remove(); bg.appendChild(genHeroArt(pick.title)); }
-    else { img.src = artUrl; }
-  }, { once: true });
-  bg.appendChild(img);
+  // Doar dacă imaginea nu are deloc părinte (creată de noi mai sus) o adăugăm
+  // în fundal. `bg.appendChild(img)` necondiționat ar SCOATE-o din <picture>,
+  // iar sursele AVIF/WebP ar deveni inutile — browserul ar descărca mereu
+  // rezerva JPEG. Bugul a stat ascuns până când testele DOM au început să
+  // randeze bannerul (vezi polyfill-ul de Web Animations din dom-smoke).
+  if (!img.parentNode) bg.appendChild(img);
 
   box.hidden = false;
   box.classList.remove('hban--loading');   // la revedere, skeleton
   // Intrarea prin Web Animations API: restart natural la fiecare apel si
   // zero reflow fortat (vechiul truc cu offsetWidth costa ~74ms de layout).
-  box.animate(
-    [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
-    { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }
-  );
+  // Web Animations API e decorativa: daca lipseste (browsere vechi, medii de
+  // test fara WAAPI — jsdom nu o are), bannerul se afiseaza simplu, fara
+  // animatie. Inainte, un `animate` lipsa arunca si `initHero` ascundea TOT
+  // bannerul — iar testele DOM nu prindeau nimic, pentru ca fix la fel se
+  // ascunde si cand catalogul e gol.
+  if (typeof box.animate === 'function') {
+    box.animate(
+      [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }
+    );
+  }
+}
+
+/** Golește <source>-urile din <picture>: fără candidați, browserul folosește
+ *  src-ul din <img> (coperta seriei). Fără asta, AVIF-ul bundled câștigă în
+ *  fața copertei — adică exact pe dos decât vrem. */
+function clearHeroArt(img) {
+  const pic = img.closest('picture');
+  if (pic) pic.querySelectorAll('source').forEach((s) => { s.srcset = ''; });
+}
+
+/** Schimbă arta de fundal a bannerului: o singură poziție, toate formatele. */
+function setHeroArt(img, idx) {
+  const nume = HERO_ART[idx] || HERO_ART[0];
+  const pic = img.closest('picture');
+  if (pic) {
+    pic.querySelectorAll('source').forEach((s) => {
+      const tip = s.getAttribute('type');
+      s.srcset = tip === 'image/avif'
+        ? `/assets/img/${nume}.avif`
+        : `/assets/img/${nume}.webp`;
+    });
+    img.src = `/assets/img/${nume}.jpg`;   // rezerva, dacă browserul nu știe AVIF/WebP
+  } else {
+    img.src = `/assets/img/${nume}.webp`;
+  }
 }
 
 async function initHero() {
@@ -502,21 +677,59 @@ async function renderContinue() {
   if (!res.ok || !res.data?.items?.length) { section.hidden = true; return; }
 
   section.hidden = false;
+  // Proprietarul site-ului poate alege altfel prin butonul „Episodul următor"
+  // din card (vezi mai jos): preferinta sta in localStorage, nu pe server.
+  const preferNext = (() => {
+    try { return localStorage.getItem('auk-continue-next') === '1'; } catch { return false; }
+  })();
+
   row.innerHTML = '';
   for (const it of res.data.items) {
+    // Când episodul e terminat și seria are un episod următor, cardul duce
+    // DIRECT la el (comportamentul pe care îl aștepți de la „Continuă
+    // vizionarea"): ai terminat episodul 5, vrei să dai play la 6.
+    // `next_episode_id` vine din server (o singură căutare în index), nu e
+    // ghicit din numere — episoadele nu sunt mereu consecutive.
+    const done = it.seconds >= WATCH_DONE_SECONDS;
+    const nextId = Number(it.next_episode_id) || 0;
+    const goNext = done && nextId > 0 && preferNext;
+    const targetId = goNext ? nextId : it.episode_id;
+
     const a = document.createElement('a');
     a.className = 'continue-card';
-    a.href = `/episode?id=${encodeURIComponent(it.episode_id)}`;
+    a.href = `/episode?id=${encodeURIComponent(targetId)}`;
+    if (goNext) a.dataset.next = '1';
 
     const art = document.createElement('div');
     art.className = 'continue-card__art';
     const cover = safeUrl(it.cover_image, '');
     if (cover && cover !== '#') {
-      const img = document.createElement('img');
-      img.src = cover; img.alt = ''; img.loading = 'lazy';
-      art.appendChild(img);
+      art.appendChild(coverImg(cover, {
+        w: 400, widths: [200, 300, 400],
+        sizes: '(min-width: 900px) 160px, 45vw',
+      }));
     } else {
       art.appendChild(genPoster(it.series_title));
+    }
+
+    // Bara de progres peste arta, ca la platformele de streaming: cat la suta
+    // din episod s-a vazut. Durata vine din serie (ep_duration, in minute);
+    // daca nu e completata, aratam „Ai inceput" in loc de un procent inventat.
+    const durMin = Number(it.ep_duration) || 0;
+    const totalSec = durMin > 0 ? durMin * 60 : 0;
+    // Fara durata completata pe serie nu inventam un procent: scriem cate
+    // minute s-au acumulat efectiv (valoarea vine din watch_progress).
+    const watchedMin = Math.max(1, Math.round(it.seconds / 60));
+    const pct = done ? 100 : (totalSec > 0 ? Math.min(99, Math.max(3, Math.round((it.seconds / totalSec) * 100))) : 0);
+    if (pct > 0) {
+      const prog = document.createElement('span');
+      prog.className = 'continue-card__prog';
+      const fill = document.createElement('i');
+      fill.style.width = `${pct}%`;
+      if (done) fill.className = 'is-done';
+      prog.appendChild(fill);
+      prog.title = done ? 'Episod terminat' : `Ai văzut ~${pct}% din episod`;
+      art.appendChild(prog);
     }
     a.appendChild(art);
 
@@ -527,30 +740,60 @@ async function renderContinue() {
     t1.textContent = it.series_title;
     const t2 = document.createElement('span');
     t2.className = 'continue-card__ep';
-    t2.textContent = `Episodul ${it.episode_number}`;
+    t2.textContent = goNext
+      ? `Episodul ${it.next_episode_number} (după ${it.episode_number})`
+      : `Episodul ${it.episode_number}`;
     meta.appendChild(t1);
     meta.appendChild(t2);
     // „acum 2 ore” — rândul pare viu, nu o listă înghețată
     if (it.updated_at) {
       const t3 = document.createElement('span');
       t3.className = 'continue-card__ago';
-      t3.textContent = relativeTime(it.updated_at);
+      const stare = done ? '✓ Văzut' : (pct > 0 ? `${pct}%` : `${watchedMin} min văzute`);
+      t3.textContent = `${stare} · ${relativeTime(it.updated_at)}`;
       meta.appendChild(t3);
     }
     a.appendChild(meta);
+
+    // Comutator „Episodul următor" — apare doar cand exista un episod urmator
+    // (altfel ar fi un buton care nu face nimic, pe majoritatea cardurilor).
+    if (done && nextId > 0) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'continue-card__next';
+      toggle.textContent = preferNext ? '↩︎ Reia episodul curent' : '⏭ Episodul următor';
+      toggle.title = preferNext
+        ? 'Cardurile terminat incep de la episodul văzut, nu de la următorul'
+        : 'Cardurile terminate incep direct de la episodul următor';
+      toggle.addEventListener('click', (e) => {
+        // Butonul stă într-un <a>: fără preventDefault, click-ul ar naviga.
+        e.preventDefault();
+        e.stopPropagation();
+        const nou = !preferNext;
+        try { localStorage.setItem('auk-continue-next', nou ? '1' : '0'); } catch { /* mod privat */ }
+        renderContinue().catch(() => { /* rândul e opțional */ });
+      });
+      a.appendChild(toggle);
+    }
     row.appendChild(a);
   }
 }
+
+// Acelasi prag ca pe server (WATCH_THRESHOLD_SECONDS din
+// src/routes/api/progress.js): sub el, punctele si marcajul „vizionat" nu se
+// acorda. Pagina il foloseste doar ca sa stie cum arata cardul din
+// „Continuă vizionarea" — decizia rămâne a serverului.
+const WATCH_DONE_SECONDS = 15 * 60;
 
 skeletons(10);
 // nav-ul si lista merg in paralel; chat-ul (WebSocket) doar cand pagina e
 // efectiv activa, ca un tab prerenderat sa nu deschida socket degeaba
 async function loadTops() {
   const sec = document.getElementById('tops-section');
-  const res = await api('/top');
-  if (!res.ok || !sec) { if (sec) sec.hidden = true; return; }
-  const week = res.data.weekly || [];
-  const rated = res.data.rated || [];
+  const home = await homeData();
+  if (!home.ok || !sec) { if (sec) sec.hidden = true; return; }
+  const week = home.data.top?.weekly || [];
+  const rated = home.data.top?.rated || [];
   if (!week.length && !rated.length) { sec.hidden = true; return; }
 
   const fill = (id, rows, meta) => {
@@ -575,6 +818,13 @@ async function loadTops() {
 
 initCatalogFilters();
 loadRecent().catch(() => { /* secțiunea e optională */ });
+// Filtrele din URL se aplica INAINTE de prima cerere, ca pagina sa se
+// incarce direct pe rezultatele cerute (fara un al doilea apel).
+readUrlState();
+if (genreFilter) document.getElementById('genre-select').value = genreFilter;
+if (statusFilter) document.getElementById('status-select').value = statusFilter;
+applyFilters({ reload: false });
+if (query) document.getElementById('search-input').value = query;
 await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale */ })]);
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 startGuestNudge();
@@ -650,9 +900,7 @@ function sugPaint(q) {
     art.className = 'search-sug__art';
     const cover = safeUrl(s.cover_image, '');
     if (cover && cover !== '#') {
-      const img = document.createElement('img');
-      img.src = cover; img.alt = ''; img.loading = 'lazy';
-      art.appendChild(img);
+      art.appendChild(coverImg(cover, { w: 120, alt: '' }));   // slot de 42 px
     } else {
       art.appendChild(genPoster(s.title));
     }
@@ -715,6 +963,32 @@ document.getElementById('search-input')?.addEventListener('keydown', (e) => {
   }
 });
 
+// Escape curata cautarea cand nu e nimic de inchis deasupra (comportamentul
+// de bara de adrese, pe care utilizatorii il asteapta instinctiv).
+document.getElementById('search-input')?.addEventListener('keydown', (e) => {
+  const box = sugBox();
+  if (e.key !== 'Escape' || (box && !box.hidden)) return;
+  const input = e.currentTarget;
+  if (!input.value) return;
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Scurtatura „/": sare in cautare de oriunde din pagina (ca pe GitHub/YouTube).
+// Ignorata cand scrii deja intr-un camp sau cand ai modificatori — altfel ar
+// fura tastele din chat, din formulare sau din comenzile browserului.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const el = document.activeElement;
+  const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable || el.tagName === 'SELECT');
+  if (typing) return;
+  const input = document.getElementById('search-input');
+  if (!input) return;
+  e.preventDefault();
+  input.focus();
+  input.select?.();
+});
+
 document.addEventListener('click', (e) => {
   if (!e.target.closest?.('.search')) sugClose();
 });
@@ -722,13 +996,21 @@ document.addEventListener('click', (e) => {
 document.getElementById('sort-select')?.addEventListener('change', (e) => {
   sort = e.target.value;
   page = 1;
-  load();
+  applyFilters();
+});
+
+// Butonul „Înapoi" al browserului: reface filtrele din URL, nu iese de pe site.
+window.addEventListener('popstate', () => {
+  readUrlState();
+  applyFilters({ reload: false });   // selectorii si URL-ul se resincronizeaza
+  load({ silent: true });
 });
 
 document.getElementById('load-more')?.addEventListener('click', async (e) => {
   e.currentTarget.disabled = true;
   e.currentTarget.textContent = 'Se încarcă…';
   page++;
+  writeUrlState();
   await load({ append: true, silent: true });
 });
 

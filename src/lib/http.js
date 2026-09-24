@@ -7,8 +7,12 @@ export const COOKIE_NAME = 'token';
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 zile, identic cu TTL-ul JWT
 
 /**
- * CSP strict FARA 'unsafe-inline': tot JS-ul e in fisiere externe,
- * deci nu e nevoie sa permitem scripturi inline (v1 avea inline peste tot).
+ * CSP cu script-src STRICT (fără 'unsafe-inline'): tot JS-ul e în fișiere
+ * externe + zero handlere on*=, deci nu e nevoie de scripturi inline.
+ * style-src ARE 'unsafe-inline' — deliberat: snippet-ul A-Ads cere stiluri
+ * inline, pagina 404 generată în worker trebuie să arate bine fără assete,
+ * iar adminul folosește stiluri inline de layout. Stilurile inline nu execută
+ * JavaScript și la noi nu conțin niciodată date de la utilizatori.
  *
  * frame-src permite orice https:, nu un allowlist de domenii. Motivul e
  * detaliat in src/lib/sources.js: furnizorii de embed pentru anime isi
@@ -24,7 +28,7 @@ export const SECURITY_HEADERS = {
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https: data: blob:",
     "font-src 'self' data:",
     "connect-src 'self' wss:",
@@ -37,6 +41,9 @@ export const SECURITY_HEADERS = {
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
+  // HSTS și pe răspunsurile workerului (până acum venea doar din _headers,
+  // adică doar pe assetele statice — API-ul JSON n-avea Strict-Transport).
+  'Strict-Transport-Security': 'max-age=31536000',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
   'Cross-Origin-Opener-Policy': 'same-origin',

@@ -48,7 +48,7 @@ export async function onRequest(context) {
   // Cosmeticele din shop merg atasate la handshake (o citire indexata),
   // nu recitite la fiecare mesaj — la fel ca rank-urile.
   const items = await env.DB
-    .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter')`)
+    .prepare(`SELECT item_id FROM user_items WHERE user_id = ? AND qty > 0 AND item_id IN ('name_gold', 'flair_supporter', 'flair_nova')`)
     .bind(user.id)
     .all();
   // Culoarea numelui (shop) vine din users.active_name_color, setata la
@@ -81,7 +81,7 @@ export async function onRequest(context) {
   url.searchParams.set('u', JSON.stringify({
     id: user.id, username: user.username,
     rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
-    flair: owned.has('flair_supporter') ? '💎' : '',
+    flair: owned.has('flair_nova') ? '🌠' : owned.has('flair_supporter') ? '💎' : '',
     name_gold: owned.has('name_gold') ? 1 : 0,
     name_color: meRow?.active_name_color || '',
     leader_color: leaderCls,

@@ -46,6 +46,7 @@ import * as reportRoute from './routes/api/report.js';
 import * as subtitleRoute from './routes/api/subtitle.js';
 import * as genresRoute from './routes/api/genres.js';
 import * as recentRoute from './routes/api/recent.js';
+import * as homeRoute from './routes/api/home.js';
 import * as commentsVoteRoute from './routes/api/comments-vote.js';
 import * as reviewsRoute from './routes/api/reviews.js';
 import * as topRoute from './routes/api/top.js';
@@ -62,6 +63,7 @@ import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
 import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
+import * as adminSeason from './routes/api/admin/season.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
@@ -102,6 +104,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/subtitle', mod: subtitleRoute },
   { method: 'GET', path: '/api/genres', mod: genresRoute },
   { method: 'GET', path: '/api/recent', mod: recentRoute },
+  { method: 'GET', path: '/api/home', mod: homeRoute },
   { method: 'POST', path: '/api/comments/vote', mod: commentsVoteRoute },
   { method: 'GET', path: '/api/reviews', mod: reviewsRoute },
   { method: 'POST', path: '/api/reviews', mod: reviewsRoute },
@@ -133,6 +136,7 @@ const ROUTES = [
   // avea mai multe surse si ele se editeaza independent de episod.
   { method: '*', path: '/api/admin/episode-sources', mod: adminEpisodeSources },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
+  { method: '*', path: '/api/admin/season', mod: adminSeason },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },

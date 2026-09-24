@@ -1,5 +1,5 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive } from './core.js';
-import { initChat } from './chat.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive, initChat } from './core.js';
+
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
 //

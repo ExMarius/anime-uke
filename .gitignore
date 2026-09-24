@@ -22,3 +22,7 @@ Thumbs.db
 .wrangler.toml.prod.bak
 wrangler.toml.bak
 worker-do/.wrangler/
+
+# Chunk-uri de build (code splitting): numele conține hash-ul conținutului,
+# se generează la deploy și nu se comit niciodată.
+public/assets/js/c-*.js

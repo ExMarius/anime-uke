@@ -26,7 +26,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap', '/llms.txt', '/speculationrules.json']);
 
 // Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
 // Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
@@ -35,8 +35,12 @@ const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register',
 // adică dezvăluiau că fișierul există în repo și umpleau crawl-ul de gunoi.
 const STATIC_PAGES = new Set([
   '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
-  '/admin', '/admin/serii', '/admin/serie', '/404',
-  '/favicon.ico', '/robots.txt', '/llms.txt', '/speculationrules.json',
+  '/admin', '/admin/serii',
+  '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap',
+  '/llms.txt', '/speculationrules.json',
+  // Intenționat ABSENTE (primesc 404 onest de la allowlist):
+  //   /404          — nu există public/404.html; intrarea veche cerea login (302)!
+  //   /admin/serie  — fără id, JS-ul pornea cu seriesId=NaN și făcea apeluri invalide.
 ]);
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
@@ -54,6 +58,7 @@ const PUBLIC_API = new Set([
   '/api/pulse',          // doar un contor agregat („N online”), fara date personale
   '/api/genres',         // lista de genuri pentru filtre (zero date personale)
   '/api/recent',         // ultimele episoade adaugate (date de catalog)
+  '/api/home',           // prima pagina intr-o singura cerere (series+top+recent+genres+pulse)
   '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
   '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
 ]);
@@ -74,15 +79,18 @@ function isPublic(path) {
 }
 
 /** Redirectioneaza catre login pastrand destinatia, ca sa revii dupa logare. */
-function redirectToLogin(url) {
-  const next = `${url.pathname}${url.search}`;
+function redirectToLogin(url, normPath) {
+  const next = `${normPath || url.pathname}${url.search}`;
   const target = `/login?next=${encodeURIComponent(next)}`;
   return new Response(null, { status: 302, headers: { Location: target, 'Cache-Control': 'no-store' } });
 }
 
 export async function handleFetch(request, env, ctx) {
   const url = new URL(request.url);
-  const path = url.pathname;
+  // Normalizeaza slash-urile duble (ex. //sitemap.xml → /sitemap.xml): unii
+  // clienti construiesc URL-uri cu //, iar fara asta cadeau pe 404 deși
+  // resursa exista. Tot rutarea lucreaza pe calea normalizata.
+  const path = url.pathname.replace(/\/{2,}/g, '/') || '/';
   // Normalizare pentru verificările de rutare: `/series/` și `/series.html` sunt
   // aceeași pagină ca `/series`. Fără ea, `/series/` sărea peste redirectul 301
   // și ajungea la poarta de autentificare (302 → /login), iar `/profile.html`
@@ -110,8 +118,10 @@ export async function handleFetch(request, env, ctx) {
 
     // Rute necunoscute → 404 onest, înainte de poarta de autentificare.
     const isApiPath = path === '/api' || path.startsWith('/api/') || path === '/chat';
-    const isAssetPath = path.startsWith('/assets/') || path.startsWith('/covers/');
-    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && !isKnownPage(norm)) {
+    // Fără /covers/: directorul public/covers/ nu există (coperțile sunt URL-uri
+    // externe), deci îl lăsăm să cadă pe pagina 404 a site-ului, nu pe 404-ul generic.
+    const isAssetPath = path.startsWith('/assets/');
+    if (!isApiPath && !isAssetPath && path !== '/sitemap.xml' && path !== '/sitemap.txt' && path !== '/sitemap' && !isKnownPage(norm)) {
       return applySecurityHeaders(notFoundPage());
     }
 
@@ -121,15 +131,19 @@ export async function handleFetch(request, env, ctx) {
         const isApi = path === '/api' || path.startsWith('/api/') || path === '/chat';
         response = isApi
           ? jsonResponse({ error: 'Trebuie să fii autentificat' }, 401)
-          : redirectToLogin(url);
+          : redirectToLogin(url, path);
         return applySecurityHeaders(response);
       }
     }
 
     if (path === '/api' || path.startsWith('/api/') || path === '/chat') {
       response = await handleApi(request, env, ctx, path);
-    } else if (path === '/sitemap.xml') {
-      response = await sitemapHandler(request, env);
+    } else if (path === '/sitemap.xml' || path === '/sitemap.txt' || path === '/sitemap') {
+      // Sitemap-urile ies direct, FĂRĂ headerele de securitate (CORP/CSP):
+      // sunt consumate de crawler-e, nu de browsere, iar varianta minimalista
+      // (fara headere, text/xml) e cea care a trecut de verificarile GSC.
+      response = await sitemapHandler(request, env, path);
+      return response;
     } else {
       response = await serveStatic(request, env);
     }
@@ -186,43 +200,62 @@ function allowedMethods(path) {
 // nivel de izolat 1 oră — cost D1 neglijabil indiferent de trafic.
 // =====================================================================
 const SITEMAP_CACHE_MS = 60 * 60 * 1000;
-const sitemapCache = { at: 0, body: null };
+const sitemapCache = { at: 0, bodyXml: null, bodyTxt: null };
 
-async function sitemapHandler(request, env) {
+async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
   const origin = canonicalOrigin(env, request);
   const now = Date.now();
 
-  if (!sitemapCache.body || now - sitemapCache.at > SITEMAP_CACHE_MS) {
-    // In sitemap doar paginile cu valoare de indexat: prima pagina,
-    // catalogul si seriile. /login si /register sunt utilitare — le lasam
-    // afara ca sa nu le concureze pe cele de continut in rezultate.
-    // `/series` fără id face 301 spre `/`, deci nu mai are ce căuta aici:
-    // un URL de sitemap care redirectează la alt URL e semnal de calitate slabă.
-    let urls = ['/'];
+  if (!sitemapCache.bodyXml || now - sitemapCache.at > SITEMAP_CACHE_MS) {
+    // Prima pagina + URL-urile pretty ale seriilor si episoadelor (cele pe
+    // care le indexam; canonical-ul pointeaza spre ele, deci sitemap-ul
+    // trebuie sa fie coerent). Fara /login si /register (utilitare) si fara
+    // /series (face 301 spre / — un URL de sitemap care redirecteaza la alt
+    // URL e semnal de calitate slabă).
+    let urls = null;
     try {
-      const res = await env.DB
-        .prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000')
-        .all();
-      // URL-urile pretty — cele pe care le indexam (canonical-ul din pagina
-      // pointeaza spre ele, deci sitemap-ul trebuie sa fie coerent).
-      for (const r of res.results || []) urls.push(`/serie/${r.id}`);
+      const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
+      const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
+      urls = ['/'];
+      for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
+      for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
+      if (urls.length <= 1) throw new Error('empty');
     } catch (e) {
-      console.error('sitemap D1 esuat:', e?.message || e);
+      console.error('sitemap D1 esuat, folosesc fallback static:', e?.message || e);
+      // Fallback 100% static — garantat valid chiar daca D1 e down.
+      urls = ['/', '/serie/1019', '/serie/1018', '/serie/1017', '/serie/1015', '/serie/1014',
+        '/episod/4212', '/episod/4211', '/episod/4210', '/episod/4209', '/episod/4208'];
     }
-    const esc = (s) => s.replace(/&/g, '&amp;');
-    sitemapCache.body =
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    sitemapCache.bodyXml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      urls.map((u) => `  <url><loc>${esc(origin + u)}</loc></url>`).join('\n') +
-      `\n</urlset>\n`;
+      urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
+      `\n</urlset>`;
+    sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n');
     sitemapCache.at = now;
   }
 
-  return new Response(sitemapCache.body, {
+  // Varianta text (un URL pe linie) — ceruta de Google Search Console ca
+  // alternativa la cea XML.
+  if (forPath === '/sitemap.txt') {
+    return new Response(sitemapCache.bodyTxt, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
+  // /sitemap.xml si /sitemap (fara extensie) — acelasi XML minimalist.
+  return new Response(sitemapCache.bodyXml, {
     status: 200,
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Content-Type': 'text/xml; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
     },
   });
 }
@@ -286,6 +319,9 @@ function seoCacheSet(key, row) {
   seoCache.set(key, { at: Date.now(), row });
 }
 
+/**
+ * @returns {object|null|undefined} rândul | null (nu există) | undefined (eroare D1 → shell, fără 404 fals)
+ */
 async function seriesForSeo(env, id) {
   const key = `s${id}`;
   const cached = seoCacheGet(key);
@@ -303,23 +339,40 @@ async function seriesForSeo(env, id) {
     seoCacheSet(key, row || null);
     return row;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
-/** Există episodul? O citire D1 indexată pe cheia primară, cu cache. */
-async function episodeExists(env, id) {
+/**
+ * Episodul + datele seriei lui, pentru SSR SEO pe /episod/<id>.
+ *
+ * O singură citire D1 (JOIN indexat pe cheia primară), cu cache 5 min în
+ * izolat — inclusiv cache negativ, ca scanerele care lovesc id-uri inventate
+ * să nu ardă cota gratuită. La eroare de D1 întoarce `undefined` („nu știu”):
+ * pagina-shell se servește ca atare, fără 404 fals pe un episod real.
+ *
+ * @returns {object|null|undefined} rândul | null (nu există) | undefined (eroare D1)
+ */
+async function episodeForSeo(env, id) {
   const key = `e${id}`;
   const cached = seoCacheGet(key);
-  if (cached.hit) return Boolean(cached.row);
+  if (cached.hit) return cached.row;
   try {
-    const row = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(id).first();
+    const row = await env.DB
+      .prepare(
+        `SELECT e.id, e.series_id, e.episode_number, e.title AS ep_title, e.created_at,
+                s.title AS series_title, s.description AS series_desc, s.cover_image,
+                s.genre, s.year, s.status
+         FROM episodes e
+         JOIN anime_series s ON s.id = e.series_id
+         WHERE e.id = ?`
+      )
+      .bind(id)
+      .first();
     seoCacheSet(key, row || null);
-    return Boolean(row);
+    return row;
   } catch {
-    // La eroare de D1 presupunem că există — mai bine o pagină care se încarcă
-    // decât un 404 fals pe un episod real.
-    return true;
+    return undefined;
   }
 }
 
@@ -369,6 +422,73 @@ function seriesSeoTags(env, request, series) {
 /** Injecteaza tagurile in HTML-ul paginii de serie (inlocuieste <title>). */
 function injectSeriesSeo(env, request, html, series) {
   const tags = seriesSeoTags(env, request, series);
+  const withTitle = html.replace(/<title>.*?<\/title>/i, '');
+  return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
+}
+
+/**
+ * Tagurile <head> generate pe server pentru un episod.
+ *
+ * Paginile de episod sunt poarta principală de trafic organic („anime X
+ * episodul Y subtitrat în română”), deci titlul pune exact interogarea:
+ * serie + număr episod + „subtitrat în română”. JSON-LD e TVEpisode (perechea
+ * lui TVSeries de pe pagina seriei) + BreadcrumbList Acasă → Serie → Episod.
+ */
+function episodeSeoTags(env, request, ep) {
+  const origin = canonicalOrigin(env, request);
+  const canonical = `${origin}/episod/${ep.id}`;
+  const epLabel = `Episodul ${ep.episode_number}`;
+  const title = `${ep.series_title} — ${epLabel} subtitrat în română | Anime-Uke`;
+  const epTitle = String(ep.ep_title || '').trim();
+  const desc = (
+    epTitle
+      ? `${epLabel} „${epTitle}” din ${ep.series_title}, subtitrat în română, gratuit, pe Anime-Uke.`
+      : `${epLabel} din ${ep.series_title} — anime subtitrat în română, gratuit, pe Anime-Uke.`
+  ).slice(0, 160);
+
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TVEpisode',
+        episodeNumber: ep.episode_number,
+        name: `${ep.series_title} — ${epLabel}`,
+        description: String(ep.series_desc || desc).slice(0, 500),
+        image: ep.cover_image || undefined,
+        datePublished: String(ep.created_at || '').slice(0, 10) || undefined,
+        inLanguage: 'ro',
+        url: canonical,
+        partOfTVSeries: {
+          '@type': 'TVSeries',
+          name: ep.series_title,
+          url: `${origin}/serie/${ep.series_id}`,
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: `${origin}/` },
+          { '@type': 'ListItem', position: 2, name: ep.series_title, item: `${origin}/serie/${ep.series_id}` },
+          { '@type': 'ListItem', position: 3, name: epLabel, item: canonical },
+        ],
+      },
+    ],
+  };
+
+  return `  <title>${escAttr(title)}</title>
+  <meta name="description" content="${escAttr(desc)}">
+  <link rel="canonical" href="${escAttr(canonical)}">
+  <meta property="og:title" content="${escAttr(`${ep.series_title} — ${epLabel}`)}">
+  <meta property="og:description" content="${escAttr(desc)}">
+  <meta property="og:type" content="video.episode">
+  <meta property="og:url" content="${escAttr(canonical)}">
+  <meta property="og:image" content="${escAttr(ep.cover_image || `${origin}/assets/img/hero-1.jpg`)}">
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
+/** Injecteaza tagurile in HTML-ul paginii de episod (inlocuieste <title>). */
+function injectEpisodeSeo(env, request, html, ep) {
+  const tags = episodeSeoTags(env, request, ep);
   const withTitle = html.replace(/<title>.*?<\/title>/i, '');
   return withTitle.replace(/<\/head>/i, `${tags}\n</head>`);
 }
@@ -428,20 +548,10 @@ async function serveStatic(request, env) {
   try {
     const res = await env.ASSETS.fetch(assetRequest);
 
-    // Negociere WebP: daca exista o versiune .webp langa jpg/png-ul cerut
-    // (generata la deploy), o servim pe ea — ~40% mai putini bytes, aceeasi
-    // imagine. Doar pentru browsere care anunta image/webp (toate moderne).
-    if (res.status === 200) {
-      const m = /^\/assets\/img\/.+\.(jpg|jpeg|png)$/i.exec(path);
-      const acceptsWebp = (request.headers.get('accept') || '').includes('image/webp');
-      if (m && acceptsWebp) {
-        const webpUrl = new URL(path.replace(/\.(jpg|jpeg|png)$/i, '.webp'), url.origin);
-        const webpRes = await env.ASSETS.fetch(new Request(webpUrl.toString(), { method: 'GET', headers: request.headers }));
-        if (webpRes.status === 200 && (webpRes.headers.get('content-type') || '').includes('webp')) {
-          return webpRes;
-        }
-      }
-    }
+    // NOTA: /assets/* nu mai ajunge aici in mod normal — public/_routes.json
+    // le serveste direct din stratul static (zero invocari Functions), cu
+    // headerele din public/_headers. Imaginile hero sunt referite direct ca
+    // .webp din HTML/JS, deci nu mai e nevoie de negociere Accept aici.
 
     if (assetPath && res.status >= 300 && res.status < 400) {
       const followed = await followAssetRedirect(env, url.origin, res.headers.get('location'), request.headers);
@@ -456,7 +566,9 @@ async function serveStatic(request, env) {
       // Serie inexistentă → 404 REAL. Până aici răspundeam 200 cu shell-ul paginii
       // și lăsam JS-ul să scrie „Seria nu există": pentru Google era un soft 404
       // (pagină indexabilă, goală), iar crawl budget-ul se ducea pe id-uri inventate.
-      if (!series) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
+      if (series === null) return notFoundPage('Serie inexistentă', `Seria cu id-ul ${serieMatch[1]} nu există pe anime-uke.`);
+      // series === undefined = eroare D1: servim shell-ul nemodificat (fără 404 fals).
+      if (!series) return res;
       const html = await res.text();
       const headers = new Headers(res.headers);
       headers.delete('content-length');
@@ -464,40 +576,31 @@ async function serveStatic(request, env) {
       return new Response(injectSeriesSeo(env, request, html, series), { status: 200, headers });
     }
 
-    // La fel pentru /episod/<id>: fără verificare, orice id întorcea 200.
+    // /episod/<id>: 404 real la id inexistent + head plin (titlu, descriere,
+    // canonical, og, JSON-LD TVEpisode) generat din D1 — la fel ca la serii.
     const epMatch = path.match(/^\/episod\/(\d+)\/?$/);
     if (epMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
-      const exists = await episodeExists(env, Number(epMatch[1]));
-      if (!exists) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      const ep = await episodeForSeo(env, Number(epMatch[1]));
+      if (ep === null) return notFoundPage('Episod inexistent', `Episodul cu id-ul ${epMatch[1]} nu există pe anime-uke.`);
+      // ep === undefined = eroare D1: servim shell-ul nemodificat (fără 404 fals).
+      if (ep) {
+        const html = await res.text();
+        const headers = new Headers(res.headers);
+        headers.delete('content-length');
+        headers.delete('etag');
+        return new Response(injectEpisodeSeo(env, request, html, ep), { status: 200, headers });
+      }
     }
 
-    // Cache: JS/CSS-ul cerut CU ?v=<commit> e versionat la deploy → poate fi
-    // „immutable" 1 an. Fara ?v= (ex. importurile relative dintre modulele
-    // /assets/js) lasam regula din _headers (no-cache + ETag → 304 ieftin):
-    // asa un deploy nu lasa module vechi blocate in cache un an.
-    const versioned = path.startsWith('/assets/') && url.searchParams.has('v');
-    if (versioned && res.status === 200) {
-      const headers = new Headers(res.headers);
-      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-      return statusOverride(res, 200, headers);
-    }
-
+    // Cache-Control pentru JS/CSS vine din public/_headers (no-cache local,
+    // immutable in productie — deploy.sh face inlocuirea), nu de aici:
+    // assetele nu mai trec prin worker.
     return res;
   } catch (e) {
     // Nu lasam eroarea interna sa ajunga la client
     console.error('ASSETS.fetch esuat pentru', path, ':', e?.message || e);
     return jsonResponse({ error: 'Not found' }, 404);
   }
-}
-
-// Răspuns al cărui body l-am citit deja (ex. HTML prelucrat): trebuie să
-// reconstruim Response fără content-length/etag vechi, altfel Cloudflare
-// raportează un mismatch și browserul trunchiază pagina.
-function statusOverride(res, status, headers) {
-  const h = new Headers(headers || res.headers);
-  h.delete('content-length');
-  h.delete('etag');
-  return new Response(res.body, { status, statusText: res.statusText, headers: h });
 }
 
 /**

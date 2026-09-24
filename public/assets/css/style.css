@@ -110,6 +110,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .
   box-shadow: 0 4px 18px -4px var(--accent-glow);
   font-size: 1.05rem;
 }
+/* Brandul e <img> (logo-icon.webp): umple cutia, fără deformare. */
+img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
+/* Mini-logo inline în textul de footer (<b><img> anime-uke</b>). */
+.fblogo { width: 1.15em; height: 1.15em; vertical-align: -.18em; border-radius: 4px; }
 .nav__brand__text { background: linear-gradient(92deg, #fff 20%, var(--accent-hi) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 .nav__links { display: flex; gap: .4rem; margin-left: auto; align-items: center; flex-wrap: wrap; }
@@ -1050,6 +1054,9 @@ td strong, td b { color: var(--text); font-weight: 700; }
 @keyframes hbanIn { to { opacity: 1; transform: none; } }
 
 .hban__bg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+/* <picture> e doar un înveliș pentru formate: nu trebuie să ocupe loc
+   (imaginea dinăuntru e poziționată absolut). */
+.hban__bg picture { display: contents; }
 .hban__bg-img, .hban__bg-gen {
   position: absolute; inset: -4%; width: 108%; height: 108%;
   object-fit: cover; object-position: center 30%;
@@ -1371,6 +1378,87 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 /* --- „acum 2 ore” pe cardurile de continuare ------------------------- */
 .continue-card__ago { font-size: .68rem; color: var(--dim-2); font-style: italic; }
 
+/* --- nota comunitatii pe card (★ 8.7) --------------------------------- */
+.badge-rating {
+  display: inline-flex; align-items: center; gap: .2rem;
+  padding: .1rem .45rem; border-radius: 99px;
+  background: rgba(251, 191, 36, .12);
+  border: 1px solid rgba(251, 191, 36, .34);
+  color: var(--warn); font-weight: 800; font-size: .74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- bara de progres de pe cardurile „Continua vizionarea" ------------ */
+.continue-card__art { position: relative; }
+.continue-card__prog {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: rgba(8, 4, 6, .72);
+}
+.continue-card__prog > i {
+  display: block; height: 100%; background: var(--accent, #DC143C);
+  box-shadow: 0 0 12px -2px var(--accent-glow, rgba(220,20,60,.38));
+}
+.continue-card__prog > i.is-done { background: var(--ok, #34d399); box-shadow: none; }
+.continue-card__ago { font-variant-numeric: tabular-nums; }
+
+/* --- butonul „Episodul următor" de pe cardurile terminate (2026-09-24) --
+   Cardul întreg e un <a>, deci butonul trebuie să rămână vizibil deasupra
+   lui și să nu declanșeze navigarea (preventDefault în JS). */
+.continue-card { position: relative; }
+.continue-card__next {
+  align-self: flex-start; margin: 0 .6rem .55rem;
+  padding: .22rem .5rem; border-radius: 99px; cursor: pointer;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line);
+  color: var(--dim); font: inherit; font-size: .68rem; font-weight: 700;
+  transition: color .15s ease, border-color .15s ease;
+}
+.continue-card__next:hover { color: var(--text); border-color: var(--accent); }
+.continue-card[data-next] .continue-card__prog > i { background: var(--accent); }
+
+/* --- marcaje pe lista de episoade (2026-09-24) ------------------------- */
+.ep-seen, .ep-progress {
+  display: inline-flex; align-items: center; gap: .18rem;
+  padding: .06rem .4rem; border-radius: 99px;
+  font-size: .68rem; font-weight: 800; letter-spacing: .01em;
+}
+.ep-seen { background: rgba(52, 211, 153, .12); border: 1px solid rgba(52, 211, 153, .3); color: var(--ok, #34d399); }
+.ep-progress { background: rgba(251, 191, 36, .1); border: 1px solid rgba(251, 191, 36, .28); color: var(--warn); }
+/* Bara subțire din stânga cardului: verde = văzut, accent = început. */
+.card--ep.is-watched, .card--ep.is-started { border-left: 3px solid transparent; }
+.card--ep.is-watched { border-left-color: var(--ok, #34d399); }
+.card--ep.is-started { border-left-color: var(--accent); }
+
+/* --- „inapoi sus" ------------------------------------------------------ */
+.to-top {
+  position: fixed; z-index: 45; left: 1.15rem; bottom: 1.15rem;
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(18, 11, 14, .88);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--text); font-size: 1.15rem; font-weight: 800; line-height: 1;
+  box-shadow: 0 14px 34px -14px rgba(0,0,0,.9);
+  animation: toTopIn .22s cubic-bezier(.2,.8,.3,1);
+}
+.to-top:hover { border-color: var(--accent); color: var(--accent-hi); transform: translateY(-2px); }
+@keyframes toTopIn { from { opacity: 0; transform: translateY(10px) scale(.92); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) {
+  .to-top { width: 40px; height: 40px; left: .8rem; bottom: .8rem; }
+}
+
+/* --- scurtatura „/" din caseta de cautare ----------------------------- */
+.search__kbd {
+  position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);
+  min-width: 1.5rem; padding: .1rem .35rem; border-radius: 6px;
+  border: 1px solid var(--line-soft); background: rgba(255,255,255,.05);
+  color: var(--dim-2); font-size: .72rem; font-weight: 700; text-align: center;
+  pointer-events: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.search input { padding-right: 2.6rem; }
+.search:focus-within .search__kbd { opacity: 0; }
+/* Fara tastatura (touch), indicatia nu are sens. */
+@media (hover: none) { .search__kbd { display: none; } }
+
 /* --- scroll reveal ---------------------------------------------------- */
 .rv { opacity: 0; transform: translateY(14px); }
 .rv.in {
@@ -1568,8 +1656,24 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
   align-items: center;
   flex-wrap: wrap;
   margin: 0 0 .9rem;
+  /* Lipicioasa sub navbar: la un catalog de 1000 de serii, filtrele ieseau din
+     ecran dupa primul rand de carduri, iar utilizatorul trebuia sa deruleze
+     sus ca sa schimbe genul. z-index peste carduri, sub navbar si sub
+     sugestiile de cautare (60). */
+  position: sticky; top: calc(var(--nav-h) + .35rem); z-index: 30;
+  padding: .5rem .6rem;
+  border-radius: 99px;
+  background: rgba(12, 7, 9, .82);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid var(--line-soft);
 }
+.cat-filters { box-shadow: 0 10px 30px -20px rgba(0,0,0,.95); }
 .cat-filters .select { min-width: 160px; }
+/* Pe ecrane mici bara lipicioasa ar acoperi prea mult: ramane in flux. */
+@media (max-width: 640px) {
+  .cat-filters { position: static; border-radius: var(--r-md); }
+}
 
 /* Badge „RO SUB" — eticheta de nișă a site-urilor românești */
 .pill-ro {
@@ -1727,6 +1831,18 @@ tr.row-click:hover .row-link { color: var(--accent-hi); }
 .nc-royal { color: #818cf8; }
 .nc-sky { color: #38bdf8; }
 .nc-violet { color: #8b5cf6; }
+.nc-silver { color: #cbd5e1; }
+.nc-bronze { color: #cd7f32; }
+.nc-mint { color: #6ee7b7; }
+.nc-sunset {
+  background: linear-gradient(90deg, #fb923c, #f472b6, #c084fc, #fb923c);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  animation: ncsunset 4s linear infinite;
+}
+@keyframes ncsunset { to { background-position: 300% 0; } }
+@media (prefers-reduced-motion: reduce) { .nc-sunset { animation: none; } }
 .nc-imperator { color: #dc2626; }
 .nc-glow { text-shadow: 0 0 8px rgba(220, 38, 38, .65); }
 .nc-rainbow {
@@ -1775,6 +1891,12 @@ body.theme-green {
   --accent: #22c55e; --accent-hi: #4ade80; --accent-deep: #15803d;
   --accent-glow: rgba(34, 197, 94, .38); --accent-soft: rgba(34, 197, 94, .13);
 }
+body.theme-sakura {
+  --bg: #120709; --bg-2: #180b0e; --surface: #201016; --surface-2: #2a1620;
+  --surface-3: #371e2a; --line: rgba(244, 114, 182, .18);
+  --accent: #f472b6; --accent-hi: #f9a8d4; --accent-deep: #9d174d;
+  --accent-glow: rgba(244, 114, 182, .38); --accent-soft: rgba(244, 114, 182, .13);
+}
 body.theme-minimalist {
   --bg: #0b0b0b; --bg-2: #101010; --surface: #161616; --surface-2: #1e1e1e;
   --surface-3: #262626; --line: rgba(255, 255, 255, .12);
@@ -1787,6 +1909,122 @@ body.theme-storm {
   --accent: #94a3b8; --accent-hi: #cbd5e1; --accent-deep: #475569;
   --accent-glow: rgba(148, 163, 184, .35); --accent-soft: rgba(148, 163, 184, .12);
 }
+body.theme-royal {
+  --bg: #0a0805; --bg-2: #100c07; --surface: #16100a; --surface-2: #1f160d;
+  --surface-3: #2a1e11; --line: rgba(251, 191, 36, .2);
+  --accent: #fbbf24; --accent-hi: #fde68a; --accent-deep: #92400e;
+  --accent-glow: rgba(251, 191, 36, .4); --accent-soft: rgba(251, 191, 36, .13);
+}
+/* ===================== TEME ANIMATE (fundaluri vii) ===================== */
+/* Modele consacrate (gradient wave, aurora boreala, valuri oceanice), doar
+   din background-position — fara blur. Peste ele, particulele reale
+   (petale/bule/stele) vin din canvas — vezi assets/js/anim-bg.js.
+   Suprafetele sunt usor translucide ca sa se vada miscarea prin ele. */
+body.theme-sunset {
+  --bg: #160a12; --bg-2: rgba(28, 12, 20, .88);
+  --surface: rgba(38, 15, 26, .8); --surface-2: rgba(48, 20, 32, .8);
+  --surface-3: rgba(62, 26, 40, .86); --line: rgba(251, 146, 60, .22);
+  --accent: #fb923c; --accent-hi: #fdba74; --accent-deep: #c2410c;
+  --accent-glow: rgba(251, 146, 60, .4); --accent-soft: rgba(251, 146, 60, .14);
+  background: linear-gradient(115deg, #431407, #9a3412, #db2777, #6d28d9, #1e3a8a, #431407);
+  background-size: 350% 350%;
+  background-attachment: fixed;
+  animation: theme-sunset-drift 26s ease infinite;
+}
+@keyframes theme-sunset-drift {
+  0%, 100% { background-position: 0% 45%; }
+  50% { background-position: 100% 55%; }
+}
+body.theme-aurora {
+  --bg: #04070f; --bg-2: rgba(6, 12, 24, .88);
+  --surface: rgba(10, 18, 34, .8); --surface-2: rgba(15, 26, 46, .8);
+  --surface-3: rgba(22, 36, 60, .86); --line: rgba(45, 212, 191, .2);
+  --accent: #2dd4bf; --accent-hi: #5eead4; --accent-deep: #0f766e;
+  --accent-glow: rgba(45, 212, 191, .38); --accent-soft: rgba(45, 212, 191, .13);
+  background:
+    radial-gradient(ellipse 60% 45% at 20% 20%, rgba(45, 212, 191, .35), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 80% 30%, rgba(139, 92, 246, .32), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 85%, rgba(236, 72, 153, .22), transparent 70%),
+    linear-gradient(180deg, #04070f, #0a1024);
+  background-size: 220% 220%, 220% 220%, 220% 220%, cover;
+  background-attachment: fixed;
+  animation: theme-aurora-drift 30s ease-in-out infinite;
+}
+@keyframes theme-aurora-drift {
+  0%, 100% { background-position: 0% 0%, 100% 20%, 50% 100%, 0 0; }
+  50% { background-position: 100% 60%, 20% 80%, 80% 0%, 0 0; }
+}
+body.theme-ocean {
+  --bg: #04121f; --bg-2: rgba(6, 20, 34, .88);
+  --surface: rgba(9, 28, 44, .8); --surface-2: rgba(13, 38, 60, .8);
+  --surface-3: rgba(18, 50, 76, .86); --line: rgba(56, 189, 248, .2);
+  --accent: #38bdf8; --accent-hi: #7dd3fc; --accent-deep: #0369a1;
+  --accent-glow: rgba(56, 189, 248, .38); --accent-soft: rgba(56, 189, 248, .13);
+  background:
+    radial-gradient(1000px 500px at 85% 110%, rgba(34, 211, 238, .16), transparent 60%),
+    repeating-linear-gradient(115deg, rgba(56, 189, 248, .07) 0 40px, transparent 40px 120px),
+    linear-gradient(160deg, #082f49, #0c4a6e 45%, #020617);
+  background-size: auto, 400px 400px, cover;
+  background-attachment: fixed;
+  animation: theme-ocean-drift 18s linear infinite;
+}
+@keyframes theme-ocean-drift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 0 0, 400px 400px, 0 0; }
+}
+/* Sakura animata: mov inchis → roz pal; peste cad petale (canvas). */
+body.theme-petale {
+  --bg: #1a0b2e; --bg-2: rgba(42, 18, 52, .88);
+  --surface: rgba(62, 24, 58, .8); --surface-2: rgba(78, 30, 70, .8);
+  --surface-3: rgba(96, 38, 84, .86); --line: rgba(249, 168, 212, .22);
+  --accent: #f472b6; --accent-hi: #f9a8d4; --accent-deep: #be185d;
+  --accent-glow: rgba(244, 114, 182, .4); --accent-soft: rgba(244, 114, 182, .14);
+  background: linear-gradient(180deg, #1a0b2e 0%, #4a1942 45%, #ffb7c5 100%);
+  background-attachment: fixed;
+}
+/* Portocaliu animat: portocaliu ars → maro; peste urca bule (canvas). */
+body.theme-portocaliu {
+  --bg: #3d1500; --bg-2: rgba(74, 28, 2, .88);
+  --surface: rgba(96, 36, 4, .8); --surface-2: rgba(116, 44, 6, .8);
+  --surface-3: rgba(138, 54, 8, .86); --line: rgba(255, 179, 71, .24);
+  --accent: #ffb347; --accent-hi: #ffd699; --accent-deep: #c25e00;
+  --accent-glow: rgba(255, 179, 71, .42); --accent-soft: rgba(255, 179, 71, .15);
+  background: radial-gradient(ellipse at 50% 42%, #cc5500 0%, #7a2e00 55%, #3d1500 100%);
+  background-attachment: fixed;
+}
+/* Iarna (sezon): noapte albastra; peste cad fulgi (canvas). */
+body.theme-iarna {
+  --bg: #0b1628; --bg-2: rgba(14, 26, 48, .88);
+  --surface: rgba(20, 36, 64, .8); --surface-2: rgba(28, 48, 84, .8);
+  --surface-3: rgba(38, 62, 104, .86); --line: rgba(186, 230, 253, .2);
+  --accent: #7dd3fc; --accent-hi: #bae6fd; --accent-deep: #0369a1;
+  --accent-glow: rgba(125, 211, 252, .38); --accent-soft: rgba(125, 211, 252, .13);
+  background: linear-gradient(180deg, #0b1628 0%, #16294d 55%, #274a78 100%);
+  background-attachment: fixed;
+}
+/* Halloween (sezon): mov aproape negru; peste urca scantei (canvas). */
+body.theme-halloween {
+  --bg: #150a24; --bg-2: rgba(28, 14, 48, .88);
+  --surface: rgba(40, 20, 66, .8); --surface-2: rgba(54, 26, 88, .8);
+  --surface-3: rgba(70, 34, 110, .86); --line: rgba(255, 150, 50, .24);
+  --accent: #ff9632; --accent-hi: #ffc078; --accent-deep: #b34a00;
+  --accent-glow: rgba(255, 150, 50, .42); --accent-soft: rgba(255, 150, 50, .15);
+  background: linear-gradient(180deg, #150a24 0%, #241040 60%, #3b1a5e 100%);
+  background-attachment: fixed;
+}
+/* Paste (sezon): primavara in zori; peste cad petale pastelate (canvas). */
+body.theme-paste {
+  --bg: #123b33; --bg-2: rgba(24, 70, 60, .88);
+  --surface: rgba(30, 88, 74, .8); --surface-2: rgba(38, 108, 90, .8);
+  --surface-3: rgba(48, 130, 108, .86); --line: rgba(202, 255, 191, .22);
+  --accent: #7ee2a8; --accent-hi: #b7f5d8; --accent-deep: #1d7a54;
+  --accent-glow: rgba(126, 226, 168, .4); --accent-soft: rgba(126, 226, 168, .14);
+  background: linear-gradient(180deg, #123b33 0%, #2f6f5e 55%, #7fb98a 100%);
+  background-attachment: fixed;
+}
+/* Temele animate NU respecta prefers-reduced-motion: activarea explicita a
+   unei teme animate = consimtamant pentru miscare (vezi anim-bg.js). Restul
+   interfetei (si culorile de nume) respecta in continuare setarea de sistem. */
 body.theme-classic {
   --bg: #0f0a05; --bg-2: #150f08; --surface: #1c1409; --surface-2: #261b0d;
   --surface-3: #31230f; --line: rgba(234, 179, 8, .18);

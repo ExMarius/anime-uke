@@ -78,6 +78,9 @@ BIND=()
 [ -n "${LIMIT_USERS:-}" ] && BIND+=(--binding "LIMIT_USERS=$LIMIT_USERS")
 [ -n "${LIMIT_SERIES:-}" ] && BIND+=(--binding "LIMIT_SERIES=$LIMIT_SERIES")
 [ -n "${CANONICAL_ORIGIN:-}" ] && BIND+=(--binding "CANONICAL_ORIGIN=$CANONICAL_ORIGIN")
+# 0 = topul săptămânal se recalculează la fiecare cerere (fără cache de o oră),
+# ca dezvoltarea și testele să vadă imediat efectul unei vizionări.
+[ -n "${TOP_CACHE_MINUTES:-}" ] && BIND+=(--binding "TOP_CACHE_MINUTES=$TOP_CACHE_MINUTES")
 $W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, genPoster } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, coverImg, genPoster } from './core.js';
 import { buildSourceRow, collectSourceRows, existingSourceRow, sourceChips, guessKind, labelFromUrl, KIND_HINTS } from './sources-ui.js';
 
 const DETAIL_FIELDS = ['alt_titles', 'themes', 'age_rating', 'ep_duration', 'release_date', 'country', 'external_url', 'team', 'next_ep_note', 'next_ep_at'];
@@ -86,10 +86,9 @@ function renderSeries() {
   const poster = document.getElementById('ser-poster');
   poster.innerHTML = '';
   if (series.cover_image) {
-    const img = document.createElement('img');
-    img.src = safeUrl(series.cover_image, '');
-    img.alt = series.title;
-    img.loading = 'lazy';
+    const img = coverImg(series.cover_image, {
+      w: 300, widths: [200, 300, 600], sizes: '150px', alt: series.title,
+    });
     img.addEventListener('error', () => img.replaceWith(genPoster(series.title)), { once: true });
     poster.appendChild(img);
   } else {

@@ -17,6 +17,11 @@
 // Rulare:  node scripts/audit-live.mjs [https://anime-uke.pages.dev]
 // =====================================================================
 
+import { gzipSync } from 'node:zlib';
+
+/** Cât ar ocupa textul comprimat cu gzip (folosit când răspunsul vine bucăți). */
+const gzipSize = (text) => gzipSync(Buffer.from(text, 'utf8'), { level: 9 }).length;
+
 const BASE = (process.argv[2] || 'https://anime-uke.pages.dev').replace(/\/$/, '');
 const TIMEOUT_MS = 20000;
 // Minificarea/bundling-ul/?v= se întâmplă DOAR în deploy.sh, deci pe local
@@ -132,8 +137,13 @@ async function main() {
   }
   for (const id of episodeIds) {
     const r = await req(`/episod/${id}`);
-    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms`);
-    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'WARN');
+    const hasLd = /application\/ld\+json/.test(r.text);
+    const title = (r.text.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1]?.trim() || '';
+    info(S1, `/episod/${id} → ${r.status} · ${r.ms} ms · title „${title.slice(0, 60)}”`);
+    expect(S1, r.status === 200, `/episod/${id} → 200`, `/episod/${id} → ${r.status}`, 'FAIL');
+    expect(S1, hasLd, `/episod/${id} are JSON-LD (SEO)`, `/episod/${id} NU are JSON-LD`, 'WARN');
+    expect(S1, /"TVEpisode"/.test(r.text), `/episod/${id} are JSON-LD TVEpisode`, `/episod/${id} nu are TVEpisode`, 'WARN');
+    expect(S1, /property=["']og:type["'][^>]*video\.episode/.test(r.text), `/episod/${id} are og:type video.episode`, `/episod/${id} nu are og:type video.episode`, 'WARN');
   }
 
   // -------------------------------------------------------------------
@@ -179,6 +189,13 @@ async function main() {
   expect(S4, urls.length === new Set(urls).size, 'sitemap fără duplicate', `sitemap are duplicate (${urls.length} vs ${new Set(urls).size} unice)`, 'WARN');
   expect(S4, !urls.some((u) => u.replace(/\/$/, '').endsWith('/series')),
     'sitemap nu conține /series (ruta face 301 spre /)', `sitemap conține /series, care face 301 → / (semnal de calitate slabă): ${urls.join(' ')}`, 'FAIL');
+  expect(S4, urls.some((u) => u.includes('/episod/')),
+    'sitemap include episoade (poarta de trafic organic)', 'sitemap fără episoade — doar prima pagină + serii', 'WARN');
+  expect(S4, !sitemap.headers['cross-origin-resource-policy'] && !sitemap.headers['content-security-policy'],
+    'sitemap iese fără CORP/CSP (curat pentru crawler-e)', `sitemap are corp=${sitemap.headers['cross-origin-resource-policy'] || '—'}`, 'WARN');
+  const sitemapTxt = await req('/sitemap.txt');
+  expect(S4, sitemapTxt.status === 200 && /text\/plain/.test(sitemapTxt.headers['content-type'] || ''),
+    '/sitemap.txt → 200 text/plain (alternativa din Search Console)', `/sitemap.txt → ${sitemapTxt.status}`, 'WARN');
   info(S4, `sitemap: ${urls.length} URL-uri · primele 3: ${urls.slice(0, 3).join(' ')}`);
   expect(S4, llms.status === 200 && llms.text.length > 50, `llms.txt → 200 (${llms.text.length} car.)`, `llms.txt → ${llms.status}`, 'WARN');
   const spec = await req('/speculationrules.json');
@@ -188,10 +205,19 @@ async function main() {
   // 5. API — publice vs protejate, 404/405
   // -------------------------------------------------------------------
   const S5 = '5. API';
-  const publicApi = ['/api/series', '/api/top', '/api/pulse', '/api/genres', '/api/recent', '/api/auth/me', '/api/auth/register-options', '/api/comments?episode_id=1'];
+  const publicApi = ['/api/series', '/api/top', '/api/pulse', '/api/genres', '/api/recent', '/api/home', '/api/auth/me', '/api/auth/register-options', '/api/comments?episode_id=1'];
   for (const p of publicApi) {
     const r = await req(p);
     expect(S5, r.status === 200, `${p} → 200 (public)`, `${p} → ${r.status} (așteptat 200)`, 'FAIL');
+  }
+  // /api/home = prima pagină într-o singură invocare de Worker (buget 0).
+  {
+    const r = await req('/api/home');
+    let agg = null;
+    try { agg = JSON.parse(r.text); } catch { /* nu e JSON */ }
+    expect(S5, !!agg?.series && !!agg?.top && Array.isArray(agg?.recent) && Array.isArray(agg?.genres) && typeof agg?.pulse?.views === 'number',
+      `/api/home agregă catalog + top + recent + genuri + pulse (${r.ms} ms)`,
+      `/api/home nu conține toate secțiunile: ${Object.keys(agg || {}).join(', ') || r.text.slice(0, 80)}`, 'FAIL');
   }
   const protectedApi = ['/api/admin/stats', '/api/admin/users', '/api/admin/series', '/api/admin/episodes', '/api/admin/log', '/api/admin/reports', '/api/admin/mods', '/api/admin/rank-themes', '/api/admin/episode-sources', '/api/leaderboard', '/api/factions', '/api/economy', '/api/shop', '/api/missions', '/api/notifications', '/api/watchlist', '/api/profile', '/api/continue', '/api/ranks', '/api/chests'];
   for (const p of protectedApi) {
@@ -272,7 +298,10 @@ async function main() {
   const h = home.headers;
   const csp = h['content-security-policy'] || '';
   expect(S8, csp.length > 0, 'CSP prezent', 'LIPSEȘTE Content-Security-Policy', 'FAIL');
-  expect(S8, csp && !/unsafe-inline|unsafe-eval/.test(csp), 'CSP fără unsafe-inline/unsafe-eval', `CSP conține unsafe-*: ${csp.slice(0, 120)}`, 'FAIL');
+  // script-src STRICT (fără unsafe-*): style-src are 'unsafe-inline' deliberat
+  // (snippet A-Ads + pagina 404 din worker — vezi comentariul din src/lib/http.js).
+  const scriptSrc = (csp.match(/script-src[^;]*/)?.[0] || '');
+  expect(S8, scriptSrc && !/unsafe-inline|unsafe-eval/.test(scriptSrc), `script-src strict (${scriptSrc})`, `script-src permite unsafe-*: ${scriptSrc}`, 'FAIL');
   expect(S8, /frame-ancestors\s+'none'/.test(csp), "CSP are frame-ancestors 'none'", 'CSP fără frame-ancestors', 'WARN');
   const hsts = h['strict-transport-security'] || '';
   expect(S8, /max-age=(\d+)/.test(hsts) && Number(hsts.match(/max-age=(\d+)/)[1]) >= 31536000, `HSTS ${hsts}`, `HSTS slab/lipsă: „${hsts}”`, 'WARN');
@@ -322,12 +351,110 @@ async function main() {
   info(S9, `total JS servit (${assets.filter((a) => a.endsWith('.js')).length} fișiere): ${(jsTotal / 1024).toFixed(1)} KB (comprimat) — fără framework, e sănătos sub ~300 KB`);
   expect(S9, jsTotal < 400 * 1024, `buget JS ok: ${(jsTotal / 1024).toFixed(0)} KB`, `JS prea greu: ${(jsTotal / 1024).toFixed(0)} KB`, 'WARN');
 
-  const imgNoWebp = await req('/assets/img/hero-1.jpg');
-  const imgWebp = await req('/assets/img/hero-1.jpg', { headers: { Accept: 'image/avif,image/webp,image/*,*/*;q=0.8' } });
-  const ctWebp = imgWebp.headers['content-type'] || '';
-  info(S9, `hero-1.jpg: fără Accept webp → ${imgNoWebp.headers['content-type']} (${imgNoWebp.headers['content-length'] || imgNoWebp.text.length} B); cu Accept webp → ${ctWebp} (${imgWebp.headers['content-length'] || imgWebp.text.length} B)`);
-  expect(S9, /webp|avif/i.test(ctWebp), 'negocierea WebP funcționează', `negocierea WebP NU funcționează (content-type ${ctWebp})`, 'WARN');
+  // Code splitting (runda 3): bundle-ul de pagină NU mai are tot codul în el —
+  // core-ul comun vine dintr-un chunk separat (nume cu hash de conținut), iar
+  // chat.js e cerut abia la nevoie (import dinamic). Verificăm pe build-ul
+  // PUBLICAT că graful de chunk-uri chiar există și se servește corect: dacă
+  // un chunk lipsește sau e blocat de cache-ul greșit, pagina rămâne fără JS.
+  // Local (dev.sh) fișierele sunt SURSE, fără bundle — nu are ce verifica.
+  if (!IS_PROD) {
+    info(S9, 'code splitting: se verifică doar pe build-ul publicat (local rulează sursele)');
+  } else {
+    const entry = await req(`/assets/js/page-index.js${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+    const statice = [...entry.text.matchAll(/from\s*"\.\/(c-[\w-]+\.js)"/g)].map((m) => m[1]);
+    expect(S9, statice.length >= 1,
+      `bundle-ul paginii își ia codul comun din ${statice.length} chunk-uri separate (${statice.join(', ') || '—'})`,
+      'page-index.js nu importă niciun chunk — code splitting-ul nu e activ în build-ul publicat', 'WARN');
+
+    // Octeții chiar descărcați: când răspunsul vine bucăți (br fără
+    // content-length, cum face Cloudflare), măsurăm textul decomprimat cu gzip.
+    // Altfel raportul amestecă 18 KB comprimat cu 39 KB necomprimat.
+    const octeti = (r) => Number(r.headers['content-length']) || gzipSize(r.text);
+
+    // Importul dinamic al chatului stă în chunk-ul COMUN (acolo e loadChat()),
+    // nu în bundle-ul paginii — deci căutăm în tot graful static.
+    const texte = [entry.text];
+    let eagerBytes = octeti(entry);
+    for (const c of [...new Set(statice)]) {
+      const r = await req(`/assets/js/${c}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+      const bytes = octeti(r);
+      eagerBytes += bytes;
+      texte.push(r.text);
+      const cache = r.headers['cache-control'] || '—';
+      info(S9, `chunk ${c} → ${r.status} · ${bytes} B · enc=${r.headers['content-encoding'] || 'identity'} · cache=${cache} · cale critică`);
+      expect(S9, r.status === 200, `chunk-ul ${c} se servește (${r.status})`, `chunk-ul ${c} → ${r.status}: bundle-ul publicat e rupt`, 'FAIL');
+      // Numele chunk-ului E hash-ul conținutului, deci cache-ul imutabil e corect
+      // chiar fără ?v= (importurile din bundle sunt relative, fără query).
+      expect(S9, /immutable/.test(cache),
+        `chunk-ul ${c} are cache imutabil (${cache})`, `chunk-ul ${c} are cache „${cache}” (așteptat immutable)`, 'WARN');
+      expect(S9, !/\n\s*\n/.test(r.text.slice(0, 4000)),
+        `chunk-ul ${c} e minificat`, `chunk-ul ${c} NU pare minificat`, 'WARN');
+    }
+
+    const dinamice = [...new Set(texte.flatMap((x) => [...x.matchAll(/import\(\s*"\.\/(c-[\w-]+\.js)"\s*\)/g)].map((m) => m[1])))];
+    expect(S9, dinamice.length >= 1,
+      `chat.js e amânat: ${dinamice.join(', ') || '—'} se cere doar la nevoie`,
+      'niciun chunk amânat: chat.js a intrat înapoi pe calea critică (fiecare vizitator îl descarcă degeaba)', 'WARN');
+    for (const c of dinamice.filter((x) => !statice.includes(x))) {
+      const r = await req(`/assets/js/${c}${v}`, { headers: { 'Accept-Encoding': 'br, gzip' } });
+      info(S9, `chunk ${c} → ${r.status} · ${octeti(r)} B · enc=${r.headers['content-encoding'] || 'identity'} · cache=${r.headers['cache-control'] || '—'} · amânat`);
+      expect(S9, r.status === 200, `chunk-ul amânat ${c} se servește (${r.status})`, `chunk-ul amânat ${c} → ${r.status}: chatul nu s-ar mai încărca`, 'FAIL');
+    }
+    info(S9, `cale critică JS (prima pagină, comprimat): ${(eagerBytes / 1024).toFixed(1)} KB = entry + ${statice.length} chunk-uri statice; chat-ul (${dinamice.join(', ')}) e în afara ei`);
+    expect(S9, eagerBytes < 40 * 1024,
+      `JS pe calea critică: ${(eagerBytes / 1024).toFixed(1)} KB comprimat`,
+      `JS pe calea critică prea greu: ${(eagerBytes / 1024).toFixed(1)} KB`, 'WARN');
+  }
+
+  // Imaginile: pagina referă direct .webp (comis în repo), deci nu mai există
+  // negociere Accept pe server — un .jpg ar însemna două cereri și o invocare
+  // de Worker în plus pentru fiecare imagine.
+  const imgWebp = await req('/assets/img/hero-1.webp');
+  const imgJpg = await req('/assets/img/hero-1.jpg');
+  info(S9, `hero-1.webp → ${imgWebp.status} ${imgWebp.headers['content-type']} (${imgWebp.headers['content-length'] || imgWebp.text.length} B) · hero-1.jpg (rezervă browsere vechi) → ${imgJpg.status}`);
+  expect(S9, imgWebp.status === 200 && /webp/i.test(imgWebp.headers['content-type'] || ''),
+    'imaginea .webp se servește direct (fără negociere pe server)',
+    `hero-1.webp → ${imgWebp.status} ${imgWebp.headers['content-type'] || '—'}`, 'WARN');
   expect(S9, /max-age=2592000/.test(imgWebp.headers['cache-control'] || ''), `imaginile au cache lung (${imgWebp.headers['cache-control']})`, `imaginile au cache: „${imgWebp.headers['cache-control'] || '—'}”`, 'WARN');
+  expect(S9, imgWebp.text.length < imgJpg.text.length, `WebP mai mic decât JPEG (${imgWebp.text.length} vs ${imgJpg.text.length} B)`, `WebP NU e mai mic decât JPEG (${imgWebp.text.length} vs ${imgJpg.text.length} B)`, 'WARN');
+
+  // Runda 4: AVIF e primul format din <picture> (îl cer browserele actuale), deci
+  // trebuie să existe, să se servească cu tipul corect și să fie mai mic decât WebP.
+  const imgAvif = await req('/assets/img/hero-1.avif');
+  info(S9, `hero-1.avif → ${imgAvif.status} ${imgAvif.headers['content-type']} (${imgAvif.headers['content-length'] || imgAvif.text.length} B) · față de WebP ${imgWebp.text.length} B și JPEG ${imgJpg.text.length} B`);
+  expect(S9, imgAvif.status === 200 && /avif/i.test(imgAvif.headers['content-type'] || ''),
+    'AVIF se servește cu tipul corect (prima alegere a browserului)',
+    `hero-1.avif → ${imgAvif.status} ${imgAvif.headers['content-type'] || '—'}`, 'WARN');
+  expect(S9, imgAvif.text.length < imgWebp.text.length,
+    `AVIF mai mic decât WebP (${imgAvif.text.length} vs ${imgWebp.text.length} B, −${Math.round(100 - imgAvif.text.length / imgWebp.text.length * 100)}%)`,
+    `AVIF NU e mai mic decât WebP (${imgAvif.text.length} vs ${imgWebp.text.length} B) — de ce l-am adăugat?`, 'WARN');
+
+  // Dovada că prima pagină nu mai cheltuie 5 invocări de Worker: pagina și
+  // asset-urile vin din stratul static (public/_routes.json), iar API-ul e
+  // agregat într-o singură cerere (/api/home). Aici verificăm doar ce se vede
+  // din exterior: headerele nu se dublează (semnul trecerii prin worker).
+  const staticCss = await req('/assets/css/style.css');
+  const cc = staticCss.headers['cache-control'] || '';
+  const doubled = (cc.match(/no-cache/g) || []).length > 1;
+  expect(S9, !doubled, `assetul static e servit direct din Pages (Cache-Control: ${cc})`,
+    `Cache-Control dublat („${cc}”) — assetul trece și prin worker: _routes.json nu e aplicat`, 'WARN');
+  expect(S9, /<picture>[\s\S]*?image\/avif[\s\S]*?image\/webp[\s\S]*?<\/picture>/.test(home.text),
+    'prima pagină folosește <picture> cu AVIF → WebP → JPEG',
+    'prima pagină nu are <picture> cu cele trei formate', 'WARN');
+  expect(S9, (home.text.match(/assets\/img\/hero-1\.webp/g) || []).length >= 1,
+    'prima pagină referă direct .webp', 'prima pagină nu referă .webp (mai există negociere pe server?)', 'WARN');
+  // .jpg-ul artei hero e REZERVA din <picture> (browserele care nu știu AVIF/WebP):
+  // o singură referință e corectă și nu produce nicio cerere în plus pentru
+  // browserele actuale. Ce nu vrem e o a doua referință (ex: preload sau un
+  // <img> separat) — aia chiar ar însemna o descărcare degeaba.
+  const faraOg = home.text.replace(/og:image[^>]*/g, '').replace(/twitter:image[^>]*/g, '');
+  const jpgHero = (faraOg.match(/assets\/img\/hero-\d\.jpg/g) || []).length;
+  expect(S9, jpgHero <= 1,
+    `o singură referință la .jpg-ul hero (rezerva din <picture>, ${jpgHero}×)`,
+    `prima pagină referă .jpg-ul hero de ${jpgHero} ori — o descărcare în plus degeaba`, 'WARN');
+  expect(S9, !/rel="preload"[^>]*as="image"[^>]*hero-/.test(home.text),
+    'fără preload pe arta hero (imaginea e deja inline în HTML)',
+    'există un <link rel=preload as=image> pe arta hero — a doua cerere pentru aceeași imagine', 'WARN');
 
   const homeEnc = home.headers['content-encoding'] || 'identity';
   expect(S9, homeEnc !== 'identity', `HTML comprimat (${homeEnc})`, 'HTML necomprimat', 'WARN');
@@ -365,8 +492,21 @@ async function main() {
   const chatCross = await req('/chat', { headers: { Origin: evil, Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': 'ZGVtbw==' } });
   info(S11, `/chat cu Origin străin + upgrade → ${chatCross.status}`);
   expect(S11, chatCross.status !== 101, 'chat-ul nu acceptă upgrade de pe altă origine', 'chat-ul a acceptat upgrade cross-origin (101)', 'FAIL');
+  // Favicon propriu la rădăcină: fără el, Pages servea iconița Cloudflare la
+  // /favicon.ico, iar Google o arăta în rezultatele de căutare. Cea implicită
+  // e minusculă (~1 KB), a noastră are 15 KB — dimensiunea o deosebește.
   const favicon = await req('/favicon.ico');
-  expect(S11, favicon.status === 200 || favicon.status === 404, `/favicon.ico → ${favicon.status}`, `/favicon.ico → ${favicon.status}`, 'WARN');
+  const favCt = favicon.headers['content-type'] || '';
+  const favLen = Number(favicon.headers['content-length'] || favicon.text.length || 0);
+  expect(S11, favicon.status === 200 && /icon/i.test(favCt),
+    `/favicon.ico → 200 ${favCt} (${favLen} B)`,
+    `/favicon.ico → ${favicon.status} ${favCt} (fără favicon propriu, Pages servește iconița Cloudflare)`, 'FAIL');
+  expect(S11, favLen > 4000,
+    `favicon.ico e al nostru (${favLen} B, nu cel implicit Cloudflare)`,
+    `favicon.ico suspect de mic (${favLen} B) — poate e cel implicit Cloudflare`, 'WARN');
+  const appleIcon = await req('/apple-touch-icon.png');
+  expect(S11, appleIcon.status === 200 && /png/.test(appleIcon.headers['content-type'] || ''),
+    '/apple-touch-icon.png → 200 PNG (iOS)', `/apple-touch-icon.png → ${appleIcon.status}`, 'WARN');
   for (const p of ['/login', '/register']) {
     const r = await req(p);
     expect(S11, /name=["']robots["'][^>]*noindex/i.test(r.text), `${p} are noindex (pagină utilitară)`, `${p} NU are noindex`, 'WARN');

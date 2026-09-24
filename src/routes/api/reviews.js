@@ -13,6 +13,7 @@ import { requireUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { validatePositiveInt } from '../../lib/validate.js';
 import { addActivity } from '../../lib/xp.js';
+import { saveRating } from '../../lib/ratings.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
 
 const MAX_LEN = 2000;
@@ -111,13 +112,9 @@ export async function onRequestPost(context) {
     .first();
 
   const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  await env.DB
-    .prepare(
-      `INSERT INTO series_ratings (user_id, series_id, rating) VALUES (?, ?, ?)
-       ON CONFLICT(user_id, series_id) DO UPDATE SET rating = excluded.rating`
-    )
-    .bind(user.id, sid.value, rating)
-    .run();
+  // Nota din recenzie trece prin aceeași cale ca votul simplu: media
+  // denormalizată de pe serie se resincronizează în același batch.
+  const agg = await saveRating(env, user.id, sid.value, rating);
   await env.DB
     .prepare(
       `INSERT INTO series_reviews (series_id, user_id, body, updated_at) VALUES (?, ?, ?, ?)
@@ -129,15 +126,11 @@ export async function onRequestPost(context) {
   // +5 XP doar la prima nota, ca in spec — editarea recenziei nu farmeaza.
   if (!hadRating) await addActivity(env, user.id, 5);
 
-  const agg = await env.DB
-    .prepare('SELECT AVG(rating) AS a, COUNT(*) AS n FROM series_ratings WHERE series_id = ?')
-    .bind(sid.value)
-    .first();
 
   return json({
     success: true,
     created: !hadReview,
-    average: Math.round((agg?.a || 0) * 10) / 10,
-    count: agg?.n || 0,
+    average: agg.average,
+    count: agg.count,
   }, { status: hadReview ? 200 : 201 });
 }

@@ -11,18 +11,22 @@
   <meta property="og:description" content="Urmărește gratuit seriile anime subtitrate în română. Puncte, chat live, comunitate.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://anime-uke.pages.dev/">
-  <meta property="og:image" content="https://anime-uke.pages.dev/assets/img/hero-1.jpg">
+  <meta property="og:image" content="https://anime-uke.pages.dev/assets/img/logo.png">
   <meta property="og:locale" content="ro_RO">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Anime-Uke — Anime Subtitrat în Română Online">
   <meta name="twitter:description" content="Urmărește gratuit seriile anime subtitrate în română. Puncte, chat live, comunitate.">
-  <meta name="twitter:image" content="https://anime-uke.pages.dev/assets/img/hero-1.jpg">
+  <meta name="twitter:image" content="https://anime-uke.pages.dev/assets/img/logo.png">
   <link rel="canonical" href="https://anime-uke.pages.dev/">
   <title>Anime-Uke — Anime Subtitrat în Română Online</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc143c'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>鬼</text></svg>">
+  <link rel="icon" href="/assets/img/logo-icon.png">
+  <!-- Coperțile seriilor vin de pe m.media-amazon.com: deschidem conexiunea
+       (TCP+TLS) cât se descarcă HTML/CSS, ca prima copertă să nu plătească
+       handshake-ul. Fără `crossorigin` — imaginile se cer fără CORS. -->
+  <link rel="preconnect" href="https://m.media-amazon.com">
   <link rel="stylesheet" href="/assets/css/style.css">
   <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
-       pentru paginile fara efecte secundare la load (series/profile).
+       pentru paginile fara efecte secundare la load (/serie/*).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
   <style>
@@ -64,8 +68,17 @@
     <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
     <a class="hban hban--loading" id="hero-banner" href="#">
       <div class="hban__bg" id="hero-bg" aria-hidden="true">
-        <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
-             alt="" fetchpriority="high">
+        <!-- <picture> cu trei formate: AVIF (cel mai mic, suportat de toate
+             browserele actuale) → WebP → JPEG (rezervă veche). Fără JS, fără
+             negociere pe server: browserul alege singur primul format pe care
+             îl știe. JS-ul schimbă toate cele trei surse o dată (vezi
+             setHeroArt din page-index.js). -->
+        <picture>
+          <source type="image/avif" srcset="/assets/img/hero-1.avif">
+          <source type="image/webp" srcset="/assets/img/hero-1.webp">
+          <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
+               alt="" fetchpriority="high">
+        </picture>
       </div>
       <div class="hban__sk" aria-hidden="true">
         <span class="sk sk-line sk-w30"></span>
@@ -106,6 +119,8 @@
         <span class="search__icon">🔍</span>
         <label class="sr-only" for="search-input">Caută o serie</label>
         <input id="search-input" type="search" placeholder="Caută o serie sau un gen…" autocomplete="off">
+        <!-- Scurtatura „/": pe desktop e o invitatie, pe touch dispare (nu ai tastatura). -->
+        <kbd class="search__kbd" aria-hidden="true">/</kbd>
       </div>
     </header>
 
@@ -213,7 +228,7 @@
   <footer class="footer">
     <div class="container footer__grid">
       <div class="footer__brand">
-        <span class="nav__brand__mark" aria-hidden="true">鬼</span>
+        <img class="nav__brand__mark" src="/assets/img/logo-icon.webp" alt="" aria-hidden="true" width="34" height="34">
         <div>
           <b>anime-uke</b>
           <p>Anime subtitrat în română, cu puncte pentru fiecare episod urmărit și o comunitate live în chat.</p>
@@ -273,12 +288,14 @@
 
 
   <footer class="site-foot">
-    <p><b>鬼 anime-uke</b> — anime subtitrat în română, gratuit.</p>
+    <p><b><img class="fblogo" src="/assets/img/logo-icon.webp" alt="" aria-hidden="true"> anime-uke</b> — anime subtitrat în română, gratuit.</p>
     <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 
   <link rel="modulepreload" href="/assets/js/page-index.js">
-  <link rel="preload" as="image" href="/assets/img/hero-1.jpg" fetchpriority="high">
+  <!-- Fără <link rel=preload> pentru arta hero: <img src="/assets/img/hero-1.webp">
+       e deja inline mai sus, deci preload-ul doar declanșa o a doua cerere
+       (dublată de browser) pentru aceeași imagine. -->
   <script type="module" src="/assets/js/page-index.js"></script>
 </body>
 </html>

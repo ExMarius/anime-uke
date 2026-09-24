@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, safeUrl, genPoster } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, safeUrl, coverImg, genPoster } from './core.js';
 
 // =====================================================================
 // /admin/serii — lista seriilor, cu cautare si paginare pe SERVER.
@@ -46,10 +46,7 @@ function thumb(url, title) {
   const td = document.createElement('td');
   const box = el('div', 'thumb');
   if (url) {
-    const img = document.createElement('img');
-    img.src = safeUrl(url, '');
-    img.alt = title || '';
-    img.loading = 'lazy';
+    const img = coverImg(url, { w: 120, alt: title || '' });   // slot de 34x48 px
     img.addEventListener('error', () => img.replaceWith(el('span', 'thumb__fallback', '鬼')), { once: true });
     box.appendChild(img);
   } else {

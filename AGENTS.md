@@ -13,8 +13,15 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (e2e 474 · dom 147 · plafoane 13), deployat.
-  Audit live: ✅ 162 · 🟡 0 · 🔴 0 (vezi `AUDIT-LIVE.md`).
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 28 · e2e 584 · dom 193 ·
+  theme-cache 7 · top-cache 17 · chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS ·
+  pixel-teme 8 · plafoane 13),
+  deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
+  (vezi `AUDIT-LIVE.md`).
+- **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
+  (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
+  invocări). Ambele deployau în același proiect Pages, deci live-ul oscila între ele —
+  vezi §6 „Integrare".
 
 ## 1. Setup în 60 de secunde
 
@@ -68,9 +75,22 @@ cat cf-relay/last-output.txt
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
-- Pentru verificări read-only pe live poți folosi și tool-ul de fetch al agentului (nu curl), sau — mai bine,
-  pentru că acoperă zeci de probe deodată — `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh`
-  (rulează și fără `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
+- `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
+  consumat azi din cotele gratuite (Functions / D1 / DO). Cere permisiunea
+  „Account Analytics: Read" pe token; fără ea scrie clar ce lipsește, nu crapă.
+- **Un singur deploy odată.** Toate branch-urile publică în ACELAȘI proiect Pages, deci două
+  sesiuni care deployează în paralel se calcă reciproc pe live (s-a întâmplat: 22.09, live-ul
+  a sărit de la o linie de lucru la alta). Verifică `git log --all --oneline -15` înainte.
+- **Atenție, Git integration activă:** proiectul Pages face build automat la fiecare push (inclusiv
+  commit-urile `relay: output` — de aici preview-urile). Un merge în `main` declanșează deploy de
+  producție **din git** (fără `?v=`/purge/minify/migrări — dar cu bindinguri corecte din `wrangler.toml`
+  comis). După un merge în `main`, rulează un deploy prin relay ca să readuci producția la forma optimizată.
+- Pentru verificări read-only pe live ai două căi: (1) tool-ul de fetch al agentului (merge direct, fără
+  relay): `robots.txt`, `sitemap.xml`, `speculationrules.json`, `/api/pulse` se văd ca text, paginile vin
+  randate (cu JS executat), iar `/404` dovedește 404-ul real. Ce NU vezi prin fetch: headerele HTTP
+  (CSP/HSTS/Cache) — pentru alea rămâne relay-ul cu `curl -sI`. (2) auditul complet, care acoperă zeci de
+  probe deodată: `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh` (rulează și fără
+  `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
 - Token-ul Cloudflare stă **doar** în GitHub Secrets (`CLOUDFLARE_API_TOKEN`). **Nu-l scrie niciodată în fișiere**,
   nici în mesaje de commit, nici în `cmd.sh`.
 - Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca marker de deploy; folosește
@@ -88,6 +108,32 @@ cat cf-relay/last-output.txt
 | Register 403 local | plafonul `LIMIT_USERS` | folosește un cont existent sau `LIMIT_USERS=50 ./dev.sh` |
 | `dev.sh`/`test.sh` mor instant: „This Worker requires compatibility date \"2026-05-01\", but the newest date supported by this server binary is …” | wrangler/workerd din `package-lock.json` e mai vechi decât `compatibility_date` din configurii | `npm i -D wrangler@latest` (≥ 4.131.2) și comite `package-lock.json`. Alternativ, coboară data în toate cele 5 fișiere `.toml` |
 | `git push` pe tag → 403 | token-ul GitHub al sandbox-ului nu are drept pe tags | folosește `gh api` (refs) sau lasă tag-urile |
+| Un asset n-are CSP/HSTS pe live (sau are alt set decât API-ul) | assetul e servit din stratul static (`public/_routes.json`), deci headerele vin din `public/_headers`, nu din worker | ține cele două seturi identice (`SECURITY_HEADERS` ↔ `public/_headers`); `tests/e2e.mjs` verifică paritatea |
+| `Cache-Control: no-cache, no-cache` (valoare dublată) pe un asset | assetul a trecut ȘI prin worker → `_routes.json` lipsește ori nu-l mai exclude | `deploy.sh` refuză să publice fără `public/_routes.json` |
+| Imagine 404 / hero fără WebP pe live | `.webp` sunt COMISE în repo, nu generate la deploy | `git add public/assets/img/*.webp`; nu pune `find -delete` în `deploy.sh` |
+| Logo-ul din nav nu se încarcă pe un browser vechi | DOM-ul cere direct `.webp` (nu mai există negociere pe server) | e intenționat: WebP e suportat de orice browser care rulează module ES; `.png` rămâne pentru favicon/`og:image` |
+| Prima pagină cheltuie 5 cereri de API | cineva a desfăcut agregarea din `/api/home` | `tests/dom-smoke.mjs` numără cererile paginii („Prima pagină cere catalogul o singură dată") |
+| Cota D1 se duce în câteva ore, deși traficul e mic | o interogare SCANEAZĂ un tabel întreg (se taxează rândurile citite, nu cererile) | `node scripts/bench-scale.mjs` arată planul + rândurile per interogare; la scara maximă nimic din prima pagină n-are voie să fie „SCAN <tabel mare>" |
+| Clasamentul „cele mai bine notate" arată medii vechi | o cale nouă scrie în `series_ratings` fără să resincronizeze contoarele | folosește `saveRating()` din `src/lib/ratings.js`; `tests/counters.mjs` verifică forma batch-ului |
+| `pulse` arată 0 serii / 0 membri | contoarele din `site_meta` nu se întrețin pe o cale de scriere nouă | contoarele se bat cu `bumpMetaStmt` (serii/episoade: `admin/*`; conturi: `register.js`; vizualizări: `StatsDO.flush`) |
+| Testele e2e nu văd o vizionare în „top săptămânal" | topul e ținut o oră în `leaderboard_cache` | rulați cu `TOP_CACHE_MINUTES=0` (o face `test.sh`/`dev.sh`); cache-ul propriu-zis e testat în `tests/top-cache.mjs` |
+| Chatul nu salvează nimic în producție, deși mesajele se văd live | două cauze suprapuse: (1) `INSERT INTO chat_messages` avea 11 coloane dar 10 `?` → D1 răspundea „10 values for 11 columns” la fiecare flush, eroare doar logată; (2) bufferul era în memorie, iar evicția DO-ului îl golea înainte de alarmă | două garduri noi: `tests/scripts-health.mjs` compară numărul de coloane cu numărul de valori la TOATE instrucțiunile `INSERT` din `src/` (prinde greșeala în 50 ms, fără server), iar `tests/chat-d1.mjs` citește **fișierul SQLite al D1-ului local** după ce scrie un mesaj pe chat — un test care nu poate fi păcălit de o bază falsă |
+| Mesajele de chat (și stickerele) nu se salvează în producție, deși local testele trec | bufferul de mesaje era în MEMORIE, iar WebSocket Hibernation evacuează DO-ul între mesaje: alarma suna pe o instanță nouă, cu buffer gol. Miniflare nu evacuează niciodată, deci local bug-ul e invizibil | fiecare mesaj se scrie întâi în `state.storage` (durabil), lotul se citește din storage la flush, iar istoricul = D1 ∪ buffer, fără dubluri. `tests/chat-persist.mjs` simulează evicția (instanță nouă peste același storage); relay-ul are „canarul" din secțiunea 17 (cont temporar, mesaj + sticker real, citite apoi din D1) |
+| „Pagina 1 a unei serii lungi întoarce listă goală (500), pagina 2 merge" | interogarea de progres trimitea câte un parametru per episod afișat, iar D1 acceptă **maxim 100 de parametri legați per interogare** | împarte `IN (...)` în bucăți de 90 (`src/routes/api/series/by-id.js`); simptomul „doar prima pagină pică" e semnătura acestei limite |
+| O funcție nouă „nu se salvează" deși nu dă eroare | `INSERT` cu 11 coloane și 10 valori, eroare doar logată | `tests/scripts-health.mjs` numără coloanele vs. valorile la toate instrucțiunile `INSERT`; `tests/chat-d1.mjs` citește tabelul real |
+| Deploy-ul de pe runner nu pornește, deși local totul e verde | sintaxă invalidă în `cf-relay/cmd.sh` (ex. o ghilimea tipografică `"` care închide un șir bash deschis cu `„`) | `node tests/scripts-health.mjs` rulează `bash -n` pe toate scripturile; e prima suită din `test.sh` |
+| O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
+| Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |
+
+- **jsdom nu are Web Animations API (`element.animate`)**. Paginile o folosesc pentru
+  animații de intrare; fără gardă, apelul aruncă, iar codul de eroare al paginii ascunde
+  elementul — testul valida calea de EROARE. Acum `animate` e gardat în pagină, iar
+  `tests/dom-smoke.mjs` are un polyfill minim. Lecția generală: când un test „trece" pe o
+  ramură de eroare (ex. „bannerul rămâne ascuns când catalogul e gol"), verifică-ți
+  ÎNTÂI premisa (aici: întreabă API-ul dacă catalogul chiar e gol).
+- **Nu muta `<img>`-ul din `<picture>`**: `bg.appendChild(img)` necondiționat scoate
+  imaginea din `<picture>`, iar `<source>`-urile (AVIF/WebP) devin inutile — browserul
+  descarcă mereu rezerva JPEG. Adaugă în fundal doar imaginea creată de JS (`if (!img.parentNode)`).
 
 ## 5. Modelul de date pe care trebuie să-l respecți
 
@@ -123,14 +169,157 @@ cat cf-relay/last-output.txt
     `STATIC_PAGES` + `DYNAMIC_PAGES` verificat ÎNAINTE de poarta de autentificare, cu normalizare `/x/`→`/x`, `/x.html`→`/x`.
   - `/login` și `/register`: `noindex` + canonical. Header nou `Cross-Origin-Resource-Policy: same-origin`.
   - `tests/e2e.mjs` a crescut de la 455 la **474** de verificări (toate cazurile de mai sus).
+- SSR SEO pe `/episod/<id>` (2026-09-21, branch `arena/01a0c538-anime-uke`): titlu
+  „Serie — Episodul N subtitrat în română | Anime-Uke”, description, canonical, `og:type video.episode`,
+  JSON-LD `TVEpisode` (+`partOfTVSeries`) și `BreadcrumbList` Acasă → Serie → Episod. Implementare în
+  `src/worker.js` (`episodeForSeo` — un JOIN indexat, cache 5 min + cache negativ; la eroare D1 servește
+  shell-ul nemodificat, fără 404 fals). e2e 474 → **482**, audit-live are probe noi pe episoade, audit
+  producție ✅ **168** · 🟡 0 · 🔴 0 (build `?v=0936caa`). Detalii în `AUDIT-LIVE.md`.
+- Verificare totală + reparații (2026-09-21, același branch): `style-src 'unsafe-inline'` deliberat în CSP
+  (reclamele A-Ads, pagina 404 din worker și layout-ul admin erau blocate de `style-src 'self'`;
+  `script-src` rămâne strict — probele e2e/audit verifică acum per-directivă); HSTS și pe răspunsurile
+  workerului; `pulse` citea DO-ul greșit (`'global'` vs `'global-chat'`) → `online` mereu 0, reparat și
+  verificat cu socket real (0→1→0); scos din allowlist `/404` (cerea login!), `/admin/serie` bare (JS cu
+  NaN), `/covers/*` (director inexistent); `seriesForSeo` la eroare D1 servește shell-ul ca episoadele;
+  `robots.txt` fără `Allow: /series`; prerender pe `/serie/*`; șters `tests/prod-smoke.mjs` (expirat,
+  dublat de audit-live); README corectat (CSP, frame-src, sandbox). e2e 482 → **491**, audit live
+  ✅ 168 · 🟡 0 · 🔴 0, build `?v=1a11f03`. Lecție: după deploy se așteaptă 60s înainte de audit
+  (propagarea Pages a servit o dată HTML vechi) — e în `cf-relay/cmd.sh`.
+- Curățenie + predare (2026-09-21, același branch; deploy de sincronizare `?v=7703add` — doar llms.txt +
+  _headers, zero cod; audit reconfirmat 168/0/0): test de
+  regresie pulse (socket deschis → `online ≥ 1`; verificat că pică pe codul vechi) → e2e **492**;
+  `llms.txt` fără linkul `/series` (301); scos referințele moarte `/covers` din `_headers`/`deploy.sh`;
+  README fără titlul dublat. Vânătoare de cod mort cu rezultat negativ (bine): toate exporturile din
+  `src/lib` sunt folosite (unele doar intern — `addXp` via `addActivity`, `MISSIONS` via `getMissionState`;
+  `requireModerator` e rezervă documentată pentru rute viitoare), toate apelurile frontend au rută în
+  router (verificat scriptic), toate assetele/CSS-ul/imaginile sunt referite. `/api/me/theme` n-are UI
+  (doar teste) — by design, tema vine din facțiuni. Live reverificat și prin fetch direct (robots,
+  sitemap, pulse, speculationrules, `/404`, `/episod/4210` randat complet).
+
+### Integrare + buget de invocări (2026-09-22, branch `arena/01a0ca0d-anime-uke`)
+
+Două sesiuni au lucrat în paralel pe `main` și ambele deployau în proiectul Pages `anime-uke`:
+una pe feature-uri/SEO (`arena/01a0c538-anime-uke`, PR #4 — SSR SEO pe episod, logo, teme de
+sezon, shop 2.0, sitemap-uri GSC) și una pe bugetul de invocări (PR #5). Live-ul oscila între
+cele două versiuni. Acum e o singură linie, testată împreună:
+
+1. **Buget 0, partea de invocări** (detalii în README → „Cât duce planul gratuit"):
+   - `public/_routes.json` — `/assets/*`, `/`, `/login`, `/register`, `/episode`, favicon,
+     apple-touch-icon, robots/llms/speculationrules sunt servite direct de stratul static
+     (**0 invocări**). Ce NU e acolo rămâne pe worker: API, `/chat`, SSR `/serie/<id>` și
+     `/episod/<id>`, paginile din spatele porții, sitemap-urile.
+     *Atenție la mentenanță:* orice rută adăugată în `exclude` scapă de poarta de
+     autentificare din worker — doar pagini publice, niciodată `/profile`, `/admin`, `/shop`.
+   - `GET /api/home` — prima pagină într-o singură invocare (înainte: 5). `page-index.js` o
+     cere o dată (`homeData()`, memoizat) și distribuie datele către grilă, topuri, „ultimele
+     episoade", filtre, hero și chip-ul „N online" (`claimPulse()`/`pushPulse()` din `core.js`).
+   - `public/_headers` preia headerele de securitate pentru căile ocolite, cu valori IDENTICE
+     cu `SECURITY_HEADERS` (inclusiv decizia documentată `style-src 'unsafe-inline'` pentru
+     A-Ads). `deploy.sh` trece JS/CSS pe `immutable` 1 an, cu marcaje `assets-versioned:start/end`.
+   - Imaginile (hero, logo) sunt cerute direct `.webp`; `.jpg`/`.png` rămân pentru
+     `og:image`/favicon și ca rezervă. Negocierea `Accept: image/webp` din worker a fost scoasă
+     (era cod mort după `_routes.json`), la fel și regula `?v=` → `immutable` și `statusOverride()`.
+   - `scripts/usage.mjs` — consumul zilei din cotele gratuite, în `cf-relay/cmd.sh`.
+2. **Rezultatul măsurat:** costul unei vizite ~12 → **~2 invocări**; în ziua deployului (cu
+   toate testele, deploy-urile și auditurile) consumul a fost **7% din invocări, 0% D1, 1% DO**.
+3. **Teste:** e2e 492 → **573** (păstrate toate verificările lor + `/api/home`, `_routes.json`,
+   paritatea de headere static↔worker, dovada că assetul nu trece prin worker, logo `.webp`),
+   dom-smoke 147 → **163** (numără cererile primei pagini; verificarea flaky a butonului
+   „anterior" a fost reparată — butoanele pornesc `disabled` în HTML).
+4. **De făcut de proprietar (2 click-uri, gratuit):** dashboard → Workers & Pages → `anime-uke`
+   → Settings → Runtime → **Fail open** (la epuizarea cotei, catalogul static rămâne vizibil).
+
+---
+
+### Viteză: code splitting + imagini dimensionate (2026-09-24, runda 3)
+
+- **JS-ul paginilor se bundlează cu `--splitting`** (`deploy.sh`): `core.js`,
+  `anim-bg.js` și `chat.js` ajung în chunk-uri `c-<hash>.js` (numele E hash-ul
+  conținutului, deci cache imutabil corect fără `?v=`; importurile din bundle
+  sunt RELATIVE, `from"./c-x.js"` — nu e nevoie de importmap). Chunk-urile NU
+  se comit (`public/assets/js/c-*.js` e în `.gitignore`) și se șterg la fiecare
+  deploy înainte de build.
+- **`chat.js` nu se mai importă static din pagini.** Se încarcă prin
+  `loadChat()`/`initChat()`/`openChat()` din `core.js` (import dinamic, o
+  singură pornire per pagină). Cine adaugă o pagină nouă importă chatul din
+  `core.js`, nu din `chat.js` — altfel îl pune iar pe calea critică și
+  `tests/scripts-health.mjs` pică (verificarea e intenționat ieftină: citește
+  sursa, nu build-ul).
+- **Coperțile se randează cu `coverImg()`** (`core.js`), nu cu
+  `createElement('img')` + `optimizeCover`: primește `w` + `widths` + `sizes` și
+  lasă browserul să aleagă treapta potrivită slotului. `optimizeCover` rămâne
+  pentru cazurile speciale (hero), dar nu mai cere 400 px pentru un thumbnail.
+- **Arta bundled are trei formate** (`<picture>`: AVIF → WebP → JPEG), iar
+  `setHeroArt()` din `page-index.js` schimbă toate sursele o dată. Dacă adaugi o
+  imagine nouă în banner, adaugă toate cele trei fișiere — altfel browserul cade
+  pe rezerva JPEG (și bugetul din `measure-weight.mjs` te anunță).
+- **CI pe fiecare push**: `.github/workflows/tests.yml` rulează `./test.sh` (fără
+  token Cloudflare, fără deploy) și urcă logurile ca artefacte; `cloudflare-relay`
+  l-a rămas doar pentru publicare + audit live (se declanșează la o modificare în
+  `cf-relay/`).
+- **Bugetul de greutate e testat**: `node scripts/measure-weight.mjs` rulează
+  pipeline-ul de deploy pe o copie a repo-ului și compară „calea critică" (HTML
+  + CSS + JS eager) cu limitele din capul fișierului. Rulează în `test.sh`
+  (faza „greutate", fără server) și încă o dată `dom-smoke` pe artefactele
+  construite (`AUK_JS_DIR=/tmp/auk-artefacte/public/assets/js`). Când schimbi
+  ceva ce intră în bundle, rulează `npm run weight` ÎNAINTE de commit.
+
+### Funcționalități noi (2026-09-24, branch `arena/01a0ca0d-anime-uke`)
+
+Catalog partajabil prin URL (`?gen=&status=&sort=&page=`), sortarea „Cele mai bine
+notate", „episodul următor" direct din cardul de continuare (cu comutator ținut în
+`localStorage`) și marcajele ✓ Văzut / Început din lista de episoade (o singură
+interogare, doar cu sesiune). Detalii și cifre de buget în README → „Funcționalități
+noi"; verificarea pe live în `AUDIT-LIVE.md` §1h.
+
+### Aspect: runda de UX (2026-09-23)
+
+Prima rundă din „mai fain la site" (aspect → funcționalități → viteză). Toate
+schimbările sunt gratuite în buget: zero cereri noi, zero imagini noi, zero
+biblioteci. Nota pe carduri vine din coloanele denormalizate ale seriei (0028),
+deci nu costă o cerere per card; „Continuă vizionarea" folosește `ep_duration`
+din același rând de serie și scrie minutele reale când durata lipsește;
+filtrele de catalog sunt lipicioase sub navbar; `initToTop()` din `core.js`
+adaugă butonul „înapoi sus" pe toate paginile; `/` sare în căutare.
+
+---
+
+### Scara: 1.000 de serii / 1.000 de utilizatori (2026-09-22, migrarea 0028)
+
+Întrebarea proprietarului a primit un răspuns măsurat, nu estimat: `scripts/bench-scale.mjs`
+construiește scara maximă pe un D1 local (migrările reale: 1.000 serii, 19.788 episoade,
+1.000 useri, 199.011 rânduri de progres, 29.578 note) și raportează rândurile citite.
+Rezultatul de dinainte: **~230.000 rânduri pentru o singură vizită pe prima pagină** —
+adica ~21 de vizite/zi până la epuizarea cotei de 5M. Trei interogări scanau tabele
+întregi la fiecare afișare: topul săptămânal (199.011), topul notelor (29.578) și pulse
+(41.576). Migrarea 0028 + codul aferent le-au adus la ~64 rânduri/vizită:
+
+- `idx_progress_updated` — fereastra de 7 zile devine căutare în index;
+- `anime_series.rating_avg/rating_count` + `idx_series_rating` — media notelor se
+  resincronizează în ACELAȘI batch cu votul (`src/lib/ratings.js`), clasamentul citește
+  5 rânduri (era GROUP BY pe toate notele site-ului);
+- `idx_series_created_id` — catalogul nu mai are nevoie de B-tree temporar;
+- `site_meta.users_total/views_total` — pulse citește 4 contoare (era 41.576 rânduri);
+- topul săptămânal se ține o oră în `leaderboard_cache` (tabelul din 0008, până acum
+  nefolosit): recalculul costă ~4.000 rânduri, 24 de ori pe zi, iar cererile obișnuite
+  citesc 1 rând. `TOP_CACHE_MINUTES=0` (dev/teste) îl face proaspăt la fiecare cerere.
+
+Regula care ține site-ul în buget: **nimic din calea fierbinte nu are voie să SCAN-eze un
+tabel mare**. `bench-scale.mjs` are o gardă anti-derivă (verifică înainte de rulare că
+SQL-ul măsurat există în handler), deci dacă cineva schimbă o interogare, bench-ul cade
+zgomotos în loc să raporteze cifre pentru altceva.
+
+---
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
-- Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): SSR SEO pe `/episod/<id>` (title generic azi;
-  e cea mai mare oportunitate de trafic organic — cere JSON-LD `VideoObject`/`BreadcrumbList` + cache ca la serii);
-  canonical/og hardcodate pe `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe
-  `CANONICAL_ORIGIN` când apare domeniul propriu); `/episode` fără id (același 301 ca `/series`, dacă se vrea);
-  audit live cu sesiune (are nevoie de un cont de test).
+- Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): canonical/og hardcodate pe
+  `anime-uke.pages.dev` în `index.html`/`login.html`/`register.html` (de mutat pe `CANONICAL_ORIGIN` când apare
+  domeniul propriu); audit live cu sesiune (are nevoie de un cont de test).
+  SSR SEO pe `/episod/<id>` e **gata** (2026-09-21, vezi §6).
+  `/episode` fără id: shell-ul e acum servit direct din stratul static (e în `_routes.json`),
+  deci un 301 ar trebui făcut din `_redirects` sau scoțând ruta de sub bypass — nu din worker,
+  care nu-l mai vede.
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —
