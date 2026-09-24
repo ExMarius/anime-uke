@@ -20,6 +20,10 @@
   <link rel="canonical" href="https://anime-uke.pages.dev/">
   <title>Anime-Uke — Anime Subtitrat în Română Online</title>
   <link rel="icon" href="/assets/img/logo-icon.png">
+  <!-- Coperțile seriilor vin de pe m.media-amazon.com: deschidem conexiunea
+       (TCP+TLS) cât se descarcă HTML/CSS, ca prima copertă să nu plătească
+       handshake-ul. Fără `crossorigin` — imaginile se cer fără CORS. -->
+  <link rel="preconnect" href="https://m.media-amazon.com">
   <link rel="stylesheet" href="/assets/css/style.css">
   <!-- Navigare aproape instantă: prefetch la hover + prerender conservator
        pentru paginile fara efecte secundare la load (/serie/*).
@@ -280,7 +284,9 @@
   </footer>
 
   <link rel="modulepreload" href="/assets/js/page-index.js">
-  <link rel="preload" as="image" href="/assets/img/hero-1.webp" type="image/webp" fetchpriority="high">
+  <!-- Fără <link rel=preload> pentru arta hero: <img src="/assets/img/hero-1.webp">
+       e deja inline mai sus, deci preload-ul doar declanșa o a doua cerere
+       (dublată de browser) pentru aceeași imagine. -->
   <script type="module" src="/assets/js/page-index.js"></script>
 </body>
 </html>

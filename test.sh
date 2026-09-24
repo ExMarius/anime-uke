@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          scripts-health + e2e + dom-smoke + theme-cache + top-cache +
+#   ./test.sh          scripts-health + greutate + e2e + dom-smoke (+ dom-smoke pe build) +
+#                      theme-cache + top-cache +
 #                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
@@ -136,6 +137,23 @@ SCRIPTS_RC=$?
 tail -4 /tmp/scripts.log
 [ "$SCRIPTS_RC" -eq 0 ] || { echo "!! scripts-health a picat:"; cat /tmp/scripts.log; exit 1; }
 
+# ---------------------------------------------------------------------
+# Faza 1: greutatea reala a paginilor (buget de viteza). Ruleaza pipeline-ul
+# de deploy pe o copie a repo-ului: purge CSS -> minificare -> bundle cu
+# splitting, apoi compara calea critica (HTML + CSS + JS eager) cu bugetele.
+# Nu are nevoie de server si tine ~2 secunde — esecul aici inseamna ca o
+# pagina a ingrasat-o (ex: chatul a intrat iar pe calea critica).
+# ---------------------------------------------------------------------
+echo "════════ greutate (buget de viteza, fara server) ════════"
+node scripts/measure-weight.mjs --out=/tmp/auk-artefacte > /tmp/weight.log 2>&1
+WEIGHT_RC=$?
+tail -6 /tmp/weight.log
+if [ "$WEIGHT_RC" -ne 0 ]; then
+  echo "!! bugetul de greutate a fost depasit:"
+  cat /tmp/weight.log
+fi
+GREUTATE_RC="$WEIGHT_RC"   # RC-ul final se compune dupa ce pornim serverul
+
 echo "── reset baza locala ──"
 rm -rf .wrangler/state
 # TOP_CACHE_MINUTES=0: topul săptămânal se recalculează la fiecare cerere, ca
@@ -144,6 +162,7 @@ rm -rf .wrangler/state
 start_server TOP_CACHE_MINUTES=0
 
 RC=0
+[ "${GREUTATE_RC:-0}" -eq 0 ] || RC=1
 echo
 echo "════════ e2e (API) ════════"
 # Logul complet ramane pe disc: un crash la mijlocul suitei ar fi altfel
@@ -167,6 +186,21 @@ if [ $DOM_RC -ne 0 ]; then
   grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/dom.log | tail -12
 fi
 [ "$DOM_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ dom-smoke pe artefactele de deploy (bundle + chunk-uri reale) ════════"
+# Faza de greutate a construit deja exact ce se publica (--out a păstrat
+# artefactele). Rulăm ACELEAȘI verificări de pagină pe cod minificat, cu
+# importurile relative către chunk-uri: o rupere în graf (un chunk lipsă, un
+# import mutat de minificator) se vede aici, nu în producție.
+AUK_JS_DIR=/tmp/auk-artefacte/public/assets/js node tests/dom-smoke.mjs > /tmp/dom-build.log 2>&1
+DOMB_RC=$?
+tail -8 /tmp/dom-build.log
+if [ $DOMB_RC -ne 0 ]; then
+  echo "!! dom-smoke (build) s-a oprit cu codul $DOMB_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/dom-build.log | tail -12
+fi
+[ "$DOMB_RC" -eq 0 ] || RC=1
 
 echo
 echo "════════ theme-cache (tema instant, fara server) ════════"

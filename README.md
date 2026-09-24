@@ -238,6 +238,39 @@ Costul măsurat (bench-scale, 1.000 serii / 1.000 utilizatori): prima pagină
 74 rânduri citite per vizită (era 64) — 414.904 rânduri/zi la 2.000 de vizite,
 adică ~8% din cota de 5M. Invocările rămân 2 per vizită.
 
+## Viteză (runda 3, 2026-09-24)
+
+Aici nu s-a „optimizat" pe impresii: fiecare schimbare are cifra de dinainte și
+de după, măsurate cu `npm run weight` (rulează exact pipeline-ul din `deploy.sh`
+pe o copie a repo-ului: purge CSS → minificare → bundle cu code splitting).
+
+| Ce | Înainte | După | De ce conta |
+|---|---|---|---|
+| Arta hero (bundled) | 168 + 126 + 131 KB (1280 px, q≈90) | **92 + 64 + 70 KB** (1024 px, q72) | imaginea e inline în prima pagină, deci intră direct în LCP; −197 KB fără nicio diferență vizibilă la 1080p |
+| `<link rel=preload>` pe hero | 1 cerere în plus | **scos** | `<img>`-ul era deja inline mai sus — preload-ul declanșa o a doua cerere pentru aceeași imagine |
+| Coperți externe | 400 px pentru orice slot; thumbnail de 34 px → coperta întreagă | **`coverImg()`: `srcset`/`sizes` per slot** (grid 200/300/400, căutare & admin 120, poster serie 200/300/600) | cardul are 184 px pe desktop / 142 px pe telefon, iar browserul alege singur treapta (și ține cont de retina) |
+| `chat.js` (14,4 KB minificat) | în **fiecare** bundle de pagină | **chunk comun, cerut la nevoie** (`import()` dinamic în `core.js`) | vizitatorul care nu deschide chatul nu-l mai descarcă și nu-și mai deschide socket-ul; se pornește o singură dată per pagină |
+| Cod comun (`core.js`, `anim-bg.js`) | duplicat în fiecare bundle | **chunk cu hash de conținut**, cache 1 an | la navigare între pagini se descarcă o singură dată, nu la fiecare pagină |
+| Măsurare | — | **`scripts/measure-weight.mjs` + bugete în `test.sh`** | o regresie (ex: chatul reintrat pe calea critică) pică testele, nu vizitatorii |
+
+Greutatea măsurată pe pipeline-ul de deploy (gzip, „cale critică" = HTML + CSS +
+JS de care pagina are nevoie ca să randeze; `amânat` = chunk-uri cerute la nevoie):
+
+| Pagina | HTML | CSS | JS critic | amânat | Total |
+|---|---|---|---|---|---|
+| profile | 3,2 KB | 18,8 KB | 16,8 KB | 5,0 KB | 38,9 KB |
+| episode | 3,9 KB | 19,1 KB | 14,7 KB | 5,0 KB | 37,7 KB |
+| index | 4,2 KB | 16,3 KB | 13,9 KB | 5,0 KB | 34,4 KB |
+| series | 2,6 KB | 16,3 KB | 13,8 KB | 5,0 KB | 32,7 KB |
+
+Față de runda precedentă (aceleași pagini, același pipeline): prima pagină a
+scăzut de la 37,3 KB la 34,4 KB pe calea critică, iar JS-ul ei de la 17,0 KB la
+13,9 KB — restul de 5,0 KB (chatul) se cere doar dacă e folosit. La navigare
+câștigul e mai mare: `core.js` + `anim-bg.js` (7,7 KB gzip) se descarcă o dată
+per sesiune, nu la fiecare pagină. Bugetele (în `measure-weight.mjs`) sunt: cale
+critică ≤ 45 KB, JS critic ≤ 19,5 KB, JS amânat ≤ 8 KB, CSS ≤ 22 KB, HTML ≤ 15 KB,
+arta hero ≤ 110 KB, nicio imagine ≤ 130 KB.
+
 ---
 
 ## Cât duce planul gratuit (și ce faci când se apropie)
@@ -373,8 +406,15 @@ merită atinse:
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
   `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
   `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
-  Numărul de verificări: scripts-health 28 · e2e 584 · dom-smoke 193 · chat-persist 14 · chat-d1 8 · counters 16
+  Numărul de verificări: scripts-health 36 · e2e 584 · dom-smoke 193 · chat-persist 14 · chat-d1 8 · counters 16
   · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
+  `test.sh` rulează și **bugetul de greutate** (`scripts/measure-weight.mjs`, fără server, ~2 s) și încă o dată
+  `dom-smoke` pe **artefactele de deploy** (189 verificări: bundle minificat + chunk-uri reale, prin `AUK_JS_DIR`) —
+  o rupere în graful de chunk-uri se vede acolo, nu în producție. Cele 4 verificări care lipsesc sunt blocul care are
+  nevoie de identitatea modulului `core.js` ca să reseteze sesiunea între două randări în același proces (imposibil
+  când codul stă într-un chunk cu exporturi minificate); pe surse rulează toate 193.
+- `npm run weight` (= `node scripts/measure-weight.mjs`): greutatea reală a fiecărei pagini pe pipeline-ul de deploy
+  (purge → minificare → bundle cu splitting), cu `--json` pentru diff-uri și `--out=DIR` ca să păstreze artefactele.
 - `node cf-relay/chat-canar.mjs [url]`: canarul de chat — cont temporar, un mesaj + un sticker pe chatul viu,
   apoi citirea lor din D1 și curățenie totală. Rulează automat pe runner, în secțiunea 17 din `cf-relay/cmd.sh`.
 - Pe producție **nu rula e2e.mjs** — zecile de înregistrări rapide declanșează protecția anti-brute-force

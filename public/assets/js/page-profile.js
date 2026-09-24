@@ -1,5 +1,4 @@
-import { api, renderNav, toast, withBusy, safeUrl, staffBadge, staffIcon, rankChip, whenActive } from './core.js';
-import { initChat } from './chat.js';
+import { api, renderNav, toast, withBusy, safeUrl, coverImg, staffBadge, staffIcon, rankChip, whenActive, initChat } from './core.js';
 
 // =====================================================================
 // Pagina de profil public — sectiunile „Informatii" si „Acces rapid".
@@ -151,10 +150,10 @@ function seriesCard(s, opts = {}) {
   const poster = el('div', 'poster');
   const imgSrc = s.cover_image || '';
   if (imgSrc) {
-    const img = document.createElement('img');
-    img.src = safeUrl(imgSrc, '');
-    img.alt = s.title || '';
-    img.loading = 'lazy';
+    const img = coverImg(imgSrc, {
+      w: 400, widths: [200, 300, 400], alt: s.title || '',
+      sizes: '(min-width: 640px) 184px, 142px',
+    });
     img.addEventListener('error', () => img.replaceWith(el('div', 'poster__fallback', '鬼')), { once: true });
     poster.appendChild(img);
   } else {

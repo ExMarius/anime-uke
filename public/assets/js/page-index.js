@@ -1,5 +1,4 @@
-import { api, renderNav, toast, getSession, safeUrl, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge, claimPulse, pushPulse } from './core.js';
-import { initChat, openChat } from './chat.js';
+import { api, renderNav, toast, getSession, safeUrl, coverImg, optimizeCover, genPoster , whenActive, countUp, onPulse, observeReveals, relativeTime, startGuestNudge, claimPulse, pushPulse, initChat, openChat } from './core.js';
 
 // Pagina principala: hero + cautare pe SERVER + grila de serii + chat.
 //
@@ -145,11 +144,11 @@ function seriesCard(s, idx = 0) {
   poster.className = 'poster';
 
   if (s.cover_image) {
-    const img = document.createElement('img');
-    img.src = optimizeCover(safeUrl(s.cover_image, ''), 400);
-    img.alt = s.title || 'Poster';
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    const img = coverImg(s.cover_image, {
+      w: 400, widths: [200, 300, 400],
+      sizes: '(min-width: 640px) 184px, 142px',
+      alt: s.title || 'Poster',
+    });
     img.addEventListener('error', () => img.replaceWith(fallback(s.title)), { once: true });
     poster.appendChild(img);
   } else {
@@ -350,11 +349,10 @@ async function loadRecent() {
     const art = document.createElement('div');
     art.className = 'recent-card__art';
     if (it.cover_image) {
-      const img = document.createElement('img');
-      img.src = optimizeCover(safeUrl(it.cover_image, ''), 400);
-      img.alt = '';
-      img.loading = 'lazy';
-      img.decoding = 'async';
+      const img = coverImg(it.cover_image, {
+        w: 400, widths: [200, 300, 400],
+        sizes: '(min-width: 900px) 180px, 45vw',
+      });
       art.appendChild(img);
     } else {
       art.appendChild(genPoster(it.series_title));
@@ -665,9 +663,10 @@ async function renderContinue() {
     art.className = 'continue-card__art';
     const cover = safeUrl(it.cover_image, '');
     if (cover && cover !== '#') {
-      const img = document.createElement('img');
-      img.src = cover; img.alt = ''; img.loading = 'lazy';
-      art.appendChild(img);
+      art.appendChild(coverImg(cover, {
+        w: 400, widths: [200, 300, 400],
+        sizes: '(min-width: 900px) 160px, 45vw',
+      }));
     } else {
       art.appendChild(genPoster(it.series_title));
     }
@@ -860,9 +859,7 @@ function sugPaint(q) {
     art.className = 'search-sug__art';
     const cover = safeUrl(s.cover_image, '');
     if (cover && cover !== '#') {
-      const img = document.createElement('img');
-      img.src = cover; img.alt = ''; img.loading = 'lazy';
-      art.appendChild(img);
+      art.appendChild(coverImg(cover, { w: 120, alt: '' }));   // slot de 42 px
     } else {
       art.appendChild(genPoster(s.title));
     }

@@ -131,20 +131,9 @@ fi
 # sigur — deploy-ul nu trebuie sa pice din pricina asta).
 ESB="$PWD/node_modules/.bin/esbuild"
 if [ -x "$ESB" ]; then
-  # (a) Bundle: fiecare pagina primeste UN SINGUR fisier JS (core+chat+pagina
-  #     inline) — importurile relative dispar, deci TOT js-ul referentiat din
-  #     HTML ajunge versionat cu ?v= si poate fi cache 1 an immutable.
-  BUN=0
-  for entry in public/assets/js/page-*.js; do
-    if "$ESB" --bundle --minify --format=esm --outfile="$entry.b" "$entry" >/dev/null 2>&1 && [ -s "$entry.b" ]; then
-      mv "$entry.b" "$entry"; BUN=$((BUN+1))
-    else
-      rm -f "$entry.b"
-    fi
-  done
-  ok "pagini bundle-uite: $BUN"
-
-  # (b) Minificare restul (css + js rămase ne-bundle-uite).
+  # (a) Minificare restul (css + js rămase ne-bundle-uite). Ruleaza INAINTE de
+  #     bundle: altfel ar trece si peste chunk-urile deja minificate (numele
+  #     lor poarta hash-ul continutului, deci nu au voie sa se schimbe).
   MIN=0
   while IFS= read -r f; do
     if "$ESB" --minify "$f" > "$f.min" 2>/dev/null && [ -s "$f.min" ]; then
@@ -152,8 +141,35 @@ if [ -x "$ESB" ]; then
     else
       rm -f "$f.min"
     fi
-  done < <(find public/assets/css -type f -name '*.css'; find public/assets/js -type f -name '*.js' ! -name 'page-*.js')
+  done < <(find public/assets/css -type f -name '*.css'; find public/assets/js -type f -name '*.js' ! -name 'page-*.js' ! -name 'c-*.js')
   ok "assete minificate: $MIN fisiere"
+
+  # (b) Bundle cu CODE SPLITTING: fiecare pagina primeste un singur fisier JS,
+  #     iar modulele comune (core.js, anim-bg.js, chat.js) ajung in chunk-uri
+  #     separate, cu hash de continut in nume. Doua efecte:
+  #       - chat.js (~14 KB) se cere la nevoie, nu pe fiecare pagina (vezi
+  #         loadChat() din core.js) — pe calea critica rămâne ~1/3 din JS;
+  #       - un vizitator care navigheaza intre pagini descarca o singura data
+  #         core-ul comun, nu o copie in fiecare bundle de pagina.
+  #     Numele chunk-urilor sunt FIX „c-<hash>.js": Pages le serveste din
+  #     stratul static (/assets/* e exclus din _routes.json), iar Cache-Control
+  #     „immutable" e corect pentru ca hash-ul chiar e continutul. Importurile
+  #     din bundle-uri sunt relative (./c-<hash>.js), deci nu e nevoie de
+  #     importmap si nu depind de ?v= din HTML.
+  rm -f public/assets/js/c-*.js            # chunk-uri vechi (dintr-un build anterior)
+  OUTJS="$(mktemp -d)"
+  if "$ESB" public/assets/js/page-*.js --bundle --minify --format=esm --splitting \
+      --target=es2022 --legal-comments=none \
+      --outdir="$OUTJS" --entry-names='[name]' --chunk-names='c-[hash]' >/tmp/esb.log 2>&1; then
+    cp "$OUTJS"/*.js public/assets/js/
+    BUN=$(ls "$OUTJS"/page-*.js 2>/dev/null | wc -l)
+    CHK=$(ls "$OUTJS"/c-*.js 2>/dev/null | wc -l)
+    ok "pagini bundle-uite: $BUN (chunk-uri comune: $CHK)"
+  else
+    cat /tmp/esb.log
+    ok "bundle: ESUAT — ramane varianta neminificata (fallback)"
+  fi
+  rm -rf "$OUTJS"
 else
   ok "esbuild lipseste — sar minificarea (fallback)"
 fi

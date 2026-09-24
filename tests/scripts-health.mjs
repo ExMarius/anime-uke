@@ -65,6 +65,42 @@ for (const f of jsFiles) {
   check(`sintaxă ${f}`, r.ok, r.out);
 }
 
+// -------------------------------------- viteză: code splitting + imagini
+// Runda 3 (viteză) a mutat chat.js în afara căii critice și a dat fiecărei
+// coperți lățimea slotului. Regulile de mai jos sunt IEFTINE (citesc sursa,
+// nu build-ul) și prind fix regresia care ar fura lățimea înapoi: cineva
+// reintroduce un import static, cineva randează iar coperta întreagă în
+// thumbnail. Bugetele de octeți se măsoară separat: scripts/measure-weight.mjs.
+{
+  const jsDir = join(ROOT, 'public/assets/js');
+  const pagini = readdirSync(jsDir).filter((f) => f.startsWith('page-') && f.endsWith('.js'));
+
+  const cuChatStatic = pagini.filter((f) => /from\s*'\.\/chat\.js'/.test(readFileSync(join(jsDir, f), 'utf8')));
+  check('nicio pagină nu importă static chat.js (chatul se cere la nevoie)',
+    cuChatStatic.length === 0, `îl importă static: ${cuChatStatic.join(', ')}`);
+
+  const core = readFileSync(join(jsDir, 'core.js'), 'utf8');
+  check('core.js încarcă chat.js printr-un import() dinamic',
+    /import\('\.\/chat\.js'\)/.test(core), 'lipsește import(\'./chat.js\')');
+  check('chatul se pornește o singură dată per pagină (promisiune memorată)',
+    /chatOn\s*\|\|=\s*loadChat\(\)/.test(core), 'lipsește garda chatOn ||= loadChat()');
+
+  const cuCoperti = ['page-index.js', 'page-series.js', 'page-profile.js', 'page-admin-serii.js', 'page-admin-serie.js'];
+  const faraCoverImg = cuCoperti.filter((f) => !readFileSync(join(jsDir, f), 'utf8').includes('coverImg('));
+  check(`paginile cu coperți cer lățimea potrivită slotului (coverImg: ${cuCoperti.length} pagini)`,
+    faraCoverImg.length === 0, `nu folosesc coverImg: ${faraCoverImg.join(', ')}`);
+
+  const deploy = readFileSync(join(ROOT, 'deploy.sh'), 'utf8');
+  check('deploy.sh bundleaza cu --splitting (chunk-uri comune, cache pe hash)',
+    /--splitting/.test(deploy), 'lipsește --splitting din pasul de bundle');
+  check('deploy.sh curata chunk-urile vechi (c-*.js) inainte de build',
+    /rm -f public\/assets\/js\/c-\*\.js/.test(deploy), 'nu șterge chunk-urile vechi');
+
+  const gitignore = readFileSync(join(ROOT, '.gitignore'), 'utf8');
+  check('chunk-urile de build (c-*.js) nu se comit',
+    gitignore.includes('public/assets/js/c-*.js'), 'lipsește regula din .gitignore');
+}
+
 // ------------------------------------------------- relay: fișiere invocate
 {
   const cmd = readFileSync(join(ROOT, 'cf-relay/cmd.sh'), 'utf8');

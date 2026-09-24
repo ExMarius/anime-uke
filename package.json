@@ -8,17 +8,18 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "bench": "node scripts/bench-scale.mjs",
+    "deploy": "./deploy.sh",
+    "deploy:do": "cd worker-do && npx wrangler deploy",
     "dev": "./dev.sh",
+    "dev:pages": "npx wrangler pages dev --port=8788",
     "migrate:local": "wrangler d1 migrations apply DB --local",
     "migrate:remote": "wrangler d1 migrations apply DB --remote",
     "seed": "node scripts/seed.mjs",
     "test": "./test.sh",
-    "usage": "node scripts/usage.mjs",
     "test:e2e": "node tests/e2e.mjs",
-    "deploy": "./deploy.sh",
-    "deploy:do": "cd worker-do && npx wrangler deploy",
-    "dev:pages": "npx wrangler pages dev --port=8788",
-    "bench": "node scripts/bench-scale.mjs"
+    "usage": "node scripts/usage.mjs",
+    "weight": "node scripts/measure-weight.mjs"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.9",

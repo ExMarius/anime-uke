@@ -3,8 +3,8 @@
 // proprietatile; cumpararea e un POST cu confirmare in doi pasi (click
 // pe card → click pe „Confirma"), ca sa nu arunci gold-ul din greseala.
 // =====================================================================
-import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession, applySiteTheme } from './core.js';
-import { initChat } from './chat.js';
+import { api, renderNav, toast, clearSession, withBusy , whenActive , getSession, applySiteTheme, initChat } from './core.js';
+
 
 let data = null;
 let myName = 'tunn';

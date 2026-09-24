@@ -221,6 +221,31 @@ cele două versiuni. Acum e o singură linie, testată împreună:
 
 ---
 
+### Viteză: code splitting + imagini dimensionate (2026-09-24, runda 3)
+
+- **JS-ul paginilor se bundlează cu `--splitting`** (`deploy.sh`): `core.js`,
+  `anim-bg.js` și `chat.js` ajung în chunk-uri `c-<hash>.js` (numele E hash-ul
+  conținutului, deci cache imutabil corect fără `?v=`; importurile din bundle
+  sunt RELATIVE, `from"./c-x.js"` — nu e nevoie de importmap). Chunk-urile NU
+  se comit (`public/assets/js/c-*.js` e în `.gitignore`) și se șterg la fiecare
+  deploy înainte de build.
+- **`chat.js` nu se mai importă static din pagini.** Se încarcă prin
+  `loadChat()`/`initChat()`/`openChat()` din `core.js` (import dinamic, o
+  singură pornire per pagină). Cine adaugă o pagină nouă importă chatul din
+  `core.js`, nu din `chat.js` — altfel îl pune iar pe calea critică și
+  `tests/scripts-health.mjs` pică (verificarea e intenționat ieftină: citește
+  sursa, nu build-ul).
+- **Coperțile se randează cu `coverImg()`** (`core.js`), nu cu
+  `createElement('img')` + `optimizeCover`: primește `w` + `widths` + `sizes` și
+  lasă browserul să aleagă treapta potrivită slotului. `optimizeCover` rămâne
+  pentru cazurile speciale (hero), dar nu mai cere 400 px pentru un thumbnail.
+- **Bugetul de greutate e testat**: `node scripts/measure-weight.mjs` rulează
+  pipeline-ul de deploy pe o copie a repo-ului și compară „calea critică" (HTML
+  + CSS + JS eager) cu limitele din capul fișierului. Rulează în `test.sh`
+  (faza „greutate", fără server) și încă o dată `dom-smoke` pe artefactele
+  construite (`AUK_JS_DIR=/tmp/auk-artefacte/public/assets/js`). Când schimbi
+  ceva ce intră în bundle, rulează `npm run weight` ÎNAINTE de commit.
+
 ### Funcționalități noi (2026-09-24, branch `arena/01a0ca0d-anime-uke`)
 
 Catalog partajabil prin URL (`?gen=&status=&sort=&page=`), sortarea „Cele mai bine

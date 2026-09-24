@@ -53,6 +53,39 @@ export function optimizeCover(value, w = 400) {
   }
 }
 
+/**
+ * <img> pentru o copertă, cu lățimea potrivită slotului în care intră.
+ *
+ * De ce nu ajungea `optimizeCover`: acolo cerem O singură lățime, aleasă de
+ * noi. Cardul din grilă are 184 px pe desktop și 142 px pe telefon, dar
+ * cerea 400 px — de ~2-3x mai mulți octeți pe fiecare poster; thumbnail-ul
+ * din admin are 34 px și cerea coperta întreagă. Aici îi dăm browserului
+ * `srcset` + `sizes` (exact ca la bannerul din pagina principală): alege el
+ * treapta, ținând cont și de ecranul retina, iar `decoding=async` scoate
+ * decodarea JPEG/WebP de pe firul principal (mai puțin TBT la scroll).
+ *
+ * `w` rămâne lățimea de bază din `src` (fallback pentru browsere fără
+ * srcset) și e plafonul: nu cerem niciodată mai mult decât înainte.
+ */
+export function coverImg(cover, opts = {}) {
+  const { w = 400, widths, sizes, alt = '', loading = 'lazy', className = '' } = opts;
+  const img = document.createElement('img');
+  const url = safeUrl(cover, '');
+  if (className) img.className = className;
+  img.alt = alt;
+  img.loading = loading;
+  img.decoding = 'async';
+  const steps = [...new Set((widths || [w]).map((x) => Math.min(x, w)))].sort((a, b) => a - b);
+  if (url && url !== '#') {
+    if (steps.length > 1) {
+      img.srcset = steps.map((x) => `${optimizeCover(url, x)} ${x}w`).join(', ');
+      img.sizes = sizes || `${w}px`;
+    }
+    img.src = optimizeCover(url, w);
+  }
+  return img;
+}
+
 export function safeUrl(value, fallback = '#') {
   const v = String(value || '').trim();
   if (!v) return fallback;
@@ -589,8 +622,38 @@ function updatePulseChip(data) {
   chip.classList.toggle('pulse-chip--live', n > 0);
 }
 
-/** Chip-ul de pulse din nav. Click → deschide chat-ul (eveniment global,
- *  ca să nu importăm chat.js din core — ar fi ciclu de module). */
+// ---------------------------------------------------------------------
+// CHAT LA CERERE („code splitting”)
+// ---------------------------------------------------------------------
+// chat.js cântărește ~14 KB minificat (socket, stikere, regulament, istoric)
+// și era importat STATIC de fiecare pagină — deci fiecare vizitator îl
+// descărca și-și deschidea socket-ul chiar dacă nu intra niciodată în chat.
+// Deploy-ul rulează esbuild cu --splitting: modulul ajunge într-un singur
+// chunk comun (nume cu hash de conținut → cache 1 an), cerut abia când e
+// nevoie. Importul e dinamic și NU creează ciclu de module (core ← chat
+// rămâne singura direcție de import static).
+let chatMod;   // promisiunea de încărcare a modulului
+let chatOn;    // promisiunea de pornire (initChat rulează o singură dată)
+
+function loadChat() {
+  return (chatMod ||= import('./chat.js'));
+}
+
+/** Pornește chat-ul (fab, modal, socket) — o singură dată per pagină. */
+export function initChat() {
+  return (chatOn ||= loadChat()
+    .then((m) => m.initChat())
+    .catch((err) => { chatOn = undefined; throw err; }));   // reîncearcă la următorul apel
+}
+
+/** Deschide fereastra de chat, pornind-o dacă încă nu e pornită. */
+export async function openChat() {
+  await initChat();
+  (await loadChat()).openChat();
+}
+
+/** Chip-ul de pulse din nav. Click → deschide chat-ul (prin wrapper-ul de mai
+ *  sus, ca chat.js să rămână încărcat la cerere). */
 function buildPulseChip() {
   const chip = document.createElement('button');
   chip.id = 'pulse-chip';
@@ -601,7 +664,7 @@ function buildPulseChip() {
   chip.innerHTML = '<span class="pulse-chip__dot" aria-hidden="true"></span>' +
     '<span class="pulse-chip__n">online</span>';
   chip.addEventListener('click', () => {
-    document.dispatchEvent(new CustomEvent('auk:open-chat'));
+    openChat().catch(() => { /* chat opțional */ });
   });
   return chip;
 }

@@ -14,6 +14,15 @@ import { JSDOM } from 'jsdom';
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8788';
 const ROOT = new URL('..', import.meta.url).pathname;
+// Cu AUK_JS_DIR rulezi EXACT artefactele de deploy (minificate + chunk-uri),
+// nu sursele: `node scripts/build-artifacts.mjs /tmp/auk-art && AUK_JS_DIR=... node tests/dom-smoke.mjs`.
+// Așa prindem o rupere în graful de chunk-uri (import relativ către un chunk
+// inexistent) înainte de deploy, nu în producție.
+const JSDIR = process.env.AUK_JS_DIR || `${ROOT}public/assets/js`;
+// Pe artefactele de deploy (AUK_JS_DIR) codul e împachetat în chunk-uri: nu mai
+// putem reseta sesiunea din exterior (vezi mai jos), deci 3 verificări care
+// depind de trucul acela se sar — sunt acoperite de rularea pe surse.
+const PE_BUILD = !!process.env.AUK_JS_DIR;
 
 let passed = 0;
 let failed = 0;
@@ -151,7 +160,7 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
   try {
     // ?t=… forteaza reimportul: fara asta, a doua pagina ar primi modulul
     // deja executat din cache si nu ar randa nimic.
-    await import(`file://${ROOT}public/assets/js/${module}?t=${Date.now()}${Math.random()}`);
+    await import(`file://${JSDIR.replace(/^\//, '/')}/${module}?t=${Date.now()}${Math.random()}`);
   } catch (e) {
     importError = e;
     errors.push(`import ${module}: ${e.message}`);
@@ -237,7 +246,11 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   const popOn = await until(() => p.$('#notif-pop')?.hidden === false);
   check('Panoul de notificări se deschide cu stare vida', popOn && /Nicio notificare|Se încarcă/.test(p.$('#notif-pop')?.textContent || ''), p.$('#notif-pop')?.textContent?.slice(0, 60));
-  check('Butonul de stikere exista in chat', !!p.$('#chat-sticker-btn'), 'lipseste #chat-sticker-btn');
+  // chat.js se încarcă la nevoie (import dinamic în core.js, vezi „Viteză"):
+  // butonul de stikere apare după ce modulul ajunge, deci îl așteptăm — și
+  // tot aici verificăm că pagina chiar pornește chat-ul singură.
+  const chatGata = await until(() => !!p.$('#chat-sticker-btn'));
+  check('Butonul de stikere exista in chat', chatGata, 'lipseste #chat-sticker-btn (chat.js nu s-a încărcat)');
   p.$('#chat-fab')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   // Regulamentul chat-ului apare la prima deschidere si dispare dupa accept.
   const rulesOn = await until(() => !!p.$('.chat-rules'));
@@ -671,26 +684,36 @@ console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
   check('Nicio eroare de runtime pe tabul Sezon (setare)', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
   // Realegere personala DUPA setare → la urmatoarea vizita bannerul explica diferenta.
-  await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
-  const p2 = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
-  // HARNESS: core.js se importa o singura data per proces (modulele de pagina
-  // il refera fara ?t=), deci cache-ul lui de sesiune supravietuieste intre
-  // mount-uri — p2 ar mosteni sesiunea veche (cu sezonul) a lui p1. Il golim
-  // explicit. In productie nu exista problema: fiecare pagina e un graf proaspat.
-  await import('../public/assets/js/core.js').then((m) => m.clearSession());
-  p2.$('#tab-sezon')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
-  await until(() => p2.$$('#sezon-list .ranks-row').length === 4);
-  const bannerOk = await until(() => !!p2.$('#sezon-banner'));
-  const bannerTxt = p2.text('#sezon-banner') || '';
-  check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
-  p2.$('#sezon-vezi')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
-  const prevOk = await until(() => [...p2.window.document.body.classList].includes('theme-iarna'));
-  check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p2.window.document.body.classList].join(','));
-  p2.$('#sezon-mea')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
-  const backOk = await until(() => [...p2.window.document.body.classList].includes('theme-sakura'));
-  check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p2.window.document.body.classList].join(','));
-  check('Nicio eroare de runtime pe tabul Sezon (banner)', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
-  await p2.teardown();
+  if (PE_BUILD) {
+    // HARNESS (doar pe build): core-ul sta într-un chunk comun, iar Node ține
+    // minte modulul între mount-uri — cache-ul de sesiune al chunk-ului
+    // supraviețuiește, iar din exterior nu-l putem goli (exporturile sunt
+    // minificate: `zt as a`). În producție nu există problema: fiecare încărcare
+    // de pagină e un graf JS nou. Cele 3 verificări de mai jos sunt acoperite
+    // de rularea pe surse (test.sh rulează dom-smoke și pe surse, și pe build).
+    console.log('  ⏭  3 verificări sărite pe artefactele de build (reset de sesiune prin identitatea modulului core.js — imposibil prin chunk-uri)');
+  } else {
+    await post('/api/shop/activate', { type: 'theme', id: 'theme_sakura' });
+    const p2 = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
+    // HARNESS: core.js se importa o singura data per proces (modulele de pagina
+    // il refera fara ?t=), deci cache-ul lui de sesiune supravietuieste intre
+    // mount-uri — p2 ar mosteni sesiunea veche (cu sezonul) a lui p1. Il golim
+    // explicit. In productie nu exista problema: fiecare pagina e un graf proaspat.
+    await import(`${JSDIR}/core.js`).then((m) => m.clearSession());
+    p2.$('#tab-sezon')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    await until(() => p2.$$('#sezon-list .ranks-row').length === 4);
+    const bannerOk = await until(() => !!p2.$('#sezon-banner'));
+    const bannerTxt = p2.text('#sezon-banner') || '';
+    check('Bannerul ii spune adminului ca vede tema personala', bannerOk && /Sakura/.test(bannerTxt) && /Iarnă/.test(bannerTxt), bannerTxt.slice(0, 130));
+    p2.$('#sezon-vezi')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    const prevOk = await until(() => [...p2.window.document.body.classList].includes('theme-iarna'));
+    check('„Vezi sezonul" aplica sezonul persistent', prevOk, [...p2.window.document.body.classList].join(','));
+    p2.$('#sezon-mea')?.dispatchEvent(new p2.window.Event('click', { bubbles: true }));
+    const backOk = await until(() => [...p2.window.document.body.classList].includes('theme-sakura'));
+    check('„Înapoi la tema mea" restaureaza Sakura', backOk, [...p2.window.document.body.classList].join(','));
+    check('Nicio eroare de runtime pe tabul Sezon (banner)', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+    await p2.teardown();
+  }
   // Curatenie: sezonul gol + adminul inapoi pe Standard (suitele urmatoare).
   await post('/api/admin/season', { theme_id: '' });
   await post('/api/shop/activate', { type: 'theme', id: 'theme_standard' });

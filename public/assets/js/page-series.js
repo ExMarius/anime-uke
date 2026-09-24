@@ -1,5 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, optimizeCover } from './core.js';
-import { initChat } from './chat.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, coverImg, initChat } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -35,11 +34,10 @@ function setHead(series) {
   const poster = document.getElementById('series-poster');
   poster.innerHTML = '';
   if (series.cover_image) {
-    const img = document.createElement('img');
-    img.src = optimizeCover(safeUrl(series.cover_image, ''), 600);
-    img.alt = series.title || 'Poster';
-    img.loading = 'eager';
-    img.decoding = 'async';
+    const img = coverImg(series.cover_image, {
+      w: 300, widths: [200, 300, 600], loading: 'eager',
+      sizes: '(max-width: 640px) 100px, 150px', alt: series.title || 'Poster',
+    });
     img.addEventListener('error', () => img.replaceWith(genPoster(series.title)), { once: true });
     poster.appendChild(img);
     poster.hidden = false;
