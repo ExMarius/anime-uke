@@ -131,8 +131,11 @@ else bad('stickerul NU a fost difuzat');
     try { return await r.json(); } catch { return null; }
   };
 
-  const catalog = await getJson('/api/series?per_page=1');
-  const serieId = catalog?.series?.[0]?.id;
+  // Prima serie din catalog poate avea 0-1 episoade (si seria fara episoade nu
+  // poate arăta nici marcaje, nici „episodul următor"): căutăm una cu 2+.
+  const catalog = await getJson('/api/series?per_page=10');
+  const candidat = (catalog?.series || []).find((x) => Number(x.episode_count) >= 2);
+  const serieId = candidat?.id ?? catalog?.series?.[0]?.id;
   const detaliu = serieId ? await getJson(`/api/series/${serieId}?per_page=3`) : null;
   const eps = detaliu?.episodes || [];
 
@@ -163,7 +166,7 @@ else bad('stickerul NU a fost difuzat');
 
     log(`  __CANAR_SERIE__=${serieId}`);
   } else {
-    log('  (catalog prea mic pentru verificarea progresului — sărită)');
+    log(`  (nicio serie cu 2+ episoade în primele 10 — verificarea progresului sărită: serie=${serieId} episoade=${eps.length})`);
   }
 }
 

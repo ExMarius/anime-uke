@@ -168,7 +168,10 @@ q 'SELECT id, username, substr(message,1,28) AS mesaj, created_at FROM chat_mess
 # TOATE suitele locale: în miniflare DO-ul nu e evacuat niciodată, deci
 # bufferul din memorie ajungea mereu în D1. Dovada reală e un mesaj scris pe
 # chat-ul viu, cu UN mesaj (nu un lot de 10), apoi citit din baza de date.
-# Contul canar se șterge la final, împreună cu mesajele lui.
+# Contul canar se șterge la final, împreună cu mesajele lui. Același cont
+# verifică și marcajele de progres („văzut" / episodul următor) — fără o a doua
+# înregistrare, căci limita e 5 conturi pe oră per IP și rulările repetate ar
+# da fals roșu.
 echo
 echo "── 17. chat: canar end-to-end (mesaj + sticker pe site-ul viu)"
 CANAR_OUT="$(node cf-relay/chat-canar.mjs "$B" 2>&1)"
