@@ -14,6 +14,8 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 5 (integrare + buget de invocări, build `7e83eb8`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | două linii de lucru contopite + costul unei vizite ~12 → ~2 invocări |
 | 6 (scara 1000×1000, migrarea 0028, build `65b57e7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | o vizită: ~230.000 → ~64 rânduri citite; planurile de execuție confirmate pe D1-ul de producție |
 | 7 (aspect, build `9f8606a`) | vezi §1f | nota pe carduri, progres la continuare, filtre lipicioase, „înapoi sus", scurtatura `/` |
+| 8 (funcționalități noi, build `77d17b7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | catalog partajabil, sortare după notă, episodul următor, „văzut" — vezi §1h |
+| 9 (viteză, build `4b65b07`) | ✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35 | chat scos de pe calea critică (chunk la cerere), arta hero 168 → 94 KB, coperți dimensionate — vezi §1i |
 
 ---
 
@@ -331,6 +333,31 @@ Suita completă: scripts-health 28 · e2e 584 · dom-smoke 193 · chat-persist 1
 chat-d1 8 · counters 16 · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13.
 
 ---
+
+## 1i. Runda 10 (2026-09-24): viteză (chunk-uri la cerere, imagini dimensionate)
+
+Cerută de proprietar ca pasul 3 din „mai fain la site" (după aspect și
+funcționalități). Cifrele vin din `npm run weight`, care rulează pipeline-ul de
+deploy pe o copie a repo-ului.
+
+| Ce s-a schimbat | Dovada pe live (build `4b65b07`) |
+|---|---|
+| **Arta hero redimensionată** (1280 px/q≈90 → 1024 px/q72) | `/assets/img/hero-1.webp` → 200, **94.014 B** (era 168.738 B). Toate trei: 168+126+131 KB → 94+65+70 KB |
+| **Preload-ul redundant scos** (imaginea e deja inline în HTML) | `curl /` nu mai conține `as="image" href="/assets/img/hero-1.webp"` |
+| **Preconnect la hostul coperților** | `curl /` conține `preconnect … m.media-amazon.com` |
+| **Code splitting**: bundle-ul paginii cere core-ul comun dintr-un chunk separat | §19 din relay: `page-index.js` importă `c-DAH2Y522.js` → 200, 21.746 B; auditul §9: pe calea critică **13,9 KB comprimat** (entry + 1 chunk), cache `immutable` |
+| **chat.js amânat** (import dinamic în chunk-ul comun) | §19: `import("./c-OJMPPHBS.js")` → 200, 14.755 B (5.167 B brotli pe live); auditul: „chat-ul (c-OJMPPHBS.js) e în afara ei" |
+| **Bundle-ul e identic cu și fără `?v=`** | md5 `7dd481d4aa9c5e87c839ef6448fc9c5a` în ambele cazuri — fără copie veche la margine |
+| **Markerii rundei 2 supraviețuiesc split-ului** | §19: `auk-continue-next` încă e în bundle-ul publicat |
+
+Auditul complet pe build-ul de producție: **✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35**
+(două verificări noi de chunk-uri + una de cache `immutable`, toate verzi).
+Canarul de chat (§17) a trecut integral în aceeași rulare: mesaj + sticker în
+D1 (id 45/46), curățenie completă.
+
+Ce NU s-a putut verifica din exterior: cât de repede se simte site-ul într-un
+browser real (LCP/TBT). Ce s-a verificat: octeții care se descarcă și numărul
+de cereri de pe calea critică — restul ține de rețea și de dispozitiv.
 
 ## 4. Cum se re-rulează auditul
 
