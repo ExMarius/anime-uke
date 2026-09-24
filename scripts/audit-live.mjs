@@ -443,9 +443,18 @@ async function main() {
     'prima pagină nu are <picture> cu cele trei formate', 'WARN');
   expect(S9, (home.text.match(/assets\/img\/hero-1\.webp/g) || []).length >= 1,
     'prima pagină referă direct .webp', 'prima pagină nu referă .webp (mai există negociere pe server?)', 'WARN');
-  expect(S9, !/assets\/img\/hero-1\.jpg/.test(home.text.replace(/og:image[^>]*/g, '').replace(/twitter:image[^>]*/g, '')),
-    'prima pagină nu cere .jpg-ul hero (doar og:image îl folosește, pentru crawlere)',
-    'prima pagină încarcă și .jpg-ul hero — o cerere în plus degeaba', 'WARN');
+  // .jpg-ul artei hero e REZERVA din <picture> (browserele care nu știu AVIF/WebP):
+  // o singură referință e corectă și nu produce nicio cerere în plus pentru
+  // browserele actuale. Ce nu vrem e o a doua referință (ex: preload sau un
+  // <img> separat) — aia chiar ar însemna o descărcare degeaba.
+  const faraOg = home.text.replace(/og:image[^>]*/g, '').replace(/twitter:image[^>]*/g, '');
+  const jpgHero = (faraOg.match(/assets\/img\/hero-\d\.jpg/g) || []).length;
+  expect(S9, jpgHero <= 1,
+    `o singură referință la .jpg-ul hero (rezerva din <picture>, ${jpgHero}×)`,
+    `prima pagină referă .jpg-ul hero de ${jpgHero} ori — o descărcare în plus degeaba`, 'WARN');
+  expect(S9, !/rel="preload"[^>]*as="image"[^>]*hero-/.test(home.text),
+    'fără preload pe arta hero (imaginea e deja inline în HTML)',
+    'există un <link rel=preload as=image> pe arta hero — a doua cerere pentru aceeași imagine', 'WARN');
 
   const homeEnc = home.headers['content-encoding'] || 'identity';
   expect(S9, homeEnc !== 'identity', `HTML comprimat (${homeEnc})`, 'HTML necomprimat', 'WARN');
