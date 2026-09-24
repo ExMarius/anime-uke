@@ -264,6 +264,13 @@ echo "   hero-1.webp: ${HERO_B} B (inainte de runda 3: 168738 B)"
 HOME_HTML="$(curl -s "$B/")"
 case "$HOME_HTML" in *'as="image" href="/assets/img/hero-1.webp"'*) echo "   !! preload-ul redundant pe arta hero a revenit" ;; *) echo "   fara preload redundant pe arta hero = da" ;; esac
 case "$HOME_HTML" in *'preconnect'*'media-amazon.com'*) echo "   preconnect la hostul coperților = da" ;; *) echo "   !! lipseste preconnect-ul la m.media-amazon.com" ;; esac
+# AVIF: primul format din <picture>. Verificam pe live ca se serveste cu tipul
+# corect si ca e chiar mai mic decat WebP-ul (altfel nu-si are rost).
+AVIF_B="$(curl -s -o /dev/null -w '%{size_download}' "$B/assets/img/hero-1.avif")"
+WEBP_B="$(curl -s -o /dev/null -w '%{size_download}' "$B/assets/img/hero-1.webp")"
+AVIF_CT="$(curl -s -o /dev/null -w '%{content_type}' "$B/assets/img/hero-1.avif")"
+echo "   hero-1.avif: $AVIF_B B ($AVIF_CT) · hero-1.webp: $WEBP_B B (inainte de runda 3: 168738 B jpg)"
+case "$HOME_HTML" in *'image/avif'*'image/webp'*) echo "   picture cu AVIF + WebP in HTML = da" ;; *) echo "   !! lipseste <picture> cu formatele" ;; esac
 # Bundle-ul trebuie sa fie IDENTIC cu si fara ?v=: daca diferă, cineva serveste
 # o copie veche de la margine (si un vizitator nou poate primi cod vechi).
 H1="$(curl -s "$B/assets/js/page-index.js" | md5sum | cut -d' ' -f1)"

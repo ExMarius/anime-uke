@@ -247,6 +247,7 @@ pe o copie a repo-ului: purge CSS → minificare → bundle cu code splitting).
 | Ce | Înainte | După | De ce conta |
 |---|---|---|---|
 | Arta hero (bundled) | 168 + 126 + 131 KB (1280 px, q≈90) | **92 + 64 + 70 KB** (1024 px, q72) | imaginea e inline în prima pagină, deci intră direct în LCP; −197 KB fără nicio diferență vizibilă la 1080p |
+| Formatul artei hero | un singur JPEG, apoi un singur WebP | **`<picture>`: AVIF → WebP → JPEG** (55 + 44 + 52 KB în AVIF) | AVIF e ~33% sub WebP pe aceeași imagine; browserul alege primul format pe care îl știe, fără negociere pe server. `setHeroArt()` schimbă toate sursele o dată la shuffle |
 | `<link rel=preload>` pe hero | 1 cerere în plus | **scos** | `<img>`-ul era deja inline mai sus — preload-ul declanșa o a doua cerere pentru aceeași imagine |
 | Coperți externe | 400 px pentru orice slot; thumbnail de 34 px → coperta întreagă | **`coverImg()`: `srcset`/`sizes` per slot** (grid 200/300/400, căutare & admin 120, poster serie 200/300/600) | cardul are 184 px pe desktop / 142 px pe telefon, iar browserul alege singur treapta (și ține cont de retina) |
 | `chat.js` (14,4 KB minificat) | în **fiecare** bundle de pagină | **chunk comun, cerut la nevoie** (`import()` dinamic în `core.js`) | vizitatorul care nu deschide chatul nu-l mai descarcă și nu-și mai deschide socket-ul; se pornește o singură dată per pagină |
@@ -269,7 +270,7 @@ scăzut de la 37,3 KB la 34,4 KB pe calea critică, iar JS-ul ei de la 17,0 KB l
 câștigul e mai mare: `core.js` + `anim-bg.js` (7,7 KB gzip) se descarcă o dată
 per sesiune, nu la fiecare pagină. Bugetele (în `measure-weight.mjs`) sunt: cale
 critică ≤ 45 KB, JS critic ≤ 19,5 KB, JS amânat ≤ 8 KB, CSS ≤ 22 KB, HTML ≤ 15 KB,
-arta hero ≤ 110 KB, nicio imagine ≤ 130 KB.
+arta hero ≤ 70 KB (AVIF; rezerva WebP ≤ 110 KB), nicio imagine ≤ 130 KB.
 
 ---
 
@@ -408,7 +409,9 @@ merită atinse:
   `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
   Numărul de verificări: scripts-health 36 · e2e 584 · dom-smoke 193 · chat-persist 14 · chat-d1 8 · counters 16
   · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
-  `test.sh` rulează și **bugetul de greutate** (`scripts/measure-weight.mjs`, fără server, ~2 s) și încă o dată
+- **CI**: `.github/workflows/tests.yml` rulează `./test.sh` la fiecare push (fără secrete, fără
+  deploy) și publică logurile ca artefacte; relay-ul rămâne pentru publicare + audit live.
+- `test.sh` rulează și **bugetul de greutate** (`scripts/measure-weight.mjs`, fără server, ~2 s) și încă o dată
   `dom-smoke` pe **artefactele de deploy** (189 verificări: bundle minificat + chunk-uri reale, prin `AUK_JS_DIR`) —
   o rupere în graful de chunk-uri se vede acolo, nu în producție. Cele 4 verificări care lipsesc sunt blocul care are
   nevoie de identitatea modulului `core.js` ca să reseteze sesiunea între două randări în același proces (imposibil

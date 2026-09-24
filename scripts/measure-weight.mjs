@@ -45,7 +45,8 @@ const BUGETE = {
   css: 22 * 1024,          // gzip: per foaie de stil
   html: 15 * 1024,         // gzip: HTML-ul (conține SVG-uri inline)
   caleCritica: 45 * 1024,  // gzip: HTML + CSS + JS eager (o pagină întreagă)
-  artaHero: 110 * 1024,    // octeți PE DISC: imaginea hero inline din prima pagină
+  artaHero: 70 * 1024,     // octeți PE DISC: imaginea hero inline din prima pagină (AVIF)
+  artaHeroFallback: 110 * 1024, // octeți PE DISC: aceeași imagine în WebP (rezerva)
   imagineBundled: 130 * 1024, // octeți PE DISC: orice altă imagine din /assets/img
 };
 
@@ -203,10 +204,13 @@ for (const f of readdirSync(join(work, 'public/assets/img'))) {
 }
 imagini.sort((a, b) => b.raw - a.raw);
 const indexHtml = readFileSync(join(work, 'public/index.html'), 'utf8');
-const heroInline = [...indexHtml.matchAll(/<img[^>]+class="hban__bg-img"[^>]*>/g)]
-  .flatMap((m) => [...m[0].matchAll(/src="([^"]+)"/g)].map((x) => x[1]))
-  .map((u) => size(join(work, 'public', u.replace(/^\//, ''))));
-const artaHero = heroInline.reduce((a, s) => a + (s?.raw || 0), 0);
+// Din <picture> luăm primul <source> (AVIF — ce descarcă browserele actuale) și
+// <img> (rezerva). Ambele, fiindcă suma greșită se vede imediat în buget.
+const surseHero = [...indexHtml.matchAll(/<source[^>]+srcset="([^"]+)"/g)].map((m) => m[1]);
+const artaHero = surseHero.filter((u) => u.endsWith('.avif'))
+  .map((u) => size(join(work, 'public', u.replace(/^\//, '')))).reduce((a, s) => a + (s?.raw || 0), 0);
+const artaHeroFallback = surseHero.filter((u) => u.endsWith('.webp'))
+  .map((u) => size(join(work, 'public', u.replace(/^\//, '')))).reduce((a, s) => a + (s?.raw || 0), 0);
 
 // ---------------------------------------------------------------------
 // 6. Raport
@@ -214,7 +218,7 @@ const artaHero = heroInline.reduce((a, s) => a + (s?.raw || 0), 0);
 if (JSON_OUT) {
   const lista = [...assets.entries()].map(([p, s]) => ({ f: p.replace(work + '/', ''), ...s }))
     .sort((a, b) => b.gzip - a.gzip);
-  console.log(JSON.stringify({ purged, bundlate, minificate, artaHero, imagini, assets: lista, pagini: rezultate }, null, 1));
+  console.log(JSON.stringify({ purged, bundlate, minificate, artaHero, artaHeroFallback, imagini, assets: lista, pagini: rezultate }, null, 1));
 } else {
   console.log(`=== GREUTATE (pipeline de deploy: purge=${purged ? 'da' : 'nu'} · bundle=${bundlate} pagini · minificate=${minificate} fișiere) ===`);
   console.log(`\n${'pagina'.padEnd(14)} ${'html'.padStart(9)} ${'css'.padStart(9)} ${'JS critic'.padStart(10)} ${'amânat'.padStart(9)} ${'TOTAL'.padStart(9)}`);
@@ -228,7 +232,7 @@ if (JSON_OUT) {
 
   console.log(`\nImagini bundlate (pe disc, top ${Math.min(5, imagini.length)}):`);
   for (const i of imagini.slice(0, 5)) console.log(`  ${(kb(i.raw) + ' KB').padStart(9)}  ${i.f}`);
-  console.log(`  arta hero inline în prima pagină: ${kb(artaHero)} KB`);
+  console.log(`  arta hero inline în prima pagină: ${kb(artaHero)} KB (AVIF) · rezerva WebP: ${kb(artaHeroFallback)} KB`);
 }
 
 // Cu --out=DIR păstrăm artefactele construite (public/ „ca la deploy"), ca să
@@ -258,7 +262,10 @@ for (const r of rezultate) {
   if (r.amanat.gzip > BUGETE.jsDeferred) depasiri.push(`${r.pagina}: JS amânat ${kb(r.amanat.gzip)} KB (buget ${kb(BUGETE.jsDeferred)})`);
 }
 if (artaHero > BUGETE.artaHero) {
-  depasiri.push(`arta hero din prima pagină are ${kb(artaHero)} KB (buget ${kb(BUGETE.artaHero)}); e inline, deci se descarcă mereu`);
+  depasiri.push(`arta hero (AVIF) are ${kb(artaHero)} KB (buget ${kb(BUGETE.artaHero)}); e inline, deci se descarcă mereu`);
+}
+if (artaHeroFallback > BUGETE.artaHeroFallback) {
+  depasiri.push(`rezerva WebP a artei hero are ${kb(artaHeroFallback)} KB (buget ${kb(BUGETE.artaHeroFallback)})`);
 }
 for (const i of imagini) {
   // Doar imaginile „grele" (nu icoanele) contează pentru buget.
@@ -267,7 +274,7 @@ for (const i of imagini) {
 
 if (!JSON_OUT) {
   console.log(`\nBugete (gzip): cale critică ≤ ${kb(BUGETE.caleCritica)} KB · JS critic ≤ ${kb(BUGETE.jsEager)} KB · JS amânat ≤ ${kb(BUGETE.jsDeferred)} KB`);
-  console.log(`         CSS ≤ ${kb(BUGETE.css)} KB · HTML ≤ ${kb(BUGETE.html)} KB · arta hero ≤ ${kb(BUGETE.artaHero)} KB · imagine ≤ ${kb(BUGETE.imagineBundled)} KB (pe disc)`);
+  console.log(`         CSS ≤ ${kb(BUGETE.css)} KB · HTML ≤ ${kb(BUGETE.html)} KB · arta hero AVIF ≤ ${kb(BUGETE.artaHero)} KB (WebP ≤ ${kb(BUGETE.artaHeroFallback)}) · imagine ≤ ${kb(BUGETE.imagineBundled)} KB (pe disc)`);
   console.log(`Cel mai greu: pagina „${grea.pagina}” ${kb(grea.total.gzip)} KB gzip · JS critic „${greuJs.pagina}” ${kb(greuJs.js.gzip)} KB gzip`);
   if (depasiri.length) {
     console.log(`\n✗ PESTE BUGET (${depasiri.length}):`);

@@ -1054,6 +1054,9 @@ td strong, td b { color: var(--text); font-weight: 700; }
 @keyframes hbanIn { to { opacity: 1; transform: none; } }
 
 .hban__bg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+/* <picture> e doar un înveliș pentru formate: nu trebuie să ocupe loc
+   (imaginea dinăuntru e poziționată absolut). */
+.hban__bg picture { display: contents; }
 .hban__bg-img, .hban__bg-gen {
   position: absolute; inset: -4%; width: 108%; height: 108%;
   object-fit: cover; object-position: center 30%;

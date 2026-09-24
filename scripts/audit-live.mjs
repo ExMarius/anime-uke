@@ -418,6 +418,17 @@ async function main() {
   expect(S9, /max-age=2592000/.test(imgWebp.headers['cache-control'] || ''), `imaginile au cache lung (${imgWebp.headers['cache-control']})`, `imaginile au cache: „${imgWebp.headers['cache-control'] || '—'}”`, 'WARN');
   expect(S9, imgWebp.text.length < imgJpg.text.length, `WebP mai mic decât JPEG (${imgWebp.text.length} vs ${imgJpg.text.length} B)`, `WebP NU e mai mic decât JPEG (${imgWebp.text.length} vs ${imgJpg.text.length} B)`, 'WARN');
 
+  // Runda 4: AVIF e primul format din <picture> (îl cer browserele actuale), deci
+  // trebuie să existe, să se servească cu tipul corect și să fie mai mic decât WebP.
+  const imgAvif = await req('/assets/img/hero-1.avif');
+  info(S9, `hero-1.avif → ${imgAvif.status} ${imgAvif.headers['content-type']} (${imgAvif.headers['content-length'] || imgAvif.text.length} B) · față de WebP ${imgWebp.text.length} B și JPEG ${imgJpg.text.length} B`);
+  expect(S9, imgAvif.status === 200 && /avif/i.test(imgAvif.headers['content-type'] || ''),
+    'AVIF se servește cu tipul corect (prima alegere a browserului)',
+    `hero-1.avif → ${imgAvif.status} ${imgAvif.headers['content-type'] || '—'}`, 'WARN');
+  expect(S9, imgAvif.text.length < imgWebp.text.length,
+    `AVIF mai mic decât WebP (${imgAvif.text.length} vs ${imgWebp.text.length} B, −${Math.round(100 - imgAvif.text.length / imgWebp.text.length * 100)}%)`,
+    `AVIF NU e mai mic decât WebP (${imgAvif.text.length} vs ${imgWebp.text.length} B) — de ce l-am adăugat?`, 'WARN');
+
   // Dovada că prima pagină nu mai cheltuie 5 invocări de Worker: pagina și
   // asset-urile vin din stratul static (public/_routes.json), iar API-ul e
   // agregat într-o singură cerere (/api/home). Aici verificăm doar ce se vede
@@ -427,6 +438,9 @@ async function main() {
   const doubled = (cc.match(/no-cache/g) || []).length > 1;
   expect(S9, !doubled, `assetul static e servit direct din Pages (Cache-Control: ${cc})`,
     `Cache-Control dublat („${cc}”) — assetul trece și prin worker: _routes.json nu e aplicat`, 'WARN');
+  expect(S9, /<picture>[\s\S]*?image\/avif[\s\S]*?image\/webp[\s\S]*?<\/picture>/.test(home.text),
+    'prima pagină folosește <picture> cu AVIF → WebP → JPEG',
+    'prima pagină nu are <picture> cu cele trei formate', 'WARN');
   expect(S9, (home.text.match(/assets\/img\/hero-1\.webp/g) || []).length >= 1,
     'prima pagină referă direct .webp', 'prima pagină nu referă .webp (mai există negociere pe server?)', 'WARN');
   expect(S9, !/assets\/img\/hero-1\.jpg/.test(home.text.replace(/og:image[^>]*/g, '').replace(/twitter:image[^>]*/g, '')),

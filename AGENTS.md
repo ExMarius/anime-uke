@@ -125,6 +125,16 @@ cat cf-relay/last-output.txt
 | O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
 | Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |
 
+- **jsdom nu are Web Animations API (`element.animate`)**. Paginile o folosesc pentru
+  animații de intrare; fără gardă, apelul aruncă, iar codul de eroare al paginii ascunde
+  elementul — testul valida calea de EROARE. Acum `animate` e gardat în pagină, iar
+  `tests/dom-smoke.mjs` are un polyfill minim. Lecția generală: când un test „trece" pe o
+  ramură de eroare (ex. „bannerul rămâne ascuns când catalogul e gol"), verifică-ți
+  ÎNTÂI premisa (aici: întreabă API-ul dacă catalogul chiar e gol).
+- **Nu muta `<img>`-ul din `<picture>`**: `bg.appendChild(img)` necondiționat scoate
+  imaginea din `<picture>`, iar `<source>`-urile (AVIF/WebP) devin inutile — browserul
+  descarcă mereu rezerva JPEG. Adaugă în fundal doar imaginea creată de JS (`if (!img.parentNode)`).
+
 ## 5. Modelul de date pe care trebuie să-l respecți
 
 - **Două sisteme de grade, separate** (detalii în README → „Grade și drepturi"):
@@ -239,6 +249,14 @@ cele două versiuni. Acum e o singură linie, testată împreună:
   `createElement('img')` + `optimizeCover`: primește `w` + `widths` + `sizes` și
   lasă browserul să aleagă treapta potrivită slotului. `optimizeCover` rămâne
   pentru cazurile speciale (hero), dar nu mai cere 400 px pentru un thumbnail.
+- **Arta bundled are trei formate** (`<picture>`: AVIF → WebP → JPEG), iar
+  `setHeroArt()` din `page-index.js` schimbă toate sursele o dată. Dacă adaugi o
+  imagine nouă în banner, adaugă toate cele trei fișiere — altfel browserul cade
+  pe rezerva JPEG (și bugetul din `measure-weight.mjs` te anunță).
+- **CI pe fiecare push**: `.github/workflows/tests.yml` rulează `./test.sh` (fără
+  token Cloudflare, fără deploy) și urcă logurile ca artefacte; `cloudflare-relay`
+  l-a rămas doar pentru publicare + audit live (se declanșează la o modificare în
+  `cf-relay/`).
 - **Bugetul de greutate e testat**: `node scripts/measure-weight.mjs` rulează
   pipeline-ul de deploy pe o copie a repo-ului și compară „calea critică" (HTML
   + CSS + JS eager) cu limitele din capul fișierului. Rulează în `test.sh`

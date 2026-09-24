@@ -459,6 +459,9 @@ function search(q) {
 // deci shuffle-ul nu loveste serverul de fiecare data (cache in sessionStorage).
 // ---------------------------------------------------------------------
 const SPOT_WINDOW_MS = 3 * 60 * 60 * 1000;
+/** Numele imaginilor bundled pentru banner (fiecare are .avif/.webp/.jpg). */
+const HERO_ART = ['hero-1', 'hero-2', 'hero-3'];
+
 const SPOT_TAGS = [
   'Recomandarea intervalului', 'De maratonat diseară', 'Ascunsă în catalog',
   'Alegerea comunității', 'Perla neștiută', 'Revăzut și aprobat',
@@ -547,14 +550,13 @@ async function renderHero(salt = spotSalt()) {
   // Fara coperta proprie: una din imaginile anime bundled (arta originala),
   // aleasa determinist din aceeasi sare ca si seria — bannerul arata mereu
   // „cu totul”, nu ca un placeholder.
-  // Referim direct .webp (cu .jpg ca rezervă pentru browsere vechi): înainte
-  // se cerea .jpg, iar workerul răspundea din mers cu .webp — adică două
-  // cereri și o invocare de Worker pentru fiecare imagine.
-  const HERO_ART = ['/assets/img/hero-1.webp', '/assets/img/hero-2.webp', '/assets/img/hero-3.webp'];
-  const HERO_ART_LEGACY = ['/assets/img/hero-1.jpg', '/assets/img/hero-2.jpg', '/assets/img/hero-3.jpg'];
+  // Trei formate per imagine, declarate în HTML (fără negociere pe server):
+  // AVIF e cel mai mic (~33% sub WebP), WebP acoperă browserele ceva mai vechi,
+  // JPEG rămâne rezerva. setHeroArt schimbă TOATE sursele o dată, ca browserul
+  // să nu rămână cu AVIF-ul poziției vechi după un shuffle.
   const artIdx = hashStr(`spot-art-${bucket}-${salt}`) % HERO_ART.length;
-  const artUrl = HERO_ART[artIdx];
-  const artLegacy = HERO_ART_LEGACY[artIdx];
+  const artUrl = `/assets/img/${HERO_ART[artIdx]}.webp`;
+  const artLegacy = `/assets/img/${HERO_ART[artIdx]}.jpg`;
   img.fetchPriority = 'high';
   // O SINGURĂ scară de rezervă, ca să nu se bată două handlere de eroare
   // una pe alta (înainte exista și `onerror`, și un `addEventListener`, iar
@@ -562,8 +564,8 @@ async function renderHero(salt = spotSalt()) {
   // originală din DB → arta .webp bundled → arta .jpg (browsere vechi) →
   // poster generat local. Ultima treaptă nu mai poate eșua.
   const ladder = [];
-  if (cover && cover !== '#') ladder.push({ src: cover, clear: true });
-  ladder.push({ src: artUrl, clear: true }, { src: artLegacy, clear: true }, { gen: true });
+  if (cover && cover !== '#') ladder.push({ src: cover, clear: true, cover: true });
+  ladder.push({ art: artIdx, clear: true }, { art: artIdx, legacy: true }, { gen: true });
   let step = 0;
   img.addEventListener('error', () => {
     const next = ladder[step++];
@@ -574,7 +576,8 @@ async function renderHero(salt = spotSalt()) {
       return;
     }
     if (next.clear) { img.srcset = ''; img.sizes = ''; }
-    img.src = next.src;
+    if (next.art !== undefined) setHeroArt(img, next.art);
+    else { if (next.cover) clearHeroArt(img); img.src = next.src; }
   });
   if (cover && cover !== '#') {
     // srcset responsive: IMDb livreaza la latimea potrivita ecranului
@@ -583,21 +586,59 @@ async function renderHero(salt = spotSalt()) {
     img.srcset = [400, 800, 1000].map((w) => `${optimizeCover(cover, w)} ${w}w`).join(', ');
     img.sizes = '100vw';
     img.src = optimizeCover(cover, 1000);
+    clearHeroArt(img);   // coperta seriei bate arta bundled (nu invers)
   } else {
     img.srcset = '';
     img.sizes = '';
-    img.src = artUrl;
+    setHeroArt(img, artIdx);
   }
-  if (img.parentNode !== bg) bg.appendChild(img);
+  // Doar dacă imaginea nu are deloc părinte (creată de noi mai sus) o adăugăm
+  // în fundal. `bg.appendChild(img)` necondiționat ar SCOATE-o din <picture>,
+  // iar sursele AVIF/WebP ar deveni inutile — browserul ar descărca mereu
+  // rezerva JPEG. Bugul a stat ascuns până când testele DOM au început să
+  // randeze bannerul (vezi polyfill-ul de Web Animations din dom-smoke).
+  if (!img.parentNode) bg.appendChild(img);
 
   box.hidden = false;
   box.classList.remove('hban--loading');   // la revedere, skeleton
   // Intrarea prin Web Animations API: restart natural la fiecare apel si
   // zero reflow fortat (vechiul truc cu offsetWidth costa ~74ms de layout).
-  box.animate(
-    [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
-    { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }
-  );
+  // Web Animations API e decorativa: daca lipseste (browsere vechi, medii de
+  // test fara WAAPI — jsdom nu o are), bannerul se afiseaza simplu, fara
+  // animatie. Inainte, un `animate` lipsa arunca si `initHero` ascundea TOT
+  // bannerul — iar testele DOM nu prindeau nimic, pentru ca fix la fel se
+  // ascunde si cand catalogul e gol.
+  if (typeof box.animate === 'function') {
+    box.animate(
+      [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }
+    );
+  }
+}
+
+/** Golește <source>-urile din <picture>: fără candidați, browserul folosește
+ *  src-ul din <img> (coperta seriei). Fără asta, AVIF-ul bundled câștigă în
+ *  fața copertei — adică exact pe dos decât vrem. */
+function clearHeroArt(img) {
+  const pic = img.closest('picture');
+  if (pic) pic.querySelectorAll('source').forEach((s) => { s.srcset = ''; });
+}
+
+/** Schimbă arta de fundal a bannerului: o singură poziție, toate formatele. */
+function setHeroArt(img, idx) {
+  const nume = HERO_ART[idx] || HERO_ART[0];
+  const pic = img.closest('picture');
+  if (pic) {
+    pic.querySelectorAll('source').forEach((s) => {
+      const tip = s.getAttribute('type');
+      s.srcset = tip === 'image/avif'
+        ? `/assets/img/${nume}.avif`
+        : `/assets/img/${nume}.webp`;
+    });
+    img.src = `/assets/img/${nume}.jpg`;   // rezerva, dacă browserul nu știe AVIF/WebP
+  } else {
+    img.src = `/assets/img/${nume}.webp`;
+  }
 }
 
 async function initHero() {

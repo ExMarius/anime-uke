@@ -68,8 +68,17 @@
     <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
     <a class="hban hban--loading" id="hero-banner" href="#">
       <div class="hban__bg" id="hero-bg" aria-hidden="true">
-        <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.webp"
-             alt="" fetchpriority="high">
+        <!-- <picture> cu trei formate: AVIF (cel mai mic, suportat de toate
+             browserele actuale) → WebP → JPEG (rezervă veche). Fără JS, fără
+             negociere pe server: browserul alege singur primul format pe care
+             îl știe. JS-ul schimbă toate cele trei surse o dată (vezi
+             setHeroArt din page-index.js). -->
+        <picture>
+          <source type="image/avif" srcset="/assets/img/hero-1.avif">
+          <source type="image/webp" srcset="/assets/img/hero-1.webp">
+          <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
+               alt="" fetchpriority="high">
+        </picture>
       </div>
       <div class="hban__sk" aria-hidden="true">
         <span class="sk sk-line sk-w30"></span>

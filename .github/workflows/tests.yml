@@ -1,0 +1,72 @@
+# =====================================================================
+# Suitele de teste — la fiecare push, fără deploy și fără secrete.
+#
+# De ce există, dacă avem deja relay-ul:
+#   - relay-ul publică (deploy + audit live) și pornește doar când se atinge
+#     cf-relay/cmd.sh; o regresie într-o pagină sau într-o rută se vedea abia
+#     când își amintea cineva să ruleze `./test.sh` local.
+#   - aici rulează EXACT ce rulează local: scripts-health, bugetul de greutate,
+#     e2e (API), dom-smoke pe surse ȘI pe artefactele de build, suitele fără
+#     server (theme-cache, top-cache, chat-persist, counters, chat-d1) și
+#     plafoanele buget-0. Fără token Cloudflare, fără efecte în producție:
+#     test.sh pornește un wrangler local pe :8788 cu o bază D1 goale.
+#
+# Timp: ~3-4 minute. Dacă pică, logurile sunt în artefacte.
+# =====================================================================
+name: tests
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instaleaza dependinte
+        run: npm ci --no-audit --no-fund
+
+      # test.sh face tot: isi porneste dev.sh local (wrangler pages dev),
+      # isi face migrarile pe o baza goala si isi compune codul de iesire.
+      - name: Suitele complete (./test.sh)
+        run: ./test.sh
+
+      - name: Publica logurile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            /tmp/scripts.log
+            /tmp/weight.log
+            /tmp/e2e.log
+            /tmp/dom.log
+            /tmp/dom-build.log
+            /tmp/theme.log
+            /tmp/topcache.log
+            /tmp/chatpersist.log
+            /tmp/counters.log
+            /tmp/chatd1.log
+            /tmp/flow.log
+            /tmp/pixel.log
+            /tmp/caps.log
+            /tmp/anime-uke-dev.log
+          if-no-files-found: ignore
+          retention-days: 7

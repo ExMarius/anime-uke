@@ -104,6 +104,15 @@ async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
     }
   };
 
+  // Web Animations API: jsdom nu o implementeaza, iar paginile o folosesc
+  // pentru animatii de intrare (hero, carduri). Fara polyfill, apelul ar
+  // arunca si codul de eroare al paginii ar ascunde elementul — adica testul
+  // ar valida calea de EROARE, nu pe cea reala (exact asta s-a intamplat cu
+  // bannerul din prima pagina, ani de zile nevazut de teste).
+  if (typeof window.Element.prototype.animate !== 'function') {
+    window.Element.prototype.animate = () => ({ finished: Promise.resolve(), cancel() {}, finish() {}, play() {}, pause() {} });
+  }
+
   // Chat-ul deschide un WebSocket; intr-un test DOM nu ne intereseaza,
   // dar lipsa constructorului ar opri executia paginii principale.
   class FakeSocket {
@@ -284,12 +293,56 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Titlul anime-ului e afisat in banner', (p.text('#hero-title') || '').length > 1, p.text('#hero-title'));
     check('Bannerul vizibil are eticheta editoriala', (p.text('#hero-tag') || '').length > 3, p.text('#hero-tag'));
     check('Bannerul are arta de fundal (coperta, arta bundled sau poster generat)', !!p.$('#hero-bg img, #hero-bg .hban__bg-gen'), p.$('#hero-bg')?.innerHTML?.slice(0, 80));
+    // Runda 4 (viteză, pasul 2): arta bundled vine în trei formate, iar shuffle-ul
+    // trebuie să schimbe TOATE sursele o dată — altfel browserul poate rămâne cu
+    // AVIF-ul poziției vechi (imaginea nu se schimba la click, deși seria da).
+    // Două stări valide, în funcție de seria afișată:
+    //   (a) seria NU are copertă → toate cele trei surse arată spre ACEEAȘI artă bundled;
+    //   (b) seria ARE copertă → <source>-urile sunt golite, iar <img> poartă coperta
+    //       (altfel AVIF-ul bundled ar bate coperta — bug real, prins de testul ăsta).
+    const picture = () => p.$('#hero-bg picture');
+    const stareHero = () => {
+      const pic = picture();
+      const surse = pic ? [...pic.querySelectorAll('source')] : [];
+      const img = pic?.querySelector('img');
+      const avif = surse[0]?.getAttribute('srcset') || '';
+      const webp = surse[1]?.getAttribute('srcset') || '';
+      const src = img?.getAttribute('src') || '';
+      const idx = (u) => (u || '').match(/hero-(\d)\./)?.[1] || '';
+      const bundled = idx(avif) && idx(avif) === idx(webp) && idx(webp) === idx(src);
+      const coperta = !avif && !webp && !!src && !idx(src);
+      return { avif, webp, src, tip: avif ? 'arta bundled' : 'coperta seriei', ok: bundled || coperta };
+    };
+    check('Arta bannerului are <picture> cu AVIF apoi WebP',
+      [...(picture()?.querySelectorAll('source') || [])].map((s) => s.getAttribute('type')).join(',') === 'image/avif,image/webp',
+      [...(picture()?.querySelectorAll('source') || [])].map((s) => s.getAttribute('type')).join(','));
+    const s1 = stareHero();
+    check(`Sursele de format sunt consecvente (${s1.tip})`,
+      s1.ok, `avif=${s1.avif} webp=${s1.webp} src=${s1.src.slice(0, 60)}`);
+    p.$('#hero-shuffle')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+    const schimbat = await until(() => {
+      const s = stareHero();
+      return (s.src && s.src !== s1.src) || s.tip !== s1.tip;
+    });
+    const s2 = stareHero();
+    check('După shuffle, sursele de format se schimbă împreună',
+      schimbat && s2.ok, `înainte: ${s1.tip} · după: ${s2.tip} src=${s2.src.slice(0, 60)} avif=${s2.avif}`);
     check('CTA-ul vizual „Vezi seria” exista', !!p.$('#hero-open'), 'lipseste #hero-open');
     p.$('#hero-shuffle')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 400));
     check('Shuffle-ul re-randeaza fara sa navigheze si fara erori', /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || '') && p.errors.length === 0, p.errors.slice(0, 2).join(' | '));
   } else {
-    check('Bannerul ramane ascuns cand catalogul e gol', true);
+    // Bannerul poate lipsi din două motive FOARTE diferite: catalogul chiar e
+    // gol (comportament corect), sau randarea a aruncat și `initHero` l-a
+    // ascuns. A doua variantă a trecut neobservată o dată (un `HERO_ART`
+    // mutat greșit a făcut fix asta) — deci întrebăm serverul care e cazul.
+    const total = Number((await (await fetch(`${BASE}/api/series?per_page=1`, { headers: { Cookie: COOKIE } })).json()).total) || 0;
+    if (total === 0) {
+      check('Bannerul ramane ascuns cand catalogul e gol', true);
+    } else {
+      check(`Bannerul se randeaza cand catalogul are serii (are ${total})`, false,
+        `banner ascuns deși există serii; erori de runtime: ${p.errors.slice(0, 3).join(' | ') || '(niciuna)'}`);
+    }
   }
 
   // --- aspect: nota pe carduri, butonul „inapoi sus", scurtatura „/"
