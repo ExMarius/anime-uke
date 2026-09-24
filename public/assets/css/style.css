@@ -1398,6 +1398,34 @@ body.cinema .ep-hero .card__meta { margin: 0; font-size: .78rem; }
 .continue-card__prog > i.is-done { background: var(--ok, #34d399); box-shadow: none; }
 .continue-card__ago { font-variant-numeric: tabular-nums; }
 
+/* --- butonul „Episodul următor" de pe cardurile terminate (2026-09-24) --
+   Cardul întreg e un <a>, deci butonul trebuie să rămână vizibil deasupra
+   lui și să nu declanșeze navigarea (preventDefault în JS). */
+.continue-card { position: relative; }
+.continue-card__next {
+  align-self: flex-start; margin: 0 .6rem .55rem;
+  padding: .22rem .5rem; border-radius: 99px; cursor: pointer;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line);
+  color: var(--dim); font: inherit; font-size: .68rem; font-weight: 700;
+  transition: color .15s ease, border-color .15s ease;
+}
+.continue-card__next:hover { color: var(--text); border-color: var(--accent); }
+.continue-card[data-next] .continue-card__prog > i { background: var(--accent); }
+
+/* --- marcaje pe lista de episoade (2026-09-24) ------------------------- */
+.ep-seen, .ep-progress {
+  display: inline-flex; align-items: center; gap: .18rem;
+  padding: .06rem .4rem; border-radius: 99px;
+  font-size: .68rem; font-weight: 800; letter-spacing: .01em;
+}
+.ep-seen { background: rgba(52, 211, 153, .12); border: 1px solid rgba(52, 211, 153, .3); color: var(--ok, #34d399); }
+.ep-progress { background: rgba(251, 191, 36, .1); border: 1px solid rgba(251, 191, 36, .28); color: var(--warn); }
+/* Bara subțire din stânga cardului: verde = văzut, accent = început. */
+.card--ep.is-watched, .card--ep.is-started { border-left: 3px solid transparent; }
+.card--ep.is-watched { border-left-color: var(--ok, #34d399); }
+.card--ep.is-started { border-left-color: var(--accent); }
+
 /* --- „inapoi sus" ------------------------------------------------------ */
 .to-top {
   position: fixed; z-index: 45; left: 1.15rem; bottom: 1.15rem;

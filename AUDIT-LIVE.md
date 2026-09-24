@@ -288,6 +288,42 @@ Cu o săptămână înainte, aceleași două mesaje nu lăsau **nimic** în tabe
 (`0 în ultimele 24h`), iar cel mai recent rând era din 14 septembrie. Deploy-ul
 care a urcat fix-ul: worker `anime-uke-do` republicat + Pages `?v=1dff223`.
 
+## 1h. Runda 9 (2026-09-24): funcționalități noi (catalog partajabil, episodul următor, „văzut")
+
+Cerute de proprietar ca pasul 2 din „mai fain la site" (după aspect). Toate cu
+buget zero: nicio migrare nouă, nicio cerere în plus pe prima pagină.
+
+| Ce s-a adăugat | Cum se verifică |
+|---|---|
+| **Filtrele intră în URL** (`?gen=Acțiune&status=ongoing&sort=rating&page=2`) și butonul Înapoi scoate filtrul | dom-smoke: pagina montată pe `/?gen=…&status=ongoing&sort=title` cere serverului exact filtrul (nu catalogul implicit), selecturile preiau valorile, iar scoaterea unui filtru rescrie URL-ul; numărul de carduri = numărul de rânduri întoarse de API pentru acel filtru |
+| **Sortarea „Cele mai bine notate"** | e2e: `?sort=rating` întoarce seriile notate ÎNAINTEA celor fără voturi; indexul `idx_series_rating` (0028) face sortarea fără să atingă rândul seriei |
+| **Episodul următor** direct din cardul „Continuă vizionarea" | e2e: răspunsul `/api/continue` aduce `next_episode_id`/`next_episode_number`, verificate împotriva episodului următor real; dom-smoke: cardul terminat are butonul, iar click-ul mută ținta cardului pe episodul următor (și poate reveni) |
+| **Marcaje ✓ Văzut / Început în lista de episoade** | e2e: episodul cu 15+ minute e marcat, cele neatinse nu, iar marcajul coincide cu cel din pagina episodului; dom-smoke: bara verde + eticheta apar pe cardul văzut, chihlimbar pe cel început. Fără sesiune, răspunsul nu conține deloc câmpul (zero citiri în plus) |
+
+Trei lucruri învățate pe pielea noastră în runda asta, toate prinse de teste
+înainte de deploy:
+
+1. **D1 acceptă maxim 100 de parametri legați per interogare.** Marcajele de
+   progres trimiteau un parametru per episod afișat; pe pagina 1 a unei serii
+   lungi (100 de episoade) ieșeau 101 → 500, listă goală, în timp ce pagina 2
+   mergea. Acum `IN (...)` se împarte în bucăți de 90.
+2. **`idx_episodes_series` din 0001 e deja `(series_id, episode_number)`** —
+   migrarea pe care o pregătisem pentru „episodul următor" a fost ștearsă înainte
+   de commit: era un index duplicat. `EXPLAIN QUERY PLAN` confirmă
+   „SEARCH e2 USING COVERING INDEX idx_episodes_series (series_id=? AND episode_number>?)”.
+3. **`/api/genres` ținea în cache o listă goală o oră întreagă** — pe un catalog
+   proaspăt (sau după un deploy, înainte de prima serie cu gen) filtrul de gen
+   rămânea gol până la restart. Acum o listă goală se ține un minut.
+
+`tests/scripts-health.mjs` verifică în plus **sintaxa întregului cod JS** (90 de
+fișiere: `src/`, `public/assets/js/`, `worker-do/`, `cf-relay/`) — înainte doar
+`tests/` și `scripts/` erau verificate, deci o eroare de sintaxă în front-end
+ajungea până la deploy. Garda a prins-o imediat într-o rundă: o linie în care un
+șir deschis cu `'` era închis cu `"` arăta perfect corect la citit.
+
+Suita completă: scripts-health 28 · e2e 584 · dom-smoke 193 · chat-persist 14 ·
+chat-d1 8 · counters 16 · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13.
+
 ---
 
 ## 4. Cum se re-rulează auditul

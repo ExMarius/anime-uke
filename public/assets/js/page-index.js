@@ -48,6 +48,61 @@ let statusFilter = '';
 let sortsLoaded = false;
 let searchTimer = null;
 
+// ---------------------------------------------------------------------
+// STARE ÎN URL (adăugat 2026-09-24): ?q=naruto&gen=Acțiune&status=ongoing&sort=rating&page=2
+//
+// De ce: un catalog filtrat trebuie să poată fi trimis cuiva („uite lista de
+// acțiune în difuzare") și să supraviețuiască unui reload sau unui share pe
+// telefon. Înainte, filtrele trăiau doar în memorie: linkul era mereu „/", iar
+// butonul Înapoi al browserului ieșea de pe site în loc să scoată filtrul.
+//
+// Fiecare schimbare a filtrelor scrie URL-ul cu pushState (o intrare nouă în
+// istoric, ca „Înapoi" să scoată filtrul), iar popstate re-citește URL-ul și
+// reîncarcă lista. La încărcarea paginii, filtrele vin din URL.
+// ---------------------------------------------------------------------
+function readUrlState() {
+  const p = new URLSearchParams(location.search);
+  query = (p.get('q') || '').trim().slice(0, 60);
+  genreFilter = (p.get('gen') || '').trim().slice(0, 40);
+  statusFilter = ['ongoing', 'completed'].includes(p.get('status')) ? p.get('status') : '';
+  const s = p.get('sort');
+  sort = ['latest', 'oldest', 'title', 'episodes', 'rating'].includes(s) ? s : 'latest';
+  const n = Number(p.get('page'));
+  page = Number.isInteger(n) && n > 0 ? n : 1;
+}
+
+/** Scrie starea curenta in URL (fara sa reincarce pagina). */
+function writeUrlState({ push = true } = {}) {
+  const p = new URLSearchParams();
+  if (query) p.set('q', query);
+  if (genreFilter) p.set('gen', genreFilter);
+  if (statusFilter) p.set('status', statusFilter);
+  if (sort !== 'latest') p.set('sort', sort);
+  if (page > 1) p.set('page', String(page));
+  const qs = p.toString();
+  const url = qs ? `?${qs}` : location.pathname;
+  try {
+    if (push) history.pushState({ catalog: true }, '', url);
+    else history.replaceState({ catalog: true }, '', url);
+  } catch { /* mod privat / file:// — filtrele merg in continuare, doar fara URL */ }
+}
+
+/** Un singur punct de intrare pentru orice schimbare de filtru. */
+function applyFilters({ reload = true } = {}) {
+  const gsel = document.getElementById('genre-select');
+  const ssel = document.getElementById('status-select');
+  const reset = document.getElementById('filter-reset');
+  if (gsel) gsel.value = genreFilter;
+  if (ssel) ssel.value = statusFilter;
+  if (reset) reset.hidden = !genreFilter && !statusFilter;
+  const inp = document.getElementById('search-input');
+  if (inp && inp.value !== query) inp.value = query;
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel && sortSel.value !== sort) sortSel.value = sort;
+  writeUrlState();
+  if (reload) load();
+}
+
 // ---------------- skeleton loading ----------------
 function skeletons(n = 10) {
   const grid = document.getElementById('series-grid');
@@ -246,17 +301,31 @@ function initCatalogFilters() {
   const apply = () => {
     genreFilter = gsel.value;
     statusFilter = ssel.value;
-    reset.hidden = !genreFilter && !statusFilter;
     page = 1;
-    load();
+    applyFilters();
   };
   gsel.addEventListener('change', apply);
   ssel.addEventListener('change', apply);
   reset.addEventListener('click', () => {
-    gsel.value = '';
-    ssel.value = '';
-    apply();
+    genreFilter = '';
+    statusFilter = '';
+    applyFilters();
   });
+  // Genurile vin asincron: daca URL-ul cere un gen, selectia se face dupa ce
+  // opțiunile exista. Iar daca genul cerut NU e in listă (link vechi, un gen
+  // ieșit din top 40, sau lista încă neîncărcată), îl adăugam noi ca opțiune:
+  // serverul aplică filtrul oricum, deci <select>-ul nu are voie să pară gol
+  // și să sugereze că filtrul nu există.
+  homeData().then(() => {
+    if (!genreFilter) return;
+    if (![...gsel.options].some((o) => o.value === genreFilter)) {
+      const o = document.createElement('option');
+      o.value = genreFilter;
+      o.textContent = genreFilter;
+      gsel.appendChild(o);
+    }
+    gsel.value = genreFilter;
+  }).catch(() => { /* filtrul rămâne scris în URL, doar selectia nu se aplica */ });
 }
 
 // ---------------------------------------------------------------------
@@ -377,6 +446,11 @@ async function load({ append = false, silent = false } = {}) {
 function search(q) {
   query = q.trim();
   page = 1;
+  // Cautarea scrie si ea URL-ul: „/?q=naruto" e un link care merge trimis.
+  // replaceState, nu pushState: search() ruleaza la fiecare tasta (debounce
+  // 180 ms), iar 10 litere ar insemna 10 intrari in istoric — butonul Înapoi
+  // ar scoate litera cu litera.
+  writeUrlState({ push: false });
   load();
 }
 
@@ -564,11 +638,28 @@ async function renderContinue() {
   if (!res.ok || !res.data?.items?.length) { section.hidden = true; return; }
 
   section.hidden = false;
+  // Proprietarul site-ului poate alege altfel prin butonul „Episodul următor"
+  // din card (vezi mai jos): preferinta sta in localStorage, nu pe server.
+  const preferNext = (() => {
+    try { return localStorage.getItem('auk-continue-next') === '1'; } catch { return false; }
+  })();
+
   row.innerHTML = '';
   for (const it of res.data.items) {
+    // Când episodul e terminat și seria are un episod următor, cardul duce
+    // DIRECT la el (comportamentul pe care îl aștepți de la „Continuă
+    // vizionarea"): ai terminat episodul 5, vrei să dai play la 6.
+    // `next_episode_id` vine din server (o singură căutare în index), nu e
+    // ghicit din numere — episoadele nu sunt mereu consecutive.
+    const done = it.seconds >= WATCH_DONE_SECONDS;
+    const nextId = Number(it.next_episode_id) || 0;
+    const goNext = done && nextId > 0 && preferNext;
+    const targetId = goNext ? nextId : it.episode_id;
+
     const a = document.createElement('a');
     a.className = 'continue-card';
-    a.href = `/episode?id=${encodeURIComponent(it.episode_id)}`;
+    a.href = `/episode?id=${encodeURIComponent(targetId)}`;
+    if (goNext) a.dataset.next = '1';
 
     const art = document.createElement('div');
     art.className = 'continue-card__art';
@@ -584,7 +675,6 @@ async function renderContinue() {
     // Bara de progres peste arta, ca la platformele de streaming: cat la suta
     // din episod s-a vazut. Durata vine din serie (ep_duration, in minute);
     // daca nu e completata, aratam „Ai inceput" in loc de un procent inventat.
-    const done = it.seconds >= WATCH_DONE_SECONDS;
     const durMin = Number(it.ep_duration) || 0;
     const totalSec = durMin > 0 ? durMin * 60 : 0;
     // Fara durata completata pe serie nu inventam un procent: scriem cate
@@ -610,7 +700,9 @@ async function renderContinue() {
     t1.textContent = it.series_title;
     const t2 = document.createElement('span');
     t2.className = 'continue-card__ep';
-    t2.textContent = `Episodul ${it.episode_number}`;
+    t2.textContent = goNext
+      ? `Episodul ${it.next_episode_number} (după ${it.episode_number})`
+      : `Episodul ${it.episode_number}`;
     meta.appendChild(t1);
     meta.appendChild(t2);
     // „acum 2 ore” — rândul pare viu, nu o listă înghețată
@@ -622,6 +714,27 @@ async function renderContinue() {
       meta.appendChild(t3);
     }
     a.appendChild(meta);
+
+    // Comutator „Episodul următor" — apare doar cand exista un episod urmator
+    // (altfel ar fi un buton care nu face nimic, pe majoritatea cardurilor).
+    if (done && nextId > 0) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'continue-card__next';
+      toggle.textContent = preferNext ? '↩︎ Reia episodul curent' : '⏭ Episodul următor';
+      toggle.title = preferNext
+        ? 'Cardurile terminat incep de la episodul văzut, nu de la următorul'
+        : 'Cardurile terminate incep direct de la episodul următor';
+      toggle.addEventListener('click', (e) => {
+        // Butonul stă într-un <a>: fără preventDefault, click-ul ar naviga.
+        e.preventDefault();
+        e.stopPropagation();
+        const nou = !preferNext;
+        try { localStorage.setItem('auk-continue-next', nou ? '1' : '0'); } catch { /* mod privat */ }
+        renderContinue().catch(() => { /* rândul e opțional */ });
+      });
+      a.appendChild(toggle);
+    }
     row.appendChild(a);
   }
 }
@@ -665,6 +778,13 @@ async function loadTops() {
 
 initCatalogFilters();
 loadRecent().catch(() => { /* secțiunea e optională */ });
+// Filtrele din URL se aplica INAINTE de prima cerere, ca pagina sa se
+// incarce direct pe rezultatele cerute (fara un al doilea apel).
+readUrlState();
+if (genreFilter) document.getElementById('genre-select').value = genreFilter;
+if (statusFilter) document.getElementById('status-select').value = statusFilter;
+applyFilters({ reload: false });
+if (query) document.getElementById('search-input').value = query;
 await Promise.all([renderNav('/'), load(), loadTops().catch(() => { /* optionale */ })]);
 whenActive(() => initChat().catch(() => { /* chat-ul e optional la load */ }));
 startGuestNudge();
@@ -838,13 +958,21 @@ document.addEventListener('click', (e) => {
 document.getElementById('sort-select')?.addEventListener('change', (e) => {
   sort = e.target.value;
   page = 1;
-  load();
+  applyFilters();
+});
+
+// Butonul „Înapoi" al browserului: reface filtrele din URL, nu iese de pe site.
+window.addEventListener('popstate', () => {
+  readUrlState();
+  applyFilters({ reload: false });   // selectorii si URL-ul se resincronizeaza
+  load({ silent: true });
 });
 
 document.getElementById('load-more')?.addEventListener('click', async (e) => {
   e.currentTarget.disabled = true;
   e.currentTarget.textContent = 'Se încarcă…';
   page++;
+  writeUrlState();
   await load({ append: true, silent: true });
 });
 

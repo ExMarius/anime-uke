@@ -16,7 +16,8 @@
 // Rulează: node tests/scripts-health.mjs
 // =====================================================================
 
-import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, statSync, copyFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -106,6 +107,37 @@ for (const f of jsFiles) {
   const necunoscute = probate.filter((p) => !routes.includes(`'${p}'`));
   check(`rutele de API probate de relay sunt înregistrate (${probate.length} rute)`,
     necunoscute.length === 0, necunoscute.join(', '));
+}
+
+// ------------------------- sintaxa TOT codul JS (nu doar scripturile de test)
+{
+  // `node --check` rula doar pe tests/ si scripts/ — deci o eroare de sintaxa
+  // in src/ sau in JS-ul de pagina ajungea pana la deploy. Exact asa a trecut
+  // o linie in tests/dom-smoke.mjs in care un sir deschis cu ' era inchis cu "
+  // (arata corect la citit, dar rupea suita cu „Invalid or unexpected token”).
+  // Verificarea e o singura poarta pentru tot codul servit sau rulat.
+  const fisiere = [];
+  const walkJs = (dir) => {
+    for (const e of readdirSync(join(ROOT, dir))) {
+      if (e === 'node_modules' || e.startsWith('.')) continue;
+      const rel = join(dir, e);
+      if (statSync(join(ROOT, rel)).isDirectory()) walkJs(rel);
+      else if (rel.endsWith('.js') || rel.endsWith('.mjs')) fisiere.push(rel);
+    }
+  };
+  for (const d of ['src', 'public/assets/js', 'worker-do/src', 'cf-relay']) walkJs(d);
+
+  const rele = [];
+  const tmp = join(tmpdir(), 'auk-check.mjs');
+  for (const f of fisiere) {
+    // Copie cu extensia .mjs: modulele ES nu trec de --check daca fisierul
+    // se numeste .js (Node le-ar citi ca CommonJS).
+    copyFileSync(join(ROOT, f), tmp);
+    const r = run(process.execPath, ['--check', tmp]);
+    if (!r.ok) rele.push(`${f}: ${String(r.out).split('\n')[0].slice(0, 90)}`);
+  }
+  check(`sintaxa intregului cod JS (${fisiere.length} fisiere: src, pagini, worker-do, relay)`,
+    rele.length === 0, rele.join(' | '));
 }
 
 // ------------------------------------- INSERT-urile au cate un parametru pe coloana

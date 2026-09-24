@@ -57,6 +57,11 @@ const SORTS = {
   oldest:   { sql: 's.created_at ASC, s.id ASC',   label: 'Cele mai vechi' },
   title:    { sql: 's.title ASC, s.id ASC',        label: 'Titlu (A–Z)' },
   episodes: { sql: 's.episode_count DESC, s.id DESC', label: 'Cele mai multe episoade' },
+  // Sortarea „cele mai bine notate" citește DOAR indexul construit în 0028
+  // (idx_series_rating pe rating_avg/rating_count), deci nu atinge rândul
+  // seriei și nu costă o sortare a catalogului. Fără filtrarea seriilor
+  // fără voturi ar apărea o grămadă de serii cu 0 stele la început.
+  rating:   { sql: '(s.rating_count > 0) DESC, s.rating_avg DESC, s.rating_count DESC, s.id DESC', label: 'Cele mai bine notate' },
 };
 
 export const SORT_KEYS = Object.keys(SORTS);

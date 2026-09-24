@@ -222,6 +222,22 @@ Detalii care fac diferența la folosire zilnică, toate cu cost zero în buget
 | Orice pagină | buton **↑ înapoi sus** după două ecrane derulate | ascultător pasiv + rAF, deci nu încarcă derularea; ascuns pe paginile scurte |
 | Căutarea | scurtătura **`/`** (scrie și sare în câmp), **Esc** golește | ca la GitHub/YouTube; indicată de un `<kbd>` vizibil doar pe desktop |
 
+## Funcționalități noi (runda 2, 2026-09-24)
+
+Tot cu buget zero — nicio cerere în plus pe prima pagină, nicio migrare nouă:
+
+| Unde | Ce face | De ce așa |
+|---|---|---|
+| Catalogul | linkul păstrează filtrele: `/ ?gen=Acțiune&status=ongoing&sort=rating&page=2` | un catalog filtrat poate fi trimis cuiva; `pushState` la fiecare schimbare, deci butonul **Înapoi** scoate filtrul, nu te scoate de pe site. Căutarea folosește `replaceState` (altfel 10 litere = 10 intrări în istoric) |
+| Sortarea | opțiune nouă **„Cele mai bine notate"** | citește direct indexul `idx_series_rating` (0028), nu rândul seriei; seriile fără voturi cad la final |
+| „Continuă vizionarea" | când episodul e terminat, cardul duce **direct la episodul următor** | `next_episode_id` vine de la server, într-o singură căutare în `idx_episodes_series` (index compus din 0001) — nu e ghicit din numere, deci merge și cu goluri în numerotare |
+| Cardul terminat | buton **⏭ Episodul următor / ↩︎ Reia episodul curent** | preferința stă în `localStorage`, nu pe server (zero scrieri în D1) |
+| Lista de episoade | marcaj **✓ Văzut** (verde) / **Început** (chihlimbar) + bară laterală | o singură interogare pe cheia primară a lui `watch_progress` pentru toată pagina, **doar cu sesiune**; pentru vizitatori răspunsul e identic cu înainte. Prag de 30 s, ca la „Continuă vizionarea" |
+
+Costul măsurat (bench-scale, 1.000 serii / 1.000 utilizatori): prima pagină
+74 rânduri citite per vizită (era 64) — 414.904 rânduri/zi la 2.000 de vizite,
+adică ~8% din cota de 5M. Invocările rămân 2 per vizită.
+
 ---
 
 ## Cât duce planul gratuit (și ce faci când se apropie)
@@ -356,7 +372,9 @@ merită atinse:
 
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
   `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
-  `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
+  `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
+  Numărul de verificări: scripts-health 28 · e2e 584 · dom-smoke 193 · chat-persist 14 · chat-d1 8 · counters 16
+  · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
 - `node cf-relay/chat-canar.mjs [url]`: canarul de chat — cont temporar, un mesaj + un sticker pe chatul viu,
   apoi citirea lor din D1 și curățenie totală. Rulează automat pe runner, în secțiunea 17 din `cf-relay/cmd.sh`.
 - Pe producție **nu rula e2e.mjs** — zecile de înregistrări rapide declanșează protecția anti-brute-force

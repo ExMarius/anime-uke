@@ -305,6 +305,23 @@ const Q = [
     atMost: true, rows: 101, rowsHow: 'index (series_id, episode_number)',
   },
   {
+    // Adăugată 2026-09-24 odată cu funcționalitatea „episodul următor".
+    // Subinterogarea corelată caută, pentru fiecare rând din „continuă
+    // vizionarea", primul episod cu număr mai mare în ACEEAȘI serie.
+    // idx_episodes_series (0001) e compus pe (series_id, episode_number),
+    // deci e o singură descindere în arbore — planul o confirmă:
+    //   SEARCH e2 USING COVERING INDEX idx_episodes_series (series_id=? AND episode_number>?)
+    // Fără el (sau cu un index doar pe series_id), SQLite ar citi toate
+    // episoadele seriei și le-ar sorta — pe One Piece, 1.100 rânduri per card.
+    name: 'PRIMA PAGINĂ: „continuă vizionarea" + următorul episod',
+    charge: 'view',
+    file: 'src/routes/api/continue.js',
+    sql: sqlOf('src/routes/api/continue.js', 'SELECT wp.episode_id, wp.seconds, wp.updated_at'),
+    params: [1],
+    atMost: true, rows: 40,
+    rowsHow: 'index (user) + 1 căutare/rând pentru următorul episod',
+  },
+  {
     name: 'EPISOD: sursele/legenda episodului',
     charge: 'view',
     file: 'src/routes/api/subtitle.js',

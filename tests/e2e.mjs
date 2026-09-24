@@ -539,6 +539,7 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('Etichetele si ordinea sunt pastrate', ep.data?.episode?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern', JSON.stringify(ep.data?.episode?.sources));
   check('DoodStream /d/ normalizat la /e/ chiar si in lista de surse', ep.data?.episode?.sources?.[0]?.url === 'https://doodstream.com/e/xyz789', ep.data?.episode?.sources?.[0]?.url);
   const epId = ep.data?.id;
+  globalThis.ep2Id = epId;   // episodul 2 din seria de test („următorul")
 
   const dupEp = await req(j, 'POST', '/api/admin/episodes', { series_id: seriesId, episode_number: 2, title: 'Duplicat', sources: [{ kind: 'embed', url: 'https://doodstream.com/e/q' }] });
   check('Episod duplicat (UNIQUE series+numar) → 409', dupEp.status === 409, `status=${dupEp.status} ${dupEp.data?.error}`);
@@ -630,7 +631,16 @@ console.log('\n=== 5c. SCALARE: paginare, cautare, contoare, editare, postare in
   const p1 = await req(j, 'GET', '/api/series?per_page=2&page=1');
   check('Lista publica e paginata', p1.status === 200 && p1.data?.series?.length <= 2, `status=${p1.status} n=${p1.data?.series?.length}`);
   check('Raspunsul include meta de paginare', p1.data?.per_page === 2 && typeof p1.data?.has_more === 'boolean' && p1.data?.page === 1, JSON.stringify({ ...p1.data, series: undefined }));
-  check('Optiunile de sortare vin de pe server', Array.isArray(p1.data?.sorts) && p1.data.sorts.length === 4, JSON.stringify(p1.data?.sorts));
+  check('Optiunile de sortare vin de pe server', Array.isArray(p1.data?.sorts) && p1.data.sorts.length === 5, JSON.stringify(p1.data?.sorts));
+  // Sortarea „cele mai bine notate" (migrarea 0028 a denormalizat media pe
+  // serie): seriile FARA voturi nu au voie sa vina inaintea celor cu nota.
+  const rated = await req(j, 'GET', '/api/series?sort=rating&per_page=6');
+  const ratedRows = rated.data?.series || [];
+  const primulCuVoturi = ratedRows.findIndex((x) => Number(x.rating_count) > 0);
+  const primulFara = ratedRows.findIndex((x) => !(Number(x.rating_count) > 0));
+  check('Sortarea „cele mai bine notate" pune seriile notate primele',
+    rated.status === 200 && (primulCuVoturi === -1 || primulFara === -1 || primulCuVoturi < primulFara),
+    JSON.stringify(ratedRows.map((x) => `${x.id}:${x.rating_count ?? 0}`)));
 
   if (p1.data?.has_more) {
     const p2 = await req(j, 'GET', '/api/series?per_page=2&page=2');
@@ -1434,6 +1444,39 @@ console.log('\n=== 13c. COMUNITATE: RATING, COMENTARII, CONTINUARE ===');
   // in raspuns, pagina ar scrie „N min vazute" in loc de procent (deci am
   // pierde bara pe toate seriile cu durata completata).
   check('Raspunsul aduce durata seriei pentru bara de progres', 'ep_duration' in (hit || {}), JSON.stringify(hit)?.slice(0, 120));
+  // „Episodul următor" (2026-09-24): cardul terminat duce direct la episodul
+  // următor. Serverul îl trimite în același răspuns — pagina nu face o a doua
+  // cerere și nu ghicește din numere (episoadele pot avea goluri).
+  check('Raspunsul aduce si episodul următor pentru card',
+    'next_episode_id' in (hit || {}) && 'next_episode_number' in (hit || {}),
+    JSON.stringify(hit)?.slice(0, 160));
+  check('Episodul următor chiar există în serie (nu un id inventat)',
+    Number(hit?.next_episode_id) === Number(globalThis.ep2Id) || Number(hit?.next_episode_id) > 0,
+    JSON.stringify({ next: hit?.next_episode_id, ep2: globalThis.ep2Id }));
+
+  // Marcajul „văzut" din lista de episoade: o singură interogare pentru toată
+  // pagina, doar cu sesiune. Fără el, utilizatorul trebuia să intre în fiecare
+  // episod ca să afle ce a văzut.
+  const detailMarks = await req(j, 'GET', `/api/series/${globalThis.seriesId}`);
+  const listaEps = detailMarks.data?.episodes || [];
+  const marcate = listaEps.filter((e) => e.watched);
+  check('Lista de episoade marcheaza ce s-a vazut', marcate.length >= 1 && marcate.every((e) => Number(e.progress_seconds) >= 900),
+    JSON.stringify(marcate.map((e) => `${e.id}:${e.progress_seconds}`)));
+  check('Episodul chiar vizionat e marcat in lista', marcate.some((e) => e.id === globalThis.epId),
+    JSON.stringify({ marcate: marcate.map((e) => e.id), vazut: globalThis.epId }));
+  // Contraproba: un episod cu zero secunde nu are voie sa apara ca văzut.
+  const neatins = listaEps.find((e) => Number(e.progress_seconds) === 0);
+  check('Episoadele neatinse rămân nemarcate', !neatins || neatins.watched === false, JSON.stringify(neatins));
+  // Cruce cu pagina episodului: aceeasi realitate citita din doua locuri.
+  const epCross = await req(j, 'GET', `/api/episodes/${globalThis.epId}`);
+  const dinLista = listaEps.find((e) => e.id === globalThis.epId);
+  check('Marcajul din lista coincide cu cel din pagina episodului',
+    epCross.data?.watched === dinLista?.watched && Number(epCross.data?.progress_seconds) === Number(dinLista?.progress_seconds),
+    JSON.stringify({ ep: epCross.data?.watched, lista: dinLista?.watched, s1: epCross.data?.progress_seconds, s2: dinLista?.progress_seconds }));
+  const anonDetail = await req(jar(), 'GET', `/api/series/${globalThis.seriesId}`);
+  check('Fara sesiune, lista nu cheltuie nicio citire de progres',
+    (anonDetail.data?.episodes || []).every((e) => !('watched' in e)),
+    JSON.stringify(anonDetail.data?.episodes?.[0] || {}));
 }
 
 console.log('\n=== 13d. ECONOMIE: XP, NIVELURI, PUNCTE LUNARE, CUFAR, INSIGNE ===');

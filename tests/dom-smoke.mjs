@@ -200,7 +200,8 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
     check('Statistica din hero vine din meta, nu din pagina curenta', p.text('#stat-series') === asteptat, `stat-series=${p.text('#stat-series')} asteptat=${asteptat}`);
   }
   const sel = p.$('#sort-select');
-  check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 4, `optiuni=${sel?.options.length}`);
+  check('Selectorul de sortare e populat de pe server', sel && sel.options.length === 5, `optiuni=${sel?.options.length}`);
+  check('  ...inclusiv „Cele mai bine notate"', [...(sel?.options || [])].some((o) => o.value === 'rating'), [...(sel?.options || [])].map((o) => o.value).join(','));
 
   // -------------------------------------------------------------------
   // BUGET 0: prima pagină = O SINGURĂ cerere de API.
@@ -416,6 +417,65 @@ console.log('\n=== DOM: /admin/serie/<id> (episoade + surse + bulk) ===');
   await p.teardown();
 }
 
+console.log('\n=== DOM: catalog partajabil prin URL (filtre + sortare) ===');
+{
+  // Un link ca „/?gen=Acțiune&status=ongoing" trebuie să deschidă pagina
+  // DIRECT pe rezultatele filtrate: fără el, un catalog filtrat nu putea fi
+  // trimis cuiva, iar butonul Înapoi ieșea de pe site în loc să scoată filtrul.
+  // Un gen propriu, ca testul sa nu depinda de catalogul de la acel moment
+  // (baza de test poate avea sau nu serii cu genuri). Numele e unic, deci
+  // filtrarea „LIKE %gen%" nu poate prinde altceva din întâmplare.
+  const gen = 'GenURLTest';
+  const created = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ title: 'Serie pentru link de catalog', status: 'ongoing', genre: gen, year: 2026 }),
+  })).json();
+  check('Seria de test pentru linkul de catalog a fost creata', Number.isInteger(created.id), JSON.stringify(created).slice(0, 120));
+
+  const p = await mountPage({
+    htmlFile: 'public/index.html',
+    url: `/?gen=${encodeURIComponent(gen)}&status=ongoing&sort=title`,
+    module: 'page-index.js',
+  });
+  const loadedUrl = await until(() => p.$$('#series-grid .card, #series-grid .poster-card').length > 0 || p.text('#series-count')?.includes('afișate'));
+  check('Pagina se incarca pe filtrele din URL', loadedUrl, p.text('#series-count'));
+  check('Selectul de gen preia valoarea din URL', p.$('#genre-select')?.value === gen, `valoare=${p.$('#genre-select')?.value}`);
+  check('  ...chiar daca genul nu era in lista adusa de server (devine opțiune)',
+    [...(p.$('#genre-select')?.options || [])].some((o) => o.value === gen),
+    [...(p.$('#genre-select')?.options || [])].map((o) => o.value).join(','));
+  check('Selectul de status preia valoarea din URL', p.$('#status-select')?.value === 'ongoing', `valoare=${p.$('#status-select')?.value}`);
+  check('Sortarea din URL ajunge in selector', p.$('#sort-select')?.value === 'title', `valoare=${p.$('#sort-select')?.value}`);
+  check('Butonul de resetare a filtrelor e vizibil', p.$('#filter-reset')?.hidden === false, `hidden=${p.$('#filter-reset')?.hidden}`);
+  // Catalogul filtrat NU are voie sa vina din /api/home (acela e doar primul
+  // ecran, nefiltrat): trebuie o cerere cu parametrii.
+  const filtrat = p.requests.find((u) => u.startsWith('/api/series?') && /gen=/.test(u));
+  check('Filtrele merg la server, nu se aplica in browser', !!filtrat, p.requests.filter((u) => u.startsWith('/api/series')).join(' ') || 'nicio cerere');
+  // /api/home rămâne cerut (hero, topuri, pulse — restul paginii), dar GRILA
+  // trebuie să vină din cererea filtrată: comparam numarul de carduri cu ce
+  // intoarce serverul pentru exact acel filtru.
+  const filtratApi = await (await fetch(`${BASE}/api/series?gen=${encodeURIComponent(gen)}&status=ongoing&per_page=24`)).json();
+  const asteptate = (filtratApi.series || []).length;
+  const carduri = p.$$('#series-grid .card, #series-grid .poster-card').length;
+  check('Grila arata exact rezultatele filtrului de pe server', asteptate >= 1 && carduri === asteptate, `dom=${carduri} api=${asteptate}`);
+  check('  ...si catalogul nefiltrat nu mai e cerut de grila', p.requests.filter((u) => u.startsWith('/api/series') && !/gen=/.test(u)).length === 0, p.requests.filter((u) => u.startsWith('/api/series')).join(' '));
+  check('URL-ul pastreaza filtrele (linkul poate fi trimis mai departe)',
+    /gen=/.test(p.window.location.search) && /status=ongoing/.test(p.window.location.search), p.window.location.search);
+
+  // Schimbarea unui filtru trebuie sa scrie URL-ul si sa dea o intrare noua in
+  // istoric (pushState), ca butonul Înapoi sa scoata filtrul, nu sa iasa de pe site.
+  const gsel = p.$('#genre-select');
+  gsel.value = '';
+  gsel.dispatchEvent(new p.window.Event('change', { bubbles: true }));
+  const scos = await until(() => !/gen=/.test(p.window.location.search));
+  check('Scoaterea filtrului se reflecta in URL (pushState)', scos, p.window.location.search);
+  check('  ...si statusul ramas e tot in URL', /status=ongoing/.test(p.window.location.search), p.window.location.search);
+  check('Nicio eroare de runtime la navigarea cu filtre', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+
+  await fetch(`${BASE}/api/admin/series?id=${created.id}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
+}
+
 console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ===');
 // Creeaza o serie de 150 de episoade ca sa treaca de pragul de 100/page.
 // Fara paginare, pagina asta ar citi toate episoadele la fiecare vizita.
@@ -489,6 +549,67 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Intervalul ales e marcat ca pagina curenta', p.$('#ep-ranges [aria-current="page"]')?.textContent?.includes('101') === true, p.$('#ep-ranges [aria-current="page"]')?.textContent);
   check('Nicio eroare de runtime pe pagina seriei', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+
+  // -------------------------------------------------------------------
+  // MARCAJUL „VAZUT" + EPISODUL URMATOR (2026-09-24)
+  //
+  // Progresul se creeaza prin API-ul real (nu inselat in DOM): episodul 1
+  // pana la pragul de 15 min (8 heartbeat-uri, limita e 120s/cerere), iar
+  // episodul 2 abia inceput. Apoi aceeasi pagina trebuie sa arate, pentru
+  // fiecare card, starea lui reala.
+  // -------------------------------------------------------------------
+  const eps = await (await fetch(`${BASE}/api/series/${sid}?per_page=5`, { headers: { Cookie: COOKIE } })).json();
+  const ep1 = (eps.episodes || []).find((e) => e.episode_number === 1);
+  const ep2 = (eps.episodes || []).find((e) => e.episode_number === 2);
+  for (let i = 0; i < 8; i++) {
+    await fetch(`${BASE}/api/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+      body: JSON.stringify({ episode_id: ep1.id, seconds: 120 }),
+    });
+  }
+  await fetch(`${BASE}/api/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
+    body: JSON.stringify({ episode_id: ep2.id, seconds: 30 }),
+  });
+
+  const p2 = await mountPage({ htmlFile: 'public/series.html', url: `/series?id=${sid}`, module: 'page-series.js' });
+  await until(() => p2.$$('#episodes-grid > *').length > 0);
+  const card1 = p2.$(`#episodes-grid .card[href$="id=${ep1.id}"]`);
+  const card2 = p2.$(`#episodes-grid .card[href$="id=${ep2.id}"]`);
+  check('Episodul vazut e marcat in lista (bara + eticheta)',
+    card1?.classList.contains('is-watched') === true && /Văzut/.test(card1?.textContent || ''),
+    `${card1?.className} | ${card1?.textContent?.slice(0, 40)}`);
+  check('Episodul abia inceput apare ca „Început", nu ca vazut',
+    card2?.classList.contains('is-started') === true && !card2?.classList.contains('is-watched') && /Început/.test(card2?.textContent || ''),
+    `${card2?.className} | ${card2?.textContent?.slice(0, 40)}`);
+  check('Nicio eroare de runtime la marcajele de episoade', p2.errors.length === 0, p2.errors.slice(0, 3).join(' | '));
+  await p2.teardown();
+
+  // Cardul din „Continua vizionarea": episodul 1 e terminat si are un
+  // urmator, deci cardul trebuie sa ofere butonul de comutare.
+  const p3 = await mountPage({ htmlFile: 'public/index.html', url: '/', module: 'page-index.js' });
+  const card = await until(() => p3.$$('#continue-row .continue-card').length > 0);
+  check('Rândul „Continua vizionarea" se randeaza pentru userul cu progres', card, `n=${p3.$$('#continue-row .continue-card').length}`);
+  const first = p3.$$('#continue-row .continue-card').find((c) => /id=/.test(c.getAttribute('href') || ''));
+  check('Cardul duce la un episod real', !!first && /\/episode\?id=\d+/.test(first.getAttribute('href') || ''), first?.getAttribute('href'));
+  const nextBtn = p3.$('#continue-row .continue-card__next');
+  check('Cardul terminat ofera butonul „Episodul următor"', !!nextBtn && /următor/i.test(nextBtn.textContent || ''), nextBtn?.textContent);
+  if (nextBtn) {
+    // Comutarea tine minte preferinta si re-randeaza cardul cu tinta noua.
+    const inainte = first.getAttribute('href');
+    nextBtn.dispatchEvent(new p3.window.Event('click', { bubbles: true }));
+    const schimbat = await until(() => {
+      const c = p3.$('#continue-row .continue-card[data-next]');
+      return !!c && c.getAttribute('href') !== inainte;
+    });
+    check('Click pe buton duce cardul la episodul următor', schimbat, p3.$('#continue-row .continue-card')?.getAttribute('href'));
+    const reia = p3.$('#continue-row .continue-card__next');
+    check('Butonul își schimba sensul (poți reveni la episodul văzut)', /Reia/i.test(reia?.textContent || ''), reia?.textContent);
+  }
+  check('Nicio eroare de runtime pe prima pagina cu progres', p3.errors.length === 0, p3.errors.slice(0, 3).join(' | '));
+  await p3.teardown();
 
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
