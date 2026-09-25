@@ -14,7 +14,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
 - **Stare:** stabil, curat, toate testele verzi (scripts-health 44 · poll-buget 22 ·
-  pulse-online 17 · e2e 584 · dom 202 / 198 pe build · theme-cache 7 · top-cache 17 ·
+  pulse-online 17 · e2e 599 · dom 210 / 206 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
@@ -155,6 +155,33 @@ cat cf-relay/last-output.txt
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
+
+### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)
+
+Sistemul `/api/friends` (migrarea 0029, PR #7) trimitea cereri în tăcere: aflai
+din întâmplare că ai o cerere de rezolvat. Acum fiecare eveniment care cere o
+acțiune sau e o veste bună notifică în clopot:
+
+- **`src/lib/notify.js`**: două tipuri noi în catalogul `NOTIF_TYPES`
+  (`friend_request`, `friend_accepted`) + funcția `notifyUser(env, userId, type,
+  payload)` — o singură scriere D1 către un utilizator (spre deosebire de
+  `notifySubscribers`, care notifică în bloc toți abonații unei serii). Fără
+  migrare nouă: `payload` e JSON, deci tipurile nu schimbă schema.
+- **`src/routes/api/friends.js`**: notificare la `send` (către destinatar), la
+  `accept` (către solicitant) și la acceptarea automată (când celălalt ceruse
+  deja). `reject`/`cancel`/`remove` **nu** notifică — zgomot inutil. O
+  notificare eșuată nu pichează acțiunea (se loghează în `notifyUser`).
+- **`public/assets/js/core.js`**: `notifHref` trimite notificările de prietenie
+  la `/profile?u=<username>` (payload-ul poartă `username`), de unde cererea se
+  rezolvă cu un click. Episoadele/seriile păstrează prioritatea.
+- **Teste**: `tests/e2e.mjs` secțiunea „13h2" (fluxul complet: cerere →
+  notificare, duplicat fără a doua notificare, acceptare, mark-read, eliminare
+  tăcută, acceptare automată) + `tests/dom-smoke.mjs` (badge + text + link în
+  dropdown, pe două conturi temporare șterse la final).
+- **Live**: `cf-relay/friends-canar.mjs` (rulat din `cmd.sh` §17b) face fluxul
+  pe producție cu două conturi „canarp%", iar D1-ul e citit direct ca dovadă.
+  Dacă plafonul de 5 conturi/oră împiedică al doilea cont, verificarea **se
+  sare** (exit 0), nu dă fals roșu.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
 

@@ -7,7 +7,36 @@
 export const NOTIF_TYPES = {
   new_episode: { icon: '🎬', text: (p) => `Episod nou la ${p.series_title}: Episodul ${p.episode_number}${p.episode_title ? ` — ${p.episode_title}` : ''}` },
   new_episodes: { icon: '📚', text: (p) => `${p.count} episoade noi la ${p.series_title}` },
+  // Prietenia: notificăm DOAR evenimentele care cer o acțiune sau o veste
+  // bună (cerere primită, cerere acceptată). Respingerea/anularea nu notifică
+  // — celălalt nu are nevoie de „știre" și ar fi zgomot în clopot.
+  friend_request: { icon: '👥', text: (p) => `${p.username} ți-a trimis o cerere de prietenie` },
+  friend_accepted: { icon: '🤝', text: (p) => `${p.username} ți-a acceptat cererea de prietenie` },
 };
+
+/**
+ * Notificare către UN singur utilizator (prietenie). O scriere D1, fără
+ * SELECT — spre deosebire de notifySubscribers, care notifică în bloc toți
+ * abonații unei serii. Payload-ul poartă întotdeauna `username`, ca
+ * notificarea să aibă link către profil (vezi notifHref în core.js).
+ *
+ * O notificare eșuată NU trebuie să ducă acțiunea însăși la eșec: cererea de
+ * prietenie e mai importantă decât vestura, deci eroarea se loghează și se
+ * returnează 0 (apelantul continuă).
+ */
+export async function notifyUser(env, userId, type, payload) {
+  try {
+    const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const res = await env.DB.prepare(
+      `INSERT INTO notifications (user_id, type, payload, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).bind(userId, type, JSON.stringify(payload || {}), stamp).run();
+    return res.meta?.changes || 0;
+  } catch (e) {
+    console.error(`notifyUser ${type} → ${userId} a eșuat`, e);
+    return 0;
+  }
+}
 
 /** Notifica toti abonatii seriei. O singura scriere batch in D1. */
 export async function notifySubscribers(env, seriesId, type, payload) {

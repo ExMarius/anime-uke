@@ -1737,6 +1737,93 @@ console.log('\n=== 13h. ABONARI LA SERII + NOTIFICARI ===');
   await req(j, 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 0 });
 }
 
+console.log('\n=== 13h2. PRIETENIE: NOTIFICARI LA CERERE SI ACCEPTARE ===');
+// Sistemul de prietenie (/api/friends) exista deja, dar nu spunea nimic
+// cand cineva iti trimite o cerere: aflai din intimica. Aici verificam
+// fluxul complet de notificari, pe conturi proaspete (user3/user4 nu mai
+// folosesc alte sectiuni, deci numaratoarea e exacta).
+{
+  const a = jar(); // user3 — cel care trimite
+  const b = jar(); // user4 — cel care primeste
+  await req(a, 'POST', '/api/auth/login', { email: 'user3@test.ro', password: 'parola123' });
+  await req(b, 'POST', '/api/auth/login', { email: 'user4@test.ro', password: 'parola123' });
+
+  // Stare cura: fara prietenie intre ei, fara notificari vechi (o rulare
+  // repetata a suitei nu trebuie sa dea fals rosu pe numaratoare).
+  await req(a, 'DELETE', '/api/friends?u=user4');
+  await req(b, 'DELETE', '/api/friends?u=user3');
+  await req(a, 'POST', '/api/notifications/read', { all: 1 });
+  await req(b, 'POST', '/api/notifications/read', { all: 1 });
+
+  // --- 1. cererea trimisa → destinatarul primeste notificare
+  const send = await req(a, 'POST', '/api/friends', { username: 'user4' });
+  check('Cererea de prietenie se trimite', send.data?.status === 'pending_out', JSON.stringify(send.data)?.slice(0, 120));
+  const nb = await req(b, 'GET', '/api/notifications');
+  const nReq = (nb.data?.notifications || []).find((n) => n.type === 'friend_request');
+  check('Destinatarul primeste notificare de cerere de prietenie',
+    nb.data?.unread === 1 && !!nReq && nReq.payload?.username === 'user3' && /user3/.test(nReq.text || ''),
+    JSON.stringify(nReq)?.slice(0, 200));
+  check('Notificarea poarta cine a trimis (link catre profil)',
+    Number.isInteger(nReq?.payload?.user_id),
+    JSON.stringify(nReq?.payload));
+
+  // --- 2. starea reciprocă se reflecta in ambele parti
+  const stA = await req(a, 'GET', '/api/friends?u=user4');
+  const stB = await req(b, 'GET', '/api/friends?u=user3');
+  check('Statusurile sunt pending_out / pending_in', stA.data?.status === 'pending_out' && stB.data?.status === 'pending_in', `${stA.data?.status} / ${stB.data?.status}`);
+
+  // --- 3. cererea duplicata nu trimite a doua notificare
+  const before = (await req(b, 'GET', '/api/notifications')).data?.notifications?.length;
+  const dup = await req(a, 'POST', '/api/friends', { username: 'user4' });
+  const after = (await req(b, 'GET', '/api/notifications')).data?.notifications?.length;
+  check('Cerere duplicata → 409', dup.status === 409, `status=${dup.status}`);
+  check('Cererea duplicata nu mai trimite o notificare', before === after, `before=${before} after=${after}`);
+
+  // --- 4. acceptarea → solicitarile primeste notificare de acceptare
+  const acc = await req(b, 'POST', '/api/friends', { username: 'user3', action: 'accept' });
+  check('Cererea se accepta', acc.data?.status === 'friends', JSON.stringify(acc.data)?.slice(0, 120));
+  const na = await req(a, 'GET', '/api/notifications');
+  const nAcc = (na.data?.notifications || []).find((n) => n.type === 'friend_accepted');
+  check('Solicitantul primeste notificare de acceptare',
+    !!nAcc && nAcc.payload?.username === 'user4' && /user4/.test(nAcc.text || ''),
+    JSON.stringify(nAcc)?.slice(0, 200));
+  check('Notificarea de acceptare e necitita (badge-ul trebuie sa cada)', na.data?.unread === 1, `unread=${na.data?.unread}`);
+
+  // --- 5. marcarea ca citit scoate notificarea din badge
+  const mr = await req(a, 'POST', '/api/notifications/read', { all: 1 });
+  const na2 = await req(a, 'GET', '/api/notifications');
+  check('Marcheaza-tot ca citit goleste badge-ul', mr.data?.changed >= 1 && na2.data?.unread === 0, JSON.stringify({ changed: mr.data?.changed, unread: na2.data?.unread }));
+
+  // --- 6. eliminarea prieteniei nu notifica (zgomot inutil)
+  const rem = await req(a, 'DELETE', '/api/friends?u=user4');
+  check('Prietenia se poate elimina', rem.data?.status === 'none', JSON.stringify(rem.data)?.slice(0, 120));
+  const nb2 = await req(b, 'GET', '/api/notifications?unread=1');
+  check('Eliminarea prieteniei nu trimite notificare',
+    !(nb2.data?.notifications || []).some((n) => n.type === 'friend_accepted' && n.payload?.username === 'user3'),
+    JSON.stringify(nb2.data?.notifications)?.slice(0, 160));
+
+  // --- 7. cerere inversa in timp ce exista deja una → acceptare automata
+  //         si cel care ceruse primil primeste notificarea de acceptare
+  await req(a, 'POST', '/api/friends', { username: 'user4' }); // așteaptă (pending_out)
+  await req(b, 'POST', '/api/notifications/read', { all: 1 });
+  const auto = await req(b, 'POST', '/api/friends', { username: 'user3' });
+  check('Trimiterea inversa accepta automat (erați deja invitați)', auto.data?.status === 'friends', JSON.stringify(auto.data)?.slice(0, 140));
+  // Cine apeasează butonul (B) vede rezultatul în UI; cine aștepta de la
+  // început (A) află de la notificare că s-a făcut prietenie.
+  const na3 = await req(a, 'GET', '/api/notifications?unread=1');
+  const nAuto = (na3.data?.notifications || []).find((n) => n.type === 'friend_accepted');
+  check('Auto-acceptarea notifica pe cel care ceruse primul',
+    !!nAuto && nAuto.payload?.username === 'user4',
+    JSON.stringify(nAuto)?.slice(0, 200));
+
+  // --- curatare: starea ramane „zero” pentru suitele urmatoare
+  await req(b, 'DELETE', '/api/friends?u=user3');
+  await req(a, 'POST', '/api/notifications/read', { all: 1 });
+  await req(b, 'POST', '/api/notifications/read', { all: 1 });
+  const finalA = await req(a, 'GET', '/api/friends?u=user4');
+  check('La final user3 si user4 nu mai sunt prieteni', finalA.data?.status === 'none', finalA.data?.status);
+}
+
 console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
 {
   const j = jar();
