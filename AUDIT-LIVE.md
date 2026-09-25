@@ -1,9 +1,10 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-22 · **Rulat prin:** relay GitHub Actions (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
-**Mod:** read-only, fără credențiale · **Scor final:** ✅ **168** · 🟡 **0** · 🔴 **0** · ℹ️ 32
-**Build auditat:** `?v=7703add` (wrangler 4.131.2, migrări 0001–0025 aplicate remote, fără migrări noi —
-doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
+**Data:** 2026-09-25 (auditul inițial: 2026-09-22) · **Rulat prin:** relay GitHub Actions
+(`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
+**Mod:** read-only, fără credențiale · **Scor final:** ✅ **190** · 🟡 **0** · 🔴 **0** · ℹ️ 36
+**Build auditat:** `?v=277c5ed` (25.09, post-merge PR #9 — buget 0: poll adaptiv + cache pe
+contorul online; scorul 190/0/0/ℹ️36 reconfirmat în runda 12, vezi §1k)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
@@ -18,6 +19,7 @@ doar llms.txt + `_headers` față de `1a11f03`; scorul 168/0/0 reconfirmat)
 | 9 (funcționalități noi, build `77d17b7`) | ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32 | catalog partajabil, sortare după notă, episodul următor, „văzut" — vezi §1h |
 | 10 (viteză, build `4b65b07`) | ✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35 | chat scos de pe calea critică (chunk la cerere), arta hero 168 → 94 KB (pasul 1), coperți dimensionate — vezi §1i |
 | 11 (viteză, pasul 2: AVIF, build `d8ad136`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | arta hero în AVIF (`<picture>`): 224 → 151 KB, −40% comprimat pe live; două buguri de hero reparate — vezi §1j |
+| 12 (buget 0: poll adaptiv + incidentul tokenului CF, build `277c5ed`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | redeploy verificat end-to-end după pierderea accesului la deploy; canarul de chat în D1, markerul `auk-adaptive` publicat, consumul zilei 2% din invocări — vezi §1k |
 
 ---
 
@@ -398,6 +400,31 @@ stări: artă din bundle și copertă de serie), iar `measure-weight` are buget 
 AVIF (≤70 KB) separat de rezerva WebP (≤110 KB).
 
 Auditul complet pe build-ul de producție: **✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36**.
+
+## 1k. Runda 12 (2026-09-25): buget 0 (poll adaptiv) + incidentul tokenului Cloudflare
+
+Context: deploierile au picat o oră cu „Secretul CLOUDFLARE_API_TOKEN nu e setat pe
+repo” — site-ul live a rulat tot timpul (doar canalul de deploy era blocat). Tokenul
+a fost readus, iar secretul `CLOUDFLARE_ACCOUNT_ID` s-a dovedit invalid (53 caractere,
+nu 32 hex → CF error 7003). Relay-ul a fost întărit în 3 commituri: alegerea
+automată a contului care vede D1-ul `anime-db`, oprirea cu exit code-ul deploy-ului
+la eroare, rezultatul în comentariu pe commit (canalul de citire din sandbox,
+vezi AGENTS.md §3).
+
+| Verificare pe live (build `?v=277c5ed`, 18:43–18:45 UTC) | Rezultat |
+|---|---|
+| `deploy.sh` complet (D1, migrări, DO, Pages, JWT) | `exit 0`; assete versionate `?v=277c5ed`, cache immutable, `_routes.json`, CSS purgat, 9 fișiere minificate |
+| Canarul de chat (cont temporar, mesaj + sticker) | OK — ambele rânduri citite direct din D1 (`chat_messages` 71/72), apoi curățenie fără urme |
+| `adaptivePoll()` publicat (marker `auk-adaptive`) | 2 apariții în chunk-ul comun `c-UTCDOFMM.js` (25 243 B, immutable) |
+| `/api/pulse` | `{"series":5,"episodes":5,"members":3,"views":7,"online":0}` — viu, contoarele 0028 confirmate |
+| Funcționalitățile rondelor 7–11 (nota pe carduri, catalog partajabil, AVIF, sticky filters…) | toate prezențe în build-ul publicat (secțiunile 15–19 din `cmd.sh`) |
+| Audit live complet | **✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36** — „niciuna — auditul a trecut curat” |
+| Consum cote gratuite (ziua UTC) | Invocări 2,2% · D1 citire 0,2% · D1 scriere 0,2% · DO 0,4% |
+
+Lecția: când deploierele pică instant, primul loc deuit e `cf-relay/last-output.txt`
+sau comentariul pe commit — verificarea de secret e *înainte* de `cmd.sh`, cu
+diagnostic clar. Verificările e2e/CI nu acoperi accesul la Cloudflare: doar un
+deploy real pe live o face.
 
 ## 4. Cum se re-rulează auditul
 
