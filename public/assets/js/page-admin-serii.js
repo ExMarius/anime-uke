@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, safeUrl, coverImg, genPoster } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, safeUrl, coverImg, genPoster, whenActive, initChat } from './core.js';
 
 // =====================================================================
 // /admin/serii — lista seriilor, cu cautare si paginare pe SERVER.
@@ -279,4 +279,5 @@ if (await guard()) {
   await renderNav('');
   document.getElementById('f-sort').innerHTML = '';
   await load();
+  whenActive(() => initChat().catch(() => { /* chat optional */ }));
 }

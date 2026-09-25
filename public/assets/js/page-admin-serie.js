@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, coverImg, genPoster } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, coverImg, genPoster, whenActive, initChat } from './core.js';
 import { buildSourceRow, collectSourceRows, existingSourceRow, sourceChips, guessKind, labelFromUrl, KIND_HINTS } from './sources-ui.js';
 
 const DETAIL_FIELDS = ['alt_titles', 'themes', 'age_rating', 'ep_duration', 'release_date', 'country', 'external_url', 'team', 'next_ep_note', 'next_ep_at'];
@@ -625,4 +625,5 @@ if (await guard()) {
     addFormSourceRow({});
     await loadEpisodes();
   }
+  whenActive(() => initChat().catch(() => { /* chat optional */ }));
 }

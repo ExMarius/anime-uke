@@ -351,6 +351,156 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
   });
 });
 
+// ---------------------------------------------------------------------
+// Prietenie: butonul „Adaugă prieten” de pe profilul altcuiva
+// ---------------------------------------------------------------------
+let friendStatus = 'none';
+
+function renderFriendActions() {
+  const wrap = document.getElementById('p-friend-actions');
+  const btn = document.getElementById('p-friend-btn');
+  const accept = document.getElementById('p-friend-accept');
+  const reject = document.getElementById('p-friend-reject');
+  const statusEl = document.getElementById('p-friend-status');
+  if (!wrap || !btn) return;
+
+  if (!data || data.is_self) {
+    wrap.hidden = true;
+    return;
+  }
+
+  wrap.hidden = false;
+  accept.hidden = true;
+  reject.hidden = true;
+  statusEl.hidden = true;
+  btn.hidden = false;
+  btn.disabled = false;
+
+  switch (friendStatus) {
+    case 'guest':
+      btn.textContent = '🔒 Autentifică-te ca să adaugi prieteni';
+      btn.className = 'btn btn--ghost';
+      btn.onclick = () => { location.href = '/login'; };
+      break;
+    case 'none':
+    case 'rejected':
+      btn.textContent = '🤝 Adaugă prieten';
+      btn.className = 'btn btn--accent';
+      statusEl.hidden = true;
+      break;
+    case 'pending_out':
+      btn.textContent = '⏳ Cerere trimisă • Anulează';
+      btn.className = 'btn btn--ghost';
+      break;
+    case 'pending_in':
+      btn.textContent = '👋 Vrea să fie prieten cu tine';
+      btn.className = 'btn btn--ghost';
+      btn.disabled = true;
+      accept.hidden = false;
+      reject.hidden = false;
+      accept.textContent = '✅ Acceptă';
+      reject.textContent = '✕ Respinge';
+      break;
+    case 'friends':
+      btn.textContent = '💚 Prieteni • Scoate';
+      btn.className = 'btn btn--ghost';
+      break;
+    case 'blocked':
+      btn.textContent = '⛔ Blocat';
+      btn.disabled = true;
+      break;
+    case 'self':
+      wrap.hidden = true;
+      break;
+    default:
+      btn.textContent = '🤝 Adaugă prieten';
+  }
+}
+
+async function loadFriendship() {
+  if (!data || data.is_self) return;
+  const username = data.user?.username;
+  if (!username) return;
+  try {
+    const res = await api(`/friends?u=${encodeURIComponent(username)}`);
+    if (res.ok) {
+      friendStatus = res.data.status || 'none';
+    } else if (res.status === 401) {
+      friendStatus = 'guest';
+    } else {
+      friendStatus = 'none';
+    }
+  } catch {
+    friendStatus = 'none';
+  }
+  renderFriendActions();
+}
+
+async function handleFriendMain() {
+  if (friendStatus === 'guest') { location.href = '/login'; return; }
+  const username = data?.user?.username;
+  if (!username) return;
+  const btn = document.getElementById('p-friend-btn');
+  if (!btn) return;
+
+  await withBusy(btn, async () => {
+    let action = 'send';
+    if (friendStatus === 'pending_out') action = 'cancel';
+    else if (friendStatus === 'friends') action = 'remove';
+    else if (friendStatus === 'none' || friendStatus === 'rejected') action = 'send';
+    else return;
+
+    const res = await api('/friends', { method: 'POST', body: { username, action } });
+    if (!res.ok) {
+      toast(res.data?.error || 'Nu am putut procesa cererea', 'err');
+      return;
+    }
+    friendStatus = res.data.status || (action === 'send' ? 'pending_out' : 'none');
+    // daca serverul intoarce none dupa cancel/remove, refetch ca sa fim siguri
+    if (action === 'cancel' || action === 'remove') friendStatus = 'none';
+    if (action === 'send' && friendStatus === 'friends') {
+      toast('Sunteți acum prieteni! 💚', 'ok');
+    } else if (action === 'send') {
+      toast('Cerere de prietenie trimisă 🤝', 'ok');
+    } else if (action === 'cancel') {
+      toast('Cerere anulată', 'ok');
+    } else if (action === 'remove') {
+      toast('Prieten scos din listă', 'ok');
+    }
+    renderFriendActions();
+  });
+}
+
+async function handleFriendAccept() {
+  const username = data?.user?.username;
+  if (!username) return;
+  const btn = document.getElementById('p-friend-accept');
+  await withBusy(btn, async () => {
+    const res = await api('/friends', { method: 'POST', body: { username, action: 'accept' } });
+    if (!res.ok) { toast(res.data?.error || 'Nu am putut accepta', 'err'); return; }
+    friendStatus = 'friends';
+    toast('Acum sunteți prieteni! 💚', 'ok');
+    renderFriendActions();
+  });
+}
+
+async function handleFriendReject() {
+  const username = data?.user?.username;
+  if (!username) return;
+  const btn = document.getElementById('p-friend-reject');
+  await withBusy(btn, async () => {
+    const res = await api('/friends', { method: 'POST', body: { username, action: 'reject' } });
+    if (!res.ok) { toast(res.data?.error || 'Nu am putut respinge', 'err'); return; }
+    friendStatus = 'none';
+    toast('Cerere respinsă', 'ok');
+    renderFriendActions();
+  });
+}
+
+document.getElementById('p-friend-btn')?.addEventListener('click', handleFriendMain);
+document.getElementById('p-friend-accept')?.addEventListener('click', handleFriendAccept);
+document.getElementById('p-friend-reject')?.addEventListener('click', handleFriendReject);
+
 // ---------------------------------------------------------------- incarcare
 async function load() {
   const res = await api(`/profile/${encodeURIComponent(target)}`);
@@ -372,6 +522,7 @@ async function load() {
   renderReco();
   await loadWatchlist();
   loadLeaderboard().catch(() => { /* clasamentul e decorativ: profilul merge oricum */ });
+  loadFriendship().catch(() => {});
 }
 
 // ---------------------------------------------------------------------

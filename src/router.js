@@ -68,6 +68,7 @@ import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
 import * as watchlistRoute from './routes/api/watchlist.js';
+import * as friendsRoute from './routes/api/friends.js';
 
 const ROUTES = [
   // --- publice ---
@@ -122,10 +123,11 @@ const ROUTES = [
   { method: 'GET', path: '/api/notifications', mod: notificationsRoute },
   { method: 'POST', path: '/api/view', mod: viewRoute },
 
-  // --- profil + lista „de vizionat" ---
+  // --- profil + lista „de vizionat" + prietenie ---
   { method: 'GET', path: '/api/profile/:username', mod: profileRoute },
   { method: 'PATCH', path: '/api/profile', mod: profileRoute },
   { method: '*', path: '/api/watchlist', mod: watchlistRoute },
+  { method: '*', path: '/api/friends', mod: friendsRoute },
 
   // --- admin ---
   { method: 'GET', path: '/api/admin/stats', mod: adminStats },
