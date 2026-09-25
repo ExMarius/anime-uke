@@ -61,24 +61,38 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          # Diagnosticul ajunge în repo (pasul următor îl comite chiar dacă
+          # aici ieșim cu 1). Fără token, fără JSON-ul contului — doar motivul.
+          DIAG="cf-relay/last-output.txt"
+          note() { printf '%s\n' "$1" | tee -a "$DIAG"; }
+          : > "$DIAG"
+          note "exit_code: (verificare secret, inainte de cmd.sh)"
+          note "commit: ${GITHUB_SHA::7}"
           if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
-            echo "✗ Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo."
-            echo "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
+            note "✗ Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo."
+            note "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
             exit 1
           fi
-          echo "✓ Token prezent."
+          note "✓ Token prezent (lungime ${#CLOUDFLARE_API_TOKEN})."
           if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            AID="$(curl -sS https://api.cloudflare.com/client/v4/accounts \
+            RAW="$(curl -sS -m 25 https://api.cloudflare.com/client/v4/accounts \
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              | jq -r '.result[0].id // empty')"
+              -w '\n__HTTP__:%{http_code}' || printf '\n__HTTP__:curl-esuat')"
+            HTTP="$(printf '%s' "$RAW" | sed -n 's/^__HTTP__://p' | tail -1)"
+            BODY="$(printf '%s' "$RAW" | sed '/^__HTTP__:/d')"
+            PARSED="$(printf '%s' "$BODY" | jq -r '[.success // false, (.errors[0].message // .errors[0].code // "fara-mesaj"), (.result[0].id // "")] | @tsv' 2>/dev/null || printf 'false\tjq-esuat\t')"
+            OK="$(printf '%s' "$PARSED" | cut -f1)"
+            ERR="$(printf '%s' "$PARSED" | cut -f2)"
+            AID="$(printf '%s' "$PARSED" | cut -f3)"
+            note "  descoperire cont: HTTP ${HTTP} · success=${OK} · eroare=${ERR}"
             if [ -z "$AID" ]; then
-              echo "✗ Nu am putut descoperi Account ID (token fara Account Settings Read?)"
+              note "✗ Nu am putut descoperi Account ID (token fara Account Settings Read, sau API picat)."
               exit 1
             fi
             echo "CLOUDFLARE_ACCOUNT_ID=${AID}" >> "$GITHUB_ENV"
-            echo "✓ Account ID descoperit automat: ${AID}"
+            note "✓ Account ID descoperit automat."
           else
-            echo "✓ Account ID din secret."
+            note "✓ Account ID din secret."
           fi
 
       - name: Ruleaza comanda

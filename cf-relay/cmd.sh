@@ -278,7 +278,7 @@ H2="$(curl -s "$B/assets/js/page-index.js?v=1" | md5sum | cut -d' ' -f1)"
 if [ -n "$H1" ] && [ "$H1" = "$H2" ]; then echo "   acelasi bundle cu si fara ?v= = da (${H1})"; else echo "   !! bundle diferit cu/fara ?v= ($H1 vs $H2) - copie veche la margine?"; fi
 
 echo
-echo "── 20. buget: poll adaptiv publicat + pulse inca viu"
+echo "── 20. buget: poll adaptiv publicat + pulse inca viu (58d837b)"
 # Markerul e un string din JS (supravietuieste minificarii; numele de functii nu).
 # Daca lipseste, live-ul inca ruleaza poll-ul fix de 60s/90s.
 CHUNK20="$(curl -s "$B/assets/js/page-index.js" | grep -oE 'c-[A-Za-z0-9_-]+\.js' | head -1)"
