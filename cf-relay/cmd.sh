@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # =====================================================================
-# Deploy + verificare LIVE, după integrarea celor două linii de lucru:
-#   (a) feature-urile din PR #4 (SSR SEO episod, logo, teme de sezon,
-#       shop 2.0, sitemap-uri GSC, garda anti-cache);
-#   (b) bugetul de invocări din sesiunea „buget 0": public/_routes.json
-#       (assetele și paginile publice statice NU mai trec prin worker),
-#       /api/home (prima pagină într-o singură cerere), imagini .webp
-#       directe, Cache-Control immutable din public/_headers.
+# Deploy + verificare LIVE: tot ce face deploy.sh (D1, migrări remote,
+# Worker DO, Pages, JWT, purge/minify, ?v=), apoi verificările
+# post-deploy pe https://anime-uke.pages.dev (sectiunile 1–20 din mai jos).
+#
+# Comportament (25.09):
+#   - alege mai întâi contul Cloudflare care chiar vede D1-ul anime-db
+#     (secretul CLOUDFLARE_ACCOUNT_ID poate lipse sau fi invalid);
+#   - oprește cu exit code-ul lui deploy.sh dacă deploy-ul pică
+#     (nu mai merge la audit peste un deces);
+#   - workflow-ul lasă rezultatul într-un comentariu pe commit (tokenii
+#     redactați) — canalul principal de citire din sandbox (AGENTS.md §3).
 #
 # Lecție păstrată: propagarea Pages durează zeci de secunde — se așteaptă
-# înainte de audit, altfel se verifică deployment-ul anterior.
+# 60s înainte de audit, altfel se verifică deployment-ul anterior.
 # =====================================================================
 set -uo pipefail
 
