@@ -309,7 +309,7 @@ img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
 .auth-back { margin-top: .9rem; text-align: center; }
 
 /* ============================ TOAST ============================ */
-.toast-wrap { position: fixed; z-index: 200; bottom: 1.2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .55rem; width: min(430px, calc(100% - 2rem)); pointer-events: none; }
+.toast-wrap { position: fixed; z-index: 100002; bottom: 1.2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .55rem; width: min(430px, calc(100% - 2rem)); pointer-events: none; }
 .toast {
   display: flex; align-items: center; gap: .6rem;
   padding: .8rem 1.05rem; border-radius: var(--r-md);
@@ -327,21 +327,34 @@ img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
 
 /* ============================ CHAT ============================ */
 .chat-fab {
-  position: fixed; z-index: 90; bottom: 1.4rem; right: 1.4rem;
-  display: flex; align-items: center; gap: .55rem;
+  position: fixed; z-index: 100000; bottom: 1.4rem; right: 1.4rem;
+  display: flex !important; align-items: center; gap: .55rem;
   padding: .92rem 1.35rem; border: none; border-radius: 99px;
   background: var(--grad); color: #fff; font-weight: 850; font-size: .94rem;
   box-shadow: 0 14px 38px -10px var(--accent-glow);
   transition: transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 .chat-fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 20px 46px -10px var(--accent-glow); }
 .chat-fab:active { transform: scale(.97); }
 .chat-fab__dot { width: 8px; height: 8px; border-radius: 50%; background: #7CFFB2; box-shadow: 0 0 0 3px rgba(124,255,178,.22); animation: pulse 2.2s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.chat-fab[hidden] { display: none !important; }
 
-.chat-modal { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(8,4,6,.78); backdrop-filter: blur(8px); }
-.chat-modal[data-open="true"] { display: flex; animation: fade .22s ease-out; }
+.chat-modal { position: fixed; inset: 0; z-index: 100001; display: none !important; align-items: center; justify-content: center; padding: 1rem; background: rgba(8,4,6,.78); backdrop-filter: blur(8px); }
+.chat-modal[data-open="false"] { display: none !important; }
+.chat-modal[data-open="true"] { display: flex !important; animation: fade .22s ease-out; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Asigură că elementele interne ale chat-ului au display corect chiar dacă
+   cineva adaugă display:none în altă parte sau purge-ul le atinge */
+.chat-box { display: flex !important; }
+.chat-head { display: flex !important; }
+.chat-body { display: flex !important; }
+.chat-form { display: flex !important; }
+.chat-online { display: block !important; }
+
 .chat-box {
   display: flex; flex-direction: column;
   width: min(540px, 100%); height: min(660px, 88vh);

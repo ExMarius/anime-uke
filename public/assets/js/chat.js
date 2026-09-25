@@ -1,15 +1,19 @@
 // =====================================================================
 // chat.js — modal de chat live prin WebSocket.
-//
 // Doar utilizatorii logati pot scrie (verificarea e pe server, in
-// functions/chat.js). Daca nu esti logat, butonul trimite la login.
-//
+// routes/chat.js). Daca nu esti logat, butonul trimite la login.
 // Reconectare cu backoff exponential: pe mobil socket-ul cade des, iar
 // fara reconectare chat-ul ramanea mort pana la refresh (v1 nu avea
 // nici macar handler de onclose).
+//
+// FIX DISPLAY (2026-09-25): butonul si modalul aveau display:none in
+// unele cazuri (purge CSS, admin fara initChat, sesiune undefined).
+// Acum ensureChatElements() garanteaza ca FAB-ul si modalul EXISTA si
+// au display corect pe ORICE pagina, iar open/close folosesc !important
+// din CSS (display:flex !important cand e deschis).
 // =====================================================================
 
-import { escapeHtml, getSession, toast , staffBadge, staffIcon, rankChip } from './core.js';
+import { getSession, toast, staffBadge, staffIcon, rankChip } from './core.js';
 
 let ws = null;
 let me = null;
@@ -17,22 +21,23 @@ let isOpen = false;
 let retry = 0;
 let retryTimer = null;
 let onlineCount = 0;
+let initialized = false;
 
 const MAX_RETRY_DELAY = 20000;
-export async function initChat() {
+
+function ensureChatElements() {
   let fab = document.getElementById('chat-fab');
   let modal = document.getElementById('chat-modal');
-  // Pana acum chat-ul exista doar pe pagina principala; paginile de serie /
-  // episod ramaneau fara el, iar site-ul parea „fara viata” pe jumatate din
-  // pagini. Daca markup-ul lipseste, il construim aici — identic cu cel din
-  // index.html — ca sa mearga identic peste tot, fara duplicate in HTML.
+
   if (!fab || !modal) {
+    // Construim markup-ul identic cu cel din index.html, dar cu display
+    // garantat (style inline + clase care au !important in CSS).
     const frag = document.createRange().createContextualFragment(`
-      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live">
+      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live" style="display:flex">
         <span class="chat-fab__dot"></span>
         <span class="chat-fab__label">Chat live</span>
       </button>
-      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live">
+      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live" style="display:none">
         <div class="chat-box">
           <div class="chat-head">
             <span class="chat-head__title">Chat global</span>
@@ -58,45 +63,96 @@ export async function initChat() {
     fab = document.getElementById('chat-fab');
     modal = document.getElementById('chat-modal');
   }
-  if (!fab || !modal) return;
 
-  me = await getSession();
+  // Garantăm display-ul chiar dacă CSS-ul a fost purgat sau suprascris
+  if (fab) {
+    fab.style.display = 'flex';
+    fab.hidden = false;
+    fab.removeAttribute('hidden');
+  }
+  if (modal) {
+    // Modalul pornește închis, dar cu display:none explicit (nu hidden)
+    if (modal.dataset.open !== 'true') {
+      modal.style.display = 'none';
+    }
+    modal.removeAttribute('hidden');
+  }
 
-  // Vizitatorii: butonul de chat duce la cont (fără conectare eșuată).
-  if (!me) {
-    fab.addEventListener('click', () => {
-      toast('Chatul e pentru membri — creează-ți un cont gratuit 💬', 'warn');
-      setTimeout(() => { location.href = '/register'; }, 900);
-    });
+  return { fab, modal };
+}
+
+export async function initChat() {
+  if (initialized) {
+    // Deja inițializat o dată pe pagină — dar asigurăm că elementele există
+    ensureChatElements();
     return;
   }
 
-  document.getElementById('chat-close')?.addEventListener('click', closeChat);
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeChat(); });
+  const { fab, modal } = ensureChatElements();
+  if (!fab || !modal) return;
+
+  try {
+    me = await getSession();
+  } catch {
+    me = null;
+  }
+
+  // Curățăm handlere vechi (dacă initChat e chemat de mai multe ori)
+  const newFab = fab.cloneNode(true);
+  fab.parentNode.replaceChild(newFab, fab);
+  const freshFab = document.getElementById('chat-fab');
+
+  // Re-atașăm modalul curat (fără duplicate de listeneri)
+  const closeBtn = document.getElementById('chat-close');
+  const form = document.getElementById('chat-form');
+  const modalEl = document.getElementById('chat-modal');
+
+  // Vizitatorii: butonul de chat duce la cont (fără conectare eșuată).
+  // IMPORTANT: null = guest confirmat, undefined = necunoscut — ambele
+  // înseamnă „nu ești logat” pentru chat.
+  if (!me) {
+    freshFab.addEventListener('click', () => {
+      toast('Chatul e pentru membri — creează-ți un cont gratuit 💬', 'warn');
+      setTimeout(() => { location.href = '/register'; }, 900);
+    });
+    // Totuși, ascultăm evenimentul global de deschidere (de la pulse-chip)
+    document.addEventListener('auk:open-chat', () => {
+      toast('Chatul e pentru membri — creează-ți un cont gratuit 💬', 'warn');
+      setTimeout(() => { location.href = '/register'; }, 900);
+    });
+    initialized = true;
+    return;
+  }
+
+  // Logat: wire-up complet
+  const doClose = () => closeChat();
+  document.getElementById('chat-close')?.addEventListener('click', doClose);
+  modalEl?.addEventListener('click', (e) => { if (e.target === modalEl) closeChat(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) closeChat(); });
 
-  document.getElementById('chat-form')?.addEventListener('submit', (e) => {
+  form?.addEventListener('submit', (e) => {
     e.preventDefault();
     sendMessage();
   });
   initStickers();
 
-  fab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
+  freshFab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
 
   // Chip-ul „N online” din nav (core.js) deschide chat-ul printr-un eveniment
-  // global — fara import circular core <-> chat. Chat-ul exista doar pentru
-  // utilizatori logati (paginile publice nici nu initializeaza chat.js).
+  // global — fara import circular core <-> chat.
   document.addEventListener('auk:open-chat', () => openChat());
-}
 
-function getSessionCached() {
-  try { return !!sessionStorage.getItem('auk-me'); } catch { return false; }
+  initialized = true;
 }
 
 export function openChat() {
-  const modal = document.getElementById('chat-modal');
+  const { fab, modal } = ensureChatElements();
   if (!modal) return;
+  // Display garantat: scoatem hidden, setăm data-open și style
+  modal.hidden = false;
+  modal.removeAttribute('hidden');
   modal.dataset.open = 'true';
+  modal.style.display = 'flex';
   isOpen = true;
   document.getElementById('chat-input')?.focus();
   if (!ws || ws.readyState === WebSocket.CLOSED) connect();
@@ -132,6 +188,7 @@ export function showRules() {
   wrap.className = 'chat-rules';
   wrap.setAttribute('role', 'dialog');
   wrap.setAttribute('aria-label', 'Regulament chat');
+  wrap.style.display = 'flex';
 
   const h = document.createElement('h3');
   h.className = 'chat-rules__title';
@@ -163,7 +220,10 @@ export function showRules() {
 
 export function closeChat() {
   const modal = document.getElementById('chat-modal');
-  if (modal) modal.dataset.open = 'false';
+  if (modal) {
+    modal.dataset.open = 'false';
+    modal.style.display = 'none';
+  }
   isOpen = false;
 }
 
@@ -238,6 +298,7 @@ function renderOnline(list) {
   box.textContent = list.length
     ? 'Online: ' + list.map((u) => `${staffIcon(u.staff_role)}${u.rank_icon || ''} ${u.username}`.trim()).join(', ')
     : 'Nimeni online momentan';
+  box.style.display = 'block';
 }
 
 function scrollDown() {
@@ -317,6 +378,7 @@ function stickerImg(st, label) {
   img.title = label || st.label;
   img.loading = 'lazy';
   img.setAttribute('referrerpolicy', 'no-referrer');
+  img.style.display = 'block';
   return img;
 }
 
@@ -333,6 +395,7 @@ function initStickers() {
     b.type = 'button';
     b.className = 'sticker-pop__item';
     b.title = st.label;
+    b.style.display = 'block';
     b.appendChild(stickerImg(st, st.label));
     b.addEventListener('click', () => {
       pop.hidden = true;
@@ -359,9 +422,11 @@ function sendSticker(id) {
 function renderMessage(m) {
   const body = document.getElementById('chat-body');
   if (!body) return;
+  body.style.display = 'flex';
 
   const row = document.createElement('div');
   row.className = 'msg' + (me && m.user_id === me.id ? ' msg--own' : '');
+  row.style.display = 'block';
 
   // mesajele care sunt DOAR un sticker se randeaza ca imagine mare; un tag
   // necunoscut sau amestecat cu text ramane text simplu (sigur)
@@ -413,8 +478,10 @@ function renderMessage(m) {
 function renderSystem(text) {
   const body = document.getElementById('chat-body');
   if (!body) return;
+  body.style.display = 'flex';
   const el = document.createElement('div');
   el.className = 'msg msg--system';
+  el.style.display = 'block';
   el.textContent = text || '';
   body.appendChild(el);
   trimBody(body);
@@ -470,6 +537,7 @@ function avatarEl(m) {
   if (!m.avatar) return null;
   const wrap = document.createElement('span');
   wrap.className = 'msg__avatar';
+  wrap.style.display = 'inline-grid';
   const img = document.createElement('img');
   img.src = m.avatar;
   img.alt = '';

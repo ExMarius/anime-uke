@@ -623,7 +623,7 @@ function updatePulseChip(data) {
 }
 
 // ---------------------------------------------------------------------
-// CHAT LA CERERE („code splitting”)
+// CHAT LA CERERE („code splitting”) + FIX DISPLAY
 // ---------------------------------------------------------------------
 // chat.js cântărește ~14 KB minificat (socket, stikere, regulament, istoric)
 // și era importat STATIC de fiecare pagină — deci fiecare vizitator îl
@@ -632,8 +632,57 @@ function updatePulseChip(data) {
 // chunk comun (nume cu hash de conținut → cache 1 an), cerut abia când e
 // nevoie. Importul e dinamic și NU creează ciclu de module (core ← chat
 // rămâne singura direcție de import static).
+//
+// FIX DISPLAY (2026-09-25): chat-ul trebuie să aibă display garantat pe
+// ORICE pagină, chiar dacă initChat întârzie sau eșuează. Injectăm FAB-ul
+// sincron la încărcarea modulului (dacă body există deja), iar initChat
+// re-încearcă la eroare.
 let chatMod;   // promisiunea de încărcare a modulului
 let chatOn;    // promisiunea de pornire (initChat rulează o singură dată)
+
+function ensureChatDomSync() {
+  try {
+    if (typeof document === 'undefined' || !document.body) return;
+    if (document.getElementById('chat-fab') && document.getElementById('chat-modal')) return;
+    const frag = document.createRange().createContextualFragment(`
+      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live" style="display:flex">
+        <span class="chat-fab__dot"></span>
+        <span class="chat-fab__label">Chat live</span>
+      </button>
+      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live" style="display:none">
+        <div class="chat-box">
+          <div class="chat-head">
+            <span class="chat-head__title">Chat global</span>
+            <span class="chat-head__count" id="chat-online-count">0 online</span>
+            <span class="chat-badge" id="chat-badge"></span>
+            <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
+          </div>
+          <div class="chat-online" id="chat-online">Se conectează…</div>
+          <div class="chat-body" id="chat-body"></div>
+          <form class="chat-form" id="chat-form">
+            <label class="sr-only" for="chat-input">Mesaj</label>
+            <div class="sticker-wrap">
+              <button class="chat-sticker-btn" id="chat-sticker-btn" type="button"
+                title="Stikere" aria-label="Deschide stikerele">😄</button>
+              <div class="sticker-pop" id="sticker-pop" hidden></div>
+            </div>
+            <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie un mesaj…" autocomplete="off">
+            <button class="btn btn--accent" type="submit">Trimite</button>
+          </form>
+        </div>
+      </div>`);
+    document.body.appendChild(frag);
+  } catch { /* DOM indisponibil — va încerca din nou la initChat */ }
+}
+
+// Încercăm injectarea imediată dacă body există deja (modulele ES sunt
+// deferred, deci de obicei body există). Dacă nu, o facem la DOMContentLoaded.
+try {
+  if (typeof document !== 'undefined') {
+    if (document.body) ensureChatDomSync();
+    else document.addEventListener('DOMContentLoaded', ensureChatDomSync, { once: true });
+  }
+} catch { /* ignora */ }
 
 function loadChat() {
   return (chatMod ||= import('./chat.js'));
@@ -641,6 +690,7 @@ function loadChat() {
 
 /** Pornește chat-ul (fab, modal, socket) — o singură dată per pagină. */
 export function initChat() {
+  ensureChatDomSync();
   return (chatOn ||= loadChat()
     .then((m) => m.initChat())
     .catch((err) => { chatOn = undefined; throw err; }));   // reîncearcă la următorul apel
@@ -648,8 +698,20 @@ export function initChat() {
 
 /** Deschide fereastra de chat, pornind-o dacă încă nu e pornită. */
 export async function openChat() {
-  await initChat();
-  (await loadChat()).openChat();
+  ensureChatDomSync();
+  try {
+    await initChat();
+    (await loadChat()).openChat();
+  } catch {
+    // Fallback: dacă modulul nu se încarcă, măcar afișăm modalul
+    const modal = document.getElementById('chat-modal');
+    if (modal) {
+      modal.hidden = false;
+      modal.removeAttribute('hidden');
+      modal.dataset.open = 'true';
+      modal.style.display = 'flex';
+    }
+  }
 }
 
 /** Chip-ul de pulse din nav. Click → deschide chat-ul (prin wrapper-ul de mai

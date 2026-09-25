@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, applySiteTheme } from './core.js';
+import { api, renderNav, toast, withBusy, getSession, formatDate, safeUrl, applySiteTheme, whenActive, initChat } from './core.js';
 
 // =====================================================================
 // Panoul admin. Toate celulele sunt construite cu createElement +
@@ -751,4 +751,5 @@ if (await guard()) {
   await renderNav('/admin');
   initTabs();
   await loadStats();
+  whenActive(() => initChat().catch(() => { /* chat optional */ }));
 }
