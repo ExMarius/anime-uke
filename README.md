@@ -340,25 +340,48 @@ vezi „Fail open" mai jos).
 | **Rânduri citite din D1 / vizită** | **~230.000** | **~64** |
 
 Cu ~2 invocări per vizită, 100k/zi înseamnă **zeci de mii de vizite pe zi**. Un vizitator
-logat care se uită la un episod consumă în plus: `/api/episodes/:id`, `/api/view`, un
-heartbeat la 2 minute (`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1) și poll-ul
-de notificări la 60 s cât timp ține tab-ul deschis. Când traficul crește, în ordinea în care
-merită atinse:
+logat care se uită la un episod consumă în plus: `/api/episodes/:id`, `/api/view` și un
+heartbeat la 2 minute (`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1).
+
+**Tab-urile lăsate deschise nu mai mănâncă cota.** Înainte, clopoțelul întreba
+`/notifications/unread` la fiecare 60 s și chip-ul „N online” întreba `/api/pulse`
+la fiecare 90 s, inclusiv noaptea, inclusiv pe un tab ascuns. Un singur tab uitat
+deschis = ~1.440 de invocări/zi doar pentru un badge care rămâne 0; ~70 de tab-uri
+goleau toată cota de Functions, iar fiecare `/api/pulse` mai costa și un request
+de Durable Object (aceeași cotă de 100.000). Acum (`adaptivePoll` în `core.js`,
+2026-09-25):
+
+| Situație | Înainte | Acum |
+|---|---|---|
+| Tab ascuns | la 60 s / 90 s | **0** |
+| Tab părăsit (10 min fără mouse/tastatură/scroll) | la 60 s / 90 s | **0** (repornește la prima mișcare) |
+| Tab activ, nimic nou | 60 s clopoțel, 90 s pulse | **60→120→240→plafon 5 min** |
+| A apărut o notificare / s-a schimbat „online” | 60 s / 90 s | înapoi la pasul scurt |
+| Comutări repetate între ferestre | o cerere la fiecare revenire | cel mult una la 30 s |
+
+„Online” nu mai lovește ChatDO la fiecare cerere: `src/routes/api/pulse.js` ține
+numărul 60 s în izolat și pe margine (`caches.default`, ca izolatele din același
+centru să împartă o singură citire). În dev și în teste bindingul
+`ONLINE_CACHE_MS=0` (`dev.sh`) lasă citirea live — altfel regresia „online mereu 0”
+nu s-ar mai vedea. Garda anti-cache (tab revenit după un deploy) citește versiunea
+din `/`, servit static, nu din pagina curentă: `/serie` și `/episod` ar fi costat
+o invocare și o citire D1 doar ca să compare un `?v=`.
+
+Când traficul crește, în ordinea în care merită atinse:
 
 1. **Fail open** (dashboard → Workers & Pages → `anime-uke` → Settings → Runtime): la
    epuizarea cotei, vizitatorii văd în continuare catalogul servit static, nu pagina de eroare.
-2. **Poll-ul de notificări** (`core.js`, 60 s) — se poate lungi sau condiționa de vizibilitatea tab-ului.
-3. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`, `SEND_CAP` și
+2. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`, `SEND_CAP` și
    `MAX_INCREMENT` din `src/routes/api/progress.js` — de ținut sincronizate): 2 → 5 minute
-   scade de ~2,5× scrierile D1 din vizionare.
-4. **Vezi scara**: `node scripts/bench-scale.mjs` spune ce ar costa fiecare interogare la
+   scade de ~2,5× scrierile D1 din vizionare. Poll-ul de notificări e deja adaptiv (vezi tabelul de mai sus).
+3. **Vezi scara**: `node scripts/bench-scale.mjs` spune ce ar costa fiecare interogare la
    1.000 de serii și 1.000 de utilizatori (și cât ar ține cota la traficul dorit).
-5. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează
+4. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează
    procentul din fiecare cotă pentru ziua UTC curentă. Cere pe token permisiunea
    „Account Analytics: Read" — dacă lipsește, scriptul spune exact asta.
-6. **Protecție anti-abuz gratis**: Bot Fight Mode, „Under Attack Mode" pentru urgente,
+5. **Protecție anti-abuz gratis**: Bot Fight Mode, „Under Attack Mode" pentru urgente,
    5 reguli WAF custom pe planul gratuit. Rate limiting-ul propriu acoperă login/register/watch/chat.
-7. **Backup**: D1 are Time Travel (restaurarere la un moment din trecut); `worker-do` și Pages
+6. **Backup**: D1 are Time Travel (restaurarere la un moment din trecut); `worker-do` și Pages
    se redeploya din repo.
 
 ---

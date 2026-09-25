@@ -68,7 +68,7 @@ jobs:
               grep -n '^!!' /tmp/suite.log | head -40 || echo '(niciuna — vezi cozile de mai jos)'
               echo '```'
             fi
-            for f in /tmp/scripts.log /tmp/weight.log /tmp/e2e.log /tmp/dom.log \
+            for f in /tmp/scripts.log /tmp/weight.log /tmp/poll.log /tmp/pulseonline.log /tmp/e2e.log /tmp/dom.log \
                      /tmp/dom-build.log /tmp/theme.log /tmp/topcache.log /tmp/chatpersist.log \
                      /tmp/counters.log /tmp/chatd1.log /tmp/flow.log /tmp/pixel.log /tmp/caps.log \
                      /tmp/suite.log; do
@@ -84,7 +84,7 @@ jobs:
           [ -f /tmp/suite.log ] && grep '^!!' /tmp/suite.log | head -6 | while IFS= read -r line; do
             printf '::error::%s\n' "$line"
           done
-          for f in /tmp/scripts.log /tmp/weight.log /tmp/e2e.log /tmp/dom.log /tmp/dom-build.log \
+          for f in /tmp/scripts.log /tmp/weight.log /tmp/poll.log /tmp/pulseonline.log /tmp/e2e.log /tmp/dom.log /tmp/dom-build.log \
                    /tmp/theme.log /tmp/topcache.log /tmp/chatpersist.log /tmp/counters.log \
                    /tmp/chatd1.log /tmp/flow.log /tmp/pixel.log /tmp/caps.log; do
             [ -f "$f" ] || continue
@@ -101,6 +101,8 @@ jobs:
             /tmp/suite.log
             /tmp/scripts.log
             /tmp/weight.log
+            /tmp/poll.log
+            /tmp/pulseonline.log
             /tmp/e2e.log
             /tmp/dom.log
             /tmp/dom-build.log

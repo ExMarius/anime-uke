@@ -246,6 +246,9 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Regulile de prefetch/prerender pentru navigare rapida exista', !!p.$('link[rel="speculationrules"][href="/speculationrules.json"]'), 'lipseste <link rel=speculationrules>');
   const bellOn = await until(() => !!p.$('#nav-bell'));
   check('Clopoțelul de notificări exista in nav', bellOn, 'lipseste #nav-bell');
+  check('Poll-ul din nav e adaptiv (marker auk-adaptive pe clopoțel și pe chip)',
+    p.$('#nav-bell')?.dataset.poll === 'auk-adaptive' && p.$('#pulse-chip')?.dataset.poll === 'auk-adaptive',
+    `bell=${p.$('#nav-bell')?.dataset.poll} chip=${p.$('#pulse-chip')?.dataset.poll}`);
   // Nav-ul e randat aici (dovada: clopoțelul) — verificăm și brandul.
   const brandImg = p.$('#nav .nav__brand__mark');
   // Logo-ul din nav e .webp (assetul nu mai trece prin worker, deci nu există

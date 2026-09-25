@@ -101,6 +101,33 @@ for (const f of jsFiles) {
     gitignore.includes('public/assets/js/c-*.js'), 'lipsește regula din .gitignore');
 }
 
+// -------------------------------------- buget 0: poll adaptiv + online cache
+// Poll-ul fix (setInterval 60s/90s) și ChatDO la fiecare /api/pulse sunt
+// exact regresia care golește cota. Verificarea citește sursa, nu build-ul:
+// minificatorul redenumește funcțiile, dar nu are voie să reapară intervalul fix.
+{
+  const core = readFileSync(join(ROOT, 'public/assets/js/core.js'), 'utf8');
+  const dev = readFileSync(join(ROOT, 'dev.sh'), 'utf8');
+  const pulse = readFileSync(join(ROOT, 'src/routes/api/pulse.js'), 'utf8');
+  check('clopoțelul nu mai are setInterval fix',
+    !/setInterval\(\s*refreshBellBadge/.test(core) && core.includes('adaptivePoll(refreshBellBadge'),
+    'a revenit poll-ul la 60 s');
+  check('pulse-ul din nav nu mai are setInterval fix',
+    !/setInterval\(\s*tick,\s*90000\)/.test(core) && core.includes('adaptivePoll(fetchPulse'),
+    'a revenit poll-ul la 90 s');
+  check('garda anti-cache citește versiunea din / (static, 0 invocări)',
+    /fetch\(\s*'\/'\s*,\s*\{\s*cache:\s*'no-store'\s*\}\s*\)/.test(core) && !/fetch\(\s*location\.pathname/.test(core),
+    'cere iar pagina curentă (invocare pe /serie și /episod)');
+  check('markerul auk-adaptive e în sursă (supraviețuiește minificării)',
+    core.includes('auk-adaptive'), 'lipsește markerul de deploy');
+  check('dev.sh leagă ONLINE_CACHE_MS (testele văd online live)',
+    /ONLINE_CACHE_MS/.test(dev), 'lipsește bindingul — e2e-ul „online ≥ 1” ar vedea cache');
+  const pulseCod = pulse.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+  check('pulse întreabă instanța global-chat, nu global',
+    pulseCod.includes("idFromName('global-chat')") && !/idFromName\(\s*'global'\s*\)/.test(pulseCod),
+    'numele instanței s-a schimbat');
+}
+
 // ------------------------------------------------- relay: fișiere invocate
 {
   const cmd = readFileSync(join(ROOT, 'cf-relay/cmd.sh'), 'utf8');

@@ -13,11 +13,11 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 28 · e2e 584 · dom 193 ·
-  theme-cache 7 · top-cache 17 · chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS ·
-  pixel-teme 8 · plafoane 13),
-  deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
-  (vezi `AUDIT-LIVE.md`).
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 44 · poll-buget 22 ·
+  pulse-online 17 · e2e 584 · dom 202 / 198 pe build · theme-cache 7 · top-cache 17 ·
+  chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
+  Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
+  (vezi `AUDIT-LIVE.md`; se reface la deploy).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
   (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
   invocări). Ambele deployau în același proiect Pages, deci live-ul oscila între ele —
@@ -40,7 +40,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0026**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0030**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -74,7 +74,12 @@ cat cf-relay/last-output.txt
 
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
-- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
+- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox. Canalul principal de citit rezultatul
+  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`
+  (body = „deploy exit N” + capul cozii output-ului, tokenii redactați). `last-output.txt` se comite și el când push-ul trece,
+  dar comentariul e garantat.
+- `CLOUDFLARE_ACCOUNT_ID` e opțional și poate fi invalid (de ex. 53 caractere în loc de 32 hex): `cf-relay/cmd.sh`
+  alege singur contul pe care tokenul chiar vede D1-ul `anime-db`. Dacă secretul e setat corect, verifică doar paritatea.
 - `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
   consumat azi din cotele gratuite (Functions / D1 / DO). Cere permisiunea
   „Account Analytics: Read" pe token; fără ea scrie clar ce lipsește, nu crapă.
@@ -122,6 +127,8 @@ cat cf-relay/last-output.txt
 | „Pagina 1 a unei serii lungi întoarce listă goală (500), pagina 2 merge" | interogarea de progres trimitea câte un parametru per episod afișat, iar D1 acceptă **maxim 100 de parametri legați per interogare** | împarte `IN (...)` în bucăți de 90 (`src/routes/api/series/by-id.js`); simptomul „doar prima pagină pică" e semnătura acestei limite |
 | O funcție nouă „nu se salvează" deși nu dă eroare | `INSERT` cu 11 coloane și 10 valori, eroare doar logată | `tests/scripts-health.mjs` numără coloanele vs. valorile la toate instrucțiunile `INSERT`; `tests/chat-d1.mjs` citește tabelul real |
 | Deploy-ul de pe runner nu pornește, deși local totul e verde | sintaxă invalidă în `cf-relay/cmd.sh` (ex. o ghilimea tipografică `"` care închide un șir bash deschis cu `„`) | `node tests/scripts-health.mjs` rulează `bash -n` pe toate scripturile; e prima suită din `test.sh` |
+| Relay-ul pică instant: „Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo” | secretul a fost șters/rotit din GitHub (s-a întâmplat 25.09 — o oră de deploieri n-au putut ieși; site-ul live rulează în continuare, doar deploy-ul e blocat) | cere proprietarului să-l readadă: Settings → Secrets and variables → Actions → `CLOUDFLARE_API_TOKEN`; diagnosticul ajunge singur în comentariul pe commit |
+| Deploy pică cu CF 7003 „Could not route to /accounts/…/d1” | secretul `CLOUDFLARE_ACCOUNT_ID` e invalid (altceva decât 32 hex) sau e alt cont | `cmd.sh` alege acum automat contul care vede D1-ul `anime-db`; pentru curățenie: secretul gol sau ID-ul corect (32 hex) |
 | O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
 | Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |
 
@@ -148,6 +155,51 @@ cat cf-relay/last-output.txt
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
+
+### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
+
+Proprietarul a pierdut accesul la deploiere pentru că secretul `CLOUDFLARE_API_TOKEN`
+lipsea din GitHub Secrets (site-ul live continua să ruleze, dar orice deploy pică în
+pasul de verificare). Doi blocaji, ambele remediale în `cf-relay/`:
+
+- **Verificare secret + diagnostic:** workflow-ul scrie în `cf-relay/last-output.txt`
+  *înainte* de `cmd.sh` dacă tokenul lipsește, plus un comentariu pe commit (canalul
+  principal de citire din sandbox, tokenii redactați — vezi §3).
+- **Alegerea contului CF:** secretul `CLOUDFLARE_ACCOUNT_ID` era invalid (53 caractere,
+  nu 32 hex) → CF error 7003. `cmd.sh` listează conturile la care tokenul are acces și
+  alege pe cel care vede D1-ul `anime-db`; dacă niciunul nu-l vede, iese cu eroare clară.
+- **Deploy-ul oprește la prima eroare:** `cmd.sh` propagă exit code-ul lui `deploy.sh`
+  (înainte continua la audit și mința cu un rezultat „OK”).
+
+Verificat end-to-end pe live: deploy `exit 0`, canarul de chat a ajuns în D1, markerul
+`auk-adaptive` e în chunk-ul publicat, auditul live a ieșit curat, `/api/pulse` viu
+(`{"series":5,…,"online":1}`).
+
+### Buget 0, runda de poll (2026-09-25, branch `arena/01a0d983-anime-uke`)
+
+Tab-urile lăsate deschise goleau cota: clopoțelul la 60 s și „N online” la 90 s,
+inclusiv pe tab ascuns, plus un request ChatDO la fiecare `/api/pulse`. Acum:
+
+- `adaptivePoll()` în `public/assets/js/core.js` — 0 cereri pe tab ascuns sau
+  părăsit 10 minute; backoff 60→120→240→plafon 5 min când numărul nu se schimbă;
+  revenire la pasul scurt când se schimbă. Scroll-ul ține tab-ul „viu”, dar nu
+  anulează backoff-ul. La re-randarea nav-ului poll-ul vechi e oprit (fără
+  scurgere de timere). Test: `tests/poll-buget.mjs` (fără server, ceas controlat).
+- `src/routes/api/pulse.js` ține „online” 60 s în izolat + `caches.default`
+  (cu timestamp, nu doar max-age). Eșecul DO nu se memorează. `ONLINE_CACHE_MS=0`
+  în `dev.sh` (implicit) — producția nu are bindingul, deci cachează.
+  **Nu scoate bindingul din dev.sh**: e2e-ul „Pulse vede socket-ul deschis”
+  ar vedea un 0 cache-uit. Test: `tests/pulse-online.mjs`.
+- Garda anti-cache cere `fetch('/')` (static, 0 invocări), nu `location.pathname`.
+- Marker de deploy: `data-poll="auk-adaptive"` (stringul supraviețuiește
+  minificării; `cf-relay/cmd.sh` §20 îl caută în chunk-ul publicat).
+- Branch-urile vechi `arena/*` de pe remote au fost șterse (toate erau deja
+  în `main`). Pe remote rămâne doar `main` + branch-ul sesiunii curente.
+
+Următoarea migrare, dacă e nevoie de schemă, e **0030** (ultima aplicată e 0029).
+Nu edita o migrare deja aplicată.
+
+
 
 - Grade de staff Helper/Staff/Moderator + tab „Grade" refăcut în admin (0025).
 - Fișa detaliată a seriei + „Episodul următor" cu countdown + JSON-LD SEO (0024).

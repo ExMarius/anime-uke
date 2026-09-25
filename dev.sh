@@ -81,6 +81,10 @@ BIND=()
 # 0 = topul săptămânal se recalculează la fiecare cerere (fără cache de o oră),
 # ca dezvoltarea și testele să vadă imediat efectul unei vizionări.
 [ -n "${TOP_CACHE_MINUTES:-}" ] && BIND+=(--binding "TOP_CACHE_MINUTES=$TOP_CACHE_MINUTES")
+# 0 = „câți sunt online” se citește live din ChatDO. În producție bindingul
+# lipsește, deci pulse.js ține contorul 60 s (o cerere DO pe minut per izolat,
+# nu una pe fiecare /api/pulse). Testul de regresie „online ≥ 1” are nevoie de 0.
+BIND+=(--binding "ONLINE_CACHE_MS=${ONLINE_CACHE_MS:-0}")
 $W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e

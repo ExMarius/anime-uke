@@ -61,24 +61,38 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
+          # Diagnosticul ajunge în repo (pasul următor îl comite chiar dacă
+          # aici ieșim cu 1). Fără token, fără JSON-ul contului — doar motivul.
+          DIAG="cf-relay/last-output.txt"
+          note() { printf '%s\n' "$1" | tee -a "$DIAG"; }
+          : > "$DIAG"
+          note "exit_code: (verificare secret, inainte de cmd.sh)"
+          note "commit: ${GITHUB_SHA::7}"
           if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
-            echo "✗ Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo."
-            echo "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
+            note "✗ Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo."
+            note "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
             exit 1
           fi
-          echo "✓ Token prezent."
+          note "✓ Token prezent (lungime ${#CLOUDFLARE_API_TOKEN})."
           if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            AID="$(curl -sS https://api.cloudflare.com/client/v4/accounts \
+            RAW="$(curl -sS -m 25 https://api.cloudflare.com/client/v4/accounts \
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              | jq -r '.result[0].id // empty')"
+              -w '\n__HTTP__:%{http_code}' || printf '\n__HTTP__:curl-esuat')"
+            HTTP="$(printf '%s' "$RAW" | sed -n 's/^__HTTP__://p' | tail -1)"
+            BODY="$(printf '%s' "$RAW" | sed '/^__HTTP__:/d')"
+            PARSED="$(printf '%s' "$BODY" | jq -r '[.success // false, (.errors[0].message // .errors[0].code // "fara-mesaj"), (.result[0].id // "")] | @tsv' 2>/dev/null || printf 'false\tjq-esuat\t')"
+            OK="$(printf '%s' "$PARSED" | cut -f1)"
+            ERR="$(printf '%s' "$PARSED" | cut -f2)"
+            AID="$(printf '%s' "$PARSED" | cut -f3)"
+            note "  descoperire cont: HTTP ${HTTP} · success=${OK} · eroare=${ERR}"
             if [ -z "$AID" ]; then
-              echo "✗ Nu am putut descoperi Account ID (token fara Account Settings Read?)"
+              note "✗ Nu am putut descoperi Account ID (token fara Account Settings Read, sau API picat)."
               exit 1
             fi
             echo "CLOUDFLARE_ACCOUNT_ID=${AID}" >> "$GITHUB_ENV"
-            echo "✓ Account ID descoperit automat: ${AID}"
+            note "✓ Account ID descoperit automat."
           else
-            echo "✓ Account ID din secret."
+            note "✓ Account ID din secret."
           fi
 
       - name: Ruleaza comanda
@@ -89,6 +103,7 @@ jobs:
           # in pasul anterior (prin GITHUB_ENV). Citim dintr-un nume separat.
           CF_ACCOUNT_ID_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           if [ -n "${CF_ACCOUNT_ID_SECRET}" ]; then
@@ -117,12 +132,23 @@ jobs:
             echo "exit_code: ${RC}"
             echo "comanda: cf-relay/cmd.sh @ ${GITHUB_SHA::7}"
             echo "────────────────────────────────────"
-            tail -c 50000 cf-relay/last-output.raw
+            # Capul: exit deploy și eroarea. Coada: auditul live.
+            head -c 20000 cf-relay/last-output.raw
+            printf '\n── … ──\n'
+            tail -c 20000 cf-relay/last-output.raw
           } > cf-relay/last-output.txt
           rm -f cf-relay/last-output.raw
           echo "${RC}" > /tmp/relay-rc
           echo "── output (exit ${RC}) ──"
           cat cf-relay/last-output.txt
+          # Logurile de Actions nu se pot citi din sandbox (blob storage blocat).
+          # Lasăm rezultatul într-un comentariu pe commit — se citește prin API.
+          # Scoatem șirurile lungi (tokeni) înainte să le scriem undeva.
+          SAFE="$(head -c 12000 cf-relay/last-output.txt | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
+          echo "::notice title=deploy-exit::${RC}"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -f body="$(printf 'deploy exit %s\n\n```\n%s\n```\n' "$RC" "$SAFE")" \
+            >/dev/null 2>&1 || echo "::warning::nu am putut comenta commit-ul"
 
       - name: Publica output-ul in repo
         if: always()
@@ -135,7 +161,9 @@ jobs:
           git add cf-relay/last-output.txt 2>/dev/null || exit 0
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "relay: output (${GITHUB_SHA::7})"
-          git push -q origin "HEAD:${BRANCH}"
+          # Push-ul poate fi respins (protecție de secrete în log). Nu îngropa
+          # rezultatul deploy-ului: comentariul de pe commit e canalul de citit.
+          git push -q origin "HEAD:${BRANCH}" || echo "::warning::push last-output respins"
 
       - name: Propaga codul de iesire al comenzii
         run: |
