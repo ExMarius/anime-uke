@@ -12,6 +12,55 @@
 # înainte de audit, altfel se verifică deployment-ul anterior.
 # =====================================================================
 set -uo pipefail
+
+# Secretul CLOUDFLARE_ACCOUNT_ID poate fi gol, cu spații, sau un ID care nu
+# e contul cu D1. Alegem contul pe care tokenul chiar vede baza anime-db.
+echo "── aleg contul care vede D1 ──"
+CLOUDFLARE_ACCOUNT_ID="$(printf '%s' "${CLOUDFLARE_ACCOUNT_ID:-}" | tr -d '[:space:]')"
+export CLOUDFLARE_ACCOUNT_ID
+echo "id din env: lungime ${#CLOUDFLARE_ACCOUNT_ID} hex32=$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | grep -qE '^[0-9a-fA-F]{32}$' && echo da || echo nu)"
+curl -sS -m 25 https://api.cloudflare.com/client/v4/accounts \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o /tmp/cf-accounts.json || true
+node <<'JS'
+const fs = require('fs');
+let j = {};
+try { j = JSON.parse(fs.readFileSync('/tmp/cf-accounts.json', 'utf8')); } catch { j = { success: false, errors: [{ message: 'json-invalid' }] }; }
+const list = Array.isArray(j.result) ? j.result : [];
+const mask = (id) => (!id ? '(gol)' : `${id.slice(0, 4)}…${id.slice(-4)} len=${id.length}`);
+const err = (j.errors && j.errors[0] && (j.errors[0].message || j.errors[0].code)) || '';
+console.log(`conturi: success=${j.success} n=${list.length} eroare=${err}`);
+fs.writeFileSync('/tmp/cf-accounts.tsv', list.map((a) => `${a.id}\t${String(a.name || '').replace(/\s+/g, ' ')}`).join('\n') + (list.length ? '\n' : ''));
+for (const a of list) console.log(`  ${a.name || '?'}  ${mask(a.id)}`);
+const env = process.env.CLOUDFLARE_ACCOUNT_ID || '';
+const hit = list.find((a) => a.id === env);
+console.log(`env ${mask(env)} e in lista: ${hit ? 'da (' + hit.name + ')' : 'nu'}`);
+JS
+BEST=""
+BEST_NAME=""
+while IFS=$'\t' read -r id name; do
+  [ -z "${id:-}" ] && continue
+  RAW="$(curl -sS -m 25 "https://api.cloudflare.com/client/v4/accounts/${id}/d1/database" \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -w '\n__HTTP__:%{http_code}' || printf '\n__HTTP__:curl-esuat')"
+  HTTP="$(printf '%s' "$RAW" | sed -n 's/^__HTTP__://p' | tail -1)"
+  printf '%s' "$RAW" | sed '/^__HTTP__:/d' > /tmp/cf-d1.json
+  INFO="$(node -e '
+    let j={}; try { j=JSON.parse(require("fs").readFileSync("/tmp/cf-d1.json","utf8")); } catch { j={success:false,errors:[{message:"json-invalid"}]}; }
+    const err=(j.errors&&j.errors[0]&&(j.errors[0].message||j.errors[0].code))||"";
+    const names=(Array.isArray(j.result)?j.result:[]).map(d=>d.name).join(",");
+    const has=(Array.isArray(j.result)?j.result:[]).some(d=>d.name==="anime-db");
+    console.log("success="+j.success+" db=["+names+"] anime-db="+has+" eroare="+err);
+  ')"
+  echo "  D1 ${name}: HTTP ${HTTP} ${INFO}"
+  if printf '%s' "$INFO" | grep -q 'anime-db=true'; then BEST="$id"; BEST_NAME="$name"; break; fi
+  if printf '%s' "$INFO" | grep -q 'success=true' && [ -z "$BEST" ]; then BEST="$id"; BEST_NAME="$name"; fi
+done < /tmp/cf-accounts.tsv
+if [ -z "$BEST" ]; then
+  echo "✗ niciun cont accesibil nu vede D1. Tokenul are nevoie de permisiunea D1 Edit pe contul unde e anime-uke."
+  exit 1
+fi
+export CLOUDFLARE_ACCOUNT_ID="$BEST"
+echo "folosesc ${BEST_NAME} (lungime ${#BEST})"
+
 ./deploy.sh
 DEPLOY_RC=$?
 echo "exit deploy: $DEPLOY_RC"
