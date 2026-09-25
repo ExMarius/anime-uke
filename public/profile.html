@@ -31,6 +31,13 @@
       <div class="profile-head__info">
         <h1 class="profile-head__name" id="p-username">Se încarcă…</h1>
         <div class="profile-head__badges" id="p-badges"></div>
+        <!-- Prietenie: apare doar pe profilul altcuiva -->
+        <div class="friend-actions" id="p-friend-actions" hidden>
+          <button class="btn btn--accent" id="p-friend-btn" type="button">🤝 Adaugă prieten</button>
+          <button class="btn btn--ghost" id="p-friend-accept" type="button" hidden>✅ Acceptă</button>
+          <button class="btn btn--ghost" id="p-friend-reject" type="button" hidden>✕ Respinge</button>
+          <span class="hint" id="p-friend-status" hidden></span>
+        </div>
       </div>
       <button class="btn btn--accent" id="p-edit-btn" type="button" hidden>✏️ Editează</button>
     </header>

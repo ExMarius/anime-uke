@@ -11,6 +11,9 @@
 // Acum ensureChatElements() garanteaza ca FAB-ul si modalul EXISTA si
 // au display corect pe ORICE pagina, iar open/close folosesc !important
 // din CSS (display:flex !important cand e deschis).
+//
+// FIX PROFILE LINK (2026-09-25): click pe poza/nume din chat -> profil
+// + adauga prieten. Avatarul si numele sunt <a> catre /profile?u=...
 // =====================================================================
 
 import { getSession, toast, staffBadge, staffIcon, rankChip } from './core.js';
@@ -288,6 +291,11 @@ function setBadge(text) {
   if (el) el.textContent = text;
 }
 
+function profileHref(username) {
+  if (!username) return '/profile';
+  return `/profile?u=${encodeURIComponent(username)}`;
+}
+
 function renderOnline(list) {
   onlineCount = list.length;
   const head = document.getElementById('chat-online-count');
@@ -295,10 +303,29 @@ function renderOnline(list) {
 
   const box = document.getElementById('chat-online');
   if (!box) return;
-  box.textContent = list.length
-    ? 'Online: ' + list.map((u) => `${staffIcon(u.staff_role)}${u.rank_icon || ''} ${u.username}`.trim()).join(', ')
-    : 'Nimeni online momentan';
+  box.innerHTML = '';
   box.style.display = 'block';
+
+  if (!list.length) {
+    box.textContent = 'Nimeni online momentan';
+    return;
+  }
+
+  const label = document.createElement('span');
+  label.textContent = 'Online: ';
+  box.appendChild(label);
+
+  list.forEach((u, idx) => {
+    const a = document.createElement('a');
+    a.href = profileHref(u.username);
+    a.className = 'chat-online__user';
+    a.title = `Vezi profilul lui ${u.username}`;
+    a.textContent = `${staffIcon(u.staff_role)}${u.rank_icon || ''} ${u.username}`.trim();
+    box.appendChild(a);
+    if (idx < list.length - 1) {
+      box.appendChild(document.createTextNode(', '));
+    }
+  });
 }
 
 function scrollDown() {
@@ -516,40 +543,65 @@ function sendMessage() {
 }
 
 /** Numele din chat: 💎 flair si 🌟 aur vin din server (atașate la handshake
- *  si stocate pe mesaj) — clientul nu le poate falsifica. */
+ *  si stocate pe mesaj) — clientul nu le poate falsifica.
+ *  FIX: numele e acum link catre profil (cerinta: click pe poza/nume -> profil + adauga prieten) */
 function nameEl(m) {
-  const u = document.createElement('span');
+  const username = m.username || 'Anon';
+  const hasProfile = !!m.username;
+  const u = document.createElement(hasProfile ? 'a' : 'span');
   // Culoarea numelui (shop). Validăm formatul — vine din DB-ul nostru, dar
   // aplicăm classă doar pentru id-uri cu aspect de id.
   const ncol = typeof m.name_color === 'string' && /^color_[a-z]+$/.test(m.name_color) ? m.name_color.slice(6) : '';
   // Liderul de facțiune își păstrează culoarea unică (prioritate).
   const lead = typeof m.leader_color === 'string' && /^nc-[a-z]+$/.test(m.leader_color) ? m.leader_color : '';
-  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '') + (lead ? ` ${lead}` : ncol ? ` nc-${ncol}` : '');
+  u.className = 'msg__user' + (m.name_gold ? ' msg__user--gold' : '') + (lead ? ` ${lead}` : ncol ? ` nc-${ncol}` : '') + (hasProfile ? ' msg__user--link' : '');
   if (lead) u.title = '👑 Liderul facțiunii sale luna aceasta';
-  u.textContent = (m.flair ? m.flair + ' ' : '') + (m.username || 'Anon');
+  else if (hasProfile) u.title = `Vezi profilul lui ${username}`;
+  if (hasProfile) {
+    u.href = profileHref(username);
+  }
+  u.textContent = (m.flair ? m.flair + ' ' : '') + username;
   return u;
 }
 
 /** Avatarul celui care vorbeste: <img> cu URL-ul din profil (poate fi GIF
  *  animat — <img> randeaza animatia nativ). Linkul picat sau gazda care
- *  blocheaza hotlinking cad pe initiala, niciodata pe imagine stricata. */
+ *  blocheaza hotlinking cad pe initiala, niciodata pe imagine stricata.
+ *  FIX: avatarul e link catre profil */
 function avatarEl(m) {
-  if (!m.avatar) return null;
-  const wrap = document.createElement('span');
-  wrap.className = 'msg__avatar';
+  const username = m.username;
+  const hasProfile = !!username;
+  if (!m.avatar && !hasProfile) return null;
+
+  const wrap = document.createElement(hasProfile ? 'a' : 'span');
+  wrap.className = 'msg__avatar' + (hasProfile ? ' msg__avatar--link' : '');
   wrap.style.display = 'inline-grid';
-  const img = document.createElement('img');
-  img.src = m.avatar;
-  img.alt = '';
-  img.loading = 'lazy';
-  img.decoding = 'async';
-  img.setAttribute('referrerpolicy', 'no-referrer');
-  img.addEventListener('error', () => {
+  if (hasProfile) {
+    wrap.href = profileHref(username);
+    wrap.title = `Vezi profilul lui ${username}`;
+  }
+
+  if (m.avatar) {
+    const img = document.createElement('img');
+    img.src = m.avatar;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.setAttribute('referrerpolicy', 'no-referrer');
+    img.addEventListener('error', () => {
+      const fb = document.createElement('span');
+      fb.className = 'msg__avatar-fb';
+      fb.textContent = (username || 'A')[0].toUpperCase();
+      img.replaceWith(fb);
+    }, { once: true });
+    wrap.appendChild(img);
+  } else if (hasProfile) {
+    // avatar lipsa dar avem username -> initiala ca link
     const fb = document.createElement('span');
     fb.className = 'msg__avatar-fb';
-    fb.textContent = (m.username || 'A')[0].toUpperCase();
-    img.replaceWith(fb);
-  }, { once: true });
-  wrap.appendChild(img);
+    fb.textContent = (username || 'A')[0].toUpperCase();
+    wrap.appendChild(fb);
+  }
+
   return wrap;
 }
