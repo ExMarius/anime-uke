@@ -348,12 +348,146 @@ export async function renderNav(active = '') {
 }
 
 // ---------------------------------------------------------------------
+// POLLING ADAPTIV (buget 0)
+//
+// De ce exista: clopotelul si chipul „N online” se improspateaza din API,
+// iar un setInterval fix cheltuieste invocari la nesfarsit — inclusiv pe
+// un tab uitat deschis peste noapte, care intreaba de 1.440 de ori pe zi
+// „cate notificari am?” ca sa primeasca de fiecare data acelasi „0”.
+// Cota planului gratuit e de 100.000 de invocari/zi, deci ~70 de tab-uri
+// uitate deschise o golesc toata, fara nicio informatie noua.
+//
+// Regula celor patru opriri — un poll se opreste cand:
+//   1. tab-ul e ASCUNS (document.hidden): nimeni nu vede badge-ul;
+//   2. tab-ul e INACTIV de 10 minute (fara mouse/tastatura/scroll): omul
+//      a plecat de tot, chiar daca fereastra a ramas in fata;
+//   3. numarul NU s-a schimbat: intervalul se dubleaza 60 s -> 120 s ->
+//      240 s pana la plafonul de 5 minute (si revine la 60 s imediat ce
+//      apare ceva nou — cine primeste notificari le vede repede);
+//   4. pagina e parasita: stop() curata tot (fara scurgeri de timere).
+//
+// Distanta minima intre doua cereri (minGap) taie si „furtuna de tab-uri”:
+// cine comuta de zece ori intre ferestre nu declanseaza zece cereri.
+//
+// Functia polluita intoarce `true` daca s-a schimbat ceva (adica vreau sa
+// raman la intervalul scurt). Orice altceva (undefined/false) = liniste,
+// deci poll-ul isi largeste pasul.
+// ---------------------------------------------------------------------
+export const POLL_BELL_MS = 60_000;
+export const POLL_PULSE_MS = 90_000;
+export const POLL_MAX_MS = 300_000;
+export const POLL_IDLE_MS = 600_000;
+
+/** Miscarile care inseamna „omul e aici”. Scroll-ul nu bubuie, deci capture. */
+const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+
+/**
+ * Urmatorul interval, in milisecunde. `0` = NU programa nimic (tab inactivil).
+ * Functie pura, fara timere: testele o verifica direct (tests/poll-buget.mjs).
+ */
+export function nextPollDelay(unchanged, idleMs, base = POLL_BELL_MS, max = POLL_MAX_MS, idleAfter = POLL_IDLE_MS) {
+  if (!(idleMs < idleAfter)) return 0;
+  const steps = Math.max(0, Math.min(Number(unchanged) || 0, 3));
+  return Math.min(base * 2 ** steps, max);
+}
+
+/**
+ * Porneste un poll care respecta cele patru opriri de mai sus.
+ * Intoarce { stop, poke, stats } — `poke()` spune „s-a intamplat ceva,
+ * uita-te acum” (il foloseste codul care stie ca numarul s-a schimbat).
+ */
+export function adaptivePoll(fn, opts = {}) {
+  const base = opts.base ?? POLL_BELL_MS;
+  const max = opts.max ?? POLL_MAX_MS;
+  const idleAfter = opts.idleAfter ?? POLL_IDLE_MS;
+  const minGap = opts.minGap ?? Math.min(base, 30_000);
+
+  // runNow pleacă de la -1 ca PRIMUL interval programat să fie `base`, nu
+  // dublul: altfel fetch-ul imediat ar conta ca „nimic nou” și am sări pasul scurt.
+  let unchanged = opts.runNow === false ? 0 : -1;
+  let lastActivity = Date.now();
+  let lastRun = 0;
+  let timer = null;
+  let stopped = false;
+
+  function schedule() {
+    if (stopped) return;
+    clearTimeout(timer);
+    timer = null;
+    const delay = nextPollDelay(unchanged, Date.now() - lastActivity, base, max, idleAfter);
+    if (!delay) return;          // inactiv: nu programam nimic, reia la miscare
+    timer = setTimeout(run, delay);
+  }
+
+  async function run() {
+    if (stopped) return;
+    if (document.hidden) return; // tab ascuns: nici macar nu reprogramam
+    lastRun = Date.now();
+    let changed = false;
+    try {
+      changed = (await fn()) === true;
+    } catch { /* un poll nu are voie sa rupa pagina */ }
+    unchanged = changed ? 0 : unchanged + 1;
+    schedule();
+  }
+
+  /** Activitate sau tab revenit in fata: cel mult o cerere la minGap. */
+  function poke() {
+    lastActivity = Date.now();
+    if (stopped || document.hidden) return;
+    if (Date.now() - lastRun < minGap) return;
+    clearTimeout(timer);
+    timer = null;
+    run();
+  }
+
+  // Scroll/click țin tab-ul „viu” (nu se oprește după 10 min de citit), dar
+  // NU cer date noi. Altfel un scroll la fiecare 30 s ar anula backoff-ul și
+  // am cheltui iar o invocare la fiecare minGap. Excepție: revenirea din
+  // inactivitate — timerul era oprit, deci merită o privire imediată.
+  const onActivity = () => {
+    const wasIdle = !(Date.now() - lastActivity < idleAfter);
+    lastActivity = Date.now();
+    if (wasIdle) poke();
+  };
+  const onVisibility = () => { if (!document.hidden) poke(); };
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    for (const ev of ACTIVITY_EVENTS) {
+      document.addEventListener(ev, onActivity, { passive: true });
+    }
+    document.addEventListener('scroll', onActivity, { passive: true, capture: true });
+    document.addEventListener('visibilitychange', onVisibility);
+  }
+
+  if (opts.runNow === false) schedule();
+  else run();
+
+  return {
+    poke,
+    stop() {
+      stopped = true;
+      clearTimeout(timer);
+      timer = null;
+      if (typeof document !== 'undefined' && document.removeEventListener) {
+        for (const ev of ACTIVITY_EVENTS) document.removeEventListener(ev, onActivity);
+        document.removeEventListener('scroll', onActivity, { capture: true });
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    },
+    stats: () => ({ unchanged, idleMs: Date.now() - lastActivity, scheduled: !!timer, lastRun }),
+  };
+}
+
+// ---------------------------------------------------------------------
 // CLOPOTEL DE NOTIFICARI (nav)
 // Un singur element pe pagina, construit odata cu nav-ul. Badge-ul vine
-// din GET /notifications/unread (indexat, ieftin): poll la 60 s + refresh
-// imediat cand tab-ul revine in fata. Lista se incarca doar la click.
+// din GET /notifications/unread (indexat, ieftin), prin adaptivePoll:
+// 60 s cand se misca ceva, pana la 5 min cand e liniste, deloc pe un tab
+// ascuns sau parasit. Lista se incarca doar la click.
 // ---------------------------------------------------------------------
 let bellPop = null;
+let bellPoll = null;
 
 function notifHref(n) {
   const p = n.payload || {};
@@ -375,19 +509,25 @@ function bumpBadge(delta) {
 // telefon, server rece) tine badge-ul greșit pana la urmatorul poll de 60 s.
 // Reia scurt cu backoff la eroare de retea; succesul reseteaza backoff-ul.
 let bellRetryMs = 0;
+/**
+ * Intoarce TRUE daca numarul s-a schimbat fata de ce afisa badge-ul:
+ * adaptivePoll tine cont de asta (schimbare = revin la 60 s, liniste = 5 min).
+ */
 async function refreshBellBadge() {
   const b = document.getElementById('nav-bell-badge');
-  if (!b) return;
+  if (!b) return false;
   const res = await api('/notifications/unread');
   if (!res.ok && res.status === 0) {
     bellRetryMs = bellRetryMs ? Math.min(bellRetryMs * 2, 15000) : 2500;
     setTimeout(refreshBellBadge, bellRetryMs);
-    return;
+    return false;
   }
   bellRetryMs = 0;
   const n = res.ok ? Number(res.data.count || 0) : 0;
+  const prev = b.hidden ? 0 : (Number(b.textContent) || 0);
   b.textContent = n > 99 ? '99+' : String(n);
   b.hidden = n === 0;
+  return n !== prev;
 }
 
 async function loadNotifPop() {
@@ -467,6 +607,8 @@ function buildBell() {
   btn.type = 'button';
   btn.title = 'Notificări';
   btn.setAttribute('aria-label', 'Notificări');
+  // String păstrat de minificator: marker de deploy (poll-ul fix a dispărut).
+  btn.dataset.poll = 'auk-adaptive';
   btn.textContent = '🔔';
   const badge = document.createElement('span');
   badge.id = 'nav-bell-badge';
@@ -491,13 +633,14 @@ function buildBell() {
   wrap.append(btn, pop);
   bellPop = pop;
 
-  // Badge proaspat: la fiecare minut si cand tab-ul revine in fata.
-  // Apelul initial e la call site (dupa appendChild) — aici wrap-ul e inca
-  // detach-at si getElementById n-ar gasi badge-ul.
-  setInterval(refreshBellBadge, 60000);
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refreshBellBadge();
-  });
+  // Badge proaspăt, dar NU pe ceas: adaptivePoll (vezi „POLLING ADAPTIV”)
+  // sare peste tab-ul ascuns, dublează pasul cât timp numărul nu se schimbă
+  // și se oprește de tot după 10 minute fără activitate. Primul apel e deja
+  // făcut de call site (imediat după appendChild), deci aici pornim doar
+  // programarea — fără o a doua cerere la load. La re-randarea nav-ului
+  // oprim poll-ul vechi, altfel rămân timere care cer date pentru un DOM șters.
+  bellPoll?.stop();
+  bellPoll = adaptivePoll(refreshBellBadge, { base: POLL_BELL_MS, runNow: false });
 
   return wrap;
 }
@@ -575,8 +718,9 @@ export function countUp(el, target, { ms = 900, format } = {}) {
 // ---------------------------------------------------------------------
 // PULSE — semnele live ale site-ului, pe toate paginile.
 // Un chip verde în nav („N online”) + date pentru strip-ul de pe index.
-// Poll la 90 s DOAR când tab-ul e vizibil; serverul ține D1 în cache
-// 5 minute, deci costul total e neglijabil față de cota gratuită.
+// Același adaptivePoll ca la clopoțel (90 s → 5 min, oprit pe tab ascuns
+// sau părăsit). Serverul ține contoarele D1 5 minute și „online” 60 s,
+// deci nici cererile care totuși pleacă nu lovesc Durable Object-ul de fiecare dată.
 // ---------------------------------------------------------------------
 let pulseData = null;
 let pulseWaiters = [];
@@ -592,10 +736,14 @@ export function onPulse(fn) {
   pulseWaiters.push(fn);
 }
 
+/** Întoarce TRUE dacă s-a schimbat câți sunt online — adaptivePoll rămâne
+ *  la pasul scurt când site-ul e viu și lărgește pasul când e liniște. */
 async function fetchPulse() {
   const res = await api('/pulse');
-  if (!res.ok || res.status === 0) return;
+  if (!res.ok || res.status === 0) return false;
+  const prevOnline = pulseData ? (Number(pulseData.online) || 0) : -1;
   pushPulse(res.data);
+  return (Number(res.data?.online) || 0) !== prevOnline;
 }
 
 /** Publică date de pulse venite pe altă cale decât /api/pulse — pagina
@@ -722,6 +870,7 @@ function buildPulseChip() {
   chip.type = 'button';
   chip.className = 'pulse-chip';
   chip.hidden = true;
+  chip.dataset.poll = 'auk-adaptive';
   chip.title = 'Cine e online acum — deschide chat-ul';
   chip.innerHTML = '<span class="pulse-chip__dot" aria-hidden="true"></span>' +
     '<span class="pulse-chip__n">online</span>';
@@ -731,17 +880,22 @@ function buildPulseChip() {
   return chip;
 }
 
+let pulsePoll = null;
 export function startPulse() {
   if (document.getElementById('pulse-chip')) return;
   const nav = document.getElementById('nav');
   if (!nav) return;
   nav.appendChild(buildPulseChip());
-  const tick = () => { if (!document.hidden) fetchPulse(); };
   // Pagina care și-a luat deja datele din /api/home nu mai plătește o cerere;
-  // dacă totuși ele nu ajung, primul tick de la 90 s le aduce.
-  if (!pulseClaimed) tick();
-  setInterval(tick, 90000);
-  document.addEventListener('visibilitychange', tick);
+  // dacă totuși ele nu ajung, primul pas de 90 s le aduce. La re-randare
+  // repornim poll-ul fără un fetch imediat — DOM-ul e nou, datele nu.
+  const deja = !!pulsePoll;
+  pulsePoll?.stop();
+  pulsePoll = adaptivePoll(fetchPulse, {
+    base: POLL_PULSE_MS,
+    max: POLL_MAX_MS,
+    runNow: !deja && !pulseClaimed,
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -977,7 +1131,11 @@ if (typeof document !== 'undefined' && document.addEventListener) {
     try {
       const vCurent = vDinTaguri();
       if (!vCurent) return;
-      const html = await (await fetch(location.pathname, { cache: 'no-store' })).text();
+      // Versiunea e aceeași pe toate paginile (deploy.sh pune ?v=<commit>
+      // peste tot). Cerem „/”, servit de stratul static — 0 invocări. Pagina
+      // curentă ar trece prin worker pe /serie, /episod, /profile, /shop
+      // (o invocare + o citire D1) doar ca să citim un query string.
+      const html = await (await fetch('/', { cache: 'no-store' })).text();
       const m = html.match(/[?&]v=([A-Za-z0-9._-]+)/);
       if (m && m[1] !== vCurent) {
         toast('A apărut o versiune nouă — reîncarc pagina…', 'info', 2500);

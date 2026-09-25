@@ -13,11 +13,11 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 28 · e2e 584 · dom 193 ·
-  theme-cache 7 · top-cache 17 · chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS ·
-  pixel-teme 8 · plafoane 13),
-  deployat. Audit live (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
-  (vezi `AUDIT-LIVE.md`).
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 44 · poll-buget 22 ·
+  pulse-online 17 · e2e 584 · dom 202 / 198 pe build · theme-cache 7 · top-cache 17 ·
+  chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
+  Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
+  (vezi `AUDIT-LIVE.md`; se reface la deploy).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
   (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
   invocări). Ambele deployau în același proiect Pages, deci live-ul oscila între ele —
@@ -40,7 +40,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0026**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0030**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -148,6 +148,32 @@ cat cf-relay/last-output.txt
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
+
+### Buget 0, runda de poll (2026-09-25, branch `arena/01a0d983-anime-uke`)
+
+Tab-urile lăsate deschise goleau cota: clopoțelul la 60 s și „N online” la 90 s,
+inclusiv pe tab ascuns, plus un request ChatDO la fiecare `/api/pulse`. Acum:
+
+- `adaptivePoll()` în `public/assets/js/core.js` — 0 cereri pe tab ascuns sau
+  părăsit 10 minute; backoff 60→120→240→plafon 5 min când numărul nu se schimbă;
+  revenire la pasul scurt când se schimbă. Scroll-ul ține tab-ul „viu”, dar nu
+  anulează backoff-ul. La re-randarea nav-ului poll-ul vechi e oprit (fără
+  scurgere de timere). Test: `tests/poll-buget.mjs` (fără server, ceas controlat).
+- `src/routes/api/pulse.js` ține „online” 60 s în izolat + `caches.default`
+  (cu timestamp, nu doar max-age). Eșecul DO nu se memorează. `ONLINE_CACHE_MS=0`
+  în `dev.sh` (implicit) — producția nu are bindingul, deci cachează.
+  **Nu scoate bindingul din dev.sh**: e2e-ul „Pulse vede socket-ul deschis”
+  ar vedea un 0 cache-uit. Test: `tests/pulse-online.mjs`.
+- Garda anti-cache cere `fetch('/')` (static, 0 invocări), nu `location.pathname`.
+- Marker de deploy: `data-poll="auk-adaptive"` (stringul supraviețuiește
+  minificării; `cf-relay/cmd.sh` §20 îl caută în chunk-ul publicat).
+- Branch-urile vechi `arena/*` de pe remote au fost șterse (toate erau deja
+  în `main`). Pe remote rămâne doar `main` + branch-ul sesiunii curente.
+
+Următoarea migrare, dacă e nevoie de schemă, e **0030** (ultima aplicată e 0029).
+Nu edita o migrare deja aplicată.
+
+
 
 - Grade de staff Helper/Staff/Moderator + tab „Grade" refăcut în admin (0025).
 - Fișa detaliată a seriei + „Episodul următor" cu countdown + JSON-LD SEO (0024).

@@ -144,7 +144,7 @@ async function main() {
     console.log(`  Eroare API: ${String(anyError).slice(0, 200)}`);
   }
   console.log(`\n  Reper sănătos: sub 50% în orice moment al zilei. Peste 60% și încă crește → vezi`);
-  console.log(`  „Cât duce planul gratuit" din README (pârghii: poll de notificări, heartbeat de vizionare,`);
+  console.log(`  „Cât duce planul gratuit" din README (pârghii: heartbeat de vizionare,`);
   console.log(`  Fail open în dashboard, Bot Fight Mode).`);
 }
 
