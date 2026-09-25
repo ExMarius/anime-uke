@@ -74,7 +74,12 @@ cat cf-relay/last-output.txt
 
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
-- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; de aceea output-ul e comis în `last-output.txt`.
+- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox. Canalul principal de citit rezultatul
+  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`
+  (body = „deploy exit N” + capul cozii output-ului, tokenii redactați). `last-output.txt` se comite și el când push-ul trece,
+  dar comentariul e garantat.
+- `CLOUDFLARE_ACCOUNT_ID` e opțional și poate fi invalid (de ex. 53 caractere în loc de 32 hex): `cf-relay/cmd.sh`
+  alege singur contul pe care tokenul chiar vede D1-ul `anime-db`. Dacă secretul e setat corect, verifică doar paritatea.
 - `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
   consumat azi din cotele gratuite (Functions / D1 / DO). Cere permisiunea
   „Account Analytics: Read" pe token; fără ea scrie clar ce lipsește, nu crapă.
@@ -122,6 +127,8 @@ cat cf-relay/last-output.txt
 | „Pagina 1 a unei serii lungi întoarce listă goală (500), pagina 2 merge" | interogarea de progres trimitea câte un parametru per episod afișat, iar D1 acceptă **maxim 100 de parametri legați per interogare** | împarte `IN (...)` în bucăți de 90 (`src/routes/api/series/by-id.js`); simptomul „doar prima pagină pică" e semnătura acestei limite |
 | O funcție nouă „nu se salvează" deși nu dă eroare | `INSERT` cu 11 coloane și 10 valori, eroare doar logată | `tests/scripts-health.mjs` numără coloanele vs. valorile la toate instrucțiunile `INSERT`; `tests/chat-d1.mjs` citește tabelul real |
 | Deploy-ul de pe runner nu pornește, deși local totul e verde | sintaxă invalidă în `cf-relay/cmd.sh` (ex. o ghilimea tipografică `"` care închide un șir bash deschis cu `„`) | `node tests/scripts-health.mjs` rulează `bash -n` pe toate scripturile; e prima suită din `test.sh` |
+| Relay-ul pică instant: „Secretul CLOUDFLARE_API_TOKEN nu e setat pe repo” | secretul a fost șters/rotit din GitHub (s-a întâmplat 25.09 — o oră de deploieri n-au putut ieși; site-ul live rulează în continuare, doar deploy-ul e blocat) | cere proprietarului să-l readadă: Settings → Secrets and variables → Actions → `CLOUDFLARE_API_TOKEN`; diagnosticul ajunge singur în comentariul pe commit |
+| Deploy pică cu CF 7003 „Could not route to /accounts/…/d1” | secretul `CLOUDFLARE_ACCOUNT_ID` e invalid (altceva decât 32 hex) sau e alt cont | `cmd.sh` alege acum automat contul care vede D1-ul `anime-db`; pentru curățenie: secretul gol sau ID-ul corect (32 hex) |
 | O clasă nouă din JS dispare pe live | PurgeCSS a șters-o: nu apare ca literal în HTML/JS analizat | scrie clasa ca literal în JS/HTML sau adaug-o în safelist (`scripts/purge-css.mjs`); relay-ul verifică prezența în CSS-ul publicat (secțiunea 15) |
 | Verificarea din relay raportează 0 la o funcție nouă din bundle | esbuild escapează non-ASCII (`min v\u0103zute`) și normalizează ghilimelele (`!== '/'` → `!=="/"`) | caută doar formei ASCII sigure: `min v`, `!==\"/\"` |
 
@@ -148,6 +155,25 @@ cat cf-relay/last-output.txt
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
+
+### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
+
+Proprietarul a pierdut accesul la deploiere pentru că secretul `CLOUDFLARE_API_TOKEN`
+lipsea din GitHub Secrets (site-ul live continua să ruleze, dar orice deploy pică în
+pasul de verificare). Doi blocaji, ambele remediale în `cf-relay/`:
+
+- **Verificare secret + diagnostic:** workflow-ul scrie în `cf-relay/last-output.txt`
+  *înainte* de `cmd.sh` dacă tokenul lipsește, plus un comentariu pe commit (canalul
+  principal de citire din sandbox, tokenii redactați — vezi §3).
+- **Alegerea contului CF:** secretul `CLOUDFLARE_ACCOUNT_ID` era invalid (53 caractere,
+  nu 32 hex) → CF error 7003. `cmd.sh` listează conturile la care tokenul are acces și
+  alege pe cel care vede D1-ul `anime-db`; dacă niciunul nu-l vede, iese cu eroare clară.
+- **Deploy-ul oprește la prima eroare:** `cmd.sh` propagă exit code-ul lui `deploy.sh`
+  (înainte continua la audit și mința cu un rezultat „OK”).
+
+Verificat end-to-end pe live: deploy `exit 0`, canarul de chat a ajuns în D1, markerul
+`auk-adaptive` e în chunk-ul publicat, auditul live a ieșit curat, `/api/pulse` viu
+(`{"series":5,…,"online":1}`).
 
 ### Buget 0, runda de poll (2026-09-25, branch `arena/01a0d983-anime-uke`)
 
