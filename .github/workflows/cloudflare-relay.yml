@@ -132,7 +132,10 @@ jobs:
             echo "exit_code: ${RC}"
             echo "comanda: cf-relay/cmd.sh @ ${GITHUB_SHA::7}"
             echo "────────────────────────────────────"
-            tail -c 50000 cf-relay/last-output.raw
+            # Capul: exit deploy și eroarea. Coada: auditul live.
+            head -c 20000 cf-relay/last-output.raw
+            printf '\n── … ──\n'
+            tail -c 20000 cf-relay/last-output.raw
           } > cf-relay/last-output.txt
           rm -f cf-relay/last-output.raw
           echo "${RC}" > /tmp/relay-rc
@@ -141,7 +144,7 @@ jobs:
           # Logurile de Actions nu se pot citi din sandbox (blob storage blocat).
           # Lasăm rezultatul într-un comentariu pe commit — se citește prin API.
           # Scoatem șirurile lungi (tokeni) înainte să le scriem undeva.
-          SAFE="$(tail -c 12000 cf-relay/last-output.txt | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
+          SAFE="$(head -c 12000 cf-relay/last-output.txt | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
           echo "::notice title=deploy-exit::${RC}"
           gh api --method POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
             -f body="$(printf 'deploy exit %s\n\n```\n%s\n```\n' "$RC" "$SAFE")" \

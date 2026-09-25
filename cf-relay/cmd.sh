@@ -13,7 +13,9 @@
 # =====================================================================
 set -uo pipefail
 ./deploy.sh
-echo "exit deploy: $?"
+DEPLOY_RC=$?
+echo "exit deploy: $DEPLOY_RC"
+if [ "$DEPLOY_RC" -ne 0 ]; then exit "$DEPLOY_RC"; fi
 echo "aștept 60s propagarea…"; sleep 60
 
 B="https://anime-uke.pages.dev"
