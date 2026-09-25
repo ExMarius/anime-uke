@@ -103,6 +103,7 @@ jobs:
           # in pasul anterior (prin GITHUB_ENV). Citim dintr-un nume separat.
           CF_ACCOUNT_ID_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           if [ -n "${CF_ACCOUNT_ID_SECRET}" ]; then
@@ -137,6 +138,14 @@ jobs:
           echo "${RC}" > /tmp/relay-rc
           echo "── output (exit ${RC}) ──"
           cat cf-relay/last-output.txt
+          # Logurile de Actions nu se pot citi din sandbox (blob storage blocat).
+          # Lasăm rezultatul într-un comentariu pe commit — se citește prin API.
+          # Scoatem șirurile lungi (tokeni) înainte să le scriem undeva.
+          SAFE="$(tail -c 12000 cf-relay/last-output.txt | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
+          echo "::notice title=deploy-exit::${RC}"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -f body="$(printf 'deploy exit %s\n\n```\n%s\n```\n' "$RC" "$SAFE")" \
+            >/dev/null 2>&1 || echo "::warning::nu am putut comenta commit-ul"
 
       - name: Publica output-ul in repo
         if: always()
@@ -149,7 +158,9 @@ jobs:
           git add cf-relay/last-output.txt 2>/dev/null || exit 0
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "relay: output (${GITHUB_SHA::7})"
-          git push -q origin "HEAD:${BRANCH}"
+          # Push-ul poate fi respins (protecție de secrete în log). Nu îngropa
+          # rezultatul deploy-ului: comentariul de pe commit e canalul de citit.
+          git push -q origin "HEAD:${BRANCH}" || echo "::warning::push last-output respins"
 
       - name: Propaga codul de iesire al comenzii
         run: |
