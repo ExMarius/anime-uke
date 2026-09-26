@@ -93,6 +93,50 @@ echo "aștept 60s propagarea…"; sleep 60
 
 B="https://anime-uke.pages.dev"
 V="$(git rev-parse --short HEAD)"
+
+# La momentul acesta buildul Git declanșat de același push a avut timp să se
+# termine. Legăm statusul Pages de SHA-ul exact și, numai la eșec, păstrăm o
+# coadă redactată de log — altfel un check roșu din GitHub nu are diagnostic.
+echo "── Git Pages: buildul declanșat de acest commit ──"
+: > /tmp/cf-pages-failed-deployment-id
+curl -sS -m 25 "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/anime-uke/deployments?per_page=20" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o /tmp/cf-pages-deployments.json || true
+PAGES_GIT_SHA="$(git rev-parse HEAD)" node <<'JS'
+const fs = require('fs');
+let j = {};
+try { j = JSON.parse(fs.readFileSync('/tmp/cf-pages-deployments.json', 'utf8')); } catch { j = { success: false, errors: [{ message: 'json-invalid' }] }; }
+const err = (j.errors && j.errors[0] && (j.errors[0].message || j.errors[0].code)) || '';
+const sha = process.env.PAGES_GIT_SHA || '';
+const list = Array.isArray(j.result) ? j.result : [];
+const d = list.find((x) => x?.deployment_trigger?.metadata?.commit_hash === sha);
+if (!d) {
+  console.log(`Git Pages deployment: găsit=nu success=${j.success} eroare=${err}`);
+  process.exit(0);
+}
+const stages = (d.stages || []).map((x) => `${x.name}:${x.status}`).join(',');
+const status = (d.latest_stage && d.latest_stage.status) || '';
+console.log(`Git Pages deployment: găsit=da env=${d.environment || ''} status=${status} stages=${stages} url=${d.url || ''}`);
+if (status === 'failure' && d.id) fs.writeFileSync('/tmp/cf-pages-failed-deployment-id', String(d.id));
+JS
+PAGES_FAILED_ID="$(cat /tmp/cf-pages-failed-deployment-id 2>/dev/null || true)"
+if [ -n "$PAGES_FAILED_ID" ]; then
+  echo "   build Git eșuat: diagnostic redactat (ultimele 30 de linii)"
+  curl -sS -m 25 "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/anime-uke/deployments/${PAGES_FAILED_ID}/history/logs" \
+    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o /tmp/cf-pages-build-logs.json || true
+  node <<'JS'
+const fs = require('fs');
+let j = {};
+try { j = JSON.parse(fs.readFileSync('/tmp/cf-pages-build-logs.json', 'utf8')); } catch { j = { success: false, errors: [{ message: 'json-invalid' }] }; }
+const err = (j.errors && j.errors[0] && (j.errors[0].message || j.errors[0].code)) || '';
+const data = j.result && j.result.data;
+const rows = Array.isArray(data) ? data : [];
+const text = rows.map((x) => typeof x === 'string' ? x : (x.message || x.text || JSON.stringify(x))).join('\n');
+const clean = text.replace(/\x1b\[[0-9;]*m/g, '').replace(/[A-Za-z0-9_-]{32,}/g, '[redacted]');
+console.log(`   log Pages: success=${j.success} linii=${rows.length} eroare=${err}`);
+console.log(clean.split('\n').filter(Boolean).slice(-30).join('\n') || '   (fără linii de log disponibile)');
+JS
+fi
+
 echo
 echo "════════ BUGEte (integrare): commit $V ════════"
 

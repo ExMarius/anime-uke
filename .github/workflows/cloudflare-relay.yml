@@ -152,6 +152,7 @@ jobs:
           SAFE="$({
             echo '── repere validate ──'
             marker 'exit deploy:'
+            marker 'Git Pages deployment:'
             marker '?v= live din /:'
             marker 'CANAR: OK (cererea si acceptarea au notificat pe live)'
             marker 'cererea de prietenie e în D1'
