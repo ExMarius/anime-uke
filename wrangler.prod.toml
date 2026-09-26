@@ -1,23 +1,15 @@
 # =====================================================================
-# wrangler.deploy.toml — configuratia de PRODUCTIE pentru proiectul Pages.
+# wrangler.prod.toml — sursa configuratiei de PRODUCTIE pentru Pages.
 #
-# De ce un fisier separat de wrangler.toml?
+# `wrangler.toml` din rădăcină trebuie să rămână IDENTIC cu acest fișier:
+# Git integration Pages îl citește direct la fiecare push. Pages respinge
+# [[migrations]] și bindingurile Durable Object fără `script_name`.
 #
-#   `wrangler.toml`      -> folosit LOCAL de `wrangler pages dev`. Acolo
-#                           clasele DO sunt exportate din public/_worker.js
-#                           (Advanced Mode) si miniflare le ruleaza inline,
-#                           cu [[migrations]]. Asa trec testele e2e.
+# `wrangler.local.toml` e singurul config cu DO-uri inline + [[migrations]];
+# dev.sh îl copiază temporar doar pentru testare/local, apoi restaurează acest
+# config de producție. deploy.sh îl copiază preventiv înainte de publicare.
 #
-#   `wrangler.deploy.toml` -> folosit la `wrangler pages deploy`. Pages NU
-#                           poate gazdui clase Durable Object in productie,
-#                           iar validarea respinge [[migrations]] si cere
-#                           `script_name` pe fiecare binding DO. Aici
-#                           bindingurile pointeaza la Worker-ul dedicat
-#                           `anime-uke-do` (vezi worker-do/).
-#
-# Deploy complet (in aceasta ordine):
-#   1. cd worker-do && npx wrangler deploy          # publica DO-urile
-#   2. npx wrangler pages deploy --project-name=anime-uke --config wrangler.deploy.toml
+# DO-urile de producție trăiesc în Worker-ul `anime-uke-do`.
 # =====================================================================
 
 name = "anime-uke"

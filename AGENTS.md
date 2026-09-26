@@ -157,6 +157,25 @@ cat cf-relay/last-output.txt
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
 
+### Pregătire lansare publică: conexiuni Pages + observabilitate (2026-09-26, branch `arena/01a0dd39-anime-uke`)
+
+- **Git integration Pages reparată:** buildurile preview eșuau înainte de cod cu
+  `Configuration file for Pages projects does not support "migrations"` și DO-uri fără
+  `script_name`. Cauza: `wrangler.toml` comis era configul local. Fișierul de la
+  rădăcină este acum configul Pages de producție (fără `[[migrations]]`, toate cele
+  trei bindinguri DO trimit la `anime-uke-do` prin `script_name`). `dev.sh` continuă
+  să copieze numai temporar `wrangler.local.toml`, deci testele locale păstrează DO-urile
+  inline. Nu înlocui din nou `wrangler.toml` cu configul local înainte de push.
+- **Relay-ul citește conexiunea Pages/Git:** raportează configurația de build, separă
+  preview-ul `github:push` de deploy-ul manual și, la eșec, publică ultimele 30 de
+  linii redactate din logul Pages în `last-output.txt` și comentariul commitului.
+  Comentariul începe și cu reperele operaționale (`deploy exit`, `?v=`, canarul de
+  prietenie și auditul), ca să nu fie pierdute prin trunchiere.
+- **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
+  verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
+  au trecut: scripts-health 44 · greutate în buget · e2e 599 · dom 210/206 · restul
+  suitei verzi. `npm audit` nu raportează vulnerabilități.
+
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)
 
 Sistemul `/api/friends` (migrarea 0029, PR #7) trimitea cereri în tăcere: aflai

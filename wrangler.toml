@@ -1,43 +1,41 @@
+# =====================================================================
+# wrangler.prod.toml — sursa configuratiei de PRODUCTIE pentru Pages.
+#
+# `wrangler.toml` din rădăcină trebuie să rămână IDENTIC cu acest fișier:
+# Git integration Pages îl citește direct la fiecare push. Pages respinge
+# [[migrations]] și bindingurile Durable Object fără `script_name`.
+#
+# `wrangler.local.toml` e singurul config cu DO-uri inline + [[migrations]];
+# dev.sh îl copiază temporar doar pentru testare/local, apoi restaurează acest
+# config de producție. deploy.sh îl copiază preventiv înainte de publicare.
+#
+# DO-urile de producție trăiesc în Worker-ul `anime-uke-do`.
+# =====================================================================
+
 name = "anime-uke"
 compatibility_date = "2026-05-01"
 pages_build_output_dir = "public"
 
-# ---------------------------------------------------------------------
-# D1 — database_id se completeaza dupa `wrangler d1 create anime-db`
-# ---------------------------------------------------------------------
 [[d1_databases]]
 binding = "DB"
 database_name = "anime-db"
 database_id = "7209b0bd-227b-46d0-b376-6157b56734fa"
-migrations_dir = "migrations"
 
-# ---------------------------------------------------------------------
-# Durable Objects
-#   ChatDO       -> chat live + buffer mesaje (flush in loturi catre D1)
-#   RateLimitDO  -> rate limiting doar pe rute sensibile (login/register/
-#                   watch/admin). NU pe GET-uri publice: fiecare verificare
-#                   costa 1 request DO, iar free tier = 100k/zi.
-#   StatsDO      -> buffer pentru contorul de vizualizari (o scriere D1
-#                   la ~20 views, nu la fiecare view)
-# ---------------------------------------------------------------------
+# DO-urile traiesc in Worker-ul separat; `script_name` e obligatoriu pe Pages.
 [[durable_objects.bindings]]
 name = "CHAT"
 class_name = "ChatDO"
+script_name = "anime-uke-do"
 
 [[durable_objects.bindings]]
 name = "RATE_LIMIT"
 class_name = "RateLimitDO"
+script_name = "anime-uke-do"
 
 [[durable_objects.bindings]]
 name = "STATS"
 class_name = "StatsDO"
+script_name = "anime-uke-do"
 
-[[migrations]]
-tag = "v1"
-new_classes = ["ChatDO", "RateLimitDO", "StatsDO"]
-
-# ---------------------------------------------------------------------
-# JWT_SECRET NU se pune aici (a fost cauza bresei din v1: repo public =
-# secret public = oricine putea falsifica un token de admin).
-# Se seteaza cu:  wrangler pages secret put JWT_SECRET
-# ---------------------------------------------------------------------
+# Fara [[migrations]] — Pages nu le suporta. Namespace-urile sunt create
+# de `wrangler deploy` din directorul worker-do/.
