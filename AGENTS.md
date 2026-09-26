@@ -14,7 +14,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
 - **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
-  pulse-online 17 · e2e 599 · dom 210 / 206 pe build · theme-cache 7 · top-cache 17 ·
+  pulse-online 17 · e2e 614 · dom 214 / 210 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
@@ -40,7 +40,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0030**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0031**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -175,7 +175,7 @@ cat cf-relay/last-output.txt
   prietenie și auditul), ca să nu fie pierdute prin trunchiere.
 - **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
   verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
-  au trecut: scripts-health 50 · greutate în buget · e2e 599 · dom 210/206 · restul
+  au trecut: scripts-health 50 · greutate în buget · e2e 614 · dom 214/210 · restul
   suitei verzi. `npm audit` nu raportează vulnerabilități.
 
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)
@@ -204,6 +204,30 @@ acțiune sau e o veste bună notifică în clopot:
   pe producție cu două conturi „canarp%", iar D1-ul e citit direct ca dovadă.
   Dacă plafonul de 5 conturi/oră împiedică al doilea cont, verificarea **se
   sare** (exit 0), nu dă fals roșu.
+
+### Mesaje private între prieteni (2026-09-26)
+
+Chatul are acum în același modal taburile **Live** și **Prieteni**. Implementarea
+este în `migrations/0030_private_messages.sql`, `src/routes/api/messages.js`,
+`src/do/ChatDO.js` și `public/assets/js/chat.js`:
+
+- `/api/messages` listează numai prietenii `accepted`, cu preview + unread;
+  `?with=<username>` citește istoricul numai dacă prietenia este încă activă;
+  `POST { action:'read', with }` marchează conversația citită.
+- DM-ul se trimite pe WebSocket ca `{ type:'dm', recipient_id, message }`.
+  `ChatDO` verifică statusul în D1 la **fiecare DM**, repetă verificarea în
+  `INSERT ... WHERE EXISTS`, persistă înainte de livrare și filtrează socketurile
+  strict după cei doi user IDs. Nu adăuga vreun cache de prietenie aici.
+- Unfriend nu șterge istoricul, dar îl face imediat inaccesibil și blochează
+  trimiterea inclusiv pe un socket deschis înaintea eliminării.
+- Clasele mini-Discord sunt `dm-*`; `/^dm/` trebuie să rămână în safelist-ul
+  `scripts/purge-css.mjs`. La deploy verifică și artefactul CSS purgat/minificat,
+  nu doar sursa.
+- Regresiile sunt în `tests/e2e.mjs` secțiunea 13h3 (accepted-only, persistență,
+  zero leak către al treilea socket, unread/read, blocare după unfriend) și în
+  `tests/dom-smoke.mjs` (taburile Live/Prieteni din același modal).
+
+Următoarea migrare este **0031**; nu modifica 0030 după ce ajunge în producție.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
 
@@ -245,7 +269,7 @@ inclusiv pe tab ascuns, plus un request ChatDO la fiecare `/api/pulse`. Acum:
 - Branch-urile vechi `arena/*` de pe remote au fost șterse (toate erau deja
   în `main`). Pe remote rămâne doar `main` + branch-ul sesiunii curente.
 
-Următoarea migrare, dacă e nevoie de schemă, e **0030** (ultima aplicată e 0029).
+Următoarea migrare, dacă e nevoie de schemă, e **0031** (ultima definită e 0030).
 Nu edita o migrare deja aplicată.
 
 

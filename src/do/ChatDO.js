@@ -179,6 +179,13 @@ export class ChatDO {
       return;
     }
 
+    // Mesajele private folosesc același socket, dar NU același broadcast:
+    // handleDirectMessage verifică prietenia în D1 la fiecare mesaj și îl
+    // trimite exclusiv socket-urilor expeditorului și destinatarului.
+    if (data.type === 'dm' || data.type === 'private_message') {
+      await this.handleDirectMessage(ws, att, data);
+      return;
+    }
     if (data.type !== 'chat') return;
 
     // --- rate limit per utilizator ---
@@ -224,6 +231,114 @@ export class ChatDO {
     } else {
       this.state.waitUntil(this.scheduleFlush());
     }
+  }
+
+  /**
+   * Persistă și livrează un mesaj direct. Destinatarul din client nu este
+   * niciodată de încredere: îl rezolvăm în D1 și cerem o prietenie accepted.
+   * INSERT-ul repetă EXISTS-ul, astfel încât un unfriend concurent între
+   * SELECT și scriere nu poate lăsa un mesaj nou după eliminarea relației.
+   */
+  async handleDirectMessage(ws, att, data) {
+    const v = validateChatMessage(String(data.message ?? ''));
+    if (!v.ok) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: v.error }));
+      return;
+    }
+
+    const rawTargetId = data.recipient_id ?? data.to_user_id
+      ?? (typeof data.to === 'number' || /^\d+$/.test(String(data.to || '')) ? data.to : null);
+    const explicitId = Number(rawTargetId);
+    const hasId = Number.isSafeInteger(explicitId) && explicitId > 0;
+    const username = String(data.to_username || data.username || (hasId ? '' : data.to) || '').trim().slice(0, 64);
+    if (!hasId && !username) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: 'Alege un prieten' }));
+      return;
+    }
+
+    let target;
+    try {
+      const where = hasId ? 'u.id = ?' : 'u.username = ?';
+      target = await this.env.DB.prepare(
+        `SELECT u.id, u.username, COALESCE(p.avatar_url, '') AS avatar
+           FROM users u
+           LEFT JOIN user_profiles p ON p.user_id = u.id
+           JOIN friendships f
+             ON ((f.requester_id = ? AND f.addressee_id = u.id)
+              OR (f.addressee_id = ? AND f.requester_id = u.id))
+            AND f.status = 'accepted'
+          WHERE ${where} AND u.id <> ?
+          LIMIT 1`
+      ).bind(att.userId, att.userId, hasId ? explicitId : username, att.userId).first();
+    } catch (error) {
+      console.error('ChatDO verificare prietenie DM eșuată:', error?.message || error);
+      ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: 'Nu am putut verifica prietenia' }));
+      return;
+    }
+
+    if (!target) {
+      ws.send(JSON.stringify({
+        type: 'error', scope: 'dm', code: 'not_friends',
+        text: 'Mesajele private pot fi trimise doar prietenilor',
+      }));
+      return;
+    }
+
+    const verdict = this.checkRate(att.userId);
+    if (!verdict.ok) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: verdict.error }));
+      return;
+    }
+
+    const createdAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    let result;
+    try {
+      result = await this.env.DB.prepare(
+        `INSERT INTO private_messages
+           (sender_id, recipient_id, message, created_at)
+         SELECT ?, ?, ?, ?
+          WHERE EXISTS (
+            SELECT 1 FROM friendships f
+             WHERE f.status = 'accepted'
+               AND ((f.requester_id = ? AND f.addressee_id = ?)
+                 OR (f.requester_id = ? AND f.addressee_id = ?))
+          )`
+      ).bind(
+        att.userId, target.id, v.value, createdAt,
+        att.userId, target.id, target.id, att.userId
+      ).run();
+    } catch (error) {
+      console.error('ChatDO persistare DM eșuată:', error?.message || error);
+      ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: 'Mesajul privat nu a putut fi salvat' }));
+      return;
+    }
+
+    if (!Number(result.meta?.changes)) {
+      // Prietenia a dispărut între SELECT și INSERT.
+      ws.send(JSON.stringify({
+        type: 'error', scope: 'dm', code: 'not_friends',
+        text: 'Prietenia nu mai este activă',
+      }));
+      return;
+    }
+
+    const entry = {
+      type: 'dm',
+      id: Number(result.meta?.last_row_id) || 0,
+      sender_id: att.userId,
+      recipient_id: Number(target.id),
+      sender_username: att.username,
+      recipient_username: target.username,
+      username: att.username,
+      avatar: att.avatar || '',
+      message: v.value,
+      created_at: createdAt,
+      read_at: null,
+    };
+
+    // Persistența precede livrarea. Un socket al unui al treilea utilizator
+    // nu poate trece filtrul, chiar dacă se află în același DO global.
+    this.broadcastPrivate(entry, att.userId, target.id);
   }
 
   webSocketClose(ws, code, reason, wasClean) {
@@ -467,6 +582,21 @@ export class ChatDO {
         ws.send(text);
       } catch {
         // conexiune moarta; o curata webSocketClose
+      }
+    }
+  }
+
+  /** DM-urile ajung numai în taburile celor doi participanți. */
+  broadcastPrivate(payload, senderId, recipientId) {
+    const allowed = new Set([Number(senderId), Number(recipientId)]);
+    const text = JSON.stringify(payload);
+    for (const socket of this.state.getWebSockets()) {
+      const userId = Number(socket.deserializeAttachment()?.userId);
+      if (!allowed.has(userId)) continue;
+      try {
+        socket.send(text);
+      } catch {
+        // conexiune moartă; o curăță webSocketClose
       }
     }
   }

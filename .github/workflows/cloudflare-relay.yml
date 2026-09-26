@@ -154,7 +154,7 @@ jobs:
             marker 'exit deploy:'
             marker 'Git Pages deployment:'
             marker '?v= live din /:'
-            marker 'CANAR: OK (cererea si acceptarea au notificat pe live)'
+            marker 'CANAR: OK (prietenie + DM privat verificate pe live)'
             marker 'cererea de prietenie e în D1'
             marker 'acceptarea e în D1'
             printf '%s\n' "$AUDIT_TOTAL"

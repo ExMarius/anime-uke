@@ -1824,6 +1824,117 @@ console.log('\n=== 13h2. PRIETENIE: NOTIFICARI LA CERERE SI ACCEPTARE ===');
   check('La final user3 si user4 nu mai sunt prieteni', finalA.data?.status === 'none', finalA.data?.status);
 }
 
+console.log('\n=== 13h3. MESAJE PRIVATE INTRE PRIETENI ===');
+{
+  const a = jar(); // user3
+  const b = jar(); // user4
+  const outsider = jar(); // user2, nu este participant
+  await req(a, 'POST', '/api/auth/login', { email: 'user3@test.ro', password: 'parola123' });
+  await req(b, 'POST', '/api/auth/login', { email: 'user4@test.ro', password: 'parola123' });
+  await req(outsider, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+
+  await req(a, 'DELETE', '/api/friends?u=user4');
+  await req(b, 'DELETE', '/api/friends?u=user3');
+
+  const anonInbox = await req(jar(), 'GET', '/api/messages');
+  check('Inbox-ul privat fara autentificare → 401', anonInbox.status === 401, `status=${anonInbox.status}`);
+  const blockedHistory = await req(a, 'GET', '/api/messages?with=user4');
+  check('Un ne-prieten nu poate citi istoricul privat', blockedHistory.status === 403, `status=${blockedHistory.status}`);
+  const outsiderHistory = await req(outsider, 'GET', '/api/messages?with=user3');
+  check('Un al treilea utilizator nu poate citi conversatia', outsiderHistory.status === 403, `status=${outsiderHistory.status}`);
+
+  // Pending nu este suficient: lista trebuie să conțină exclusiv accepted.
+  await req(a, 'POST', '/api/friends', { username: 'user4' });
+  const pendingInbox = await req(a, 'GET', '/api/messages');
+  check('Cererea pending nu apare in lista de mesaje private',
+    pendingInbox.status === 200 && !(pendingInbox.data?.conversations || []).some((x) => x.username === 'user4'),
+    JSON.stringify(pendingInbox.data?.conversations));
+  const accept = await req(b, 'POST', '/api/friends', { username: 'user3', action: 'accept' });
+  check('Prietenia pentru DM este accepted', accept.data?.status === 'friends', JSON.stringify(accept.data));
+  const acceptedInbox = await req(a, 'GET', '/api/messages');
+  check('Lista DM contine prietenul accepted chiar fara istoric',
+    acceptedInbox.status === 200 && (acceptedInbox.data?.conversations || []).some((x) => x.username === 'user4'),
+    JSON.stringify(acceptedInbox.data?.conversations));
+
+  const sockets = [a, b, outsider].map((j) => new WS(`${WS_BASE}/chat`, { headers: { Cookie: j.cookie } }));
+  const waitWs = (socket, predicate, timeout = 7000) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off('message', onMessage);
+      reject(new Error('timeout WS DM'));
+    }, timeout);
+    const onMessage = (raw) => {
+      let data;
+      try { data = JSON.parse(raw.toString()); } catch { return; }
+      if (!predicate(data)) return;
+      clearTimeout(timer);
+      socket.off('message', onMessage);
+      resolve(data);
+    };
+    socket.on('message', onMessage);
+  });
+
+  try {
+    await Promise.all(sockets.map((socket) => waitWs(socket, (data) => data.type === 'init')));
+    let leaked = false;
+    const leakHandler = (raw) => {
+      try { if (JSON.parse(raw.toString()).type === 'dm') leaked = true; } catch { /* ignoră */ }
+    };
+    sockets[2].on('message', leakHandler);
+
+    const senderCopy = waitWs(sockets[0], (data) => data.type === 'dm' && data.message === 'Salut privat persistent');
+    const recipientCopy = waitWs(sockets[1], (data) => data.type === 'dm' && data.message === 'Salut privat persistent');
+    const user4 = (acceptedInbox.data?.conversations || []).find((x) => x.username === 'user4');
+    sockets[0].send(JSON.stringify({ type: 'dm', recipient_id: user4?.user_id, message: 'Salut privat persistent' }));
+    const [sent, received] = await Promise.all([senderCopy, recipientCopy]);
+    await sleep(250);
+    sockets[2].off('message', leakHandler);
+
+    check('DM-ul live ajunge la expeditor si destinatar',
+      sent.sender_username === 'user3' && received.recipient_username === 'user4'
+        && Number(sent.id) > 0 && sent.id === received.id,
+      JSON.stringify({ sent, received }).slice(0, 260));
+    check('DM-ul nu este livrat WebSocket unui al treilea utilizator', leaked === false, `leaked=${leaked}`);
+
+    const history = await req(b, 'GET', '/api/messages?with=user3');
+    check('Conversatia 1-la-1 este persistenta in endpointul de istoric',
+      history.status === 200 && (history.data?.messages || []).some((m) => m.id === sent.id && m.message === 'Salut privat persistent'),
+      JSON.stringify(history.data)?.slice(0, 260));
+    const inboxUnread = await req(b, 'GET', '/api/messages');
+    const preview = (inboxUnread.data?.conversations || []).find((x) => x.username === 'user3');
+    check('Inbox-ul are preview si badge unread',
+      preview?.last_message === 'Salut privat persistent' && Number(preview?.unread) === 1 && inboxUnread.data?.unread >= 1,
+      JSON.stringify(preview));
+
+    const marked = await req(b, 'POST', '/api/messages', { action: 'read', with: 'user3' });
+    const inboxRead = await req(b, 'GET', '/api/messages');
+    const readPreview = (inboxRead.data?.conversations || []).find((x) => x.username === 'user3');
+    check('Mark-as-read goleste badge-ul conversatiei',
+      marked.status === 200 && marked.data?.changed >= 1 && Number(readPreview?.unread) === 0,
+      JSON.stringify({ marked: marked.data, preview: readPreview }));
+
+    // După unfriend, aceeași conexiune WebSocket nu păstrează vreo autorizație
+    // în cache: atât citirea, cât și trimiterea sunt refuzate imediat.
+    const removed = await req(a, 'DELETE', '/api/friends?u=user4');
+    check('Prietenia poate fi eliminata inaintea probei de blocare', removed.data?.status === 'none', JSON.stringify(removed.data));
+    const hiddenHistory = await req(b, 'GET', '/api/messages?with=user3');
+    check('Dupa unfriend istoricul privat este blocat imediat', hiddenHistory.status === 403, `status=${hiddenHistory.status}`);
+
+    const rejectedDm = waitWs(sockets[0], (data) => data.type === 'error' && data.scope === 'dm');
+    sockets[0].send(JSON.stringify({ type: 'dm', recipient_id: user4?.user_id, message: 'Nu trebuie salvat' }));
+    const rejection = await rejectedDm;
+    check('Dupa unfriend trimiterea DM este blocata pe acelasi socket',
+      rejection.code === 'not_friends', JSON.stringify(rejection));
+    const afterRemoveInbox = await req(b, 'GET', '/api/messages');
+    check('Fostul prieten dispare imediat din inbox',
+      !(afterRemoveInbox.data?.conversations || []).some((x) => x.username === 'user3'),
+      JSON.stringify(afterRemoveInbox.data?.conversations));
+  } catch (error) {
+    check('Fluxul WebSocket pentru DM functioneaza', false, error.message);
+  } finally {
+    sockets.forEach((socket) => { try { socket.close(); } catch { /* ignoră */ } });
+  }
+}
+
 console.log('\n=== 13i. SHOP (SINK DE GOLD) + RAPORTARE SURSE ===');
 {
   const j = jar();

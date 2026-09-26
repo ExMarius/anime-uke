@@ -69,6 +69,7 @@ import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
 import * as watchlistRoute from './routes/api/watchlist.js';
 import * as friendsRoute from './routes/api/friends.js';
+import * as messagesRoute from './routes/api/messages.js';
 
 const ROUTES = [
   // --- publice ---
@@ -128,6 +129,7 @@ const ROUTES = [
   { method: 'PATCH', path: '/api/profile', mod: profileRoute },
   { method: '*', path: '/api/watchlist', mod: watchlistRoute },
   { method: '*', path: '/api/friends', mod: friendsRoute },
+  { method: '*', path: '/api/messages', mod: messagesRoute },
 
   // --- admin ---
   { method: 'GET', path: '/api/admin/stats', mod: adminStats },

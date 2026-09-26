@@ -16,7 +16,7 @@
 // + adauga prieten. Avatarul si numele sunt <a> catre /profile?u=...
 // =====================================================================
 
-import { getSession, toast, staffBadge, staffIcon, rankChip } from './core.js';
+import { api, getSession, toast, staffBadge, staffIcon, rankChip } from './core.js';
 
 let ws = null;
 let me = null;
@@ -25,59 +25,108 @@ let retry = 0;
 let retryTimer = null;
 let onlineCount = 0;
 let initialized = false;
+let activeTab = 'live';
+let activeFriend = null;
+let dmInbox = [];
+let inboxLoaded = false;
+let inboxLoading = null;
 
 const MAX_RETRY_DELAY = 20000;
+
+function chatBoxMarkup() {
+  return `
+    <div class="chat-box">
+      <div class="chat-head">
+        <span class="chat-head__title">Comunitate</span>
+        <span class="chat-head__count" id="chat-online-count">0 online</span>
+        <span class="chat-badge" id="chat-badge"></span>
+        <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
+      </div>
+      <div class="chat-tabs" id="chat-tabs" role="tablist" aria-label="Tip conversație">
+        <button class="chat-tab" id="chat-tab-live" type="button" role="tab" aria-controls="chat-live-panel" aria-selected="true" data-chat-tab="live">● Live</button>
+        <button class="chat-tab" id="chat-tab-friends" type="button" role="tab" aria-controls="chat-friends-panel" aria-selected="false" data-chat-tab="friends">
+          Prieteni <span class="dm-badge" id="dm-tab-badge" hidden></span>
+        </button>
+      </div>
+      <section class="chat-panel chat-panel--live" id="chat-live-panel" role="tabpanel" aria-labelledby="chat-tab-live">
+        <div class="chat-online" id="chat-online">Se conectează…</div>
+        <div class="chat-body" id="chat-body"></div>
+        <form class="chat-form" id="chat-form">
+          <label class="sr-only" for="chat-input">Mesaj live</label>
+          <div class="sticker-wrap">
+            <button class="chat-sticker-btn" id="chat-sticker-btn" type="button" title="Stikere" aria-label="Deschide stikerele">😄</button>
+            <div class="sticker-pop" id="sticker-pop" hidden></div>
+          </div>
+          <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie în chatul live…" autocomplete="off">
+          <button class="btn btn--accent" type="submit">Trimite</button>
+        </form>
+      </section>
+      <section class="chat-panel chat-panel--friends" id="chat-friends-panel" role="tabpanel" aria-labelledby="chat-tab-friends" hidden>
+        <div class="dm-layout">
+          <aside class="dm-sidebar" aria-label="Conversații cu prietenii">
+            <div class="dm-sidebar__head"><strong>Prieteni</strong><span id="dm-total-label">0 conversații</span></div>
+            <div class="dm-inbox" id="dm-inbox"><p class="dm-empty">Se încarcă…</p></div>
+          </aside>
+          <div class="dm-thread" id="dm-thread">
+            <div class="dm-thread__head">
+              <button class="dm-back" id="dm-back" type="button" aria-label="Înapoi la prieteni">‹</button>
+              <span class="dm-thread__avatar" id="dm-thread-avatar">💬</span>
+              <div><strong id="dm-thread-name">Mesaje private</strong><small id="dm-thread-state">Alege un prieten</small></div>
+            </div>
+            <div class="dm-body" id="dm-body"><p class="dm-empty">Alege un prieten din listă pentru a începe conversația.</p></div>
+            <form class="dm-form" id="dm-form" hidden>
+              <label class="sr-only" for="dm-input">Mesaj privat</label>
+              <input class="input" id="dm-input" type="text" maxlength="500" placeholder="Mesaj privat…" autocomplete="off">
+              <button class="btn btn--accent" type="submit" aria-label="Trimite mesajul privat">➤</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>`;
+}
 
 function ensureChatElements() {
   let fab = document.getElementById('chat-fab');
   let modal = document.getElementById('chat-modal');
 
-  if (!fab || !modal) {
-    // Construim markup-ul identic cu cel din index.html, dar cu display
-    // garantat (style inline + clase care au !important in CSS).
+  if (!fab) {
     const frag = document.createRange().createContextualFragment(`
-      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live" style="display:flex">
+      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul" style="display:flex">
         <span class="chat-fab__dot"></span>
-        <span class="chat-fab__label">Chat live</span>
-      </button>
-      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live" style="display:none">
-        <div class="chat-box">
-          <div class="chat-head">
-            <span class="chat-head__title">Chat global</span>
-            <span class="chat-head__count" id="chat-online-count">0 online</span>
-            <span class="chat-badge" id="chat-badge"></span>
-            <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
-          </div>
-          <div class="chat-online" id="chat-online">Se conectează…</div>
-          <div class="chat-body" id="chat-body"></div>
-          <form class="chat-form" id="chat-form">
-            <label class="sr-only" for="chat-input">Mesaj</label>
-            <div class="sticker-wrap">
-              <button class="chat-sticker-btn" id="chat-sticker-btn" type="button"
-                title="Stikere" aria-label="Deschide stikerele">😄</button>
-              <div class="sticker-pop" id="sticker-pop" hidden></div>
-            </div>
-            <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie un mesaj…" autocomplete="off">
-            <button class="btn btn--accent" type="submit">Trimite</button>
-          </form>
-        </div>
-      </div>`);
+        <span class="chat-fab__label">Chat</span>
+        <span class="chat-fab__badge dm-badge" id="chat-dm-badge" hidden></span>
+      </button>`);
     document.body.appendChild(frag);
     fab = document.getElementById('chat-fab');
+  }
+  if (!modal) {
+    const frag = document.createRange().createContextualFragment(`
+      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live și mesaje private" style="display:none">
+        ${chatBoxMarkup()}
+      </div>`);
+    document.body.appendChild(frag);
     modal = document.getElementById('chat-modal');
   }
 
-  // Garantăm display-ul chiar dacă CSS-ul a fost purgat sau suprascris
+  // Markup-ul vechi poate exista în index.html; îl actualizăm fără să cerem
+  // tuturor paginilor să dubleze structura mini-Discord din acest modul.
+  if (modal && !modal.querySelector('#chat-tabs')) modal.innerHTML = chatBoxMarkup();
+  if (fab && !fab.querySelector('#chat-dm-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'chat-fab__badge dm-badge';
+    badge.id = 'chat-dm-badge';
+    badge.hidden = true;
+    fab.appendChild(badge);
+  }
+
+  // Garantăm display-ul chiar dacă CSS-ul a fost purgat sau suprascris.
   if (fab) {
     fab.style.display = 'flex';
     fab.hidden = false;
     fab.removeAttribute('hidden');
   }
   if (modal) {
-    // Modalul pornește închis, dar cu display:none explicit (nu hidden)
-    if (modal.dataset.open !== 'true') {
-      modal.style.display = 'none';
-    }
+    if (modal.dataset.open !== 'true') modal.style.display = 'none';
     modal.removeAttribute('hidden');
   }
 
@@ -137,6 +186,14 @@ export async function initChat() {
     e.preventDefault();
     sendMessage();
   });
+  document.querySelectorAll('[data-chat-tab]').forEach((button) => {
+    button.addEventListener('click', () => switchChatTab(button.dataset.chatTab));
+  });
+  document.getElementById('dm-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendDirectMessage();
+  });
+  document.getElementById('dm-back')?.addEventListener('click', () => closeDirectThread());
   initStickers();
 
   freshFab.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
@@ -157,9 +214,18 @@ export function openChat() {
   modal.dataset.open = 'true';
   modal.style.display = 'flex';
   isOpen = true;
-  document.getElementById('chat-input')?.focus();
+  if (activeTab === 'friends') document.getElementById('dm-input')?.focus();
+  else document.getElementById('chat-input')?.focus();
   if (!ws || ws.readyState === WebSocket.CLOSED) connect();
-  if (!rulesAccepted()) showRules();
+  // Inbox-ul se cere la deschidere, nu la fiecare pagină vizitată: păstrăm
+  // bugetul de invocări și tot avem badge-ul înainte ca utilizatorul să aleagă tabul.
+  loadInbox().then(() => {
+    if (activeTab === 'friends' && activeFriend) {
+      const fresh = dmInbox.find((row) => Number(row.user_id) === Number(activeFriend.user_id));
+      if (fresh) markDirectRead(fresh);
+    }
+  });
+  if (activeTab === 'live' && !rulesAccepted()) showRules();
 }
 
 // ---------------------------------------------------------------------
@@ -262,8 +328,12 @@ function connect() {
       return;
     }
     if (data.type === 'message') { renderMessage(data); if (data.online) renderOnline(data.online); scrollDown(); return; }
+    if (data.type === 'dm') { handleDirectMessage(data); return; }
     if (data.type === 'system') { renderSystem(data.text); if (data.online) renderOnline(data.online); scrollDown(); return; }
-    if (data.type === 'error') { toast(data.text || 'Nu am putut trimite mesajul', 'err'); }
+    if (data.type === 'error') {
+      toast(data.text || 'Nu am putut trimite mesajul', 'err');
+      if (data.scope === 'dm' && data.code === 'not_friends') loadInbox(true);
+    }
   };
 
   ws.onerror = () => setBadge('eroare');
@@ -331,6 +401,292 @@ function renderOnline(list) {
 function scrollDown() {
   const body = document.getElementById('chat-body');
   if (body) body.scrollTop = body.scrollHeight;
+}
+
+// ---------------------------------------------------------------------
+// Mesaje private — inbox mini-Discord în același modal
+// ---------------------------------------------------------------------
+function switchChatTab(tab) {
+  activeTab = tab === 'friends' ? 'friends' : 'live';
+  const live = document.getElementById('chat-live-panel');
+  const friends = document.getElementById('chat-friends-panel');
+  if (live) live.hidden = activeTab !== 'live';
+  if (friends) friends.hidden = activeTab !== 'friends';
+  document.querySelectorAll('[data-chat-tab]').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.chatTab === activeTab));
+  });
+
+  if (activeTab === 'friends') {
+    loadInbox().then(() => {
+      if (activeFriend) {
+        const fresh = dmInbox.find((row) => Number(row.user_id) === Number(activeFriend.user_id));
+        if (fresh) markDirectRead(fresh);
+      }
+    });
+    (activeFriend ? document.getElementById('dm-input') : document.querySelector('.dm-friend'))?.focus();
+  } else {
+    document.getElementById('chat-input')?.focus();
+    if (!rulesAccepted()) showRules();
+  }
+}
+
+async function loadInbox(force = false) {
+  if (inboxLoading) return inboxLoading;
+  if (inboxLoaded && !force) {
+    renderInbox();
+    return;
+  }
+
+  inboxLoading = (async () => {
+    const result = await api('/messages');
+    if (!result.ok) {
+      const box = document.getElementById('dm-inbox');
+      if (box) {
+        box.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'dm-empty';
+        p.textContent = result.data?.error || 'Nu am putut încărca prietenii.';
+        box.appendChild(p);
+      }
+      return;
+    }
+    dmInbox = Array.isArray(result.data?.conversations) ? result.data.conversations : [];
+    inboxLoaded = true;
+
+    // Unfriend cât modalul e deschis: conversația dispare și thread-ul se
+    // închide imediat, fără a păstra istoricul vizibil în DOM.
+    if (activeFriend && !dmInbox.some((row) => Number(row.user_id) === Number(activeFriend.user_id))) {
+      closeDirectThread();
+    }
+    renderInbox();
+  })().finally(() => { inboxLoading = null; });
+  return inboxLoading;
+}
+
+function renderInbox() {
+  const box = document.getElementById('dm-inbox');
+  if (!box) return;
+  box.innerHTML = '';
+
+  const total = dmInbox.reduce((sum, row) => sum + (Number(row.unread) || 0), 0);
+  updateDmBadges(total);
+  const label = document.getElementById('dm-total-label');
+  if (label) label.textContent = `${dmInbox.length} ${dmInbox.length === 1 ? 'prieten' : 'prieteni'}`;
+
+  if (!dmInbox.length) {
+    const p = document.createElement('p');
+    p.className = 'dm-empty';
+    p.textContent = 'Nu ai încă prieteni acceptați. Adaugă-i din profil pentru a le scrie.';
+    box.appendChild(p);
+    return;
+  }
+
+  for (const friend of dmInbox) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'dm-friend' + (activeFriend && Number(activeFriend.user_id) === Number(friend.user_id) ? ' dm-friend--active' : '');
+    button.dataset.userId = String(friend.user_id);
+    button.appendChild(dmAvatar(friend, 'dm-friend__avatar'));
+
+    const main = document.createElement('span');
+    main.className = 'dm-friend__main';
+    const name = document.createElement('strong');
+    name.textContent = friend.username;
+    const preview = document.createElement('small');
+    preview.textContent = friend.last_message
+      ? `${Number(friend.last_sender_id) === Number(me?.id) ? 'Tu: ' : ''}${friend.last_message}`
+      : 'Începe conversația';
+    main.append(name, preview);
+    button.appendChild(main);
+
+    const side = document.createElement('span');
+    side.className = 'dm-friend__side';
+    if (friend.last_message_at) {
+      const time = document.createElement('time');
+      time.textContent = String(friend.last_message_at).slice(11, 16);
+      side.appendChild(time);
+    }
+    if (Number(friend.unread) > 0) {
+      const badge = document.createElement('b');
+      badge.className = 'dm-badge';
+      badge.textContent = Number(friend.unread) > 99 ? '99+' : String(friend.unread);
+      side.appendChild(badge);
+    }
+    button.appendChild(side);
+    button.addEventListener('click', () => openDirectThread(friend));
+    box.appendChild(button);
+  }
+}
+
+function dmAvatar(friend, className) {
+  const wrap = document.createElement('span');
+  wrap.className = className;
+  if (friend.avatar) {
+    const img = document.createElement('img');
+    img.src = friend.avatar;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => {
+      wrap.textContent = (friend.username || '?')[0].toUpperCase();
+    }, { once: true });
+    wrap.appendChild(img);
+  } else {
+    wrap.textContent = (friend.username || '?')[0].toUpperCase();
+  }
+  return wrap;
+}
+
+function updateDmBadges(total) {
+  for (const id of ['dm-tab-badge', 'chat-dm-badge']) {
+    const badge = document.getElementById(id);
+    if (!badge) continue;
+    badge.hidden = total < 1;
+    badge.textContent = total > 99 ? '99+' : String(total || '');
+  }
+}
+
+async function openDirectThread(friend) {
+  activeFriend = friend;
+  renderInbox();
+  document.querySelector('.dm-layout')?.classList.add('dm-layout--thread');
+
+  const name = document.getElementById('dm-thread-name');
+  const state = document.getElementById('dm-thread-state');
+  const avatar = document.getElementById('dm-thread-avatar');
+  const body = document.getElementById('dm-body');
+  const form = document.getElementById('dm-form');
+  if (name) name.textContent = friend.username;
+  if (state) state.textContent = 'Mesaje private · doar între prieteni';
+  if (avatar) {
+    avatar.innerHTML = '';
+    avatar.appendChild(dmAvatar(friend, 'dm-thread__avatar-inner'));
+  }
+  if (body) {
+    body.innerHTML = '';
+    const loading = document.createElement('p');
+    loading.className = 'dm-empty';
+    loading.textContent = 'Se încarcă istoricul…';
+    body.appendChild(loading);
+  }
+  if (form) form.hidden = false;
+
+  const result = await api(`/messages?with=${encodeURIComponent(friend.username)}`);
+  // Utilizatorul poate selecta alt prieten cât requestul este în zbor.
+  if (!activeFriend || Number(activeFriend.user_id) !== Number(friend.user_id)) return;
+  if (!result.ok) {
+    toast(result.data?.error || 'Conversația nu mai este disponibilă', 'warn');
+    closeDirectThread();
+    loadInbox(true);
+    return;
+  }
+
+  if (body) {
+    body.innerHTML = '';
+    const messages = Array.isArray(result.data?.messages) ? result.data.messages : [];
+    if (!messages.length) {
+      const empty = document.createElement('p');
+      empty.className = 'dm-empty';
+      empty.textContent = `Spune-i salut lui ${friend.username}.`;
+      body.appendChild(empty);
+    } else {
+      messages.forEach(renderDirectBubble);
+    }
+    body.scrollTop = body.scrollHeight;
+  }
+
+  if (isOpen && activeTab === 'friends') await markDirectRead(friend);
+  document.getElementById('dm-input')?.focus();
+}
+
+function closeDirectThread() {
+  activeFriend = null;
+  document.querySelector('.dm-layout')?.classList.remove('dm-layout--thread');
+  const name = document.getElementById('dm-thread-name');
+  const state = document.getElementById('dm-thread-state');
+  const avatar = document.getElementById('dm-thread-avatar');
+  const body = document.getElementById('dm-body');
+  const form = document.getElementById('dm-form');
+  if (name) name.textContent = 'Mesaje private';
+  if (state) state.textContent = 'Alege un prieten';
+  if (avatar) avatar.textContent = '💬';
+  if (body) {
+    body.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'dm-empty';
+    p.textContent = 'Alege un prieten din listă pentru a începe conversația.';
+    body.appendChild(p);
+  }
+  if (form) form.hidden = true;
+  renderInbox();
+}
+
+function renderDirectBubble(message) {
+  const body = document.getElementById('dm-body');
+  if (!body) return;
+  if (message.id && body.querySelector(`[data-dm-id="${Number(message.id)}"]`)) return;
+  body.querySelector('.dm-empty')?.remove();
+
+  const row = document.createElement('div');
+  row.className = 'dm-message' + (Number(message.sender_id) === Number(me?.id) ? ' dm-message--own' : '');
+  if (message.id) row.dataset.dmId = String(message.id);
+  const bubble = document.createElement('p');
+  bubble.textContent = message.message || '';
+  const time = document.createElement('time');
+  time.textContent = String(message.created_at || '').slice(11, 16);
+  row.append(bubble, time);
+  body.appendChild(row);
+  body.scrollTop = body.scrollHeight;
+}
+
+async function markDirectRead(friend) {
+  if (!friend || Number(friend.unread) < 1) return;
+  const result = await api('/messages', {
+    method: 'POST',
+    body: { action: 'read', with: friend.username },
+  });
+  if (!result.ok) return;
+  const row = dmInbox.find((item) => Number(item.user_id) === Number(friend.user_id));
+  if (row) row.unread = 0;
+  friend.unread = 0;
+  renderInbox();
+  updateDmBadges(Number(result.data?.unread) || 0);
+}
+
+function sendDirectMessage() {
+  const input = document.getElementById('dm-input');
+  if (!input || !activeFriend) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    toast('Chat-ul nu e conectat încă. Încearcă din nou într-o secundă.', 'warn');
+    return;
+  }
+  ws.send(JSON.stringify({
+    type: 'dm',
+    recipient_id: Number(activeFriend.user_id),
+    message: text.slice(0, 500),
+  }));
+  input.value = '';
+}
+
+function handleDirectMessage(message) {
+  const otherId = Number(message.sender_id) === Number(me?.id)
+    ? Number(message.recipient_id)
+    : Number(message.sender_id);
+  const openForThisFriend = activeFriend && Number(activeFriend.user_id) === otherId;
+  const visibleThread = openForThisFriend && isOpen && activeTab === 'friends';
+  if (openForThisFriend) renderDirectBubble(message);
+
+  // Reîmprospătarea server-side dă preview/unread corecte în toate taburile.
+  // Marcăm citit NUMAI dacă thread-ul este efectiv vizibil; un mesaj sosit
+  // cât modalul e închis sau utilizatorul e pe Live trebuie să păstreze badge-ul.
+  loadInbox(true).then(async () => {
+    if (visibleThread && Number(message.recipient_id) === Number(me?.id)) {
+      const fresh = dmInbox.find((row) => Number(row.user_id) === otherId) || activeFriend;
+      await markDirectRead(fresh);
+    }
+  });
 }
 
 /** Stikere: GIF-uri populare cu anime, direct de pe Tenor (media.tenor.com).
