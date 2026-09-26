@@ -2,7 +2,7 @@
 # Ruleaza toate suitele locale pe baze de date curate.
 #
 #   ./test.sh          scripts-health + greutate + poll-buget + pulse-online +
-#                      e2e + dom-smoke (+ dom-smoke pe build) +
+#                      turso-messages + e2e + dom-smoke (+ dom-smoke pe build) +
 #                      theme-cache + top-cache +
 #                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
 #
@@ -176,6 +176,15 @@ if [ "$PULSE_RC" -ne 0 ]; then
   cat /tmp/pulseonline.log
 fi
 
+echo "════════ turso-messages (protocol + rutare DM, fara retea) ════════"
+node tests/turso-messages.mjs > /tmp/turso.log 2>&1
+TURSO_RC=$?
+tail -6 /tmp/turso.log
+if [ "$TURSO_RC" -ne 0 ]; then
+  echo "!! turso-messages a picat:"
+  cat /tmp/turso.log
+fi
+
 echo "── reset baza locala ──"
 rm -rf .wrangler/state
 # TOP_CACHE_MINUTES=0: topul săptămânal se recalculează la fiecare cerere, ca
@@ -187,6 +196,7 @@ RC=0
 [ "${GREUTATE_RC:-0}" -eq 0 ] || RC=1
 [ "${POLL_RC:-0}" -eq 0 ] || RC=1
 [ "${PULSE_RC:-0}" -eq 0 ] || RC=1
+[ "${TURSO_RC:-0}" -eq 0 ] || RC=1
 echo
 echo "════════ e2e (API) ════════"
 # Logul complet ramane pe disc: un crash la mijlocul suitei ar fi altfel

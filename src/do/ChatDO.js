@@ -72,6 +72,7 @@ const seqOf = (key) => Number(key.slice(MSG_PREFIX.length)) || 0;
 const fingerprint = (m) => `${m.created_at}|${m.user_id}|${m.message}`;
 
 import { validateChatMessage } from '../lib/validate.js';
+import { deletePrivateMessage, insertPrivateMessage } from '../lib/private-messages.js';
 
 export class ChatDO {
   constructor(state, env) {
@@ -236,8 +237,8 @@ export class ChatDO {
   /**
    * Persistă și livrează un mesaj direct. Destinatarul din client nu este
    * niciodată de încredere: îl rezolvăm în D1 și cerem o prietenie accepted.
-   * INSERT-ul repetă EXISTS-ul, astfel încât un unfriend concurent între
-   * SELECT și scriere nu poate lăsa un mesaj nou după eliminarea relației.
+   * Mesajul ajunge în Turso, apoi prietenia este recitită din D1; un unfriend
+   * concurent șterge imediat scrierea și oprește livrarea.
    */
   async handleDirectMessage(ws, att, data) {
     const v = validateChatMessage(String(data.message ?? ''));
@@ -293,38 +294,54 @@ export class ChatDO {
     const createdAt = new Date().toISOString().replace('T', ' ').slice(0, 19);
     let result;
     try {
-      result = await this.env.DB.prepare(
-        `INSERT INTO private_messages
-           (sender_id, recipient_id, message, created_at)
-         SELECT ?, ?, ?, ?
-          WHERE EXISTS (
-            SELECT 1 FROM friendships f
-             WHERE f.status = 'accepted'
-               AND ((f.requester_id = ? AND f.addressee_id = ?)
-                 OR (f.requester_id = ? AND f.addressee_id = ?))
-          )`
-      ).bind(
-        att.userId, target.id, v.value, createdAt,
-        att.userId, target.id, target.id, att.userId
-      ).run();
+      // D1 nu poate participa într-o tranzacție atomică împreună cu Turso.
+      // Autorizăm din D1 înainte, persistăm în Turso, apoi verificăm din nou.
+      // Dacă unfriend-ul a concurat cu scrierea, ștergem mesajul și nu îl
+      // livrăm. Astfel Turso nu devine niciodată sursă de autorizare.
+      result = await insertPrivateMessage(
+        this.env, att.userId, target.id, v.value, createdAt
+      );
+      if (!Number(result.rowsAffected) || !Number(result.lastInsertId)) {
+        throw new Error('INSERT DM fără id');
+      }
+
+      const stillFriends = await this.env.DB.prepare(
+        `SELECT 1 AS ok FROM friendships f
+          WHERE f.status = 'accepted'
+            AND ((f.requester_id = ? AND f.addressee_id = ?)
+              OR (f.requester_id = ? AND f.addressee_id = ?))
+          LIMIT 1`
+      ).bind(att.userId, target.id, target.id, att.userId).first();
+      if (!stillFriends) {
+        await deletePrivateMessage(
+          this.env, result.lastInsertId, att.userId, target.id
+        );
+        ws.send(JSON.stringify({
+          type: 'error', scope: 'dm', code: 'not_friends',
+          text: 'Prietenia nu mai este activă',
+        }));
+        return;
+      }
     } catch (error) {
+      // Dacă INSERT-ul a reușit dar reverificarea D1 a picat, mesajul nu a
+      // fost livrat și nu trebuie să rămână orfan în Turso.
+      if (Number(result?.lastInsertId)) {
+        try {
+          await deletePrivateMessage(
+            this.env, result.lastInsertId, att.userId, target.id
+          );
+        } catch (cleanupError) {
+          console.error('ChatDO curățare DM eșuată:', cleanupError?.message || cleanupError);
+        }
+      }
       console.error('ChatDO persistare DM eșuată:', error?.message || error);
       ws.send(JSON.stringify({ type: 'error', scope: 'dm', text: 'Mesajul privat nu a putut fi salvat' }));
       return;
     }
 
-    if (!Number(result.meta?.changes)) {
-      // Prietenia a dispărut între SELECT și INSERT.
-      ws.send(JSON.stringify({
-        type: 'error', scope: 'dm', code: 'not_friends',
-        text: 'Prietenia nu mai este activă',
-      }));
-      return;
-    }
-
     const entry = {
       type: 'dm',
-      id: Number(result.meta?.last_row_id) || 0,
+      id: Number(result.lastInsertId) || 0,
       sender_id: att.userId,
       recipient_id: Number(target.id),
       sender_username: att.username,

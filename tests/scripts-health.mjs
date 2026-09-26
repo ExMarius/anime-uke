@@ -149,6 +149,20 @@ for (const f of jsFiles) {
       && workflow.includes('git checkout -- cf-relay/last-output.txt'),
     'commitul de output ar rescrie branch-ul de mentenanță cu main sau checkout-ul ar eșua');
 
+  const deploy = readFileSync(join(ROOT, 'deploy.sh'), 'utf8');
+  check('relay-ul primește ambele secrete Turso din GitHub Actions',
+    (workflow.match(/secrets\.TURSO_DATABASE_URL/g) || []).length >= 2
+      && (workflow.match(/secrets\.TURSO_AUTH_TOKEN/g) || []).length >= 2,
+    'verificarea și pasul de deploy trebuie să primească URL + token');
+  check('deploy-ul migrează Turso și pune secrete pe Pages + Worker DO',
+    deploy.includes('scripts/turso-migrate.mjs')
+      && deploy.includes('cd worker-do && $WRANGLER secret put TURSO_DATABASE_URL')
+      && deploy.includes('cd worker-do && $WRANGLER secret put TURSO_AUTH_TOKEN')
+      && deploy.includes('pages secret put TURSO_DATABASE_URL')
+      && deploy.includes('pages secret put TURSO_AUTH_TOKEN')
+      && existsSync(join(ROOT, 'turso/migrations/0001_private_messages.sql')),
+    'fără ambele runtime-uri, Pages poate citi dar ChatDO nu poate scrie (sau invers)');
+
   // Capcana de shell care s-a întâmplat deja: ghilimea dreaptă (") închide
   // un șir deschis cu „. Acceptăm doar perechile corecte sau fără diacritice.
   const badLines = cmd.split('\n')

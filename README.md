@@ -55,10 +55,10 @@ src/
 │       └── …               comments, reviews, ratings, leaderboard, economy, chest(s), missions,
 │                           shop(-buy/-activate), factions, notifications, profile, watchlist, …
 ├── do/                     Durable Objects: ChatDO, RateLimitDO, StatsDO
-└── lib/                    session (auth + drepturi), ranks (grade), crypto, jwt, http, validate,
-                            ratelimit, audit, xp, shop, missions, factions, notify, profile, sources, limits, paging
+└── lib/                    session, auth, rankuri, validare, notificări + turso/private-messages
 worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
 migrations/                 schema D1 = suma migrărilor 0001…0030 (NU există alt schema.sql)
+turso/migrations/           schema separată pentru conținutul mesajelor private
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
 ├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
@@ -69,7 +69,8 @@ tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
 ├── dom-smoke.mjs           paginile în jsdom (local)           │
 ├── chat-persist.mjs        chatul supraviețuiește evicției DO  │
-├── chat-d1.mjs             mesajul ajunge chiar în tabelul D1  ├─ ./test.sh le rulează pe toate
+├── chat-d1.mjs             mesajul live ajunge chiar în tabelul D1
+├── turso-messages.mjs      protocolul Turso + persistența DM   ├─ ./test.sh le rulează pe toate
 └── caps-e2e.mjs            plafoanele LIMIT_USERS/LIMIT_SERIES ┘
     (verificarea pe producție = scripts/audit-live.mjs, prin relay; vechiul
     prod-smoke.mjs a fost șters — descria site-ul privat cu invitații.)
@@ -142,15 +143,20 @@ Reguli care evită surprize:
 
 ```bash
 export CLOUDFLARE_API_TOKEN=...   # D1 Edit, Pages Edit, Workers Scripts Edit
+export TURSO_DATABASE_URL=...     # baza anime-uke-messages
+export TURSO_AUTH_TOKEN=...       # token SQL limitat la această bază
 npm run deploy                    # ./deploy.sh
 ```
 
-`deploy.sh` rulează în ordinea obligatorie: **D1 → migrări → Worker DO (`anime-uke-do`) → Pages → JWT_SECRET**,
-purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină și versionează assetele cu `?v=<commit>`.
+`deploy.sh` rulează în ordinea obligatorie: **D1 → migrări D1 → migrare/backfill Turso → Worker DO
+(`anime-uke-do`) → Pages → secrete runtime → JWT_SECRET**, purgă CSS-ul mort,
+bundle-uiește/minifică JS-ul per pagină și versionează assetele cu `?v=<commit>`. Migratează
+idempotent în Turso orice DM creat anterior în tabelul D1.
 
 **Fără acces de rețea la Cloudflare** (ex. sandbox de agent): scrie comanda în `cf-relay/cmd.sh`, comite pe un
-branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-ul e în secretul
-repo-ului `CLOUDFLARE_API_TOKEN`, niciodată în cod) și comite rezultatul în `cf-relay/last-output.txt`.
+branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-urile sunt în
+secretele repo-ului `CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, niciodată în cod)
+și comite rezultatul în `cf-relay/last-output.txt`.
 Dacă triggerul pornește de pe un branch, relay-ul trece explicit la `origin/main` înainte de deploy: producția
 primește numai codul integrat, iar output-ul este apoi comis înapoi pe branch-ul care a declanșat rularea.
 Deploy complet = `cmd.sh` apelează `./deploy.sh`.
@@ -217,15 +223,22 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
   compact tip mini-Discord: avatar, preview, oră, badge necitit și conversația 1-la-1.
 - Inbox-ul (`GET /api/messages`) pornește strict din `friendships.status = 'accepted'`;
   cererile pending/rejected și foștii prieteni nu apar.
-- Istoricul (`GET /api/messages?with=<username>`) este persistent în tabelul
-  `private_messages` (migrarea `0030_private_messages.sql`). `POST /api/messages`
-  cu `{ action: 'read', with }` marchează mesajele conversației ca citite.
+- Istoricul (`GET /api/messages?with=<username>`) este persistent în baza Turso
+  **`anime-uke-messages`** (`turso/migrations/0001_private_messages.sql`). D1 păstrează
+  utilizatorii și prieteniile; conținutul privat nu mai consumă stocarea/scrierile D1.
+  `POST /api/messages` cu `{ action: 'read', with }` marchează mesajele conversației
+  ca citite tot în Turso.
 - Trimiterea live folosește același `WS /chat`, cu payload `{ type: 'dm', recipient_id,
-  message }`. `ChatDO` verifică prietenia în D1 la **fiecare mesaj**, persistă înainte de
-  livrare și trimite evenimentul numai socket-urilor celor doi participanți.
+  message }`. `ChatDO` verifică prietenia în D1 la **fiecare mesaj**, persistă în Turso
+  înainte de livrare, recitește prietenia pentru a prinde un unfriend concurent și
+  trimite evenimentul numai socket-urilor celor doi participanți.
 - Un ne-prieten nu poate citi sau trimite. După unfriend, endpointul de istoric dă 403,
-  iar următorul DM este refuzat chiar pe socketul deja deschis; istoricul rămâne în D1,
-  dar devine imediat inaccesibil.
+  iar următorul DM este refuzat chiar pe socketul deja deschis; istoricul rămâne în
+  Turso, dar devine imediat inaccesibil.
+- Producția primește `TURSO_DATABASE_URL` și `TURSO_AUTH_TOKEN` numai ca secrete
+  Cloudflare. Relay-ul le citește din GitHub Actions Secrets, aplică migrările Turso,
+  importă idempotent mesajele vechi din D1 și le leagă atât la Pages, cât și la Workerul
+  Durable Objects. Local, în lipsa credențialelor, aceeași interfață folosește D1.
 
 ---
 

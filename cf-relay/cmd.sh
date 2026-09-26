@@ -360,6 +360,9 @@ FRIENDS_RC=$?
 echo "$FRIENDS_OUT" | sed 's/^/     /'
 FA="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_A__=//p' | head -1)"
 FB="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_B__=//p' | head -1)"
+FA_ID="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_A_ID__=//p' | head -1)"
+FB_ID="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_B_ID__=//p' | head -1)"
+FDM="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_DM_TEXT__=//p' | head -1)"
 if [ "$FRIENDS_RC" -ne 0 ]; then
   echo "   !! canarul de prietenie a picat (exit $FRIENDS_RC) — notificările NU ajung în producție"
 else
@@ -371,6 +374,16 @@ else
     case "$N_FR" in *'"n":1'*) echo "   cererea de prietenie e în D1 (notificare către destinatar): da" ;; *) echo "   !! lipsește notificarea de cerere în D1: $N_FR" ;; esac
     case "$N_ACC" in *'"n":1'*) echo "   acceptarea e în D1 (notificare către solicitant): da" ;; *) echo "   !! lipsește notificarea de acceptare în D1: $N_ACC" ;; esac
   fi
+fi
+# Dovada persistenței DM nu mai poate veni din D1: mesajele private trăiesc
+# în baza separată Turso. Scriptul caută exact textul canar între cele două ID-uri
+# și curăță rândurile înainte ca utilizatorii temporari să fie șterși din D1.
+echo "   dovadă directă în Turso (anime-uke-messages):"
+TURSO_CANAR_OUT="$(node scripts/turso-canary.mjs "$FA_ID" "$FB_ID" "$FDM" 2>&1)"
+TURSO_CANAR_RC=$?
+echo "$TURSO_CANAR_OUT" | sed 's/^/     /'
+if [ "$TURSO_CANAR_RC" -ne 0 ]; then
+  echo "   !! canarul Turso a picat (exit $TURSO_CANAR_RC) — DM-ul nu este confirmat în baza separată"
 fi
 # Partea de frontend: notificarea de prietenie trebuie să ducă la profilul
 # persoanei (/profile?u=…), nu să fie fără link. Markerul e ASCII, deci
