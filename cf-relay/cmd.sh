@@ -19,6 +19,20 @@
 # =====================================================================
 set -uo pipefail
 
+# Un relay poate fi declanșat dintr-un branch de mentenanță (workflow-ul ascultă
+# toate branch-urile), dar producția nu trebuie să primească niciodată codul
+# neintegrat al acelui branch. Pe Actions trecem explicit la main și relansăm
+# comanda din commitul de producție. Marcajul previne recursia după exec.
+if [ "${GITHUB_ACTIONS:-}" = "true" ] \
+  && [ "${GITHUB_REF_NAME:-}" != "main" ] \
+  && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ]; then
+  echo "── relay de pe ${GITHUB_REF_NAME}: folosesc origin/main pentru producție ──"
+  git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+  git checkout --detach origin/main
+  export RELAY_MAIN_CHECKED_OUT=1
+  exec bash cf-relay/cmd.sh
+fi
+
 # Secretul CLOUDFLARE_ACCOUNT_ID poate fi gol, cu spații, sau un ID care nu
 # e contul cu D1. Alegem contul pe care tokenul chiar vede baza anime-db.
 echo "── aleg contul care vede D1 ──"

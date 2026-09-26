@@ -136,6 +136,11 @@ for (const f of jsFiles) {
       cmd.includes(f) && existsSync(join(ROOT, f)),
       cmd.includes(f) ? 'lipsește din repo' : 'nu mai e invocat');
   }
+  check('relay-ul declanșat de pe branch publică exact origin/main',
+    cmd.includes('RELAY_MAIN_CHECKED_OUT=1')
+      && cmd.includes('git checkout --detach origin/main')
+      && cmd.includes('exec bash cf-relay/cmd.sh'),
+    'fără această gardă, un push de mentenanță poate publica cod neintegrat');
 
   // Capcana de shell care s-a întâmplat deja: ghilimea dreaptă (") închide
   // un șir deschis cu „. Acceptăm doar perechile corecte sau fără diacritice.

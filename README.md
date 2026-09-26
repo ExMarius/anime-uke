@@ -151,7 +151,8 @@ purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină și versionează 
 **Fără acces de rețea la Cloudflare** (ex. sandbox de agent): scrie comanda în `cf-relay/cmd.sh`, comite pe un
 branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-ul e în secretul
 repo-ului `CLOUDFLARE_API_TOKEN`, niciodată în cod) și comite rezultatul în `cf-relay/last-output.txt`.
-Deploy complet = `cmd.sh` apelează `./deploy.sh`.
+Dacă triggerul pornește de pe un branch, relay-ul trece explicit la `origin/main` înainte de deploy: producția
+primește numai codul integrat. Deploy complet = `cmd.sh` apelează `./deploy.sh`.
 
 ### De ce există `worker-do/`
 
