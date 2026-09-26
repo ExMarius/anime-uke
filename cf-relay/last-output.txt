@@ -1,5 +1,5 @@
 exit_code: 0
-comanda: cf-relay/cmd.sh @ 59e433b
+comanda: cf-relay/cmd.sh @ 79c0020
 ────────────────────────────────────
 ── aleg contul care vede D1 ──
 id din env: lungime 32 hex32=da
@@ -24,13 +24,13 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 19.69)
 
 [1;35m==> 4/5  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=59e433b
+    [0;32m✓[0m assete versionate ?v=79c0020
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m assete minificate: 9 fisiere
     [0;32m✓[0m pagini bundle-uite: 10 (chunk-uri comune: 3)
-    [0;32m✓[0m publicat: https://7fb20e32.anime-uke.pages.dev
+    [0;32m✓[0m publicat: https://bae58da1.anime-uke.pages.dev
 
 [1;35m==> 5/5  JWT_SECRET[0m
     [0;32m✓[0m secretul exista deja — il pastrez, sesiunile raman valide
@@ -38,8 +38,10 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
 [1;32mGATA.[0m  Site: https://anime-uke.pages.dev
 exit deploy: 0
 aștept 60s propagarea…
+── Git Pages: buildul declanșat de acest commit ──
+Git Pages deployment: găsit=da env=production status=success stages=queued:active,initialize:idle,clone_repo:idle,build:idle,deploy:success url=https://bae58da1.anime-uke.pages.dev
 
-════════ BUGEte (integrare): commit 59e433b ════════
+════════ BUGEte (integrare): commit 79c0020 ════════
 ── 1. asset static: Cache-Control dintr-o singură sursă (fără worker în cale)
 cache-control: public, max-age=31536000, immutable
    (înainte de _routes.json ieșea „no-cache, no-cache” = assetul trecea și prin worker)
@@ -98,7 +100,7 @@ cache-control: public, max-age=31536000, immutable
    profil: use_token=1 (≥1) · temă instant în bundle: auk-theme=0 (≥1)
    head /shop: cache-control: no-store
    head / (html): cache-control: public, max-age=0, must-revalidate
-   ?v= live din /: 59e433b · din /shop:  (gol = /shop e în spatele login-ului, normal)
+   ?v= live din /: 79c0020 · din /shop:  (gol = /shop e în spatele login-ului, normal)
 ── 13. poarta admin (economie) + sezon
    GET /api/admin/users anonim → 401 (trebuie 401)
    GET /api/admin/season anonim → 401 (trebuie 401)
@@ -129,7 +131,7 @@ cache-control: public, max-age=31536000, immutable
 
 ── 17. chat: canar end-to-end (mesaj + sticker pe site-ul viu)
      ══ CANAR CHAT (https://anime-uke.pages.dev) ══
-       ✅ cont temporar creat: canarb84bd646 (id 47)
+       ✅ cont temporar creat: canar3465a505 (id 50)
        ✅ login reușit (cookie HttpOnly primit)
        ✅ WebSocket deschis pe chat-ul live
        ✅ mesajul a fost difuzat live
@@ -141,13 +143,13 @@ cache-control: public, max-age=31536000, immutable
        __CANAR_SERIE__=1014
        … aștept 20s (fereastra de flush) — exact scenariul care se pierdea
        ✅ istoricul de la reconectare conține ambele (30 mesaje)
-       (user_id pentru curățenie: 47)
-       __CANAR_USER__=canarb84bd646
-       __CANAR_ID__=47
-       __CANAR_TEXT__=canar-2026-09-26T10:56:57
+       (user_id pentru curățenie: 50)
+       __CANAR_USER__=canar3465a505
+       __CANAR_ID__=50
+       __CANAR_TEXT__=canar-2026-09-26T11:01:51
      CANAR: OK (mesajul si stickerul sunt in istoricul servit de DO)
    dovezi în D1 (rândurile canarului, citite direct din baza de date):
-     [{"id":83,"username":"canarb84bd646","message":"canar-2026-09-26T10:56:57","created_at":"2026-09-26 10:56:58"},{"id":84,"username":"canarb84bd646","message":"[sticker:naruto]","created_at":"2026-09-26 10:57:00"}]
+     [{"id":85,"username":"canar3465a505","message":"canar-2026-09-26T11:01:51","created_at":"2026-09-26 11:01:53"},{"id":86,"username":"canar3465a505","message":"[sticker:naruto]","created_at":"2026-09-26 11:01:55"}]
    mesajul e ÎN D1: da
    stickerul e ÎN D1: da
    după curățenie: [{"n":46}] rânduri în chat_messages, [{"n":3}] conturi
@@ -156,20 +158,20 @@ cache-control: public, max-age=31536000, immutable
 
 ── 17b. prietenie: canar end-to-end (cerere + acceptare → notificări)
      ══ CANAR PRIETENIE (https://anime-uke.pages.dev) ══
-       ✅ cont temporar B creat: canarpj4y43jb
-       __CANAR_B__=canarpj4y43jb
-       ✅ cont temporar A creat: canarpj4y43ja
-       __CANAR_A__=canarpj4y43ja
+       ✅ cont temporar B creat: canarpm4kxhtb
+       __CANAR_B__=canarpm4kxhtb
+       ✅ cont temporar A creat: canarpm4kxhta
+       __CANAR_A__=canarpm4kxhta
        ✅ amandoua conturile sunt logate (cookie HttpOnly)
        ✅ cererea de prietenie s-a trimis (B → A)
-       ✅ A are notificarea de cerere: „canarpj4y43jb ți-a trimis o cerere de prietenie” (badge 1)
+       ✅ A are notificarea de cerere: „canarpm4kxhtb ți-a trimis o cerere de prietenie” (badge 1)
        ✅ cererea s-a acceptat (A → B)
-       ✅ B are notificarea de acceptare: „canarpj4y43ja ți-a acceptat cererea de prietenie” (badge 1)
-       __CANAR_A__=canarpj4y43ja
-       __CANAR_B__=canarpj4y43jb
+       ✅ B are notificarea de acceptare: „canarpm4kxhta ți-a acceptat cererea de prietenie” (badge 1)
+       __CANAR_A__=canarpm4kxhta
+       __CANAR_B__=canarpm4kxhtb
      CANAR: OK (cererea si acceptarea au notificat pe live)
    dovezi în D1 (notificările celor două conturi canar):
-     [{"username":"canarpj4y43ja","type":"friend_request","payload":"{\"username\":\"canarpj4y43jb\",\"user_id\":48}","read":0},{"username":"canarpj4y43jb","type":"friend_accepted","payload":"{\"username\":\"canarpj4y43ja\",\"user_id\":49}","read":0}]
+     [{"username":"canarpm4kxhta","type":"friend_request","payload":"{\"username\":\"canarpm4kxhtb\",\"user_id\":51}","read":0},{"username":"canarpm4kxhtb","type":"friend_accepted","payload":"{\"username\":\"canarpm4kxhta\",\"user_id\":52}","read":0}]
    cererea de prietenie e în D1 (notificare către destinatar): da
    acceptarea e în D1 (notificare către solicitant): da
    bundle: linkul notificării de prietenie către profil (/profile?u=): 1 (trebuie >= 1)
@@ -204,13 +206,13 @@ cache-control: public, max-age=31536000, immutable
 
 ════════ AUDIT LIVE ════════
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-26T10:57:46.874Z
+data: 2026-09-26T11:02:48.330Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (99 ms)
-  ℹ️  / → 200 · 99 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (123 ms)
+  ℹ️  / → 200 · 123 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -218,7 +220,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 36 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 37 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -226,7 +228,7 @@ data: 2026-09-26T10:57:46.874Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 143 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 91 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -236,24 +238,24 @@ data: 2026-09-26T10:57:46.874Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 96 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 110 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 84 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 106 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 82 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 100 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 81 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 103 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 87 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 108 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -308,7 +310,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ /api/auth/me → 200 (public)
   ✅ /api/auth/register-options → 200 (public)
   ✅ /api/comments?episode_id=1 → 200 (public)
-  ✅ /api/home agregă catalog + top + recent + genuri + pulse (176 ms)
+  ✅ /api/home agregă catalog + top + recent + genuri + pulse (267 ms)
   ✅ /api/admin/stats → 401 (protejat)
   ✅ /api/admin/users → 401 (protejat)
   ✅ /api/admin/series → 401 (protejat)
@@ -363,7 +365,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=59e433b (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=79c0020 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 78200 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -371,12 +373,9 @@ data: 2026-09-26T10:57:46.874Z
   ℹ️  /assets/css/page-episode.css → 200 · 9804 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/page-episode.css e comprimat (br)
   ✅ /assets/css/page-episode.css are Cache-Control: public, max-age=31536000, immutable
-  ✅ /assets/css/page-episode.css e minificat
-  ℹ️  /assets/css/page-user.css → 200 · 8687 B · enc=br · cache=public, max-age=31536000, immutable
-  ✅ /assets/css/page-user.css e comprimat (br)
-  ✅ /assets/css/page-user.css are Cache-Control: public, max-age=31536000, immu
+  ✅ /assets/css/page-episode.css e m
 ── … ──
-SALVAT de fapt în producție (D1)
+de fapt în producție (D1)
    total rânduri:      [{"n":46}]
    în ultimele 24h:    [{"n":8}]
    în ultimele 7 zile: [{"n":16}]
@@ -386,7 +385,7 @@ SALVAT de fapt în producție (D1)
 
 ── 17. chat: canar end-to-end (mesaj + sticker pe site-ul viu)
      ══ CANAR CHAT (https://anime-uke.pages.dev) ══
-       ✅ cont temporar creat: canarb84bd646 (id 47)
+       ✅ cont temporar creat: canar3465a505 (id 50)
        ✅ login reușit (cookie HttpOnly primit)
        ✅ WebSocket deschis pe chat-ul live
        ✅ mesajul a fost difuzat live
@@ -398,13 +397,13 @@ SALVAT de fapt în producție (D1)
        __CANAR_SERIE__=1014
        … aștept 20s (fereastra de flush) — exact scenariul care se pierdea
        ✅ istoricul de la reconectare conține ambele (30 mesaje)
-       (user_id pentru curățenie: 47)
-       __CANAR_USER__=canarb84bd646
-       __CANAR_ID__=47
-       __CANAR_TEXT__=canar-2026-09-26T10:56:57
+       (user_id pentru curățenie: 50)
+       __CANAR_USER__=canar3465a505
+       __CANAR_ID__=50
+       __CANAR_TEXT__=canar-2026-09-26T11:01:51
      CANAR: OK (mesajul si stickerul sunt in istoricul servit de DO)
    dovezi în D1 (rândurile canarului, citite direct din baza de date):
-     [{"id":83,"username":"canarb84bd646","message":"canar-2026-09-26T10:56:57","created_at":"2026-09-26 10:56:58"},{"id":84,"username":"canarb84bd646","message":"[sticker:naruto]","created_at":"2026-09-26 10:57:00"}]
+     [{"id":85,"username":"canar3465a505","message":"canar-2026-09-26T11:01:51","created_at":"2026-09-26 11:01:53"},{"id":86,"username":"canar3465a505","message":"[sticker:naruto]","created_at":"2026-09-26 11:01:55"}]
    mesajul e ÎN D1: da
    stickerul e ÎN D1: da
    după curățenie: [{"n":46}] rânduri în chat_messages, [{"n":3}] conturi
@@ -413,20 +412,20 @@ SALVAT de fapt în producție (D1)
 
 ── 17b. prietenie: canar end-to-end (cerere + acceptare → notificări)
      ══ CANAR PRIETENIE (https://anime-uke.pages.dev) ══
-       ✅ cont temporar B creat: canarpj4y43jb
-       __CANAR_B__=canarpj4y43jb
-       ✅ cont temporar A creat: canarpj4y43ja
-       __CANAR_A__=canarpj4y43ja
+       ✅ cont temporar B creat: canarpm4kxhtb
+       __CANAR_B__=canarpm4kxhtb
+       ✅ cont temporar A creat: canarpm4kxhta
+       __CANAR_A__=canarpm4kxhta
        ✅ amandoua conturile sunt logate (cookie HttpOnly)
        ✅ cererea de prietenie s-a trimis (B → A)
-       ✅ A are notificarea de cerere: „canarpj4y43jb ți-a trimis o cerere de prietenie” (badge 1)
+       ✅ A are notificarea de cerere: „canarpm4kxhtb ți-a trimis o cerere de prietenie” (badge 1)
        ✅ cererea s-a acceptat (A → B)
-       ✅ B are notificarea de acceptare: „canarpj4y43ja ți-a acceptat cererea de prietenie” (badge 1)
-       __CANAR_A__=canarpj4y43ja
-       __CANAR_B__=canarpj4y43jb
+       ✅ B are notificarea de acceptare: „canarpm4kxhta ți-a acceptat cererea de prietenie” (badge 1)
+       __CANAR_A__=canarpm4kxhta
+       __CANAR_B__=canarpm4kxhtb
      CANAR: OK (cererea si acceptarea au notificat pe live)
    dovezi în D1 (notificările celor două conturi canar):
-     [{"username":"canarpj4y43ja","type":"friend_request","payload":"{\"username\":\"canarpj4y43jb\",\"user_id\":48}","read":0},{"username":"canarpj4y43jb","type":"friend_accepted","payload":"{\"username\":\"canarpj4y43ja\",\"user_id\":49}","read":0}]
+     [{"username":"canarpm4kxhta","type":"friend_request","payload":"{\"username\":\"canarpm4kxhtb\",\"user_id\":51}","read":0},{"username":"canarpm4kxhtb","type":"friend_accepted","payload":"{\"username\":\"canarpm4kxhta\",\"user_id\":52}","read":0}]
    cererea de prietenie e în D1 (notificare către destinatar): da
    acceptarea e în D1 (notificare către solicitant): da
    bundle: linkul notificării de prietenie către profil (/profile?u=): 1 (trebuie >= 1)
@@ -461,13 +460,13 @@ SALVAT de fapt în producție (D1)
 
 ════════ AUDIT LIVE ════════
 AUDIT LIVE — https://anime-uke.pages.dev
-data: 2026-09-26T10:57:46.874Z
+data: 2026-09-26T11:02:48.330Z
 
 ════════════ DETALII ════════════
 
 ── 1. Pagini + SEO ──
-  ✅ / → 200 (99 ms)
-  ℹ️  / → 200 · 99 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
+  ✅ / → 200 (123 ms)
+  ℹ️  / → 200 · 123 ms · title „Anime-Uke — Anime Subtitrat în Română Online” (44 car.)
   ✅ / răspunde 200
   ✅ / title are lungime sănătoasă (44)
   ✅ / meta description 160 car.
@@ -475,7 +474,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ / are 6 taguri og:*
   ✅ / are lang="ro"
   ✅ / are toate assetele versionate (?v=)
-  ℹ️  /login → 200 · 36 ms · title „Login • anime-uke” (17 car.)
+  ℹ️  /login → 200 · 37 ms · title „Login • anime-uke” (17 car.)
   ✅ /login răspunde 200
   ✅ /login title are lungime sănătoasă (17)
   ✅ /login meta description 112 car.
@@ -483,7 +482,7 @@ data: 2026-09-26T10:57:46.874Z
   ℹ️  /login e marcat noindex (pagină utilitară) — og:* nu sunt necesare
   ✅ /login are lang="ro"
   ✅ /login are toate assetele versionate (?v=)
-  ℹ️  /register → 200 · 143 ms · title „Cont nou • anime-uke” (20 car.)
+  ℹ️  /register → 200 · 91 ms · title „Cont nou • anime-uke” (20 car.)
   ✅ /register răspunde 200
   ✅ /register title are lungime sănătoasă (20)
   ✅ /register meta description 80 car.
@@ -493,24 +492,24 @@ data: 2026-09-26T10:57:46.874Z
   ✅ /register are toate assetele versionate (?v=)
   ✅ /series → 301 către /
   ✅ /series/ → 301 către /
-  ℹ️  /serie/1019 → 200 · 96 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
+  ℹ️  /serie/1019 → 200 · 110 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Anime sub”
   ✅ /serie/1019 → 200
   ✅ /serie/1019 are JSON-LD (SEO)
   ✅ /serie/1019 are og:type video.*
-  ℹ️  /serie/1018 → 200 · 84 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
+  ℹ️  /serie/1018 → 200 · 106 ms · title „DanMachi — Anime subtitrat în română online | Anime-Uke”
   ✅ /serie/1018 → 200
   ✅ /serie/1018 are JSON-LD (SEO)
   ✅ /serie/1018 are og:type video.*
-  ℹ️  /serie/1017 → 200 · 82 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
+  ℹ️  /serie/1017 → 200 · 100 ms · title „Jitsu wa Watashi wa / Actually, I am... — Anime subtitrat în”
   ✅ /serie/1017 → 200
   ✅ /serie/1017 are JSON-LD (SEO)
   ✅ /serie/1017 are og:type video.*
-  ℹ️  /episod/4212 → 200 · 81 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
+  ℹ️  /episod/4212 → 200 · 103 ms · title „Lord of Mysteries / Guimi Zhi Zhu: Xiaochou Pian — Episodul ”
   ✅ /episod/4212 → 200
   ✅ /episod/4212 are JSON-LD (SEO)
   ✅ /episod/4212 are JSON-LD TVEpisode
   ✅ /episod/4212 are og:type video.episode
-  ℹ️  /episod/4211 → 200 · 87 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
+  ℹ️  /episod/4211 → 200 · 108 ms · title „Liar Game — Episodul 1 subtitrat în română | Anime-Uke”
   ✅ /episod/4211 → 200
   ✅ /episod/4211 are JSON-LD (SEO)
   ✅ /episod/4211 are JSON-LD TVEpisode
@@ -565,7 +564,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ /api/auth/me → 200 (public)
   ✅ /api/auth/register-options → 200 (public)
   ✅ /api/comments?episode_id=1 → 200 (public)
-  ✅ /api/home agregă catalog + top + recent + genuri + pulse (176 ms)
+  ✅ /api/home agregă catalog + top + recent + genuri + pulse (267 ms)
   ✅ /api/admin/stats → 401 (protejat)
   ✅ /api/admin/users → 401 (protejat)
   ✅ /api/admin/series → 401 (protejat)
@@ -620,7 +619,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ fără Access-Control-Allow-Origin (nu deschidem API-ul către alte origini)
 
 ── 9. Assete + performanță ──
-  ℹ️  cere assetele cu ?v=59e433b (versiunea din HTML-ul live)
+  ℹ️  cere assetele cu ?v=79c0020 (versiunea din HTML-ul live)
   ℹ️  /assets/css/style.css → 200 · 78200 B · enc=br · cache=public, max-age=31536000, immutable
   ✅ /assets/css/style.css e comprimat (br)
   ✅ /assets/css/style.css are Cache-Control: public, max-age=31536000, immutable
@@ -694,7 +693,7 @@ data: 2026-09-26T10:57:46.874Z
   ✅ o singură referință la .jpg-ul hero (rezerva din <picture>, 1×)
   ✅ fără preload pe arta hero (imaginea e deja inline în HTML)
   ✅ HTML comprimat (br)
-  ℹ️  timpi: / 99 ms · /series 22 ms · /api/series 161 ms
+  ℹ️  timpi: / 123 ms · /series 24 ms · /api/series 215 ms
 
 ── 10. Scurgeri ──
   ✅ niciun secret/UUID hardcodat în cele 8 bundle-uri JS
@@ -729,10 +728,10 @@ exit audit: 0
 ════════ CONSUM COTE GRATUITE (azi, UTC) ════════
 CONSUM COTE GRATUITE — ziua UTC 2026-09-26 (se resetează la 00:00 UTC)
 
-  🟢 Invocări Functions (Pages)                  859 /      100.000    1%  ····················
-  🟢 D1 rânduri citite                         7.418 /    5.000.000    0%  ····················
-  🟢 D1 rânduri scrise                           273 /      100.000    0%  ····················
-  🟢 Durable Objects requests                    176 /      100.000    0%  ····················
+  🟢 Invocări Functions (Pages)                1.027 /      100.000    1%  ····················
+  🟢 D1 rânduri citite                         9.648 /    5.000.000    0%  ····················
+  🟢 D1 rânduri scrise                           377 /      100.000    0%  ····················
+  🟢 Durable Objects requests                    225 /      100.000    0%  ····················
   🟢 DO durată (GB-s)                              0 /       13.000    0%  ····················
 
   Reper sănătos: sub 50% în orice moment al zilei. Peste 60% și încă crește → vezi
