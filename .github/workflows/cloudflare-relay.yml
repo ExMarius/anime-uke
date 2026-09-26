@@ -181,7 +181,10 @@ jobs:
           # de output ar rescrie branch-ul de mentenanță cu arborele lui main.
           OUTPUT="$(mktemp)"
           if [ -f cf-relay/last-output.txt ]; then cp cf-relay/last-output.txt "$OUTPUT"; fi
-          git fetch --no-tags origin "$BRANCH"
+          # Și acest fișier e modificat în working tree; îl resetăm doar după
+          # ce l-am salvat, altfel Git refuză checkout-ul înapoi la branch.
+          git checkout -- cf-relay/last-output.txt
+          git fetch --no-tags origin "+${BRANCH}:refs/remotes/origin/${BRANCH}"
           git checkout -B "$BRANCH" "origin/$BRANCH"
           cp "$OUTPUT" cf-relay/last-output.txt
           rm -f "$OUTPUT"

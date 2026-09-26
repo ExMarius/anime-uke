@@ -145,8 +145,9 @@ for (const f of jsFiles) {
   const workflow = readFileSync(join(ROOT, '.github/workflows/cloudflare-relay.yml'), 'utf8');
   check('workflow-ul păstrează branch-ul trigger după checkout-ul la main',
     workflow.includes('git checkout -B "$BRANCH" "origin/$BRANCH"')
-      && workflow.includes('cp cf-relay/last-output.txt "$OUTPUT"'),
-    'commitul de output ar rescrie branch-ul de mentenanță cu main');
+      && workflow.includes('cp cf-relay/last-output.txt "$OUTPUT"')
+      && workflow.includes('git checkout -- cf-relay/last-output.txt'),
+    'commitul de output ar rescrie branch-ul de mentenanță cu main sau checkout-ul ar eșua');
 
   // Capcana de shell care s-a întâmplat deja: ghilimea dreaptă (") închide
   // un șir deschis cu „. Acceptăm doar perechile corecte sau fără diacritice.
