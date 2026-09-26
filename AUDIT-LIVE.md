@@ -1,10 +1,10 @@
 # Audit live — https://anime-uke.pages.dev
 
-**Data:** 2026-09-25 (auditul inițial: 2026-09-22) · **Rulat prin:** relay GitHub Actions
+**Data:** 2026-09-26 (auditul inițial: 2026-09-22) · **Rulat prin:** relay GitHub Actions
 (`cf-relay/cmd.sh` → `node scripts/audit-live.mjs`)
 **Mod:** read-only, fără credențiale · **Scor final:** ✅ **190** · 🟡 **0** · 🔴 **0** · ℹ️ 36
-**Build auditat:** `?v=277c5ed` (25.09, post-merge PR #9 — buget 0: poll adaptiv + cache pe
-contorul online; scorul 190/0/0/ℹ️36 reconfirmat în runda 12, vezi §1k)
+**Build auditat:** `?v=205f42b` (26.09, post-merge PR #11 — notificări de prietenie;
+scorul 190/0/0/ℹ️36 e în picioare din runda 11, vezi §1k și §1l)
 
 | Rundă | Scor | Ce a fost |
 |---|---|---|
@@ -20,6 +20,7 @@ contorul online; scorul 190/0/0/ℹ️36 reconfirmat în runda 12, vezi §1k)
 | 10 (viteză, build `4b65b07`) | ✅ 186 · 🟡 0 · 🔴 0 · ℹ️ 35 | chat scos de pe calea critică (chunk la cerere), arta hero 168 → 94 KB (pasul 1), coperți dimensionate — vezi §1i |
 | 11 (viteză, pasul 2: AVIF, build `d8ad136`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | arta hero în AVIF (`<picture>`): 224 → 151 KB, −40% comprimat pe live; două buguri de hero reparate — vezi §1j |
 | 12 (buget 0: poll adaptiv + incidentul tokenului CF, build `277c5ed`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | redeploy verificat end-to-end după pierderea accesului la deploy; canarul de chat în D1, markerul `auk-adaptive` publicat, consumul zilei 2% din invocări — vezi §1k |
+| 13 (notificări de prietenie, build `205f42b`) | ✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36 | cererile de prietenie notifică în clopot; canar de prietenie pe live (cerere + acceptare, dovezi în D1), PR #8 mort închis — vezi §1l |
 
 ---
 
@@ -425,6 +426,28 @@ Lecția: când deploierele pică instant, primul loc deuit e `cf-relay/last-outp
 sau comentariul pe commit — verificarea de secret e *înainte* de `cmd.sh`, cu
 diagnostic clar. Verificările e2e/CI nu acoperi accesul la Cloudflare: doar un
 deploy real pe live o face.
+
+## 1l. Runda 13 (2026-09-26): notificări de prietenie
+
+Sistemul `/api/friends` (PR #7, migrarea 0029) trimitea cereri în tăcere: destinatarul
+afla de existența unei cereri doar dacă se uita pe profil. Runda adaugă notificările
+în clopot — `friend_request` la trimitere, `friend_accepted` la acceptare (inclusiv la
+acceptarea automată, către cel care ceruse primul). Fără migrare nouă: tipurile sunt
+un catalog în `src/lib/notify.js`, iar `payload` (JSON) poartă `username`, ca notificarea
+să aibă link către profil.
+
+| Verificare pe live (build `?v=205f42b`, 26.09, post-merge PR #11) | Rezultat |
+|---|---|
+| `deploy.sh` complet din `main` (merge-ul declanșează deploy din git, relay-ul readuce forma optimizată) | `exit 0`; assete versionate `?v=205f42b`, cache immutable, `_routes.json`, CSS purgat, 10 pagini bundle-uite |
+| Canarul de prietenie (`cf-relay/friends-canar.mjs`, §17b în `cmd.sh`) | OK — cont B trimite cerere lui A, A are notificarea „…ți-a trimis o cerere de prietenie” (badge 1), A acceptă, B are „…ți-a acceptat cererea de prietenie” (badge 1) |
+| Dovada în D1 (rândurile citite direct din tabel) | `notifications`: `friend_request` către A cu `payload {"username":"canarp…b","user_id":42}` + `friend_accepted` către B — ambele `read=0`, apoi curățenie fără urme (conturile „canarp%” șterse, contor `users_total` realiniat) |
+| Linkul din notificare către profil | marker `/profile?u=` prezent în chunk-ul comun publicat (1 apariție) |
+| Audit live complet | **✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36** — „niciuna — auditul a trecut curat” |
+| Consum cote gratuite (ziua UTC) | Invocări 0,1% · D1 citire 0,02% · D1 scriere 0,04% · DO 0% |
+
+Curățenie de repo în aceeași rundă: **PR #8** (`arena/01a0d983-anime-uke`, „buget 0: poll
+adaptiv”) a fost închis — conținutul lui de cod era deja în `main` prin PR #9/#10, iar
+singura diferenție rămasă era `cf-relay/last-output.txt` (un log de CI).
 
 ## 4. Cum se re-rulează auditul
 
