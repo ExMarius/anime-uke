@@ -22,7 +22,8 @@ set -uo pipefail
 # Un relay poate fi declanșat dintr-un branch de mentenanță (workflow-ul ascultă
 # toate branch-urile), dar producția nu trebuie să primească niciodată codul
 # neintegrat al acelui branch. Pe Actions trecem explicit la main și relansăm
-# comanda din commitul de producție. Marcajul previne recursia după exec.
+# comanda din commitul de producție. Marcajul previne recursia după exec.;
+# diagnosticul tranzitoriu al workflow-ului este salvat separat înainte de checkout.
 if [ "${GITHUB_ACTIONS:-}" = "true" ] \
   && [ "${GITHUB_REF_NAME:-}" != "main" ] \
   && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ]; then
