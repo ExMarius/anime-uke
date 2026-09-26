@@ -13,7 +13,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 49 · poll-buget 22 ·
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
   pulse-online 17 · e2e 599 · dom 210 / 206 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
@@ -175,7 +175,7 @@ cat cf-relay/last-output.txt
   prietenie și auditul), ca să nu fie pierdute prin trunchiere.
 - **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
   verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
-  au trecut: scripts-health 49 · greutate în buget · e2e 599 · dom 210/206 · restul
+  au trecut: scripts-health 50 · greutate în buget · e2e 599 · dom 210/206 · restul
   suitei verzi. `npm audit` nu raportează vulnerabilități.
 
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)

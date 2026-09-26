@@ -152,7 +152,8 @@ purgă CSS-ul mort, bundle-uiește/minifică JS-ul per pagină și versionează 
 branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-ul e în secretul
 repo-ului `CLOUDFLARE_API_TOKEN`, niciodată în cod) și comite rezultatul în `cf-relay/last-output.txt`.
 Dacă triggerul pornește de pe un branch, relay-ul trece explicit la `origin/main` înainte de deploy: producția
-primește numai codul integrat. Deploy complet = `cmd.sh` apelează `./deploy.sh`.
+primește numai codul integrat, iar output-ul este apoi comis înapoi pe branch-ul care a declanșat rularea.
+Deploy complet = `cmd.sh` apelează `./deploy.sh`.
 
 ### De ce există `worker-do/`
 

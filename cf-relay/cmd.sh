@@ -27,6 +27,9 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ] \
   && [ "${GITHUB_REF_NAME:-}" != "main" ] \
   && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ]; then
   echo "── relay de pe ${GITHUB_REF_NAME}: folosesc origin/main pentru producție ──"
+  # Pasul anterior din workflow inițializează last-output.txt pentru diagnostic.
+  # Nu e sursă de deploy, iar checkout-ul trebuie să poată schimba arborele.
+  git checkout -- cf-relay/last-output.txt
   git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
   git checkout --detach origin/main
   export RELAY_MAIN_CHECKED_OUT=1

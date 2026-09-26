@@ -175,6 +175,16 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          # cmd.sh poate face checkout la origin/main pentru a publica numai
+          # cod integrat. Păstrăm output-ul temporar, apoi revenim la branch-ul
+          # care a declanșat workflow-ul înainte să îl comitem; altfel commitul
+          # de output ar rescrie branch-ul de mentenanță cu arborele lui main.
+          OUTPUT="$(mktemp)"
+          if [ -f cf-relay/last-output.txt ]; then cp cf-relay/last-output.txt "$OUTPUT"; fi
+          git fetch --no-tags origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          cp "$OUTPUT" cf-relay/last-output.txt
+          rm -f "$OUTPUT"
           git config user.name  "cf-relay[bot]"
           git config user.email "cf-relay[bot]@users.noreply.github.com"
           git add cf-relay/last-output.txt 2>/dev/null || exit 0
