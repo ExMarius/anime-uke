@@ -108,14 +108,21 @@ try { j = JSON.parse(fs.readFileSync('/tmp/cf-pages-deployments.json', 'utf8'));
 const err = (j.errors && j.errors[0] && (j.errors[0].message || j.errors[0].code)) || '';
 const sha = process.env.PAGES_GIT_SHA || '';
 const list = Array.isArray(j.result) ? j.result : [];
-const d = list.find((x) => x?.deployment_trigger?.metadata?.commit_hash === sha);
+const matches = list.filter((x) => x?.deployment_trigger?.metadata?.commit_hash === sha);
+// deploy.sh publică și el același SHA, dar în producție. Pentru sănătatea
+// integrării alegem explicit deployment-ul declanșat de Git (preview), nu
+// pe cel manual, mai nou, pe care tocmai l-am publicat prin relay.
+const d = matches.find((x) => x?.deployment_trigger?.type === 'github')
+  || matches.find((x) => x?.environment === 'preview')
+  || matches[0];
 if (!d) {
   console.log(`Git Pages deployment: găsit=nu success=${j.success} eroare=${err}`);
   process.exit(0);
 }
 const stages = (d.stages || []).map((x) => `${x.name}:${x.status}`).join(',');
 const status = (d.latest_stage && d.latest_stage.status) || '';
-console.log(`Git Pages deployment: găsit=da env=${d.environment || ''} status=${status} stages=${stages} url=${d.url || ''}`);
+const trigger = (d.deployment_trigger && d.deployment_trigger.type) || '';
+console.log(`Git Pages deployment: găsit=da trigger=${trigger} env=${d.environment || ''} status=${status} stages=${stages} url=${d.url || ''}`);
 if (status === 'failure' && d.id) fs.writeFileSync('/tmp/cf-pages-failed-deployment-id', String(d.id));
 JS
 PAGES_FAILED_ID="$(cat /tmp/cf-pages-failed-deployment-id 2>/dev/null || true)"
