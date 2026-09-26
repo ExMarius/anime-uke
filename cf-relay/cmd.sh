@@ -3,8 +3,7 @@
 # Deploy + verificare LIVE: tot ce face deploy.sh (D1, migrări remote,
 # Worker DO, Pages, JWT, purge/minify, ?v=), apoi verificările
 # post-deploy pe https://anime-uke.pages.dev (sectiunile 1–20 din mai jos).
-# Sincronizare post-merge PR #12: reaplică forma optimizată pentru build-ul
-# 205f42b după deploy-ul automat al integrării GitHub.
+# Rulare post-merge PR #17: migrează mesajele în Turso prin protocolul v3.
 #
 # Comportament (25.09):
 #   - alege mai întâi contul Cloudflare care chiar vede D1-ul anime-db
