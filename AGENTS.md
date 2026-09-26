@@ -75,9 +75,10 @@ cat cf-relay/last-output.txt
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox. Canalul principal de citit rezultatul
-  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`
-  (body = „deploy exit N” + capul cozii output-ului, tokenii redactați). `last-output.txt` se comite și el când push-ul trece,
-  dar comentariul e garantat.
+  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`.
+  Înaintea capului/cozii de output (cu tokenii redactați), comentariul scoate explicit reperele de predare: `exit deploy`,
+  `?v=` din HTML, canarul de prietenie și totalul/exit-ul auditului — nu le pierde la trunchierea logului. `last-output.txt`
+  se comite și el când push-ul trece, dar comentariul e garantat.
 - `CLOUDFLARE_ACCOUNT_ID` e opțional și poate fi invalid (de ex. 53 caractere în loc de 32 hex): `cf-relay/cmd.sh`
   alege singur contul pe care tokenul chiar vede D1-ul `anime-db`. Dacă secretul e setat corect, verifică doar paritatea.
 - `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
