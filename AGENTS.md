@@ -99,8 +99,10 @@ cat cf-relay/last-output.txt
   (CSP/HSTS/Cache) — pentru alea rămâne relay-ul cu `curl -sI`. (2) auditul complet, care acoperă zeci de
   probe deodată: `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh` (rulează și fără
   `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
-- Token-ul Cloudflare stă **doar** în GitHub Secrets (`CLOUDFLARE_API_TOKEN`). **Nu-l scrie niciodată în fișiere**,
-  nici în mesaje de commit, nici în `cmd.sh`.
+- Token-urile Cloudflare/Turso stau **doar** în GitHub Secrets
+  (`CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`). **Nu le
+  scrie niciodată în fișiere**, mesaje de commit sau `cmd.sh`. Relay-ul copiază
+  credențialele Turso în secretele runtime Pages + Worker DO la deploy.
 - Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca marker de deploy; folosește
   identificatori (nume de funcții, id-uri HTML, clase CSS).
 
@@ -208,26 +210,36 @@ acțiune sau e o veste bună notifică în clopot:
 ### Mesaje private între prieteni (2026-09-26)
 
 Chatul are acum în același modal taburile **Live** și **Prieteni**. Implementarea
-este în `migrations/0030_private_messages.sql`, `src/routes/api/messages.js`,
+este în `src/lib/private-messages.js`, `src/lib/turso.js`,
+`turso/migrations/0001_private_messages.sql`, `src/routes/api/messages.js`,
 `src/do/ChatDO.js` și `public/assets/js/chat.js`:
 
 - `/api/messages` listează numai prietenii `accepted`, cu preview + unread;
   `?with=<username>` citește istoricul numai dacă prietenia este încă activă;
   `POST { action:'read', with }` marchează conversația citită.
+- **Producția păstrează conținutul DM în Turso (`anime-uke-messages`)**, nu în
+  D1. D1 rămâne sursa de adevăr pentru users/friendships. Fără credențiale
+  Turso (numai local/test), adaptorul folosește tabelul D1 din migrarea 0030.
 - DM-ul se trimite pe WebSocket ca `{ type:'dm', recipient_id, message }`.
-  `ChatDO` verifică statusul în D1 la **fiecare DM**, repetă verificarea în
-  `INSERT ... WHERE EXISTS`, persistă înainte de livrare și filtrează socketurile
-  strict după cei doi user IDs. Nu adăuga vreun cache de prietenie aici.
+  `ChatDO` verifică statusul în D1 la **fiecare DM**, persistă în Turso, apoi
+  recitește prietenia; dacă un unfriend a concurat cu scrierea, șterge mesajul
+  și nu îl livrează. Nu adăuga vreun cache de prietenie aici.
 - Unfriend nu șterge istoricul, dar îl face imediat inaccesibil și blochează
   trimiterea inclusiv pe un socket deschis înaintea eliminării.
 - Clasele mini-Discord sunt `dm-*`; `/^dm/` trebuie să rămână în safelist-ul
   `scripts/purge-css.mjs`. La deploy verifică și artefactul CSS purgat/minificat,
   nu doar sursa.
 - Regresiile sunt în `tests/e2e.mjs` secțiunea 13h3 (accepted-only, persistență,
-  zero leak către al treilea socket, unread/read, blocare după unfriend) și în
+  zero leak către al treilea socket, unread/read, blocare după unfriend),
+  `tests/turso-messages.mjs` (protocol + selectarea Turso) și
   `tests/dom-smoke.mjs` (taburile Live/Prieteni din același modal).
+- `deploy.sh` aplică migrările din `turso/migrations/`, face backfill idempotent
+  din D1 și setează secretele pe **ambele** runtime-uri: Pages citește inboxul,
+  Workerul `anime-uke-do` scrie DM-ul. Relay-ul validează direct mesajul canar
+  în Turso și îl curăță înainte să șteargă conturile temporare.
 
-Următoarea migrare este **0031**; nu modifica 0030 după ce ajunge în producție.
+Următoarea migrare D1 este **0031**; nu modifica 0030. Următoarea migrare Turso
+este **0002**; nu modifica `turso/migrations/0001_private_messages.sql` după deploy.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
 

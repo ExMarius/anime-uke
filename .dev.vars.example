@@ -3,3 +3,8 @@
 #   npx wrangler pages secret put JWT_SECRET
 # Genereaza o valoare aleatoare cu:  openssl rand -hex 32
 JWT_SECRET=schimba-cu-o-valoare-aleatoare-lunga
+
+# Opțional local: fără aceste două valori, mesajele private folosesc baza D1
+# locală. În producție sunt obligatorii și vin din GitHub Actions Secrets.
+# TURSO_DATABASE_URL=libsql://anime-uke-messages-ORG.turso.io
+# TURSO_AUTH_TOKEN=token-doar-pentru-baza-de-mesaje

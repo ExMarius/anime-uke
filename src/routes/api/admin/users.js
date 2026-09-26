@@ -3,6 +3,7 @@ import { requireAdmin } from '../../../lib/session.js';
 import { validatePositiveInt } from '../../../lib/validate.js';
 import { logAdminAction } from '../../../lib/audit.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
+import { deletePrivateMessagesForUser } from '../../../lib/private-messages.js';
 
 // =====================================================================
 // /api/admin/users — gestionarea utilizatorilor din panoul admin.
@@ -177,6 +178,10 @@ export async function onRequestPost(context) {
         }
       }
 
+      // Turso nu are FK către users din D1. Ștergem explicit conținutul privat
+      // înaintea contului; dacă Turso e indisponibil, contul rămâne intact și
+      // operația poate fi reluată fără a lăsa mesaje orfane.
+      await deletePrivateMessagesForUser(env, target.value);
       await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(target.value).run();
       await logAdminAction(env, admin, 'delete_user', 'user', target.value, user.username);
       return json({ success: true, action, username: user.username });

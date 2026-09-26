@@ -3,9 +3,9 @@
 # pentru ca sandbox-ul de lucru nu are acces de retea la api.cloudflare.com.
 #
 # Cum functioneaza:
-#   1. Secretul CLOUDFLARE_API_TOKEN e OBLIGATORIU:
-#      Settings → Secrets and variables → Actions → New repository secret
-#      (CLOUDFLARE_ACCOUNT_ID e optional — se descopera automat din API.)
+#   1. Secrete obligatorii: CLOUDFLARE_API_TOKEN, TURSO_DATABASE_URL și
+#      TURSO_AUTH_TOKEN (Settings → Secrets and variables → Actions).
+#      CLOUDFLARE_ACCOUNT_ID e optional — se descopera automat din API.
 #   2. Comanda de rulat sta in cf-relay/cmd.sh (comis in repo).
 #   3. Declansare: orice push (pe ORICE branch) care modifica cmd.sh
 #      SAU manual prin workflow_dispatch (input "cmd").
@@ -13,8 +13,8 @@
 #      branch (logurile de Actions nu se pot citi din sandbox).
 #
 # Securitate:
-#   - Token-ul Cloudflare sta DOAR in GitHub Secrets (criptat, mascat in
-#     loguri). Nu apare niciodata in cod sau in istoricul git.
+#   - Token-urile Cloudflare/Turso stau DOAR in GitHub Secrets (criptate,
+#     mascate in loguri). Nu apar niciodata in cod sau in istoricul git.
 #   - Repo-ul e PUBLIC: comenzi nu afiseaza date de utilizatori sau
 #     valori de secrete, doar ID-uri/statusuri.
 # =====================================================================
@@ -59,6 +59,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         run: |
           set -euo pipefail
           # Diagnosticul ajunge în repo (pasul următor îl comite chiar dacă
@@ -73,7 +75,13 @@ jobs:
             note "  Adauga-l: Settings → Secrets and variables → Actions → New repository secret"
             exit 1
           fi
-          note "✓ Token prezent (lungime ${#CLOUDFLARE_API_TOKEN})."
+          note "✓ Token Cloudflare prezent (lungime ${#CLOUDFLARE_API_TOKEN})."
+          if [ -z "${TURSO_DATABASE_URL}" ] || [ -z "${TURSO_AUTH_TOKEN}" ]; then
+            note "✗ Lipsesc TURSO_DATABASE_URL sau TURSO_AUTH_TOKEN din GitHub Actions Secrets."
+            exit 1
+          fi
+          # Nu scriem nici URL-ul bazei, nici tokenul în diagnosticul public.
+          note "✓ Credențiale Turso prezente (URL + token, valori ascunse)."
           if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
             RAW="$(curl -sS -m 25 https://api.cloudflare.com/client/v4/accounts \
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
@@ -102,6 +110,8 @@ jobs:
           # nu exista, valoarea goala ar suprascrie ID-ul descoperit automat
           # in pasul anterior (prin GITHUB_ENV). Citim dintr-un nume separat.
           CF_ACCOUNT_ID_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -155,6 +165,8 @@ jobs:
             marker 'Git Pages deployment:'
             marker '?v= live din /:'
             marker 'CANAR: OK (prietenie + DM privat verificate pe live)'
+            marker 'DM canar găsit direct în Turso:'
+            marker 'urme DM canar rămase în Turso:'
             marker 'cererea de prietenie e în D1'
             marker 'acceptarea e în D1'
             printf '%s\n' "$AUDIT_TOTAL"

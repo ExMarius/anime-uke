@@ -6,14 +6,17 @@
 # poata lega bindingurile cu script_name):
 #
 #   1. D1            -> creeaza baza de date daca nu exista
-#   2. Schema        -> aplica migrarile SQL pe D1 (remote)
-#   3. Worker DO     -> publica ChatDO / RateLimitDO / StatsDO
-#   4. Pages         -> publica frontendul + _worker.js (Advanced Mode)
-#   5. JWT_SECRET    -> seteaza secretul pe proiectul Pages
+#   2. Schema D1     -> aplica migrarile SQL pe D1 (remote)
+#   3. Turso         -> schema DM + import idempotent din D1
+#   4. Worker DO     -> publica ChatDO / RateLimitDO / StatsDO + secrete Turso
+#   5. Pages         -> publica frontendul + _worker.js + secrete Turso
+#   6. JWT_SECRET    -> pastreaza/seteaza secretul pe proiectul Pages
 #
-# Necesita:
+# Necesita (valorile vin din GitHub Actions Secrets):
 #   export CLOUDFLARE_API_TOKEN=...
 #   export CLOUDFLARE_ACCOUNT_ID=...
+#   export TURSO_DATABASE_URL=...
+#   export TURSO_AUTH_TOKEN=...
 # Permisiuni token: D1 Edit, Cloudflare Pages Edit, Workers Scripts Edit,
 #                   Account Settings Read.
 # =====================================================================
@@ -28,6 +31,8 @@ DB_BINDING="DB"
 
 : "${CLOUDFLARE_API_TOKEN:?Lipseste CLOUDFLARE_API_TOKEN}"
 : "${CLOUDFLARE_ACCOUNT_ID:?Lipseste CLOUDFLARE_ACCOUNT_ID}"
+: "${TURSO_DATABASE_URL:?Lipseste TURSO_DATABASE_URL}"
+: "${TURSO_AUTH_TOKEN:?Lipseste TURSO_AUTH_TOKEN}"
 
 # Cale ABSOLUTA: deploy.sh face `cd worker-do`, deci o cale relativa s-ar strica.
 WRANGLER="npx wrangler"
@@ -38,7 +43,7 @@ ok()   { printf '    \033[0;32m✓\033[0m %s\n' "$1"; }
 die()  { printf '    \033[0;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
 # ---------------------------------------------------------------------
-step "1/5  Baza de date D1"
+step "1/6  Baza de date D1"
 DB_UUID="$(curl -sS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" \
   -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
   | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);if(!j.success)process.exit(2);const m=(j.result||[]).find(x=>x.name===process.argv[1]);console.log(m?m.uuid:"")})' "$DB_NAME" || true)"
@@ -70,12 +75,27 @@ fi
 grep -q 'script_name' wrangler.toml || die "wrangler.toml nu contine script_name — configuratie de productie invalida"
 
 # ---------------------------------------------------------------------
-step "2/5  Schema D1 (remote)"
+step "2/6  Schema D1 (remote)"
 $WRANGLER d1 migrations apply "$DB_BINDING" --remote >/tmp/mig.txt 2>&1 || { cat /tmp/mig.txt; die "migrari esuate"; }
 grep -q 'No migrations to apply' /tmp/mig.txt && ok "deja aplicata" || ok "migrari aplicate"
 
 # ---------------------------------------------------------------------
-step "3/5  Worker Durable Objects: $WORKER"
+step "3/6  Turso: schema + istoric mesaje private"
+# Păstrăm orice DM creat în scurta perioadă în care funcția a folosit D1.
+# Exportul conține numai coloanele tabelului de mesaje; tokenul Turso nu este
+# argument CLI și nu ajunge în log, ci rămâne în environment.
+$WRANGLER d1 execute "$DB_BINDING" --remote --json \
+  --command "SELECT id, sender_id, recipient_id, message, created_at, read_at FROM private_messages ORDER BY id" \
+  >/tmp/private-messages-d1.json 2>/tmp/private-messages-d1.err \
+  || { cat /tmp/private-messages-d1.err; die "nu am putut exporta mesajele private din D1"; }
+node scripts/turso-migrate.mjs --backfill /tmp/private-messages-d1.json \
+  >/tmp/turso-migrate.txt 2>&1 || { cat /tmp/turso-migrate.txt; die "migrare Turso esuata"; }
+cat /tmp/turso-migrate.txt
+rm -f /tmp/private-messages-d1.json /tmp/private-messages-d1.err /tmp/turso-migrate.txt
+ok "baza anime-uke-messages este pregatita"
+
+# ---------------------------------------------------------------------
+step "4/6  Worker Durable Objects: $WORKER"
 set +e
 ( cd worker-do && $WRANGLER deploy >/tmp/wdo.txt 2>&1 )
 RC=$?
@@ -90,8 +110,17 @@ else
   cat /tmp/wdo.txt; die "deploy Worker DO esuat"
 fi
 
+# Workerul DO face INSERT-ul DM, deci are nevoie de aceleași două secrete.
+# `put` primește valoarea prin stdin; nu apare în comandă sau output.
+printf '%s' "$TURSO_DATABASE_URL" | ( cd worker-do && $WRANGLER secret put TURSO_DATABASE_URL ) \
+  >/tmp/wdo-turso-url.txt 2>&1 || { cat /tmp/wdo-turso-url.txt; die "secretul Turso URL nu a ajuns in Worker DO"; }
+printf '%s' "$TURSO_AUTH_TOKEN" | ( cd worker-do && $WRANGLER secret put TURSO_AUTH_TOKEN ) \
+  >/tmp/wdo-turso-token.txt 2>&1 || { cat /tmp/wdo-turso-token.txt; die "secretul Turso token nu a ajuns in Worker DO"; }
+rm -f /tmp/wdo-turso-url.txt /tmp/wdo-turso-token.txt
+ok "secretele Turso sunt legate la Worker DO"
+
 # ---------------------------------------------------------------------
-step "4/5  Cloudflare Pages: $PROJECT"
+step "5/6  Cloudflare Pages: $PROJECT"
 # Versionare assete: browserele cu cache vechi primeau JS-ul de dinainte
 # de deploy („butonul nu merge” dupa fiecare release). Fiecare HTML primeste
 # ?v=<git hash>; dupa deploy readucem fisierele la forma din repo.
@@ -181,13 +210,21 @@ $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=tr
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
 ok "publicat: ${DEPLOY_URL:-vezi /tmp/pages.txt}"
+# Endpointul /api/messages citește Turso din Workerul Pages. Reaplicăm la
+# fiecare deploy, astfel un token rotit în GitHub Secrets ajunge imediat live.
+printf '%s' "$TURSO_DATABASE_URL" | $WRANGLER pages secret put TURSO_DATABASE_URL --project-name="$PROJECT" \
+  >/tmp/pages-turso-url.txt 2>&1 || { cat /tmp/pages-turso-url.txt; die "secretul Turso URL nu a ajuns in Pages"; }
+printf '%s' "$TURSO_AUTH_TOKEN" | $WRANGLER pages secret put TURSO_AUTH_TOKEN --project-name="$PROJECT" \
+  >/tmp/pages-turso-token.txt 2>&1 || { cat /tmp/pages-turso-token.txt; die "secretul Turso token nu a ajuns in Pages"; }
+rm -f /tmp/pages-turso-url.txt /tmp/pages-turso-token.txt
+ok "secretele Turso sunt legate la Pages"
 # Frații .webp ai imaginilor (hero, logo) sunt COMISAȚI în repo: runner-ul
 # GitHub nu are ImageMagick, iar workerul nu mai negociaza WebP — paginile
 # refera direct .webp. De aceea NU se mai sterge nimic aici.
 git checkout -- public 2>/dev/null || true
 
 # ---------------------------------------------------------------------
-step "5/5  JWT_SECRET"
+step "6/6  JWT_SECRET"
 # Il generam DOAR la primul deploy. Inainte regeneram la fiecare publicare,
 # ceea ce invalida toate sesiunile: orice deploy scotea toti utilizatorii
 # afara. Acum ca exista conturi reale, asta ar fi fost deranjant saptamanal.

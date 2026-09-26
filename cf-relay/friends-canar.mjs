@@ -87,6 +87,7 @@ if (regB.status !== 200 && regB.status !== 201) {
 }
 ok(`cont temporar B creat: ${B.username}`);
 log(`  __CANAR_B__=${B.username}`);
+log(`  __CANAR_B_ID__=${regB.data?.user?.id || ''}`);
 
 const regA = await post('/api/auth/register', A);
 if (regA.status === 429) {
@@ -100,6 +101,7 @@ if (regA.status !== 200 && regA.status !== 201) {
 }
 ok(`cont temporar A creat: ${A.username}`);
 log(`  __CANAR_A__=${A.username}`);
+log(`  __CANAR_A_ID__=${regA.data?.user?.id || ''}`);
 
 const loginA = await post('/api/auth/login', { username: A.username, password: A.password });
 const loginB = await post('/api/auth/login', { username: B.username, password: B.password });
