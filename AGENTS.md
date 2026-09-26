@@ -13,7 +13,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 48 · poll-buget 22 ·
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
   pulse-online 17 · e2e 599 · dom 210 / 206 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
@@ -63,7 +63,8 @@ set -uo pipefail
 echo "exit deploy: $?"
 # + verificări post-deploy cu curl pe https://anime-uke.pages.dev (grep în JS/CSS, statusuri API)
 EOF
-# 2. commit + push → workflow-ul pornește automat (orice branch, doar când se schimbă cmd.sh)
+# 2. commit + push → workflow-ul pornește automat (orice branch, doar când se schimbă cmd.sh).
+#    Dacă e un branch, relay-ul face checkout explicit la origin/main înainte de deploy.
 git add cf-relay/cmd.sh && git commit -m "relay: deploy <ce>" && git push origin <branch>
 # 3. așteaptă și citește rezultatul
 sleep 15; ID=$(gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId')
@@ -84,9 +85,10 @@ cat cf-relay/last-output.txt
 - `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
   consumat azi din cotele gratuite (Functions / D1 / DO). Cere permisiunea
   „Account Analytics: Read" pe token; fără ea scrie clar ce lipsește, nu crapă.
-- **Un singur deploy odată.** Toate branch-urile publică în ACELAȘI proiect Pages, deci două
-  sesiuni care deployează în paralel se calcă reciproc pe live (s-a întâmplat: 22.09, live-ul
-  a sărit de la o linie de lucru la alta). Verifică `git log --all --oneline -15` înainte.
+- **Un singur deploy odată.** Toate trigger-ele relay publică în ACELAȘI proiect Pages; ele
+  rulează acum codul din `origin/main`, dar două sesiuni paralele se pot totuși călca la migrări,
+  cache și audit. Concurența workflow-ului le serializează; verifică `git log --all --oneline -15`
+  înainte de un trigger manual.
 - **Atenție, Git integration activă:** proiectul Pages face build automat la fiecare push (inclusiv
   commit-urile `relay: output` — de aici preview-urile). Un merge în `main` declanșează deploy de
   producție **din git** (fără `?v=`/purge/minify/migrări — dar cu bindinguri corecte din `wrangler.toml`
@@ -173,7 +175,7 @@ cat cf-relay/last-output.txt
   prietenie și auditul), ca să nu fie pierdute prin trunchiere.
 - **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
   verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
-  au trecut: scripts-health 48 · greutate în buget · e2e 599 · dom 210/206 · restul
+  au trecut: scripts-health 50 · greutate în buget · e2e 599 · dom 210/206 · restul
   suitei verzi. `npm audit` nu raportează vulnerabilități.
 
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)

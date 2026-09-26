@@ -136,6 +136,18 @@ for (const f of jsFiles) {
       cmd.includes(f) && existsSync(join(ROOT, f)),
       cmd.includes(f) ? 'lipsește din repo' : 'nu mai e invocat');
   }
+  check('relay-ul declanșat de pe branch publică exact origin/main',
+    cmd.includes('RELAY_MAIN_CHECKED_OUT=1')
+      && cmd.includes('git checkout -- cf-relay/last-output.txt')
+      && cmd.includes('git checkout --detach origin/main')
+      && cmd.includes('exec bash cf-relay/cmd.sh'),
+    'fără această gardă, un push de mentenanță poate publica cod neintegrat');
+  const workflow = readFileSync(join(ROOT, '.github/workflows/cloudflare-relay.yml'), 'utf8');
+  check('workflow-ul păstrează branch-ul trigger după checkout-ul la main',
+    workflow.includes('git checkout -B "$BRANCH" "origin/$BRANCH"')
+      && workflow.includes('cp cf-relay/last-output.txt "$OUTPUT"')
+      && workflow.includes('git checkout -- cf-relay/last-output.txt'),
+    'commitul de output ar rescrie branch-ul de mentenanță cu main sau checkout-ul ar eșua');
 
   // Capcana de shell care s-a întâmplat deja: ghilimea dreaptă (") închide
   // un șir deschis cu „. Acceptăm doar perechile corecte sau fără diacritice.
