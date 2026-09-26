@@ -13,7 +13,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 44 · poll-buget 22 ·
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 48 · poll-buget 22 ·
   pulse-online 17 · e2e 599 · dom 210 / 206 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
@@ -75,9 +75,10 @@ cat cf-relay/last-output.txt
 - `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
   bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
 - Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox. Canalul principal de citit rezultatul
-  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`
-  (body = „deploy exit N” + capul cozii output-ului, tokenii redactați). `last-output.txt` se comite și el când push-ul trece,
-  dar comentariul e garantat.
+  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`.
+  Înaintea capului/cozii de output (cu tokenii redactați), comentariul scoate explicit reperele de predare: `exit deploy`,
+  `?v=` din HTML, canarul de prietenie și totalul/exit-ul auditului — nu le pierde la trunchierea logului. `last-output.txt`
+  se comite și el când push-ul trece, dar comentariul e garantat.
 - `CLOUDFLARE_ACCOUNT_ID` e opțional și poate fi invalid (de ex. 53 caractere în loc de 32 hex): `cf-relay/cmd.sh`
   alege singur contul pe care tokenul chiar vede D1-ul `anime-db`. Dacă secretul e setat corect, verifică doar paritatea.
 - `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
@@ -155,6 +156,25 @@ cat cf-relay/last-output.txt
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
+
+### Pregătire lansare publică: conexiuni Pages + observabilitate (2026-09-26, branch `arena/01a0dd39-anime-uke`)
+
+- **Git integration Pages reparată:** buildurile preview eșuau înainte de cod cu
+  `Configuration file for Pages projects does not support "migrations"` și DO-uri fără
+  `script_name`. Cauza: `wrangler.toml` comis era configul local. Fișierul de la
+  rădăcină este acum configul Pages de producție (fără `[[migrations]]`, toate cele
+  trei bindinguri DO trimit la `anime-uke-do` prin `script_name`). `dev.sh` continuă
+  să copieze numai temporar `wrangler.local.toml`, deci testele locale păstrează DO-urile
+  inline. Nu înlocui din nou `wrangler.toml` cu configul local înainte de push.
+- **Relay-ul citește conexiunea Pages/Git:** raportează configurația de build, separă
+  preview-ul `github:push` de deploy-ul manual și, la eșec, publică ultimele 30 de
+  linii redactate din logul Pages în `last-output.txt` și comentariul commitului.
+  Comentariul începe și cu reperele operaționale (`deploy exit`, `?v=`, canarul de
+  prietenie și auditul), ca să nu fie pierdute prin trunchiere.
+- **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
+  verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
+  au trecut: scripts-health 48 · greutate în buget · e2e 599 · dom 210/206 · restul
+  suitei verzi. `npm audit` nu raportează vulnerabilități.
 
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)
 

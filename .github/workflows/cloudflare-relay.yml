@@ -143,8 +143,27 @@ jobs:
           cat cf-relay/last-output.txt
           # Logurile de Actions nu se pot citi din sandbox (blob storage blocat).
           # Lasăm rezultatul într-un comentariu pe commit — se citește prin API.
-          # Scoatem șirurile lungi (tokeni) înainte să le scriem undeva.
-          SAFE="$(head -c 12000 cf-relay/last-output.txt | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
+          # Un simplu `head` tăia tocmai canarii și totalul auditului, aflate la
+          # finalul relay-ului. Extragem explicit reperele operaționale, apoi
+          # păstrăm și capul/coada pentru diagnostic. Fiecare grep e opțional:
+          # un deploy oprit înainte de audit trebuie totuși să lase comentariu.
+          marker() { grep -F -m1 -- "$1" cf-relay/last-output.txt || true; }
+          AUDIT_TOTAL="$(grep -E '✅[[:space:]]+[0-9]+[[:space:]]+🟡[[:space:]]+[0-9]+[[:space:]]+🔴[[:space:]]+[0-9]+[[:space:]]+ℹ️[[:space:]]+[0-9]+' cf-relay/last-output.txt | tail -1 || true)"
+          SAFE="$({
+            echo '── repere validate ──'
+            marker 'exit deploy:'
+            marker 'Git Pages deployment:'
+            marker '?v= live din /:'
+            marker 'CANAR: OK (cererea si acceptarea au notificat pe live)'
+            marker 'cererea de prietenie e în D1'
+            marker 'acceptarea e în D1'
+            printf '%s\n' "$AUDIT_TOTAL"
+            marker 'exit audit:'
+            echo '── cap output ──'
+            head -c 6000 cf-relay/last-output.txt
+            printf '\n── … output prescurtat … ──\n'
+            tail -c 6000 cf-relay/last-output.txt
+          } | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g')"
           echo "::notice title=deploy-exit::${RC}"
           gh api --method POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
             -f body="$(printf 'deploy exit %s\n\n```\n%s\n```\n' "$RC" "$SAFE")" \

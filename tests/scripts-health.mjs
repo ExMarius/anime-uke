@@ -148,6 +148,33 @@ for (const f of jsFiles) {
     badLines.map((b) => `linia ${b.n}`).join(', '));
 }
 
+// ------------------------------------ Pages Git: configul din rădăcină e producție
+// Cloudflare Pages citește NUMAI wrangler.toml din rădăcină la buildul Git.
+// Dacă dev.sh lasă acolo configul local (cu [[migrations]] și DO-uri inline),
+// preview-ul cade înainte să construiască: Pages respinge migrations și cere
+// script_name pentru fiecare Durable Object. O copie identică cu șablonul
+// producție e intenționată; wrangler.local.toml rămâne singurul config local.
+{
+  const rootToml = readFileSync(join(ROOT, 'wrangler.toml'), 'utf8');
+  const prodToml = readFileSync(join(ROOT, 'wrangler.prod.toml'), 'utf8');
+  const localToml = readFileSync(join(ROOT, 'wrangler.local.toml'), 'utf8');
+  const doNames = ['CHAT', 'RATE_LIMIT', 'STATS'];
+  const doBlocks = rootToml.split('[[durable_objects.bindings]]').slice(1);
+  const bindingsOk = doNames.every((name) => doBlocks.some((block) =>
+    block.includes(`name = "${name}"`) && block.includes('script_name = "anime-uke-do"')));
+
+  check('wrangler.toml e identic cu șablonul Pages de producție',
+    rootToml === prodToml, 'root-ul diferă de wrangler.prod.toml; Git Pages va citi configul greșit');
+  check('configul Pages nu conține [[migrations]]',
+    !/^\[\[migrations\]\]/m.test(rootToml), 'Pages respinge migrations în wrangler.toml');
+  check('toate DO-urile Pages au script_name către anime-uke-do',
+    bindingsOk && (rootToml.match(/script_name = "anime-uke-do"/g) || []).length === doNames.length,
+    'CHAT/RATE_LIMIT/STATS trebuie să indice Worker-ul DO extern');
+  check('configul local rămâne separat, cu migrations pentru miniflare',
+    /^\[\[migrations\]\]/m.test(localToml) && !localToml.includes('script_name = "anime-uke-do"'),
+    'wrangler.local.toml trebuie să țină DO-urile inline pentru testele locale');
+}
+
 // --------------------------------------------- API-urile din relay chiar există
 {
   // Fiecare rută de API pe care o PROBEAZĂ relay-ul (nu orice text din

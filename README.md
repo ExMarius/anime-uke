@@ -79,7 +79,8 @@ AGENTS.md                   ghid de predare pentru următorul care lucrează (CL
 AUDIT-LIVE.md               ultimul audit al producției: ce s-a verificat, ce s-a reparat, ce a rămas de decis
 dev.sh · test.sh · deploy.sh
 wrangler.prod.toml (șablon producție) · wrangler.local.toml (dev) · wrangler.migrate.toml (doar migrări)
-wrangler.toml               = copia ACTIVĂ; dev.sh o înlocuiește temporar cu cea locală și o restaurează la ieșire
+wrangler.toml               = configul Pages de producție, identic cu `wrangler.prod.toml`; Git integration îl citește la fiecare push.
+                              dev.sh îl înlocuiește numai temporar cu cel local și îl restaurează la ieșire
 ```
 
 Fișiere care **nu** există intenționat: `schema.sql` (schema = migrările), `push.sh`, seed-uri de
@@ -156,8 +157,9 @@ Deploy complet = `cmd.sh` apelează `./deploy.sh`.
 
 Cloudflare Pages nu poate găzdui clase Durable Object în producție. Advanced Mode (`public/_worker.js` cu
 `export { ChatDO }`) merge doar local, în miniflare. De aceea DO-urile trăiesc în Worker-ul `anime-uke-do`
-(`worker-do/`), iar Pages le leagă prin `script_name = "anime-uke-do"` (în `wrangler.prod.toml`).
-Local, `wrangler.local.toml` le rulează inline ca să nu fie nevoie de un al doilea proces.
+(`worker-do/`), iar Pages le leagă prin `script_name = "anime-uke-do"` (în `wrangler.toml`,
+identic cu `wrangler.prod.toml`). Local, `wrangler.local.toml` le rulează inline ca să nu fie nevoie de
+un al doilea proces.
 
 ---
 
