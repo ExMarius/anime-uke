@@ -1,24 +1,42 @@
 // =====================================================================
-// Client Turso/libSQL minimal pentru runtime-uri edge (Cloudflare Workers).
+// Client Turso pentru runtime-uri edge (Cloudflare Workers).
 //
-// Folosim protocolul oficial SQL over HTTP în locul unui SDK greu: un singur
-// POST /v2/pipeline, cu parametri tipizați. Tokenul vine exclusiv din bindingul
-// secret TURSO_AUTH_TOKEN și nu este inclus niciodată în erori sau loguri.
+// Baza `turso://` nouă folosește protocolul Hrana v3. Driverul oficial
+// @tursodatabase/serverless este inclus local pentru ca buildul Pages fără
+// `npm install` să-l poată rezolva; folosește numai fetch și funcționează în
+// Pages/Workers, precum și în scripturile Node de deploy.
+// Tokenul vine exclusiv din bindingul secret TURSO_AUTH_TOKEN și nu este
+// inclus niciodată în erori sau loguri.
 // =====================================================================
 
-const DEFAULT_TIMEOUT_MS = 8_000;
+import { Session } from '../vendor/turso-serverless.js';
 
-export function hasTurso(env) {
-  return !!(String(env?.TURSO_DATABASE_URL || '').trim()
-    && String(env?.TURSO_AUTH_TOKEN || '').trim());
+const DEFAULT_TIMEOUT_MS = 8_000;
+const sessions = new WeakMap();
+
+function credential(value, name) {
+  let raw = String(value || '').trim();
+  // Acceptăm defensiv și valoarea copiată ca linie .env în GitHub Secrets.
+  const assignment = raw.match(new RegExp(`^(?:export\\s+)?${name}\\s*=\\s*([\\s\\S]*)$`, 'i'));
+  if (assignment) raw = assignment[1].trim();
+  if (raw.length >= 2 && ((raw.startsWith('"') && raw.endsWith('"'))
+    || (raw.startsWith("'") && raw.endsWith("'")))) {
+    raw = raw.slice(1, -1).trim();
+  }
+  return raw;
 }
 
-export function tursoPipelineUrl(value) {
-  const raw = String(value || '').trim();
+export function hasTurso(env) {
+  return !!(credential(env?.TURSO_DATABASE_URL, 'TURSO_DATABASE_URL')
+    && credential(env?.TURSO_AUTH_TOKEN, 'TURSO_AUTH_TOKEN'));
+}
+
+export function tursoBaseUrl(value) {
+  const raw = credential(value, 'TURSO_DATABASE_URL');
   if (!raw) throw new Error('TURSO_DATABASE_URL lipsește');
 
-  // Dashboardul/CLI-ul poate furniza libsql://, iar endpointul HTTP cere
-  // https://. Acceptăm și formele mai noi turso:// / wss://.
+  // Dashboardul/CLI-ul poate furniza libsql:// sau turso://, iar driverul
+  // normalizează aceste scheme la HTTPS. Curățăm și un endpoint lipit manual.
   const http = raw
     .replace(/^libsql:/i, 'https:')
     .replace(/^turso:/i, 'https:')
@@ -31,9 +49,15 @@ export function tursoPipelineUrl(value) {
   url.password = '';
   url.search = '';
   url.hash = '';
-  const path = url.pathname.replace(/\/+$/, '');
-  url.pathname = /\/v2\/pipeline$/i.test(path) ? path : `${path}/v2/pipeline`;
-  return url.toString();
+  url.pathname = url.pathname
+    .replace(/\/v[23]\/(?:pipeline|cursor)\/?$/i, '')
+    .replace(/\/+$/, '');
+  return url.toString().replace(/\/$/, '');
+}
+
+// Păstrat ca reper explicit/testabil: interogările driverului merg prin cursor v3.
+export function tursoPipelineUrl(value) {
+  return `${tursoBaseUrl(value)}/v3/cursor`;
 }
 
 export function tursoArg(value) {
@@ -49,21 +73,6 @@ export function tursoArg(value) {
   return { type: 'text', value: String(value) };
 }
 
-function decodeCell(cell) {
-  if (cell === null || cell === undefined) return null;
-  // Celulele din `rows` sunt Value-uri tipizate. `last_insert_rowid` este însă
-  // serializat de protocol ca string/număr simplu, în funcție de versiune.
-  if (typeof cell === 'string' || typeof cell === 'number') return cell;
-  if (cell.type === 'null') return null;
-  if (cell.type === 'integer') {
-    const n = Number(cell.value);
-    return Number.isSafeInteger(n) ? n : String(cell.value);
-  }
-  if (cell.type === 'float') return Number(cell.value);
-  if (cell.type === 'blob') return cell.base64 || '';
-  return cell.value ?? null;
-}
-
 function safeErrorMessage(error) {
   const message = String(error?.message || error || 'eroare necunoscută');
   // Un server nu ar trebui să repete Authorization, dar nu propagăm niciun
@@ -71,68 +80,84 @@ function safeErrorMessage(error) {
   return message.replace(/[A-Za-z0-9_-]{32,}/g, '[redacted]').slice(0, 300);
 }
 
+function stateFor(env) {
+  const url = tursoBaseUrl(env?.TURSO_DATABASE_URL);
+  const authToken = credential(env?.TURSO_AUTH_TOKEN, 'TURSO_AUTH_TOKEN');
+  if (!authToken) throw new Error('TURSO_AUTH_TOKEN lipsește');
+
+  // Un singur stream per env/isolate, serializat ca să nu amestecăm batonul
+  // Hrana între cereri concurente. Driverul păstrează conexiunea HTTP eficient.
+  if (env && (typeof env === 'object' || typeof env === 'function')) {
+    const current = sessions.get(env);
+    if (current?.url === url && current?.authToken === authToken) return current;
+    const state = {
+      url,
+      authToken,
+      session: new Session({ url, authToken, defaultQueryTimeout: DEFAULT_TIMEOUT_MS }),
+      tail: Promise.resolve(),
+    };
+    sessions.set(env, state);
+    return state;
+  }
+  return {
+    url,
+    authToken,
+    session: new Session({ url, authToken, defaultQueryTimeout: DEFAULT_TIMEOUT_MS }),
+    tail: Promise.resolve(),
+  };
+}
+
+async function withSession(env, task) {
+  const state = stateFor(env);
+  const previous = state.tail;
+  let release;
+  state.tail = new Promise((resolve) => { release = resolve; });
+  await previous;
+  try {
+    return await task(state.session);
+  } catch (error) {
+    throw new Error(`Turso: ${safeErrorMessage(error)}`);
+  } finally {
+    release();
+  }
+}
+
+function normalizeRow(row, columns) {
+  if (Array.isArray(row)) {
+    return Object.fromEntries(columns.map((name, index) => [name, row[index]]));
+  }
+  if (row && typeof row === 'object') return { ...row };
+  return {};
+}
+
+function normalizeResult(result = {}) {
+  const columns = Array.isArray(result.columns) ? result.columns : [];
+  const last = result.lastInsertRowid;
+  return {
+    rows: (Array.isArray(result.rows) ? result.rows : []).map((row) => normalizeRow(row, columns)),
+    rowsAffected: Number(result.rowsAffected) || 0,
+    lastInsertId: last == null ? 0 : Number(last),
+  };
+}
+
 export async function tursoPipeline(env, statements, options = {}) {
   if (!hasTurso(env)) throw new Error('Credențialele Turso lipsesc');
-  const list = Array.isArray(statements) ? statements : [];
+  const list = Array.isArray(statements) ? statements.map((statement) => ({
+    sql: String(statement?.sql || ''),
+    args: Array.isArray(statement?.args) ? statement.args : [],
+  })) : [];
   if (!list.length) return [];
 
-  const requests = list.map((statement) => ({
-    type: 'execute',
-    stmt: {
-      sql: String(statement.sql || ''),
-      ...(Array.isArray(statement.args) && statement.args.length
-        ? { args: statement.args.map(tursoArg) }
-        : {}),
-    },
-  }));
-  requests.push({ type: 'close' });
-
   const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : DEFAULT_TIMEOUT_MS;
-  let response;
-  try {
-    response = await fetch(tursoPipelineUrl(env.TURSO_DATABASE_URL), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${String(env.TURSO_AUTH_TOKEN).trim()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ requests }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-  } catch (error) {
-    throw new Error(`Turso indisponibil: ${safeErrorMessage(error)}`);
-  }
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error(`Turso a răspuns HTTP ${response.status} fără JSON valid`);
-  }
-  if (!response.ok) {
-    const detail = payload?.error?.message || payload?.message || `HTTP ${response.status}`;
-    throw new Error(`Turso a refuzat cererea: ${safeErrorMessage(detail)}`);
-  }
-
-  const results = Array.isArray(payload?.results) ? payload.results.slice(0, list.length) : [];
-  if (results.length !== list.length) throw new Error('Răspuns Turso incomplet');
-
-  return results.map((item) => {
-    if (item?.type !== 'ok' || item?.response?.type !== 'execute') {
-      const detail = item?.error?.message || item?.error || 'execuție SQL eșuată';
-      throw new Error(`Turso SQL: ${safeErrorMessage(detail)}`);
+  return withSession(env, async (session) => {
+    if (list.length === 1) {
+      const result = await session.execute(list[0].sql, list[0].args, false, { queryTimeout: timeoutMs });
+      return [normalizeResult(result)];
     }
-    const result = item.response.result || {};
-    const columns = (result.cols || []).map((column) => column.name);
-    const rows = (result.rows || []).map((row) => Object.fromEntries(
-      columns.map((name, index) => [name, decodeCell(row[index])])
-    ));
-    const last = decodeCell(result.last_insert_rowid);
-    return {
-      rows,
-      rowsAffected: Number(result.affected_row_count) || 0,
-      lastInsertId: last == null ? 0 : Number(last),
-    };
+    // Fără mod tranzacțional: fiecare statement rămâne idempotent/autocommit,
+    // aceeași semantică folosită de backfill-ul pe bucăți.
+    const results = await session.batch(list, undefined, { queryTimeout: timeoutMs });
+    return results.map(normalizeResult);
   });
 }
 

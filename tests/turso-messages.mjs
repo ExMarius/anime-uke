@@ -1,7 +1,7 @@
 // Teste fără rețea pentru protocolul Turso și stratul de mesaje private.
 
 import { ChatDO } from '../src/do/ChatDO.js';
-import { tursoExecute, tursoPipelineUrl } from '../src/lib/turso.js';
+import { tursoExecute, tursoPipeline, tursoPipelineUrl } from '../src/lib/turso.js';
 import {
   insertPrivateMessage,
   markMessagesRead,
@@ -29,51 +29,67 @@ const cell = (value) => value == null
     ? { type: 'integer', value: String(value) }
     : { type: 'text', value: String(value) };
 const response = (columns = [], rows = [], affected = 0, lastId = null) => ({
-  type: 'ok',
-  response: {
-    type: 'execute',
-    result: {
-      cols: columns.map((name) => ({ name })),
-      rows: rows.map((row) => row.map(cell)),
-      affected_row_count: affected,
-      // Protocolul Hrana trimite last_insert_rowid ca string, nu ca Value.
-      last_insert_rowid: lastId == null ? null : String(lastId),
-    },
-  },
+  columns,
+  rows,
+  affected,
+  lastId,
 });
+
+const resultFor = (statement) => {
+  if (/^INSERT INTO private_messages/i.test(statement.sql.trim())) {
+    return response([], [], 1, 41);
+  }
+  if (/^UPDATE private_messages/i.test(statement.sql.trim())) return response([], [], 2, null);
+  if (/^DELETE FROM private_messages/i.test(statement.sql.trim())) return response([], [], 1, null);
+  if (/WITH relevant AS/i.test(statement.sql)) {
+    return response(
+      ['friend_id', 'last_message', 'last_message_at', 'last_sender_id', 'unread'],
+      [[9, 'Salut', '2026-09-26 20:00:00', 9, 1]]);
+  }
+  if (/UNION ALL/i.test(statement.sql)) {
+    return response(
+      ['id', 'sender_id', 'recipient_id', 'message', 'created_at', 'read_at'],
+      [[41, 7, 9, 'Salut', '2026-09-26 20:00:00', null]]);
+  }
+  return response(['n'], [[1]]);
+};
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init) => {
   const body = JSON.parse(init.body);
-  const statement = body.requests[0].stmt;
-  calls.push({ url, init, statement });
-  let result;
-  if (/^INSERT INTO private_messages/i.test(statement.sql.trim())) {
-    result = response([], [], 1, 41);
-  } else if (/^UPDATE private_messages/i.test(statement.sql.trim())) {
-    result = response([], [], 2, null);
-  } else if (/^DELETE FROM private_messages/i.test(statement.sql.trim())) {
-    result = response([], [], 1, null);
-  } else if (/WITH relevant AS/i.test(statement.sql)) {
-    result = response(
-      ['friend_id', 'last_message', 'last_message_at', 'last_sender_id', 'unread'],
-      [[9, 'Salut', '2026-09-26 20:00:00', 9, 1]]);
-  } else if (/UNION ALL/i.test(statement.sql)) {
-    result = response(
-      ['id', 'sender_id', 'recipient_id', 'message', 'created_at', 'read_at'],
-      [[41, 7, 9, 'Salut', '2026-09-26 20:00:00', null]]);
-  } else {
-    result = response(['n'], [[1]]);
-  }
-  return new Response(JSON.stringify({ results: [result, { type: 'ok', response: { type: 'close' } }] }), {
+  // Ultimul pas este proba autocommit adăugată de driver, nu SQL-ul aplicației.
+  const statements = body.batch.steps.slice(0, -1).map((step) => step.stmt);
+  const results = statements.map((statement) => {
+    calls.push({ url, init, statement });
+    return resultFor(statement);
+  });
+
+  // /v3/cursor răspunde NDJSON: antetul cursorului, apoi intrările batchului.
+  const entries = [{ baton: 'test-baton', base_url: null }];
+  results.forEach((result, step) => {
+    entries.push({
+      type: 'step_begin', step,
+      cols: result.columns.map((name) => ({ name, decltype: '' })),
+    });
+    entries.push(...result.rows.map((row) => ({ type: 'row', step, row: row.map(cell) })));
+    entries.push({
+      type: 'step_end', step, affected_row_count: result.affected,
+      last_insert_rowid: result.lastId == null ? null : String(result.lastId),
+    });
+  });
+  entries.push(
+    { type: 'step_begin', step: results.length, cols: [] },
+    { type: 'step_end', step: results.length, affected_row_count: 0, last_insert_rowid: null },
+  );
+  return new Response(`${entries.map((entry) => JSON.stringify(entry)).join('\n')}\n`, {
     status: 200,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/x-ndjson' },
   });
 };
 
 try {
-  check('libsql:// este normalizat la endpointul HTTPS /v2/pipeline',
-    tursoPipelineUrl(env.TURSO_DATABASE_URL) === 'https://anime-uke-messages-example.turso.io/v2/pipeline');
+  check('libsql:// este normalizat la endpointul HTTPS /v3/cursor',
+    tursoPipelineUrl(env.TURSO_DATABASE_URL) === 'https://anime-uke-messages-example.turso.io/v3/cursor');
 
   const simple = await tursoExecute(env, 'SELECT ? AS n', [7]);
   check('clientul decodează rândurile libSQL tipizate', simple.rows[0]?.n === 1, JSON.stringify(simple));
@@ -85,6 +101,13 @@ try {
   check('numerele sunt legate ca integer libSQL',
     first.statement.args[0]?.type === 'integer' && first.statement.args[0]?.value === '7',
     JSON.stringify(first.statement.args));
+
+  const batch = await tursoPipeline(env, [
+    { sql: 'INSERT INTO private_messages(sender_id, recipient_id, message) VALUES (?, ?, ?)', args: [7, 9, 'unu'] },
+    { sql: 'INSERT INTO private_messages(sender_id, recipient_id, message) VALUES (?, ?, ?)', args: [7, 9, 'doi'] },
+  ]);
+  check('batchul v3 pentru backfill întoarce toate rezultatele',
+    batch.length === 2 && batch.every((item) => item.rowsAffected === 1), JSON.stringify(batch));
 
   const inserted = await insertPrivateMessage(env, 7, 9, 'Salut', '2026-09-26 20:00:00');
   check('INSERT-ul DM întoarce id-ul Turso', inserted.rowsAffected === 1 && inserted.lastInsertId === 41,

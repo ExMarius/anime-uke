@@ -705,13 +705,18 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   check('Cardul terminat ofera butonul „Episodul următor"', !!nextBtn && /următor/i.test(nextBtn.textContent || ''), nextBtn?.textContent);
   if (nextBtn) {
     // Comutarea tine minte preferinta si re-randeaza cardul cu tinta noua.
-    const inainte = first.getAttribute('href');
+    // Urmărim cardul care conține butonul, nu primul card: ordinea progresului
+    // poate pune înainte un alt episod cu același ID ca ținta acestuia.
+    const cardsInainte = p3.$$('#continue-row .continue-card');
+    const cardIndex = cardsInainte.indexOf(nextBtn.closest('.continue-card'));
+    const inainte = cardsInainte[cardIndex]?.getAttribute('href');
     nextBtn.dispatchEvent(new p3.window.Event('click', { bubbles: true }));
     const schimbat = await until(() => {
-      const c = p3.$('#continue-row .continue-card[data-next]');
-      return !!c && c.getAttribute('href') !== inainte;
+      const c = p3.$$('#continue-row .continue-card')[cardIndex];
+      return !!c?.dataset.next && c.getAttribute('href') !== inainte;
     });
-    check('Click pe buton duce cardul la episodul următor', schimbat, p3.$('#continue-row .continue-card')?.getAttribute('href'));
+    check('Click pe buton duce cardul la episodul următor', schimbat,
+      p3.$$('#continue-row .continue-card')[cardIndex]?.getAttribute('href'));
     const reia = p3.$('#continue-row .continue-card__next');
     check('Butonul își schimba sensul (poți reveni la episodul văzut)', /Reia/i.test(reia?.textContent || ''), reia?.textContent);
   }
