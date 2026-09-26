@@ -67,6 +67,24 @@ fi
 export CLOUDFLARE_ACCOUNT_ID="$BEST"
 echo "folosesc ${BEST_NAME} (lungime ${#BEST})"
 
+# Git integration face și builduri Pages la fiecare push. Înainte de deploy
+# arătăm configurația activă, fără secrete, ca un build de preview căzut să nu
+# rămână o cutie neagră la pregătirea lansării publice.
+echo "── conexiunea Pages + Git (configurația de build) ──"
+curl -sS -m 25 "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/anime-uke" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -o /tmp/cf-pages-project.json || true
+node <<'JS'
+const fs = require('fs');
+let j = {};
+try { j = JSON.parse(fs.readFileSync('/tmp/cf-pages-project.json', 'utf8')); } catch { j = { success: false, errors: [{ message: 'json-invalid' }] }; }
+const p = j.result || {};
+const b = p.build_config || {};
+const err = (j.errors && j.errors[0] && (j.errors[0].message || j.errors[0].code)) || '';
+const val = (x) => JSON.stringify(String(x == null ? '' : x));
+console.log(`Pages project: success=${j.success} eroare=${err}`);
+console.log(`Git build: production_branch=${val(p.production_branch)} root_dir=${val(b.root_dir)} build_command=${val(b.build_command)} destination_dir=${val(b.destination_dir)}`);
+JS
+
 ./deploy.sh
 DEPLOY_RC=$?
 echo "exit deploy: $DEPLOY_RC"
