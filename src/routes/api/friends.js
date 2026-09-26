@@ -1,6 +1,7 @@
 import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { getSessionUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
+import { notifyUser } from '../../lib/notify.js';
 
 // =====================================================================
 // /api/friends — sistem de prietenie
@@ -11,11 +12,15 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 //
 // POST /api/friends { username, action? }
 //   action default 'send'
-//   'send' -> trimite cerere
-//   'accept' -> accepta cerere primita
-//   'reject' -> respinge cerere primita
+//   'send' -> trimite cerere (destinatarul primeste notificare friend_request;
+//             daca celalalt ceruse deja, accepta automat si-l notifica)
+//   'accept' -> accepta cerere primita (solicitantul primeste friend_accepted)
+//   'reject' -> respinge cerere primita (fara notificare — zgomot inutil)
 //   'cancel' -> anuleaza cerere trimisa
 //   'remove' -> sterge prietenia acceptata
+//
+// Notificarile sunt scrise prin notifyUser (o singura scriere D1); o
+// notificare esuata nu pica actiunea — vezi src/lib/notify.js.
 //
 // =====================================================================
 
@@ -169,6 +174,9 @@ export async function onRequestPost(context) {
             `UPDATE friendships SET status = 'accepted', updated_at = datetime('now')
              WHERE id = ?`
           ).bind(existing.id).run();
+          // Cel care ceruse primul află că s-a făcut prietenie — nu știa că
+          // celălalt tocmai a apăsat „adaugă” în locul lui.
+          await notifyUser(env, other.id, 'friend_accepted', { username: me.username, user_id: me.id });
           return json({ ok: true, status: 'friends', message: 'Cerere acceptată automat — erați deja invitați' });
         }
         if (st === 'blocked') return errorResponse(403, 'Nu poți trimite cerere');
@@ -183,6 +191,8 @@ export async function onRequestPost(context) {
         `INSERT INTO friendships (requester_id, addressee_id, status, created_at, updated_at)
          VALUES (?, ?, 'pending', datetime('now'), datetime('now'))`
       ).bind(me.id, other.id).run();
+      // Destinatarul află că are o cerere de rezolvat (badge + clopot).
+      await notifyUser(env, other.id, 'friend_request', { username: me.username, user_id: me.id });
       return json({ ok: true, status: 'pending_out', message: 'Cerere trimisă' });
     }
 
@@ -195,6 +205,8 @@ export async function onRequestPost(context) {
       await env.DB.prepare(
         `UPDATE friendships SET status = 'accepted', updated_at = datetime('now') WHERE id = ?`
       ).bind(existing.id).run();
+      // Cel care a cerut află că e acceptat — asta e „vestea bună".
+      await notifyUser(env, existing.requester_id, 'friend_accepted', { username: me.username, user_id: me.id });
       return json({ ok: true, status: 'friends' });
     }
 

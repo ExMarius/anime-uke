@@ -993,6 +993,66 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
 }
 
 {
+  console.log('=== DOM: notificarea de prietenie are link catre profil ===');
+  // Notificarile de prietenie (cerere primită / acceptată) sunt singurele
+  // care duc pe un profil, nu pe o serie. Verificăm aici TOT fluxul vizibil:
+  // B îi trimite cerere lui A → badge-ul lui A urcă → dropdown-ul arată
+  // textul → linkul din notificare e profilul lui B.
+  // Conturi temporare cu IP-uri distincte: register e plafonat la 5 conturi
+  // pe oră per IP, iar restul suitei abia a consumat din cota.
+  const rand = Math.random().toString(36).slice(2, 8);
+  const A = { username: `domfa${rand}`, email: `domfa${rand}@test.ro`, password: 'parola123' };
+  const B = { username: `domfb${rand}`, email: `domfb${rand}@test.ro`, password: 'parola123' };
+  const IP_A = '10.9.9.1', IP_B = '10.9.9.2';
+  const regUser = async (u, ip) => (await fetch(`${BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: BASE, 'CF-Connecting-IP': ip, 'X-Forwarded-For': ip },
+    body: JSON.stringify(u),
+  })).status;
+  const loginUser = async (u, ip) => {
+    const r = await fetch(`${BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: BASE, 'CF-Connecting-IP': ip },
+      body: JSON.stringify({ username: u.username, password: u.password }),
+    });
+    return (r.headers.getSetCookie?.() || []).map((s) => s.split(';')[0]).join('; ');
+  };
+  check('Contul A (destinatarul) s-a creat', await regUser(A, IP_A) === 201, A.username);
+  check('Contul B (expeditorul) s-a creat', await regUser(B, IP_B) === 201, B.username);
+  const cookieB = await loginUser(B, IP_B);
+  const fr = await fetch(`${BASE}/api/friends`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: BASE, Cookie: cookieB },
+    body: JSON.stringify({ username: A.username }),
+  });
+  const frData = await fr.json().catch(() => null);
+  check('Cererea de prietenie s-a trimis', frData?.status === 'pending_out', JSON.stringify(frData)?.slice(0, 120));
+
+  const cookieA = await loginUser(A, IP_A);
+  const p = await mountPage({ htmlFile: 'public/index.html', url: '/', module: 'page-index.js', cookie: cookieA });
+  const badgeOn = await until(() => p.$('#nav-bell-badge') && !p.$('#nav-bell-badge').hidden && Number(p.$('#nav-bell-badge').textContent) >= 1);
+  check('Badge-ul clopoțelului arata cererea de prietenie necitita', badgeOn, `badge=${p.$('#nav-bell-badge')?.textContent}`);
+  p.$('#nav-bell')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const itemOn = await until(() => [...p.$$('#notif-pop .notif-pop__item')].some((el) => el.textContent.includes(B.username)));
+  const item = [...p.$$('#notif-pop .notif-pop__item')].find((el) => el.textContent.includes(B.username));
+  check('Notificarea de prietenie apare in clopot, cu text uman', itemOn && /cerere de prietenie/.test(item?.textContent || ''), item?.textContent?.slice(0, 140));
+  check('Notificarea de prietenie are link catre profilul expeditorului', item?.getAttribute('href') === `/profile?u=${B.username}`, item?.getAttribute('href'));
+  check('Nicio eroare de runtime pe pagina cu notificare de prietenie', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+  // Curatenie: conturile temporare dispar din baza locala (prietenia si
+  // notificarile se sting in cascada, prin ON DELETE CASCADE).
+  const profA = await (await fetch(`${BASE}/api/profile/${A.username}`, { headers: { Cookie: COOKIE } })).json();
+  const profB = await (await fetch(`${BASE}/api/profile/${B.username}`, { headers: { Cookie: COOKIE } })).json();
+  for (const id of [profA?.user?.id, profB?.user?.id]) {
+    if (Number.isInteger(id)) {
+      await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE }, body: JSON.stringify({ action: 'delete', user_id: id }) });
+    }
+  }
+  const stergere = await Promise.all([A.username, B.username].map((u) => fetch(`${BASE}/api/profile/${u}`, { headers: { Cookie: COOKIE } }).then((r) => r.status)));
+  check('Conturile temporare au fost sterse dupa test', stergere.every((s) => s === 404), stergere.join(','));
+}
+
+{
   console.log('=== DOM: /shop (vitrina de gold) ===');
   const p = await mountPage({ htmlFile: 'public/shop.html', url: '/shop', module: 'page-shop.js' });
   const cardsOn = await until(() => p.$$('#shop-grid .shop-card').length === 8);

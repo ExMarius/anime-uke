@@ -493,6 +493,9 @@ function notifHref(n) {
   const p = n.payload || {};
   if (p.episode_id) return `/episode?id=${encodeURIComponent(p.episode_id)}`;
   if (p.series_id) return `/series?id=${encodeURIComponent(p.series_id)}`;
+  // Notificarile de prietenie (cerere primită / acceptată) duc la profilul
+  // persoanei în cauză — de acolo se rezolvă cererea, cu un click.
+  if (p.username) return `/profile?u=${encodeURIComponent(p.username)}`;
   return null;
 }
 

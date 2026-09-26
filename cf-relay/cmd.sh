@@ -258,6 +258,49 @@ case "$RAMASE" in *'"n":0'*) echo "   urme rămase după canar: 0 (curat)" ;; *)
 RAMASE_WP="$(q "SELECT COUNT(*) AS n FROM watch_progress wp JOIN users u ON u.id = wp.user_id WHERE u.username LIKE 'canar%'")"
 case "$RAMASE_WP" in *'"n":0'*) echo "   progres rămas după canar: 0 (curat)" ;; *) echo "   !! progres rămas după canar: $RAMASE_WP" ;; esac
 
+# ── 17b. CANARUL DE PRIETENIE (notificări) ────────────────────────────
+# Cererile de prietenie sunt anunțate în clopot: friend_request când cineva
+# îți trimite o cerere, friend_accepted când ți-o acceptă. Doveza live e
+# fluxul întreg pe două conturi temporare (register + cerere + acceptare),
+# apoi rândurile citite DIRECT din D1 — ca la canarul de chat, pentru că o
+# scriere în cod nu demostrează nimic pe producție.
+echo
+echo "── 17b. prietenie: canar end-to-end (cerere + acceptare → notificări)"
+FRIENDS_OUT="$(node cf-relay/friends-canar.mjs "$B" 2>&1)"
+FRIENDS_RC=$?
+echo "$FRIENDS_OUT" | sed 's/^/     /'
+FA="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_A__=//p' | head -1)"
+FB="$(echo "$FRIENDS_OUT" | sed -n 's/^  __CANAR_B__=//p' | head -1)"
+if [ "$FRIENDS_RC" -ne 0 ]; then
+  echo "   !! canarul de prietenie a picat (exit $FRIENDS_RC) — notificările NU ajung în producție"
+else
+  if [ -n "$FA" ] && [ -n "$FB" ]; then
+    echo "   dovezi în D1 (notificările celor două conturi canar):"
+    q "SELECT u.username, n.type, n.payload, n.read FROM notifications n JOIN users u ON u.id = n.user_id WHERE u.username IN ('$FA','$FB') ORDER BY n.id" | sed 's/^/     /'
+    N_FR="$(q "SELECT COUNT(*) AS n FROM notifications n JOIN users u ON u.id = n.user_id WHERE u.username = '$FA' AND n.type = 'friend_request'")"
+    N_ACC="$(q "SELECT COUNT(*) AS n FROM notifications n JOIN users u ON u.id = n.user_id WHERE u.username = '$FB' AND n.type = 'friend_accepted'")"
+    case "$N_FR" in *'"n":1'*) echo "   cererea de prietenie e în D1 (notificare către destinatar): da" ;; *) echo "   !! lipsește notificarea de cerere în D1: $N_FR" ;; esac
+    case "$N_ACC" in *'"n":1'*) echo "   acceptarea e în D1 (notificare către solicitant): da" ;; *) echo "   !! lipsește notificarea de acceptare în D1: $N_ACC" ;; esac
+  fi
+fi
+# Partea de frontend: notificarea de prietenie trebuie să ducă la profilul
+# persoanei (/profile?u=…), nu să fie fără link. Markerul e ASCII, deci
+# supraviețuiește minificării; se caută în chunk-ul comun publicat.
+CHUNK_F="$(curl -s "$B/assets/js/page-index.js" | grep -oE 'c-[A-Za-z0-9_-]+\.js' | head -1)"
+if [ -n "$CHUNK_F" ]; then
+  HREF_F="$(curl -s "$B/assets/js/$CHUNK_F" | grep -c '/profile?u=' || true)"
+  echo "   bundle: linkul notificării de prietenie către profil (/profile?u=): $HREF_F (trebuie >= 1)"
+else
+  echo "   !! nu am găsit chunk-ul comun (code splitting inactiv?)"
+fi
+# Curățenie: conturile dispar, iar ON DELETE CASCADE curăță prietenia și
+# notificările. Contorul users_total e denormalizat — îl realiniem.
+q "DELETE FROM users WHERE username LIKE 'canarp%'" >/dev/null
+q "UPDATE site_meta SET value = (SELECT COUNT(*) FROM users) WHERE key = 'users_total'" >/dev/null
+echo "   după curățenie: $(q 'SELECT COUNT(*) AS n FROM users') conturi"
+N_RAMAS="$(q "SELECT COUNT(*) AS n FROM notifications n JOIN users u ON u.id = n.user_id WHERE u.username LIKE 'canarp%'")"
+case "$N_RAMAS" in *'"n":0'*) echo "   notificări canar rămase: 0 (curat)" ;; *) echo "   !! notificări canar rămase: $N_RAMAS" ;; esac
+
 # ── 18. FUNCȚIONALITĂȚI NOI (runda 2) ─────────────────────────────────
 # Verificăm pe CSS-ul/JS-ul PUBLICAT (nu pe sursă): PurgeCSS poate șterge o
 # clasă nouă, iar esbuild escapează non-ASCII, deci căutăm doar ace ASCII.

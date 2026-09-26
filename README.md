@@ -238,6 +238,24 @@ Costul măsurat (bench-scale, 1.000 serii / 1.000 utilizatori): prima pagină
 74 rânduri citite per vizită (era 64) — 414.904 rânduri/zi la 2.000 de vizite,
 adică ~8% din cota de 5M. Invocările rămân 2 per vizită.
 
+## Notificări de prietenie (2026-09-25)
+
+Cererile de prietenie sunt anunțate în clopotul de notificări — același
+mecanism ca episoadele noi, fără migrare nouă (tipurile sunt un catalog în
+`src/lib/notify.js`, iar tabela `notifications` e deja acolo):
+
+| Eveniment | Notificare | Link |
+|---|---|---|
+| Cineva îți trimite o cerere | 👥 „{user} ți-a trimis o cerere de prietenie" | profilul lui (`/profile?u=…`), de unde accepți/respingi |
+| Cineva îți acceptă cererea | 🤝 „{user} ți-a acceptat cererea de prietenie" | profilul lui |
+
+Dacă celălalt îți trimisese deja o cerere și tu apeși „adaugă prieten",
+prietenia se acceptă automat și el primește notificarea de acceptare.
+Respingerea, anularea și eliminarea prieteniei **nu** notifică: celălalt nu
+are o acțiune de făcut, iar clopotul rămâne pentru ce contează. Fiecare
+eveniment e o singură scriere D1 (`notifyUser`), iar o notificare eșuată nu
+pichează niciodată cererea de prietenie.
+
 ## Viteză (runda 3, 2026-09-24)
 
 Aici nu s-a „optimizat" pe impresii: fiecare schimbare are cifra de dinainte și
@@ -417,7 +435,7 @@ Când traficul crește, în ordinea în care merită atinse:
 | Catalog | `GET /api/series`, `/api/series/:id`, `/api/episodes/:id`, `/api/genres`, `/api/recent`, `/api/top`, `/api/subtitle` | public |
 | Cont | `POST /api/auth/register|login|logout`, `GET /api/auth/me`, `GET /api/auth/register-options` | public |
 | Vizionare | `POST /api/view`, `POST /api/progress`, `GET /api/continue`, `/api/watchlist`, `POST /api/subscribe` | logat |
-| Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse` | logat / public |
+| Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse`, `/api/friends` | logat / public |
 | Economie | `GET /api/economy`, `/api/chest`, `/api/chests`, `/api/missions`, `GET /api/shop`, `POST /api/shop/buy|activate`, `/api/factions` | logat |
 | Identitate | `GET /api/ranks`, `POST /api/me/theme`, `GET /api/profile/:username`, `PATCH /api/profile`, `/api/notifications*` | logat |
 | Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|mods|rank-themes|reports` | admin |
