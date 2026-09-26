@@ -1,6 +1,6 @@
 # 🎌 anime-uke
 
-Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel / gold / cufere / misiuni / shop), facțiuni lunare, grade, panou admin și chat live.
+Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel / gold / cufere / misiuni / shop), facțiuni lunare, grade, panou admin, chat live și mesaje private între prieteni.
 
 **Stack:** Cloudflare Pages + D1 + Durable Objects + WebSockets · vanilla HTML/CSS/JS, fără framework
 **Cost:** $0/lună — rulează integral în planul gratuit Cloudflare
@@ -37,7 +37,7 @@ public/                     assete statice + entrypoint
     ├── subs/demo-ro.vtt    subtitrare demo folosită de teste
     └── js/
         ├── core.js         api(), sesiune, nav, toast, badge-uri (staffBadge/rankChip), pulse
-        ├── chat.js         WebSocket + fereastra de chat + regulament + stickere
+        ├── chat.js         modal Live/Prieteni, WebSocket, DM, regulament + stickere
         ├── auth.js         logica comună login/register
         ├── sources-ui.js   editorul de surse video (admin + raportare)
         └── page-*.js       un modul per pagină (page-index, page-series, page-episode,
@@ -58,7 +58,7 @@ src/
 └── lib/                    session (auth + drepturi), ranks (grade), crypto, jwt, http, validate,
                             ratelimit, audit, xp, shop, missions, factions, notify, profile, sources, limits, paging
 worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
-migrations/                 schema D1 = suma migrărilor 0001…0025 (NU există alt schema.sql)
+migrations/                 schema D1 = suma migrărilor 0001…0030 (NU există alt schema.sql)
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
 ├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
@@ -210,6 +210,22 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
     înlocuiește „no-cache" cu `immutable` 1 an pentru JS/CSS (toate referințele din HTML
     poartă `?v=<commit>`, iar `page-*.js` sunt bundle-uite). Zero revalidări, zero cereri
     care să ajungă în worker.
+
+## Mesaje private între prieteni (2026-09-26)
+
+- Același modal de chat are taburile **Live** și **Prieteni**. Tabul Prieteni este un inbox
+  compact tip mini-Discord: avatar, preview, oră, badge necitit și conversația 1-la-1.
+- Inbox-ul (`GET /api/messages`) pornește strict din `friendships.status = 'accepted'`;
+  cererile pending/rejected și foștii prieteni nu apar.
+- Istoricul (`GET /api/messages?with=<username>`) este persistent în tabelul
+  `private_messages` (migrarea `0030_private_messages.sql`). `POST /api/messages`
+  cu `{ action: 'read', with }` marchează mesajele conversației ca citite.
+- Trimiterea live folosește același `WS /chat`, cu payload `{ type: 'dm', recipient_id,
+  message }`. `ChatDO` verifică prietenia în D1 la **fiecare mesaj**, persistă înainte de
+  livrare și trimite evenimentul numai socket-urilor celor doi participanți.
+- Un ne-prieten nu poate citi sau trimite. După unfriend, endpointul de istoric dă 403,
+  iar următorul DM este refuzat chiar pe socketul deja deschis; istoricul rămâne în D1,
+  dar devine imediat inaccesibil.
 
 ---
 
@@ -439,11 +455,11 @@ Când traficul crește, în ordinea în care merită atinse:
 | Catalog | `GET /api/series`, `/api/series/:id`, `/api/episodes/:id`, `/api/genres`, `/api/recent`, `/api/top`, `/api/subtitle` | public |
 | Cont | `POST /api/auth/register|login|logout`, `GET /api/auth/me`, `GET /api/auth/register-options` | public |
 | Vizionare | `POST /api/view`, `POST /api/progress`, `GET /api/continue`, `/api/watchlist`, `POST /api/subscribe` | logat |
-| Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse`, `/api/friends` | logat / public |
+| Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse`, `/api/friends`, `GET/POST /api/messages` | logat / public |
 | Economie | `GET /api/economy`, `/api/chest`, `/api/chests`, `/api/missions`, `GET /api/shop`, `POST /api/shop/buy|activate`, `/api/factions` | logat |
 | Identitate | `GET /api/ranks`, `POST /api/me/theme`, `GET /api/profile/:username`, `PATCH /api/profile`, `/api/notifications*` | logat |
 | Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|mods|rank-themes|reports` | admin |
-| Chat | `WS /chat` → `ChatDO` | logat |
+| Chat | `WS /chat` → `ChatDO` (`chat` global + `dm` privat între prieteni) | logat |
 
 ---
 
@@ -452,7 +468,7 @@ Când traficul crește, în ordinea în care merită atinse:
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
   `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
   `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
-  Numărul de verificări: scripts-health 36 · e2e 584 · dom-smoke 193 · chat-persist 14 · chat-d1 8 · counters 16
+  Numărul de verificări: scripts-health 50 · e2e 614 · dom-smoke 214 (210 pe build) · chat-persist 14 · chat-d1 8 · counters 16
   · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
 - **CI**: `.github/workflows/tests.yml` rulează `./test.sh` la fiecare push (fără secrete, fără
   deploy) și publică logurile ca artefacte; relay-ul rămâne pentru publicare + audit live.

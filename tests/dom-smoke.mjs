@@ -269,6 +269,27 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Regulamentul chat-ului apare la prima deschidere', rulesOn && p.$$('.chat-rules__list li').length >= 5, `li=${p.$$('.chat-rules__list li').length}`);
   p.$('.chat-rules .btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   check('Dupa accept regulamentul dispare si acceptul e memorat', !p.$('.chat-rules') && p.window.localStorage.getItem('auk-chat-rules-v1') === '1', `ls=${p.window.localStorage.getItem('auk-chat-rules-v1')}`);
+
+  // Același modal are cele două moduri, nu un al doilea popup. Tabul Prieteni
+  // cere inbox-ul și arată doar lista servită de /api/messages.
+  check('Chatul are taburile Live si Prieteni in acelasi modal',
+    p.text('#chat-tab-live')?.includes('Live') && p.text('#chat-tab-friends')?.includes('Prieteni')
+      && p.$('#chat-tab-live')?.closest('#chat-modal') === p.$('#chat-tab-friends')?.closest('#chat-modal'),
+    `${p.text('#chat-tab-live')} / ${p.text('#chat-tab-friends')}`);
+  p.$('#chat-tab-friends')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const friendsOn = await until(() => p.$('#chat-friends-panel')?.hidden === false
+    && p.requests.includes('/api/messages') && !/Se încarcă/.test(p.text('#dm-inbox') || ''));
+  check('Tabul Prieteni se deschide si incarca inbox-ul privat',
+    friendsOn && p.$('#chat-live-panel')?.hidden === true,
+    `friendsHidden=${p.$('#chat-friends-panel')?.hidden} req=${p.requests.filter((x) => x.includes('/messages')).join(',')}`);
+  check('Inbox-ul privat are stare vida explicita cand nu exista prieteni acceptati',
+    /prieteni acceptați|Începe conversația|prieteni/.test(p.text('#dm-inbox') || ''),
+    p.text('#dm-inbox'));
+  p.$('#chat-tab-live')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  check('Revenirea pe Live restaureaza chatul global',
+    p.$('#chat-live-panel')?.hidden === false && p.$('#chat-friends-panel')?.hidden === true,
+    `live=${p.$('#chat-live-panel')?.hidden} friends=${p.$('#chat-friends-panel')?.hidden}`);
+
   p.$('#chat-sticker-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
   check('Pickerul de stikere se deschide cu setul Tenor complet', p.$$('#sticker-pop .sticker-pop__item').length >= 50, `n=${p.$$('#sticker-pop .sticker-pop__item').length}`);
   p.$('#sticker-pop .sticker-pop__item')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));

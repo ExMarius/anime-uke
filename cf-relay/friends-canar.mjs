@@ -1,3 +1,5 @@
+import WS from 'ws';
+
 // =====================================================================
 // friends-canar.mjs — dovada LIVE ca notificarile de prietenie chiar
 // ajung la destinatar, pe site-ul din productie.
@@ -53,10 +55,19 @@ async function post(path, body, cookie) {
   return { status: res.status, data, cookie: tokenCookie };
 }
 
-const getJson = async (path, cookie) => {
-  const r = await fetch(`${BASE}${path}`, { headers: { cookie, origin: BASE, referer: `${BASE}/` } });
-  try { return await r.json(); } catch { return null; }
+const getResponse = async (path, cookie, init = {}) => {
+  const r = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      cookie, origin: BASE, referer: `${BASE}/`,
+      ...(init.headers || {}),
+    },
+  });
+  let data = null;
+  try { data = await r.json(); } catch { /* răspuns non-JSON */ }
+  return { status: r.status, data };
 };
+const getJson = async (path, cookie) => (await getResponse(path, cookie)).data;
 
 log(`══ CANAR PRIETENIE (${BASE}) ══`);
 
@@ -130,11 +141,90 @@ if (nAcc && nAcc.payload?.username === A.username && /acceptat/.test(nAcc.text |
   bad(`B NU are notificarea de acceptare: ${JSON.stringify(notifB)?.slice(0, 200)}`);
 }
 
-// --- 4. linkul din notificare duce la profil (se vede in bundle) --------
+// --- 4. DM live + persistență + unread + blocare după unfriend ----------
+const DM_TEXT = `dm-canar-${rand}`;
+log(`  __CANAR_DM_TEXT__=${DM_TEXT}`);
+const inboxB = await getJson('/api/messages', loginB.cookie);
+const friendA = (inboxB?.conversations || []).find((row) => row.username === A.username);
+if (!friendA?.user_id) {
+  bad(`A nu apare în inbox-ul accepted al lui B: ${JSON.stringify(inboxB)?.slice(0, 220)}`);
+} else {
+  const WS_BASE = BASE.replace(/^http/, 'ws');
+  const socketA = new WS(`${WS_BASE}/chat`, { headers: { Cookie: loginA.cookie } });
+  const socketB = new WS(`${WS_BASE}/chat`, { headers: { Cookie: loginB.cookie } });
+  const waitWs = (socket, predicate, timeout = 9000) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off('message', onMessage);
+      reject(new Error('timeout WebSocket'));
+    }, timeout);
+    const onMessage = (raw) => {
+      let data;
+      try { data = JSON.parse(raw.toString()); } catch { return; }
+      if (!predicate(data)) return;
+      clearTimeout(timer);
+      socket.off('message', onMessage);
+      resolve(data);
+    };
+    socket.on('message', onMessage);
+  });
+
+  try {
+    await Promise.all([
+      waitWs(socketA, (data) => data.type === 'init'),
+      waitWs(socketB, (data) => data.type === 'init'),
+    ]);
+    const copyA = waitWs(socketA, (data) => data.type === 'dm' && data.message === DM_TEXT);
+    const copyB = waitWs(socketB, (data) => data.type === 'dm' && data.message === DM_TEXT);
+    socketB.send(JSON.stringify({ type: 'dm', recipient_id: friendA.user_id, message: DM_TEXT }));
+    const [received, sent] = await Promise.all([copyA, copyB]);
+    if (received.id && received.id === sent.id && received.sender_username === B.username) {
+      ok('DM-ul live a ajuns la ambii participanți cu același id');
+    } else {
+      bad(`copiile DM nu coincid: ${JSON.stringify({ received, sent }).slice(0, 220)}`);
+    }
+
+    const historyA = await getResponse(`/api/messages?with=${encodeURIComponent(B.username)}`, loginA.cookie);
+    const persisted = (historyA.data?.messages || []).some((message) => message.id === received.id && message.message === DM_TEXT);
+    persisted ? ok('DM-ul este persistent în istoricul live')
+              : bad(`DM-ul lipsește din istoric: ${JSON.stringify(historyA.data)?.slice(0, 220)}`);
+
+    const unreadA = await getJson('/api/messages', loginA.cookie);
+    const preview = (unreadA?.conversations || []).find((row) => row.username === B.username);
+    preview?.last_message === DM_TEXT && Number(preview?.unread) === 1
+      ? ok('inbox-ul live are preview + unread=1')
+      : bad(`preview/unread greșit: ${JSON.stringify(preview)}`);
+
+    const marked = await post('/api/messages', { action: 'read', with: B.username }, loginA.cookie);
+    marked.status === 200 && marked.data?.changed >= 1 && marked.data?.unread === 0
+      ? ok('mark-as-read a golit badge-ul live')
+      : bad(`mark-as-read eșuat: ${marked.status} ${JSON.stringify(marked.data)}`);
+
+    const removed = await getResponse(`/api/friends?u=${encodeURIComponent(A.username)}`, loginB.cookie, { method: 'DELETE' });
+    if (removed.data?.status !== 'none') bad(`unfriend eșuat: ${removed.status} ${JSON.stringify(removed.data)}`);
+    const blockedHistory = await getResponse(`/api/messages?with=${encodeURIComponent(B.username)}`, loginA.cookie);
+    blockedHistory.status === 403
+      ? ok('după unfriend istoricul este blocat imediat')
+      : bad(`după unfriend istoricul răspunde ${blockedHistory.status}`);
+
+    const rejectionP = waitWs(socketB, (data) => data.type === 'error' && data.scope === 'dm');
+    socketB.send(JSON.stringify({ type: 'dm', recipient_id: friendA.user_id, message: `${DM_TEXT}-blocat` }));
+    const rejection = await rejectionP;
+    rejection.code === 'not_friends'
+      ? ok('după unfriend același socket nu mai poate trimite DM')
+      : bad(`DM-ul după unfriend nu a fost respins corect: ${JSON.stringify(rejection)}`);
+  } catch (error) {
+    bad(`fluxul DM live a aruncat: ${error.message}`);
+  } finally {
+    try { socketA.close(); } catch { /* ignoră */ }
+    try { socketB.close(); } catch { /* ignoră */ }
+  }
+}
+
+// --- 5. linkul din notificare duce la profil (se vede in bundle) --------
 // Dovada în D1 (rândurile chiar există în tabel) se face în cmd.sh, care
 // are wrangler; aici lăsăm doar userii de șters.
 log(`  __CANAR_A__=${A.username}`);
 log(`  __CANAR_B__=${B.username}`);
-log(failed === 0 ? 'CANAR: OK (cererea si acceptarea au notificat pe live)'
+log(failed === 0 ? 'CANAR: OK (prietenie + DM privat verificate pe live)'
                  : `CANAR: ${failed} verificări picate`);
 process.exit(failed === 0 ? 0 : 1);
