@@ -20,6 +20,15 @@
 //       de scriere/citire, fallback-uri. „Fallback” nu ascunde erori;
 //       fiecare are un rând aici.
 //
+//   node scripts/watch-turso.mjs user <user_id>
+//       Rândurile unui utilizator din Turso (folosit de canarul live ca
+//       dovadă directă, nu prin API).
+//
+//   node scripts/watch-turso.mjs purge-user <user_id>
+//       Șterge rândurile unui cont TEMPORAR de canar. Turso nu are
+//       ON DELETE CASCADE spre `users` (tabelul e în D1), deci curățenia
+//       canarului trebuie făcută explicit. NU o folosi pe conturi reale.
+//
 //   node scripts/watch-turso.mjs count
 //       Numărul de rânduri și suma secundelor din Turso (verificare directă).
 //
@@ -177,6 +186,25 @@ async function count() {
   return true;
 }
 
+async function userRows(id) {
+  const res = await tursoExecute(env,
+    `SELECT user_id, episode_id, series_id, seconds, updated_at
+       FROM watch_progress WHERE user_id = ? ORDER BY episode_id`,
+    [Number(id) || 0], { timeoutMs: 20_000 });
+  if (!res.rows.length) { console.log(`  (niciun rând în Turso pentru user ${id})`); return false; }
+  for (const row of res.rows) {
+    console.log(`  user=${row.user_id} ep=${row.episode_id} serie=${row.series_id} secunde=${row.seconds} (${row.updated_at})`);
+  }
+  return true;
+}
+
+async function purgeUser(id) {
+  const res = await tursoExecute(env, 'DELETE FROM watch_progress WHERE user_id = ?',
+    [Number(id) || 0], { timeoutMs: 20_000 });
+  console.log(`  ✓ șterse ${res.rowsAffected} rânduri de canar din Turso (user ${id})`);
+  return true;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     if (!hasTurso(env)) throw new Error('Lipsesc TURSO_DATABASE_URL / TURSO_AUTH_TOKEN');
@@ -185,7 +213,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     else if (command === 'compare') ok = await compare(argv[1], numFlag('tolerance', 300));
     else if (command === 'report') ok = await report(numFlag('hours', 24));
     else if (command === 'count') ok = await count();
-    else throw new Error(`comandă necunoscută: "${command}" (backfill|compare|report|count)`);
+    else if (command === 'user') ok = await userRows(argv[1]);
+    else if (command === 'purge-user') ok = await purgeUser(argv[1]);
+    else throw new Error(`comandă necunoscută: "${command}" (backfill|compare|report|count|user|purge-user)`);
     if (!ok) process.exit(1);
   } catch (error) {
     console.error(`  ✗ watch-turso ${command}: ${error.message}`);
@@ -193,4 +223,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
 }
 
-export { backfill, compare, compareMaps, report, count };
+export { backfill, compare, compareMaps, report, count, userRows, purgeUser };
