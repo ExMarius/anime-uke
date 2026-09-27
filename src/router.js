@@ -59,11 +59,14 @@ import * as logoutRoute from './routes/api/auth/logout.js';
 import * as meRoute from './routes/api/auth/me.js';
 import * as registerOptions from './routes/api/auth/register-options.js';
 import * as passwordRoute from './routes/api/auth/password.js';
+import * as passwordResetRoute from './routes/api/auth/password-reset.js';
+import * as passwordResetConfirmRoute from './routes/api/auth/password-reset-confirm.js';
 import * as adminStats from './routes/api/admin/stats.js';
 import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
 import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
+import * as adminPasswordResets from './routes/api/admin/password-resets.js';
 import * as adminSeason from './routes/api/admin/season.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
@@ -85,6 +88,8 @@ const ROUTES = [
   { method: 'GET', path: '/api/auth/me', mod: meRoute },
   { method: 'GET', path: '/api/auth/register-options', mod: registerOptions },
   { method: 'POST', path: '/api/auth/password', mod: passwordRoute },
+  { method: 'POST', path: '/api/auth/password-reset', mod: passwordResetRoute },
+  { method: 'POST', path: '/api/auth/password-reset/confirm', mod: passwordResetConfirmRoute },
 
   // --- puncte / vizionari ---
   { method: 'POST', path: '/api/progress', mod: progressRoute },
@@ -142,6 +147,7 @@ const ROUTES = [
   // avea mai multe surse si ele se editeaza independent de episod.
   { method: '*', path: '/api/admin/episode-sources', mod: adminEpisodeSources },
   { method: '*', path: '/api/admin/users', mod: adminUsers },
+  { method: '*', path: '/api/admin/password-resets', mod: adminPasswordResets },
   { method: '*', path: '/api/admin/season', mod: adminSeason },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
