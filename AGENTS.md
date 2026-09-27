@@ -579,16 +579,21 @@ progres). **NICIODATĂ site/proiect/repo nou, niciodată rebuild de la zero.**
 „Clone"-ul de mai jos NU face un al doilea site: doar descarcă codul curent ca să-l
 modifici pe loc; după push în main + `./deploy.sh`, modificarea apare pe ACELAȘI site.
 
-## Setup pentru o sesiune/agent NOU (copy-paste, ~2 minute)
+## Setup pentru o sesiune/agent NOU — AUTOMAT
 
 ```bash
 git clone https://github.com/ExMarius/anime-uke.git && cd anime-uke
-# Node >= 22 OBLIGATORIU (suitele de teste folosesc node:sqlite).
-# Daca sistemul are Node 20: instaleaza Node 24 in ~/.cache/node24 si pune-l
-# in fata la PATH: export PATH=$HOME/.cache/node24/bin:$PATH
-npm install --no-audit --no-fund && chmod +x *.sh
-./test.sh          # TOATE suitele verzi inainte de a modifica orice
+./setup.sh test    # Node 24 automat, dependente, permisiuni, toate testele
 ```
+Atat. `setup.sh` instaleaza singur Node >=22 daca lipseste, face npm install,
+chmod pe scripturi si (cu argumentul `test`) ruleaza toate suitele.
+
+## Deploy AUTOMAT (fara secrete in sandbox)
+Push pe main → CI `tests.yml` ruleaza toate suitele → daca-s verzi,
+`auto-deploy.yml` face deploy singur (Worker DO + Pages) cu tokenul din
+GitHub Secrets. Agentul NU are nevoie de token Cloudflare niciodata.
+Comenzi wrangler punctuale / migrari D1: prin `cf-relay` (cmd.sh) sau
+`./deploy.sh` local daca sandbox-ul are acces la api.cloudflare.com.
 
 Secretele NU sunt in repo (nici nu trebuie sa fie): token Cloudflare + account ID
 pentru `./deploy.sh`, token GitHub pentru push. Le cere proprietarului la pornire.
