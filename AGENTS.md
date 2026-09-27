@@ -543,3 +543,29 @@ zgomotos în loc să raporteze cifre pentru altceva.
 - Fă lucrurile complet: cod → teste → deploy → verificare pe live → raport clar în română.
 - Nu șterge/redenumi lucruri „de curățenie" fără să verifici că nu sunt referite (`grep -rn` în `src public scripts tests deploy.sh dev.sh test.sh`).
 - Când termini o sesiune mai lungă, **actualizează acest fișier** (secțiunile 6 și 7) pentru următorul.
+
+---
+
+## Regulile proprietarului (adicate manual, au prioritate MAXIMA)
+
+1. **Flux de livrare:** build → `./test.sh` verde → commit → **push direct în main** →
+   deploy. **FĂRĂ pull requests.** (PR-urile #21–#23 au fost excepția altui agent,
+   nu regula.)
+2. **Viteză:** puține du-te-vino; dacă o metodă eșuează de două ori, schimbă metoda
+   imediat și spune ce ai schimbat. Fără așteptare de ore.
+3. **Buget 0:** doar planuri gratuite. Turso e tolerat DOAR cât rămâne free tier și
+   există rollback documentat spre D1; orice alt vendor nou = întrebare explicită
+   către proprietar înainte.
+4. **Interdicții:** fără scraping de site-uri piratate și fără linkuri mega.nz /
+   similare; **fără auto-next** (scos la cerere explicită — nici măcar comentarii
+   care să sugereze că există); fără reCAPTCHA / Google Analytics / anti-debug;
+   fără secțiune de caractere / Pokémon.
+5. **Player:** video inline; fără buton propriu de fullscreen; fullscreen-ul nativ al
+   providerului trebuie să meargă; `allow="fullscreen *; …"`; **fără `sandbox`** pe
+   iframe-ul playerului.
+6. **Puncte:** doar după 15 minute de vizionare, prin progresul de vizionare
+   (indiferent de store-ul activ: D1 sau Turso).
+7. **Igienă:** `rm -rf .wrangler /home/user/.config/.wrangler` după deploy/teste;
+   `chmod +x *.sh` după restore-uri de sandbox; snapshot < 128 MB / 10k fișiere.
+8. **Gate public:** catalogul public e decizia curentă (SEO/GSC). Zonele personale
+   (profile, admin, chat, PM) rămân strict în spatele login-ului.

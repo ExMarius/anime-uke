@@ -398,7 +398,7 @@ async function load() {
   // Playerul se incarca doar dupa ce avem URL-urile validate pe server.
   renderSources(res.data.sources || []);
 
-  // Navigare intre episoade + abonare + auto-next (nu blocam playerul pe ele)
+  // Navigare intre episoade + abonare (nu blocam playerul pe ele)
   initEpNav(ep.series_id, ep.episode_number).catch(() => { /* optional */ });
 
   initComments(Number(id));
@@ -844,7 +844,7 @@ function initReport() {
 initReport();
 
 // =====================================================================
-// PLAYER v4: navigare intre episoade jos, mod cinema, auto-next.
+// PLAYER v4: navigare intre episoade jos, mod cinema.
 // =====================================================================
 let currentSeriesId = null;
 let currentNumber = 0;
