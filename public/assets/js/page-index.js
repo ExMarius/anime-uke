@@ -94,6 +94,7 @@ function applyFilters({ reload = true } = {}) {
   if (gsel) gsel.value = genreFilter;
   if (ssel) ssel.value = statusFilter;
   if (reset) reset.hidden = !genreFilter && !statusFilter;
+  syncGenreChips();
   const inp = document.getElementById('search-input');
   if (inp && inp.value !== query) inp.value = query;
   const sortSel = document.getElementById('sort-select');
@@ -129,6 +130,20 @@ function emptyState(text, sub = '') {
     s.className = 'hint';
     s.textContent = sub;
     el.appendChild(s);
+  }
+  if (query || genreFilter || statusFilter) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn--ghost btn--sm';
+    b.textContent = 'Resetează căutarea și filtrele';
+    b.addEventListener('click', () => {
+      query = '';
+      genreFilter = '';
+      statusFilter = '';
+      page = 1;
+      applyFilters();
+    });
+    el.appendChild(b);
   }
   return el;
 }
@@ -226,17 +241,29 @@ function render() {
   grid.innerHTML = '';
 
   if (!allSeries.length) {
+    const filtrat = !!(query || genreFilter || statusFilter);
     grid.appendChild(emptyState(
-      query ? 'Nicio potrivire' : 'Încă nu există serii',
-      query ? 'Încearcă alt termen de căutare.' : 'Adaugă prima serie din panoul de administrare.'
+      filtrat ? 'Nicio potrivire' : 'Încă nu există serii',
+      filtrat ? 'Încearcă alt termen, alt gen sau șterge filtrele.' : 'Adaugă prima serie din panoul de administrare.'
     ));
-    count.textContent = query ? '0 rezultate' : '';
+    count.textContent = filtrat ? '0 rezultate' : '';
     return;
   }
   count.textContent = `${allSeries.length} afișate`;
   let idx = 0;
   for (const s of allSeries) grid.appendChild(seriesCard(s, idx++));
   observeReveals(grid);
+}
+
+function setCatalogCount(data) {
+  const count = document.getElementById('series-count');
+  if (!count || !allSeries.length) return;
+  const total = Number(data?.total);
+  if (Number.isFinite(total) && total >= allSeries.length) {
+    count.textContent = `${allSeries.length} afișate · ${total.toLocaleString('ro-RO')}${data.total_capped ? '+' : ''} total`;
+  } else {
+    count.textContent = `${allSeries.length} afișate`;
+  }
 }
 
 function fillSorts(sorts) {
@@ -279,6 +306,39 @@ onPulse((p) => {
 // FILTRE DE CATALOG (gen + status) — modelul site-urilor de anime.
 // Schimbarea unui filtru readuce pagina 1 cu noul set de parametri.
 // ---------------------------------------------------------------------
+function syncGenreChips() {
+  document.querySelectorAll('.genre-chip').forEach((b) => {
+    b.classList.toggle('is-active', (b.dataset.genre || '') === genreFilter);
+  });
+}
+
+function renderGenreChips(genres = []) {
+  const row = document.getElementById('genre-chips');
+  if (!row) return;
+  const popular = [...new Set(genres.filter(Boolean))].slice(0, 10);
+  if (genreFilter && !popular.includes(genreFilter)) popular.unshift(genreFilter);
+  if (!popular.length) { row.hidden = true; return; }
+  row.hidden = false;
+  row.innerHTML = '';
+  const addChip = (value, label) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'genre-chip';
+    b.dataset.genre = value;
+    b.textContent = label;
+    b.addEventListener('click', () => {
+      genreFilter = value;
+      page = 1;
+      applyFilters();
+      document.getElementById('serii')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    row.appendChild(b);
+  };
+  addChip('', 'Toate');
+  for (const g of popular) addChip(g, g);
+  syncGenreChips();
+}
+
 function initCatalogFilters() {
   const gsel = document.getElementById('genre-select');
   const ssel = document.getElementById('status-select');
@@ -295,6 +355,7 @@ function initCatalogFilters() {
       o.textContent = g;
       gsel.appendChild(o);
     }
+    renderGenreChips(home.data.genres);
   }).catch(() => { /* filtrele rămân cu opțiunea „Toate genurile" */ });
 
   const apply = () => {
@@ -308,6 +369,7 @@ function initCatalogFilters() {
   reset.addEventListener('click', () => {
     genreFilter = '';
     statusFilter = '';
+    page = 1;
     applyFilters();
   });
   // Genurile vin asincron: daca URL-ul cere un gen, selectia se face dupa ce
@@ -324,6 +386,7 @@ function initCatalogFilters() {
       gsel.appendChild(o);
     }
     gsel.value = genreFilter;
+    renderGenreChips([...new Set([genreFilter, ...[...gsel.options].map((o) => o.value).filter(Boolean)])]);
   }).catch(() => { /* filtrul rămâne scris în URL, doar selectia nu se aplica */ });
 }
 
@@ -424,6 +487,7 @@ async function load({ append = false, silent = false } = {}) {
   }
 
   render();
+  setCatalogCount(data);
   setHeroStats(data);
 
   const wrap = document.getElementById('load-more-wrap');
@@ -531,7 +595,9 @@ async function renderHero(salt = spotSalt()) {
   document.getElementById('hero-tag').textContent =
     SPOT_TAGS[hashStr(`spot-tag-${bucket}-${salt}`) % SPOT_TAGS.length];
   // Tot bannerul e un singur <a>: click oriunde duce la seria afisata.
-  document.getElementById('hero-banner').setAttribute('href', `/series?id=${encodeURIComponent(pick.id)}`);
+  const heroHref = `/series?id=${encodeURIComponent(pick.id)}`;
+  document.getElementById('hero-banner').setAttribute('href', heroHref);
+  box.setAttribute('aria-label', `Recomandare anime: ${pick.title}. Deschide seria`);
   document.getElementById('hero-title').textContent = pick.title;
   document.getElementById('hero-sub').textContent =
     [pick.genre, pick.year, pick.episode_count ? `${pick.episode_count} episoade` : '']
@@ -649,15 +715,27 @@ async function initHero() {
     // skeletonul afisat in eternitate peste pagina)
     document.getElementById('hero-banner')?.setAttribute('hidden', '');
   }
-  document.getElementById('hero-shuffle')?.addEventListener('click', async (ev) => {
-    // butonul sta IN anchorul-banner: nu vrem sa si navigheze la shuffle
+  const shuffle = document.getElementById('hero-shuffle');
+  const runShuffle = async (ev) => {
+    // controlul sta IN anchorul-banner: nu vrem sa si navigheze la shuffle
     ev.preventDefault();
     ev.stopPropagation();
     const btn = ev.currentTarget;
-    btn.disabled = true;
+    if (btn.getAttribute('aria-disabled') === 'true') return;
+    if ('disabled' in btn) btn.disabled = true;
+    btn.setAttribute('aria-disabled', 'true');
     const salt = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
     try { sessionStorage.setItem('auk-spot-salt', salt); } catch { /* mod privat */ }
-    try { await renderHero(salt); } finally { btn.disabled = false; }
+    try { await renderHero(salt); }
+    finally {
+      if ('disabled' in btn) btn.disabled = false;
+      btn.removeAttribute('aria-disabled');
+    }
+  };
+  shuffle?.addEventListener('click', runShuffle);
+  shuffle?.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    runShuffle(ev).catch(() => { /* decorativ */ });
   });
 }
 
@@ -785,6 +863,23 @@ async function renderContinue() {
 // „Continuă vizionarea" — decizia rămâne a serverului.
 const WATCH_DONE_SECONDS = 15 * 60;
 
+function initQuickActions() {
+  document.getElementById('quick-random')?.addEventListener('click', async () => {
+    const home = await homeData();
+    const list = home.ok ? (home.data.series?.series || []) : allSeries;
+    if (!list.length) { toast('Nu am încărcat încă nicio serie.', 'info'); return; }
+    const pick = list[Math.floor(Math.random() * list.length)];
+    if (pick?.id) location.href = `/series?id=${encodeURIComponent(pick.id)}`;
+  });
+
+  document.getElementById('quick-completed')?.addEventListener('click', () => {
+    statusFilter = 'completed';
+    page = 1;
+    applyFilters();
+    document.getElementById('serii')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 skeletons(10);
 // nav-ul si lista merg in paralel; chat-ul (WebSocket) doar cand pagina e
 // efectiv activa, ca un tab prerenderat sa nu deschida socket degeaba
@@ -817,6 +912,7 @@ async function loadTops() {
 }
 
 initCatalogFilters();
+initQuickActions();
 loadRecent().catch(() => { /* secțiunea e optională */ });
 // Filtrele din URL se aplica INAINTE de prima cerere, ca pagina sa se
 // incarce direct pe rezultatele cerute (fara un al doilea apel).

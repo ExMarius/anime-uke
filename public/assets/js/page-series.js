@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge , whenActive, coverImg, initChat } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge, whenActive, coverImg, initChat, formatDate, staffBadge, rankChip } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -9,6 +9,10 @@ function badge(text, cls = '') {
   el.style.position = 'static';
   el.textContent = text;
   return el;
+}
+
+function cssUrl(url) {
+  return `url("${String(url).replace(/["\\]/g, '')}")`;
 }
 
 function setHead(series) {
@@ -31,6 +35,12 @@ function setHead(series) {
 
   // Posterul seriei. La o imagine care nu se incarca (coperta stearsa, URL
   // mort) cadem pe fallback-ul cu glifa, nu pe un icon de imagine rupta.
+  const hero = document.getElementById('series-hero');
+  const cover = safeUrl(series.cover_image, '');
+  if (hero) {
+    if (cover && cover !== '#') hero.style.setProperty('--ser-cover', cssUrl(cover));
+    else hero.style.removeProperty('--ser-cover');
+  }
   const poster = document.getElementById('series-poster');
   poster.innerHTML = '';
   if (series.cover_image) {
@@ -64,6 +74,57 @@ function setHead(series) {
 
   paintInfo(series);
   paintNextEp(series);
+}
+
+function paintKpis(series, d = {}) {
+  const box = document.getElementById('series-kpis');
+  if (!box) return;
+  const items = [];
+  const eps = Number(d.episode_count ?? series.episode_count ?? 0);
+  if (eps) items.push(['Episoade', eps.toLocaleString('ro-RO')]);
+  if (series.ep_duration) items.push(['Durată', `${series.ep_duration} min/ep`]);
+  if (d.rating_count) items.push(['Rating', `★ ${Number(d.rating_average || 0).toLocaleString('ro-RO')} (${d.rating_count})`]);
+  if (series.status) items.push(['Status', series.status === 'completed' ? 'Finalizat' : 'În difuzare']);
+  box.innerHTML = '';
+  for (const [label, value] of items) {
+    const it = document.createElement('span');
+    it.className = 'ser-kpi';
+    const v = document.createElement('b');
+    v.textContent = value;
+    const l = document.createElement('small');
+    l.textContent = label;
+    it.append(v, l);
+    box.appendChild(it);
+  }
+  box.hidden = !items.length;
+}
+
+function paintSeriesCtas(d) {
+  const start = document.getElementById('start-episode-btn');
+  const share = document.getElementById('share-series-btn');
+  const first = [...(d.episodes || [])].sort((a, b) => Number(a.episode_number) - Number(b.episode_number))[0];
+  if (start) {
+    if (first?.id) {
+      start.href = `/episode?id=${encodeURIComponent(first.id)}`;
+      start.textContent = first.watched ? '▶ Reia de la episodul 1' : '▶ Începe cu episodul 1';
+      start.hidden = false;
+    } else {
+      start.hidden = true;
+    }
+  }
+  if (share && !share.dataset.wired) {
+    share.dataset.wired = '1';
+    share.addEventListener('click', async () => {
+      const url = `${location.origin}/serie/${encodeURIComponent(seriesId || d.series?.id || '')}`;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('clipboard indisponibil');
+        await navigator.clipboard.writeText(url);
+        toast('Linkul seriei a fost copiat.', 'ok');
+      } catch {
+        toast(`Link serie: ${url}`, 'info', 6500);
+      }
+    });
+  }
 }
 
 /** Anuntul „Episodul urmator" cu countdown local (nu costa nicio cerere). */
@@ -208,8 +269,12 @@ function episodeCard(ep) {
     meta.appendChild(st);
   }
 
+  const open = document.createElement('span');
+  open.className = 'ep-open';
+  open.textContent = ep.watched ? 'Revezi' : 'Urmărește';
+
   body.append(title, meta);
-  a.append(num, body);
+  a.append(num, body, open);
   return a;
 }
 
@@ -236,6 +301,9 @@ let epPage = 1;
 let epPages = 1;
 let epPerPage = 100;
 let epTotal = 0;
+let epLoaded = [];
+let epQuery = '';
+let epState = 'all';
 
 /** Intervalul de episoade pe care il acopera o pagina: „101–200”. */
 function rangeLabel(page, perPage, total) {
@@ -292,22 +360,53 @@ function renderRanges() {
   bar.appendChild(mkBtn('→', epPage + 1, { disabled: epPage >= epPages }));
 }
 
-function renderEpisodes(episodes) {
+function episodeMatches(ep) {
+  const q = epQuery.trim().toLowerCase();
+  const started = !ep.watched && Number(ep.progress_seconds) >= 30;
+  if (epState === 'watched' && !ep.watched) return false;
+  if (epState === 'started' && !started) return false;
+  if (epState === 'unwatched' && (ep.watched || started)) return false;
+  if (!q) return true;
+  return String(ep.episode_number).includes(q) || String(ep.title || '').toLowerCase().includes(q);
+}
+
+function renderEpisodes(episodes, { store = true } = {}) {
   const grid = document.getElementById('episodes-grid');
+  if (store) epLoaded = episodes || [];
+  const shown = (store ? epLoaded : episodes || []).filter(episodeMatches);
   grid.innerHTML = '';
 
-  if (!episodes.length) {
+  if (!shown.length) {
     const el = document.createElement('div');
     el.className = 'empty';
     el.style.gridColumn = '1 / -1';
     el.innerHTML = '<div class="empty__icon">📺</div>';
     const t = document.createElement('div');
-    t.textContent = epTotal ? 'Niciun episod în intervalul ăsta.' : 'Încă nu au fost adăugate episoade.';
+    const filtered = !!(epQuery.trim() || epState !== 'all');
+    t.textContent = filtered
+      ? 'Nicio potrivire în intervalul afișat.'
+      : epTotal ? 'Niciun episod în intervalul ăsta.' : 'Încă nu au fost adăugate episoade.';
     el.appendChild(t);
+    if (filtered) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn--ghost btn--sm';
+      b.textContent = 'Șterge filtrul';
+      b.addEventListener('click', () => {
+        epQuery = '';
+        epState = 'all';
+        const input = document.getElementById('episode-filter');
+        const state = document.getElementById('episode-state');
+        if (input) input.value = '';
+        if (state) state.value = 'all';
+        renderEpisodes(epLoaded, { store: false });
+      });
+      el.appendChild(b);
+    }
     grid.appendChild(el);
     return;
   }
-  for (const ep of episodes) grid.appendChild(episodeCard(ep));
+  for (const ep of shown) grid.appendChild(episodeCard(ep));
 }
 
 function showGridError(message) {
@@ -374,6 +473,8 @@ async function load() {
   document.getElementById('episodes-count').textContent =
     epTotal ? `${epTotal} ${epTotal === 1 ? 'episod' : 'episoade'}` : '';
 
+  paintKpis(res.data.series, res.data);
+  paintSeriesCtas(res.data);
   renderRanges();
   renderEpisodes(res.data.episodes || []);
 }
@@ -644,10 +745,24 @@ async function loadChests(seriesId) {
     : 'Pornește un episod: minutele vizionate aici deblochează cuferele, rând pe rând.';
 }
 
+function initEpisodeTools() {
+  const input = document.getElementById('episode-filter');
+  const state = document.getElementById('episode-state');
+  input?.addEventListener('input', (e) => {
+    epQuery = e.currentTarget.value;
+    renderEpisodes(epLoaded, { store: false });
+  });
+  state?.addEventListener('change', (e) => {
+    epState = e.currentTarget.value;
+    renderEpisodes(epLoaded, { store: false });
+  });
+}
+
+initEpisodeTools();
 await Promise.all([renderNav(''), load()]);
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
 startGuestNudge();
-const sid = Number(getParam('id'));
+const sid = Number(seriesId || getParam('id') || (location.pathname.match(/^\/serie\/(\d+)/)?.[1] ?? 0));
 if (sid) {
   await initWatchlist(sid);
   loadChests(sid).catch(() => { /* cuferele sunt optionale: pagina trebuie sa mearga oricum */ });

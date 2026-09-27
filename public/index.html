@@ -29,15 +29,13 @@
        pentru paginile fara efecte secundare la load (/serie/*).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
-  <style>
-  </style>
 </head>
 <body>
   <nav class="nav" id="nav"></nav>
 
   <main class="container">
     <!-- Hero banner: anime random, arta full-bleed sus de tot. -->
-    <a class="hban hban--loading" id="hero-banner" href="#">
+    <a class="hban hban--loading" id="hero-banner" href="#" aria-label="Recomandarea anime a momentului">
       <div class="hban__bg" id="hero-bg" aria-hidden="true">
         <!-- <picture> cu trei formate: AVIF (cel mai mic, suportat de toate
              browserele actuale) → WebP → JPEG (rezervă veche). Fără JS, fără
@@ -48,7 +46,7 @@
           <source type="image/avif" srcset="/assets/img/hero-1.avif">
           <source type="image/webp" srcset="/assets/img/hero-1.webp">
           <img class="hban__bg-img" id="hero-bg-img" src="/assets/img/hero-1.jpg"
-               alt="" fetchpriority="high">
+               alt="" fetchpriority="high" decoding="async" width="1600" height="720">
         </picture>
       </div>
       <div class="hban__sk" aria-hidden="true">
@@ -63,8 +61,8 @@
         <p class="hban__sub" id="hero-sub"></p>
         <div class="hban__cta">
           <span class="hban__open" id="hero-open">▶ Vezi seria</span>
-          <button class="btn btn--ghost btn--sm" id="hero-shuffle" type="button"
-            title="Alt anime random">🎲 Alt anime</button>
+          <span class="btn btn--ghost btn--sm" id="hero-shuffle" role="button" tabindex="0"
+            title="Alt anime random" aria-label="Alege alt anime random">🎲 Alt anime</span>
         </div>
       </div>
     </a>
@@ -92,6 +90,13 @@
         <input id="search-input" type="search" placeholder="Caută o serie sau un gen…" autocomplete="off">
         <!-- Scurtatura „/": pe desktop e o invitatie, pe touch dispare (nu ai tastatura). -->
         <kbd class="search__kbd" aria-hidden="true">/</kbd>
+      </div>
+
+      <div class="hero-quick" aria-label="Scurtături rapide">
+        <a href="#recent-section">🆕 Ultimele episoade</a>
+        <a href="#tops-section">🔥 Topuri</a>
+        <button type="button" id="quick-random">🎲 Surprinde-mă</button>
+        <button type="button" id="quick-completed">✅ Finalizate</button>
       </div>
     </header>
 
@@ -130,6 +135,7 @@
         </select>
         <button class="btn btn--ghost btn--sm" type="button" id="filter-reset" hidden>Șterge filtrele ✕</button>
       </div>
+      <div class="genre-chips" id="genre-chips" aria-label="Genuri populare"></div>
       <div id="series-grid" class="grid" aria-live="polite">
         <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
         <div class="sk sk-card"><div class="sk sk-poster"></div><div class="sk sk-line"></div><div class="sk sk-line sk-line--s"></div></div>
@@ -213,45 +219,13 @@
         <span class="footer__line"><b id="footer-views">—</b>&nbsp;vizionări totale</span>
       </div>
     </div>
+    <div class="container footer__notice">
+      <strong>Notă:</strong> Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare.
+    </div>
     <div class="container footer__base">
       <span>© <span id="footer-year">2026</span> anime-uke</span>
       <span>Cloudflare Pages · D1 · Durable Objects</span>
     </div>
-  </footer>
-
-  <!-- CHAT: buton flotant + modal -->
-  <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live">
-    <span class="chat-fab__dot"></span>
-    <span class="chat-fab__label">Chat live</span>
-  </button>
-
-  <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live">
-    <div class="chat-box">
-      <div class="chat-head">
-        <span class="chat-head__title">Chat global</span>
-        <span class="chat-head__count" id="chat-online-count">0 online</span>
-        <span class="chat-badge" id="chat-badge"></span>
-        <button class="chat-close" id="chat-close" type="button" aria-label="Închide chat-ul">✕</button>
-      </div>
-      <div class="chat-online" id="chat-online">Se conectează…</div>
-      <div class="chat-body" id="chat-body"></div>
-      <form class="chat-form" id="chat-form">
-        <label class="sr-only" for="chat-input">Mesaj</label>
-        <div class="sticker-wrap">
-          <button class="chat-sticker-btn" id="chat-sticker-btn" type="button"
-            title="Stikere" aria-label="Deschide stikerele">😄</button>
-          <div class="sticker-pop" id="sticker-pop" hidden></div>
-        </div>
-        <input class="input" id="chat-input" type="text" maxlength="500" placeholder="Scrie un mesaj…" autocomplete="off">
-        <button class="btn btn--accent" type="submit">Trimite</button>
-      </form>
-    </div>
-  </div>
-
-
-  <footer class="site-foot">
-    <p><b><img class="fblogo" src="/assets/img/logo-icon.webp" alt="" aria-hidden="true"> anime-uke</b> — anime subtitrat în română, gratuit.</p>
-    <p class="hint">Nu găzduim fișiere video pe serverele noastre — conținutul este încorporat din surse publice, la fel ca la motoarele de căutare. Contul deblochează progres, puncte și chat.</p>
   </footer>
 
   <link rel="modulepreload" href="/assets/js/page-index.js">
