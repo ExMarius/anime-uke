@@ -241,7 +241,18 @@ este în `src/lib/private-messages.js`, `src/lib/turso.js`,
 Următoarea migrare D1 este **0031**; nu modifica 0030. Migrarea Turso 0002
 (progres de vizionare) e descrisă mai jos; următoarea liberă e **0003**.
 
-### Progresul de vizionare mutat în Turso, în etape (2026-09-27)
+### Progresul de vizionare mutat în Turso, în etape (2026-09-27) — LIVE pe `turso`
+
+**Stare la 27.09, verificată pe producție:** etapele d1 → shadow → turso au fost
+rulate în ordine, fiecare cu deploy propriu și canar live (`cmd.sh` §21).
+Ultimul deploy (`exit deploy: 0`, audit ✅ 190 · 🟡 0 · 🔴 0) confirmă:
+`store=turso`, **0 rânduri de progres noi în D1**, rândul canarului prezent în
+Turso (`user=111 ep=4212 serie=1019 secunde=1200`), recompensa exact o dată în
+D1 (`watched_history` 1 rând, 10 puncte), `compare` cu **delta maxim 0s**,
+`watch_store_audit` **gol** (niciun timeout, niciun fallback, nicio divergență).
+Consum real în ziua lansării (trei deploy-uri + canari + audituri incluse):
+**977 rows_written D1 (1%)**, 22.459 citite (0%), 1.623 invocări (2%), 539 DO (1%).
+
 
 `watch_progress` = jumătate din scrierile D1 (30.000 din ~61.300/zi la 500
 spectatori × 12 episoade × 24 min). A fost mutat în baza Turso gratuită
