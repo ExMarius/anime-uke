@@ -24,9 +24,21 @@ set -uo pipefail
 # neintegrat al acelui branch. Pe Actions trecem explicit la main și relansăm
 # comanda din commitul de producție. Marcajul previne recursia după exec.;
 # diagnosticul tranzitoriu al workflow-ului este salvat separat înainte de checkout.
+#
+# Excepție intenționată, rară: proprietarul poate cere publicarea directă a
+# unui PR fără merge. Ea cere marcajul exact [deploy-current-branch] în
+# mesajul COMMITULUI care schimbă acest fișier; astfel un push obișnuit pe un
+# branch nu poate publica accidental în producție, iar următorul relay revine
+# automat la main.
+DEPLOY_CURRENT_BRANCH=0
+if git log -1 --format=%B | grep -qx '\[deploy-current-branch\]'; then
+  DEPLOY_CURRENT_BRANCH=1
+  echo "── marcaj explicit: deploy de producție din branch-ul curent ──"
+fi
 if [ "${GITHUB_ACTIONS:-}" = "true" ] \
   && [ "${GITHUB_REF_NAME:-}" != "main" ] \
-  && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ]; then
+  && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ] \
+  && [ "$DEPLOY_CURRENT_BRANCH" != "1" ]; then
   echo "── relay de pe ${GITHUB_REF_NAME}: folosesc origin/main pentru producție ──"
   # Pasul anterior din workflow inițializează last-output.txt pentru diagnostic.
   # Nu e sursă de deploy, iar checkout-ul trebuie să poată schimba arborele.

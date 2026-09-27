@@ -142,6 +142,11 @@ for (const f of jsFiles) {
       && cmd.includes('git checkout --detach origin/main')
       && cmd.includes('exec bash cf-relay/cmd.sh'),
     'fără această gardă, un push de mentenanță poate publica cod neintegrat');
+  check('excepția de deploy din branch cere un marker explicit în commit',
+    cmd.includes('DEPLOY_CURRENT_BRANCH=0')
+      && cmd.includes("grep -qx '\\[deploy-current-branch\\]'")
+      && cmd.includes('&& [ "$DEPLOY_CURRENT_BRANCH" != "1" ]'),
+    'un branch ar putea ocoli garda main fără aprobarea explicită din commit');
   const workflow = readFileSync(join(ROOT, '.github/workflows/cloudflare-relay.yml'), 'utf8');
   check('workflow-ul păstrează branch-ul trigger după checkout-ul la main',
     workflow.includes('git checkout -B "$BRANCH" "origin/$BRANCH"')
