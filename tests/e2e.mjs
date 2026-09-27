@@ -567,6 +567,7 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   const r = await req(j, 'POST', '/api/admin/series', {
     title: 'One Piece', description: 'Piratul rege Luffy!', cover_image: 'https://picsum.photos/id/1015/600/900',
     status: 'ongoing', genre: 'Acțiune, Aventură', year: 1999,
+    team: 'Traducere: Ana · Verificare: Dan',
   });
   check('Adaugare serie → 201', r.status === 201, `status=${r.status} ${JSON.stringify(r.data).slice(0,150)}`);
 
@@ -721,6 +722,8 @@ console.log('\n=== 5b. SURSE VIDEO (CRUD) ===');
   const pub = await req(j, 'GET', `/api/episodes/${epId}`);
   check('API public intoarce sursele active, in ordine', pub.data?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern,StreamTape RO', JSON.stringify(pub.data?.sources));
   check('API public nu expune id-urile de episod inactive', pub.data?.sources?.every((x) => x.kind !== undefined && x.url.startsWith('https://')) === true, JSON.stringify(pub.data?.sources).slice(0, 150));
+  check('API episod trimite creditul echipei seriei fără apel suplimentar',
+    pub.data?.episode?.series_team === 'Traducere: Ana · Verificare: Dan', pub.data?.episode?.series_team);
 
   const del = await req(j, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
   check('Stergere sursa → 200', del.status === 200 && del.data?.success === true, `status=${del.status}`);

@@ -389,7 +389,15 @@ async function load() {
   titleEl.textContent = label;
   document.title = `${ep.series_title || 'Serie'} · ${label} • anime-uke`;
 
-  metaEl.textContent = `${ep.series_title || ''} · 👁 ${Number(ep.views ?? 0).toLocaleString('ro-RO')} vizionări`;
+  // Creditul echipei vine din seria episodului (nu dintr-un al doilea apel
+  // /api/series). Administratorul îl poate scrie liber, de la „Traducere”
+  // până la verificare/timing, de aceea îl afișăm ca metadată neutră.
+  const meta = [
+    ep.series_title || '',
+    `👁 ${Number(ep.views ?? 0).toLocaleString('ro-RO')} vizionări`,
+    ep.series_team ? `📝 ${ep.series_team}` : '',
+  ].filter(Boolean);
+  metaEl.textContent = meta.join(' · ');
 
   crumb.href = `/series?id=${encodeURIComponent(ep.series_id)}`;
   crumb.textContent = `← ${ep.series_title || 'Înapoi la serie'}`;

@@ -857,7 +857,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // nu depinda de ce a mai ramas in baza de la alte suite.
   const created = await (await fetch(`${BASE}/api/admin/series`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
-    body: JSON.stringify({ title: `DOM Ep Test ${Date.now()}`, status: 'completed' }),
+    body: JSON.stringify({ title: `DOM Ep Test ${Date.now()}`, status: 'completed', team: 'Traducere: DOM Ana' }),
   })).json();
   const sid = created?.series?.id ?? created?.id;
   await fetch(`${BASE}/api/admin/episodes`, {
@@ -877,6 +877,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // bug-ul care a trimis in productie un spinner vesnic.
   const loaded = await until(() => /Episodul \d/.test(p.text('#episode-title') || ''));
   check('Bootstrap-ul termina: titlul devine eticheta episodului', loaded, `titlu=${p.text('#episode-title')}`);
+  check('Creditul echipei seriei apare în metadatele episodului', /Traducere: DOM Ana/.test(p.text('#episode-meta') || ''), p.text('#episode-meta'));
   check('Nu s-a afisat starea de esec in player', !p.$('.player .empty'), 'playerul arata mesajul de esec');
   check('Nicio eroare de runtime la montarea playerului', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   check('Bara de progres spre 15 minute e in DOM', !!p.$('#watch-progress'), 'lipseste #watch-progress');
