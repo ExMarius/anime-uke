@@ -122,7 +122,10 @@ jobs:
           # Se schimbă din Settings → Variables → Actions, FĂRĂ deploy de cod:
           #   d1 (implicit, rollback instant) | shadow (dual-write) | turso.
           # Prioritate: inputul manual al rularii > variabila de repo > d1.
-          WATCH_STORE: ${{ github.event.inputs.watch_store || vars.WATCH_STORE || 'd1' }}
+          # ATENȚIE: pe branch-ul de sesiune valoarea implicită e folosită ca să
+          # rulăm etapele (dispatch-ul manual nu e permis tokenului de sandbox).
+          # Pe `main` rămâne 'd1' — rollback-ul implicit.
+          WATCH_STORE: ${{ github.event.inputs.watch_store || vars.WATCH_STORE || 'shadow' }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
           GH_TOKEN: ${{ github.token }}
         run: |

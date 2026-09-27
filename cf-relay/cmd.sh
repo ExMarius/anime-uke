@@ -17,6 +17,8 @@
 # Lecție păstrată: propagarea Pages durează zeci de secunde — se așteaptă
 # 60s înainte de audit, altfel se verifică deployment-ul anterior.
 # =====================================================================
+# Etapa curentă a mutării progresului de vizionare vine din env (WATCH_STORE):
+# d1 (implicit pe main) | shadow (dual-write) | turso (cutover).
 set -uo pipefail
 
 # Un relay poate fi declanșat dintr-un branch de mentenanță (workflow-ul ascultă
