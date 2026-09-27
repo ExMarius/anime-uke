@@ -352,11 +352,11 @@ interogări care scanau tabele întregi **la fiecare afișare a primei pagini**:
 | Restul (sesiune, genuri, sitemap, notificări) | ~600 | ~600 (amortizat) | erau deja indexate |
 
 **Rezultatul măsurat:** o vizită pe prima pagină a scăzut de la **~230.000** de rânduri
-citite la **~64**, iar la 2.000 de vizite pe zi consumul ajunge la **~395.000 rânduri/zi
-(8% din cotă)**. Plafonul de 5M/zi ar ține acum teoretic ~78.000 de vizite pe zi pe prima
-pagină, în loc de ~21. Aceeași măsurătoare a arătat și ce NU era o problemă: scrierile
-(heartbeat-ul de vizionare e la 2 minute, vizualizările se bat la 20 înainte de un flush
-D1) și invocările.
+citite la **~74**, iar la 2.000 de vizite pe zi consumul ajunge la **~417.000 rânduri/zi
+(8,3% din cotă)**. Plafonul de 5M/zi ar ține acum teoretic ~67.000 de vizite pe zi pe prima
+pagină, în loc de ~21. Scrierile sunt protejate separat: heartbeat-ul de vizionare este
+lotizat la 5 minute, starea zilnică nu mai rescrie misiunea/streak-ul după ce sunt deja
+îndeplinite, iar vizualizările se bat câte 20 înainte de un flush D1.
 
 Planurile de execuție sunt verificate **pe D1-ul de producție** la fiecare rulare a
 relay-ului (`EXPLAIN QUERY PLAN`, secțiunea 14 din `cf-relay/cmd.sh`): topul săptămânal iese
@@ -364,9 +364,11 @@ relay-ului (`EXPLAIN QUERY PLAN`, secțiunea 14 din `cf-relay/cmd.sh`): topul s�
 trebuie să fie 0.
 
 Spațiul nu e o problemă la scara asta: baza sintetică de mai sus (1.000 de serii, 19.788 de
-episoade, un an de istoric de vizionare pentru 1.000 de conturi) are **26 MB**, iar plafonul
-gratuit e 500 MB pe bază. Crește cu istoricul de vizionare (o linie per utilizator+episod),
-deci `npm run bench -- --keep` e modul cel mai rapid de a vedea unde ajungi.
+episoade și 200 de poziții de progres pentru fiecare dintre cele 1.000 de conturi) are
+**26 MB**, iar plafonul gratuit D1 actual este **5 GB în total pe cont**. Crește cu istoricul
+de vizionare (o linie per utilizator+episod), deci `npm run bench -- --keep` e modul cel mai
+rapid de a vedea unde ajungi. „Forever” înseamnă monitorizare și retenție, nu stocare
+nelimitată: la 70–80% trebuie arhivate/compactate datele vechi înainte de plafon.
 
 Ce a rămas deliberat „scump" și de ce e în regulă: genurile (1.000 rânduri, o dată pe
 oră), sitemap-urile (până la 6.000 rânduri, o dată pe oră, cerute de crawlere) și
@@ -388,11 +390,24 @@ vezi „Fail open" mai jos).
 | API pentru prima pagină | 5 (`/series` `/top` `/recent` `/genres` `/pulse`) | **1** (`/api/home`) |
 | Sesiune (nav, puncte) | 1 | 1 |
 | **Total vizitator fără cont** | **~12 invocări** | **~2 invocări** |
-| **Rânduri citite din D1 / vizită** | **~230.000** | **~64** |
+| **Rânduri citite din D1 / vizită** | **~230.000** | **~74** |
 
 Cu ~2 invocări per vizită, 100k/zi înseamnă **zeci de mii de vizite pe zi**. Un vizitator
 logat care se uită la un episod consumă în plus: `/api/episodes/:id`, `/api/view` și un
-heartbeat la 2 minute (`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1).
+heartbeat la 5 minute (`/api/progress` = 1 invocare + 1 request DO + 1 scriere D1).
+
+Scenariul țintă se calculează direct cu:
+
+```bash
+node scripts/bench-scale.mjs --daily-watchers 500 --watched-per-viewer 12 --watch-minutes 24
+```
+
+La 500 de spectatori × 12 episoade de 24 minute, proiecția conservatoare este aproximativ
+**61.300 rows_written D1 (61%)**, **49.000 invocări Worker (49%)** și **42.000 request-uri
+Durable Objects (42%)** pe zi. Rămâne o marjă de circa 39% pentru poll-urile adaptive,
+navigare, chat și variația duratei. Nu este capacitate infinită: dacă durata medie, numărul
+de spectatori sau activitatea socială cresc mult peste ipoteză, `npm run usage` este
+semnalul de adevăr și funcționalitățile dinamice trebuie degradate înainte de 80%.
 
 **Tab-urile lăsate deschise nu mai mănâncă cota.** Înainte, clopoțelul întreba
 `/notifications/unread` la fiecare 60 s și chip-ul „N online” întreba `/api/pulse`
@@ -422,9 +437,10 @@ Când traficul crește, în ordinea în care merită atinse:
 
 1. **Fail open** (dashboard → Workers & Pages → `anime-uke` → Settings → Runtime): la
    epuizarea cotei, vizitatorii văd în continuare catalogul servit static, nu pagina de eroare.
-2. **Heartbeat-ul de vizionare** (`page-episode.js` → `HEARTBEAT_SEND_MS`, `SEND_CAP` și
-   `MAX_INCREMENT` din `src/routes/api/progress.js` — de ținut sincronizate): 2 → 5 minute
-   scade de ~2,5× scrierile D1 din vizionare. Poll-ul de notificări e deja adaptiv (vezi tabelul de mai sus).
+2. **Heartbeat-ul de vizionare** este deja la 5 minute (`page-episode.js` →
+   `HEARTBEAT_SEND_MS`, `SEND_CAP` și `MAX_INCREMENT` din `src/routes/api/progress.js` —
+   obligatoriu sincronizate). Nu-l micșora. Dacă scrierile depășesc constant 80%, următoarea
+   pârghie este 10 minute plus flush la ascundere/plecare. Poll-ul de notificări este deja adaptiv.
 3. **Vezi scara**: `node scripts/bench-scale.mjs` spune ce ar costa fiecare interogare la
    1.000 de serii și 1.000 de utilizatori (și cât ar ține cota la traficul dorit).
 4. **Vezi consumul**: `npm run usage` (rulează și la sfârșitul `cf-relay/cmd.sh`) afișează

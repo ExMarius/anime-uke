@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Ruleaza toate suitele locale pe baze de date curate.
 #
-#   ./test.sh          scripts-health + greutate + poll-buget + pulse-online +
-#                      turso-messages + e2e + dom-smoke (+ dom-smoke pe build) +
+#   ./test.sh          scripts-health + greutate + poll-buget + watch-budget +
+#                      pulse-online + turso-messages + e2e + dom-smoke (+ build) +
 #                      theme-cache + top-cache +
 #                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
 #
@@ -167,6 +167,15 @@ if [ "$POLL_RC" -ne 0 ]; then
   cat /tmp/poll.log
 fi
 
+echo "════════ watch-budget (500 × 12 episoade, fara server) ════════"
+node tests/watch-budget.mjs > /tmp/watch-budget.log 2>&1
+WATCH_BUDGET_RC=$?
+tail -4 /tmp/watch-budget.log
+if [ "$WATCH_BUDGET_RC" -ne 0 ]; then
+  echo "!! watch-budget a picat:"
+  cat /tmp/watch-budget.log
+fi
+
 echo "════════ pulse-online (cache contor online, fara server) ════════"
 node tests/pulse-online.mjs > /tmp/pulseonline.log 2>&1
 PULSE_RC=$?
@@ -195,6 +204,7 @@ start_server TOP_CACHE_MINUTES=0
 RC=0
 [ "${GREUTATE_RC:-0}" -eq 0 ] || RC=1
 [ "${POLL_RC:-0}" -eq 0 ] || RC=1
+[ "${WATCH_BUDGET_RC:-0}" -eq 0 ] || RC=1
 [ "${PULSE_RC:-0}" -eq 0 ] || RC=1
 [ "${TURSO_RC:-0}" -eq 0 ] || RC=1
 echo

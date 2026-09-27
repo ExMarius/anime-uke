@@ -52,6 +52,12 @@ const PROGRESS_PER_USER = numArg('progress', 200);   // rânduri în watch_progr
 const RATINGS_PER_USER = numArg('ratings', 30);      // note acordate / utilizator
 const EPISODES_PER_SERIES = numArg('episodes', 12);  // medie (seriile lungi au 12x)
 const VIEWS_PER_DAY = numArg('views', 2000);         // vizite pe prima pagină / zi (proiecția)
+// Proiecția de vizionare activă cerută pentru bugetul $0. Numele distinct
+// evită confuzia cu --episodes (numărul mediu de episoade per serie).
+const DAILY_WATCHERS = numArg('daily-watchers', 500);
+const WATCHED_PER_VIEWER = numArg('watched-per-viewer', 12);
+const WATCH_MINUTES = numArg('watch-minutes', 24);
+const HEARTBEAT_SECONDS = 300; // sincron cu page-episode.js și progress.js
 
 // ---------------------------------------------------------------------
 // Pregătirea bazei: migrările reale, apoi date sintetice la scară
@@ -457,6 +463,25 @@ const daily = perView * VIEWS_PER_DAY + perHour * 24 + per5min * 288;
 const quota = 5_000_000;
 const viewsUntilQuota = Math.floor(quota / perView);
 
+// Buget conservator pentru o zi de streaming. Numărăm un heartbeat suplimentar
+// prin ceil() (flush-ul de la final), iar la fiecare episod finalizat presupunem
+// 5 scrieri: watched_history, puncte, XP, puncte lunare și reputație. Misiunea
+// și streak-ul scriu doar la primul episod al zilei după optimizarea no-op.
+const watchedDaily = DAILY_WATCHERS * WATCHED_PER_VIEWER;
+const heartbeatsPerEpisode = Math.ceil((WATCH_MINUTES * 60) / HEARTBEAT_SECONDS);
+const heartbeatWrites = watchedDaily * heartbeatsPerEpisode;
+const completionWrites = watchedDaily * 5;
+const dailyStateWrites = DAILY_WATCHERS * 2;
+const bufferedViewWrites = Math.ceil(watchedDaily / 20);
+const projectedD1Writes = heartbeatWrites + completionWrites + dailyStateWrites + bufferedViewWrites;
+// HTML SSR + detalii episod + /view, apoi heartbeat-urile. Este deliberat o
+// limită superioară: unele pagini sunt statice și cache-urile reduc traficul.
+const projectedWorkerRequests = DAILY_WATCHERS * 2
+  + watchedDaily * (3 + heartbeatsPerEpisode);
+// RateLimitDO + StatsDO pentru /view, plus RateLimitDO pentru progres.
+const projectedDoRequests = watchedDaily * (2 + heartbeatsPerEpisode);
+const pct = (n, q) => Math.round((n / q) * 1000) / 10;
+
 if (!JSON_OUT) {
   console.log(`\n════════ BANC DE TEST LA SCARĂ — ${fmt(SERIES)} serii · ${fmt(USERS)} utilizatori ════════`);
   console.log(`date sintetice: ${Object.entries(SIZES).map(([k, v]) => `${k}=${fmt(v)}`).join(' · ')}`);
@@ -474,12 +499,31 @@ if (!JSON_OUT) {
   console.log(`  Invocări de Worker pentru o vizită:              2   (din 100.000/zi)`);
   console.log(`\n  „rânduri citite" = metrica taxată de D1 (rândurile pe care le atinge interogarea).`);
   console.log(`  ${results.filter((r) => /SCAN/.test(r.scansText)).length} din ${results.length} interogări SCANEAZĂ un tabel întreg.`);
+
+  console.log(`\n════════ PROIECȚIE STREAMING — ${fmt(DAILY_WATCHERS)} spectatori × ${fmt(WATCHED_PER_VIEWER)} episoade/zi ════════`);
+  console.log(`  episoade urmărite/zi:                     ${padL(fmt(watchedDaily), 10)}`);
+  console.log(`  heartbeat-uri/episod (${WATCH_MINUTES} min, lot ${HEARTBEAT_SECONDS}s): ${padL(fmt(heartbeatsPerEpisode), 10)}`);
+  console.log(`  D1 rows_written estimate:                 ${padL(fmt(projectedD1Writes), 10)} / 100.000 (${pct(projectedD1Writes, 100_000)}%)`);
+  console.log(`    progres=${fmt(heartbeatWrites)} · recompense=${fmt(completionWrites)} · stare zilnică=${fmt(dailyStateWrites)} · views buffer=${fmt(bufferedViewWrites)}`);
+  console.log(`  Worker requests estimate:                 ${padL(fmt(projectedWorkerRequests), 10)} / 100.000 (${pct(projectedWorkerRequests, 100_000)}%)`);
+  console.log(`  Durable Object requests estimate:         ${padL(fmt(projectedDoRequests), 10)} / 100.000 (${pct(projectedDoRequests, 100_000)}%)`);
+  console.log('  Marja rămasă acoperă poll-uri adaptive, navigare, chat și variația duratei episoadelor.');
 }
 
 if (JSON_OUT) {
   console.log(JSON.stringify({
     sizes: SIZES, series: SERIES, users: USERS, viewsPerDay: VIEWS_PER_DAY,
     perView, perHour, per5min, daily, viewsUntilQuota,
+    streaming: {
+      dailyWatchers: DAILY_WATCHERS,
+      watchedPerViewer: WATCHED_PER_VIEWER,
+      watchMinutes: WATCH_MINUTES,
+      watchedDaily,
+      heartbeatsPerEpisode,
+      projectedD1Writes,
+      projectedWorkerRequests,
+      projectedDoRequests,
+    },
     results: results.map(({ name, scansText, rows, rowsHow, median, charge }) => ({ name, charge, plan: scansText || 'index', rows, rowsHow, ms: median })),
   }, null, 2));
 }

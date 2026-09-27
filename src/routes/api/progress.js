@@ -33,13 +33,15 @@ export const WATCH_THRESHOLD_SECONDS = 15 * 60;
 export const POINTS_PER_EPISODE = 10;
 
 /**
- * Maximul acceptat intr-un singur heartbeat. Un client trimite normal 30s;
- * limita exista ca sa nu poata fi varsate 900 de secunde dintr-o singura
-// cerere si sa se sara direct peste prag.
+ * Maximul acceptat într-un heartbeat, sincronizat cu SEND_CAP din client.
+ * Loturile de 5 minute țin scenariul 500 × 12 episoade/zi sub cotele gratuite;
+ * pragul de vizionare rămâne server-side și cere cel puțin trei cereri.
  */
-const MAX_INCREMENT = 120;
+const MAX_INCREMENT = 300;
 
-const RATE_LIMIT = 240;
+// 12 episoade × aproximativ 5 heartbeat-uri (inclusiv flush la plecare) lasă
+// marjă pentru retry-uri, fără a permite trafic nelimitat spre D1/RateLimitDO.
+const RATE_LIMIT = 90;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 export async function onRequestPost(context) {
