@@ -77,6 +77,16 @@ function renderQuick() {
     { icon: '⭐', label: 'Serii recomandate', href: '#p-reco-section' },
     { icon: '🏆', label: 'Puncte', value: data.user.points },
   ];
+  // Este transmis numai pentru profilul propriu. Astfel legătura e practică
+  // pentru membru, fără să transforme istoricul de vizionare în date publice.
+  const last = s.last_watched;
+  if (last?.episode_id && last?.series_id) {
+    items.unshift({
+      icon: '⏯️', value: last.series_title || 'Serie',
+      label: `Ultima vizionare · EP ${last.episode_number}`,
+      href: `/episode?id=${encodeURIComponent(last.episode_id)}`,
+    });
+  }
   if (data.profile.mal_url) {
     items.push({ icon: '🔗', label: 'MyAnimeList', href: data.profile.mal_url, external: true });
   }

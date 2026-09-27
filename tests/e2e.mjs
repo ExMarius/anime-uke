@@ -1167,6 +1167,15 @@ console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
   check('Profilul include statisticile (structura)', typeof opts.data?.stats?.episodes_watched === 'number', JSON.stringify(opts.data?.stats));
   check('Profilul NU expune email-ul', !JSON.stringify(opts.data).includes('marius@test.ro'), '');
 
+  // Ultima vizionare este practică pe propriul profil, dar deliberat privată.
+  const viewer = jar();
+  await req(viewer, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const ownWatching = await req(viewer, 'GET', '/api/profile/me');
+  check('Profilul propriu include linkul spre ultimul episod vizionat',
+    ownWatching.data?.stats?.last_watched?.episode_id === globalThis.epId
+      && ownWatching.data?.stats?.last_watched?.series_id === globalThis.seriesId,
+    JSON.stringify(ownWatching.data?.stats?.last_watched));
+
   const bad1 = await req(j, 'PATCH', '/api/profile', { birth_date: '2099-01-01' });
   check('Data în viitor → 400', bad1.status === 400, `status=${bad1.status}`);
   const bad2 = await req(j, 'PATCH', '/api/profile', { birth_date: '2007-02-30' });
@@ -1194,6 +1203,7 @@ console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
   const publicProfile = await req(j, 'GET', '/api/profile/user2');
   check('Profilul public al altui utilizator', publicProfile.status === 200 && publicProfile.data?.user?.username === 'user2' && publicProfile.data?.is_self === false, `status=${publicProfile.status}`);
   check('Statistica reala: user2 are 1 episod vizionat', publicProfile.data?.stats?.episodes_watched === 1 && publicProfile.data?.stats?.series_watched === 1, JSON.stringify(publicProfile.data?.stats));
+  check('Profilul public nu expune ultima vizionare personală', publicProfile.data?.stats?.last_watched === null, JSON.stringify(publicProfile.data?.stats));
   check('Profilul altui user NU ii expune email-ul', !JSON.stringify(publicProfile.data).includes('user2@test.ro'), '');
   const anonProfile = await req(jar(), 'GET', '/api/profile/marius');
   check('Profilul cere autentificare → 401', anonProfile.status === 401, `status=${anonProfile.status}`);
