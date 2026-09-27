@@ -3,7 +3,7 @@
 # Deploy + verificare LIVE: tot ce face deploy.sh (D1, migrări remote,
 # Worker DO, Pages, JWT, purge/minify, ?v=), apoi verificările
 # post-deploy pe https://anime-uke.pages.dev (sectiunile 1–20 din mai jos).
-# Reluare operațională după rotația TURSO_AUTH_TOKEN: migrare Turso,
+# Reluare operațională după configurarea tokenului de bază Turso: migrare,
 # deploy complet și canar live pe codul integrat în origin/main.
 #
 # Comportament (25.09):
