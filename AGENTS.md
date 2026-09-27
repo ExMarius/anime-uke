@@ -572,6 +572,13 @@ zgomotos în loc să raporteze cifre pentru altceva.
 
 ---
 
+## REGULA DE AUR pentru o sesiune/agent NOU
+Lucrezi DOAR pe site-ul EXISTENT: `https://anime-uke.pages.dev`, proiectul Cloudflare
+Pages `anime-uke`, repo-ul `ExMarius/anime-uke`, baza D1 `anime-db` (+ Turso pentru
+progres). **NICIODATĂ site/proiect/repo nou, niciodată rebuild de la zero.**
+„Clone"-ul de mai jos NU face un al doilea site: doar descarcă codul curent ca să-l
+modifici pe loc; după push în main + `./deploy.sh`, modificarea apare pe ACELAȘI site.
+
 ## Setup pentru o sesiune/agent NOU (copy-paste, ~2 minute)
 
 ```bash
