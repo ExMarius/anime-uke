@@ -235,6 +235,15 @@ fi
 # Frații WebP pentru imagini sunt COMISAȚI în repo (runner-ul GitHub nu are
 # ImageMagick); workerul îi negociaza automat, vezi serveStatic.
 
+# Comutatorul etapei, ca secret Pages. Se pune ÎNAINTE de publicare: un
+# secret adăugat DUPĂ `pages deploy` intră în vigoare abia la deploy-ul
+# următor (lecția „redeploy de activare” de la secretele Turso). Rollback
+# instant = o rulare cu WATCH_STORE=d1.
+printf '%s' "$WATCH_STORE" | $WRANGLER pages secret put WATCH_STORE --project-name="$PROJECT" \
+  >/tmp/pages-watch-store.txt 2>&1 || { cat /tmp/pages-watch-store.txt; die "WATCH_STORE nu a ajuns in Pages"; }
+rm -f /tmp/pages-watch-store.txt
+ok "WATCH_STORE=$WATCH_STORE va fi activ din acest deploy"
+
 $WRANGLER pages deploy --project-name="$PROJECT" --branch=main --commit-dirty=true >/tmp/pages.txt 2>&1 \
   || { cat /tmp/pages.txt; die "deploy Pages esuat"; }
 DEPLOY_URL="$(grep -oE 'https://[a-z0-9.-]*\.pages\.dev' /tmp/pages.txt | head -1 || true)"
@@ -248,12 +257,6 @@ printf '%s' "$TURSO_AUTH_TOKEN" | $WRANGLER pages secret put TURSO_AUTH_TOKEN --
 rm -f /tmp/pages-turso-url.txt /tmp/pages-turso-token.txt
 ok "secretele Turso sunt legate la Pages"
 
-# Comutatorul etapei, ca secret Pages: rollback instant = redeploy cu
-# WATCH_STORE=d1 (sau schimbarea valorii din dashboard), fara atingerea codului.
-printf '%s' "$WATCH_STORE" | $WRANGLER pages secret put WATCH_STORE --project-name="$PROJECT" \
-  >/tmp/pages-watch-store.txt 2>&1 || { cat /tmp/pages-watch-store.txt; die "WATCH_STORE nu a ajuns in Pages"; }
-rm -f /tmp/pages-watch-store.txt
-ok "WATCH_STORE=$WATCH_STORE este activ pe Pages"
 # Frații .webp ai imaginilor (hero, logo) sunt COMISAȚI în repo: runner-ul
 # GitHub nu are ImageMagick, iar workerul nu mai negociaza WebP — paginile
 # refera direct .webp. De aceea NU se mai sterge nimic aici.
