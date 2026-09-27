@@ -436,6 +436,45 @@ console.log('\n=== 4. LOGIN ===');
 
   const me = await req(j, 'GET', '/api/auth/me');
   check('Sesiune persista dupa login', me.data?.user?.username === 'marius');
+
+  // Schimbarea parolei cere parola curenta si trebuie sa inchida toate
+  // celelalte sesiuni. `j2` este cookie-ul de pe al doilea „dispozitiv".
+  const guestChange = await req(jar(), 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: 'AltaParola123',
+  });
+  check('Schimbare parola fara sesiune → 401', guestChange.status === 401, `status=${guestChange.status}`);
+
+  const wrongCurrent = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'nu-e-parola', new_password: 'AltaParola123',
+  });
+  check('Schimbare parola cu parola curenta gresita → 401', wrongCurrent.status === 401, `status=${wrongCurrent.status}`);
+
+  const tooShort = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: '123',
+  });
+  check('Schimbare parola prea scurta → 400', tooShort.status === 400, `status=${tooShort.status}`);
+
+  const changed = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: 'ParolaNoua123',
+  });
+  check('Schimbare parola reusita → 200 + cookie nou',
+    changed.status === 200 && /HttpOnly/i.test(String(changed.headers.get('set-cookie'))), `status=${changed.status}`);
+  const oldDevice = await req(j2, 'GET', '/api/auth/me');
+  check('Schimbarea parolei invalideaza cealalta sesiune',
+    oldDevice.status === 200 && oldDevice.data?.user === null, `status=${oldDevice.status} user=${JSON.stringify(oldDevice.data?.user)}`);
+  const oldLogin = await req(jar(), 'POST', '/api/auth/login', { email: 'marius@test.ro', password: 'parola123' });
+  check('Parola veche nu mai permite login', oldLogin.status === 401, `status=${oldLogin.status}`);
+  const fresh = jar();
+  const newLogin = await req(fresh, 'POST', '/api/auth/login', { email: 'marius@test.ro', password: 'ParolaNoua123' });
+  check('Parola noua permite login', newLogin.status === 200, `status=${newLogin.status}`);
+
+  // Restabilim parola fixture-ului ca restul suitei sa poata ramane concis;
+  // `fresh` devine singura sesiune admin valida folosita mai jos.
+  const restored = await req(fresh, 'POST', '/api/auth/password', {
+    current_password: 'ParolaNoua123', new_password: 'parola123',
+  });
+  check('Parola fixture-ului se poate restabili', restored.status === 200, `status=${restored.status}`);
+  globalThis.admin = fresh;
 }
 
 console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) ===');

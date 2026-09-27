@@ -102,7 +102,7 @@ export async function onRequestPost(context) {
       .run();
   }
 
-  const token = await signJWT({ id: userId, username: username.value }, env.JWT_SECRET);
+  const token = await signJWT({ id: userId, username: username.value, auth_version: 0 }, env.JWT_SECRET);
 
   return json(
     { user: { id: userId, username: username.value, points: 0, is_admin: isFirstUser } },

@@ -58,6 +58,7 @@ import * as loginRoute from './routes/api/auth/login.js';
 import * as logoutRoute from './routes/api/auth/logout.js';
 import * as meRoute from './routes/api/auth/me.js';
 import * as registerOptions from './routes/api/auth/register-options.js';
+import * as passwordRoute from './routes/api/auth/password.js';
 import * as adminStats from './routes/api/admin/stats.js';
 import * as adminSeries from './routes/api/admin/series.js';
 import * as adminEpisodes from './routes/api/admin/episodes.js';
@@ -83,6 +84,7 @@ const ROUTES = [
   { method: 'POST', path: '/api/auth/logout', mod: logoutRoute },
   { method: 'GET', path: '/api/auth/me', mod: meRoute },
   { method: 'GET', path: '/api/auth/register-options', mod: registerOptions },
+  { method: 'POST', path: '/api/auth/password', mod: passwordRoute },
 
   // --- puncte / vizionari ---
   { method: 'POST', path: '/api/progress', mod: progressRoute },
