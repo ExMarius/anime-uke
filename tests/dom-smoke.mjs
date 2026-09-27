@@ -308,6 +308,8 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   const topsOn = await until(() => p.$('#tops-section')?.hidden === false && p.$$('#top-weekly li').length >= 1);
   check('Topul saptamanal se randeaza pe home', topsOn, `li=${p.$$('#top-weekly li').length}`);
   check('Clasamentul de voturi se randeaza pe home', p.$$('#top-rated li').length >= 1 && /★/.test(p.$('#top-rated')?.textContent || ''), p.$('#top-rated')?.textContent?.slice(0, 60));
+  check('Fara iframe-uri de reclama terta (A-Ads) pe home', !p.$$('iframe').some((el) => (el.getAttribute('src') || '').includes('a-ads')), 'reclama terta prezenta');
+  check('Card OG propriu declarat pe home', (p.$('meta[property=\"og:image\"]')?.getAttribute('content') || '').includes('og-card.png'), p.$('meta[property=\"og:image\"]')?.getAttribute('content'));
   check('Hero bannerul exista in DOM', !!p.$('#hero-banner'), 'lipseste #hero-banner');
   check('Hero bannerul e prima sectiune din main (sus de tot)', p.$('main')?.firstElementChild?.id === 'hero-banner', p.$('main')?.firstElementChild?.id);
   check('Butonul de shuffle „Alt anime” exista', !!p.$('#hero-shuffle'), 'lipseste #hero-shuffle');

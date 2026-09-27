@@ -235,8 +235,8 @@ console.log('\n=== 1. VIZITATOR ===');
       homeHtml.includes('src="/assets/img/logo-icon.webp"') && !homeHtml.includes('src="/assets/img/logo-icon.png"'),
       (homeHtml.match(/<img class="nav__brand__mark"[^>]*>/) || ['-'])[0]);
     check('faviconul și og:image rămân PNG (WebP nu e acceptat de iOS/crawlere)',
-      homeHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && homeHtml.includes('/assets/img/logo.png'), 'verifică <link rel=icon> și og:image');
-    check('og:image de pe / e logo-ul', homeHtml.includes('/assets/img/logo.png'), homeHtml.match(/og:image[^>]*>/)?.[0]);
+      homeHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && homeHtml.includes('/assets/img/og-card.png'), 'verifică <link rel=icon> și og:image');
+    check('og:image de pe / e cardul OG propriu (PNG wide, nu logo pătrat)', homeHtml.includes('/assets/img/og-card.png'), homeHtml.match(/og:image[^>]*>/)?.[0]);
     const loginHtml = await (await fetch(BASE + '/login')).text();
     check('Login folosește logo-ul (favicon + marca auth)',
       loginHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && loginHtml.includes('auth-logo__mark'),
