@@ -1,4 +1,4 @@
 # Etapa mutării progresului de vizionare în Turso (src/lib/watch-store.js).
 # Valori: d1 (rollback instant) | shadow (dual-write, D1 oficial) | turso.
 # Schimbarea acestui fișier declanșează relay-ul și redeployează cu etapa nouă.
-shadow
+turso
