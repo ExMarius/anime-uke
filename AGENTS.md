@@ -250,6 +250,13 @@ trial. Implementarea: `src/lib/watch-store.js`,
 `turso/migrations/0002_watch_progress.sql`, `scripts/watch-turso.mjs`,
 `tests/watch-store.mjs`.
 
+- **Etapa se alege din `cf-relay/watch-stage.txt`** (fișier comis, ultima linie
+  nevidă). Modificarea lui declanșează relay-ul și redeployează cu etapa nouă;
+  rollback = un commit cu `d1`. `WATCH_STORE` din environment/variabilă de repo
+  îl suprascrie. **Nu** pune `WATCH_STORE` în `[vars]` din `wrangler*.toml`:
+  Pages refuză deploy-ul cu „Binding name 'WATCH_STORE' already in use” când
+  există și ca secret (a picat o dată, 27.09). Secretul se pune ÎNAINTE de
+  `pages deploy`, altfel intră în vigoare abia la deploy-ul următor.
 - **Flag: `WATCH_STORE` = `d1` (implicit) | `shadow` | `turso`.** Fără
   credențiale Turso, orice valoare cade pe `d1`. `deploy.sh` îl pune ca
   secret Pages din environment; `[vars]` din `wrangler*.toml` îl ține pe `d1`.

@@ -42,8 +42,7 @@ new_classes = ["ChatDO", "RateLimitDO", "StatsDO"]
 # Se seteaza cu:  wrangler pages secret put JWT_SECRET
 # ---------------------------------------------------------------------
 
-# Unde trăiește `watch_progress`: d1 (implicit, rollback instant) | shadow
-# (dual-write, D1 sursa oficială) | turso (Turso sursa oficială, fallback D1).
-# deploy.sh poate suprascrie valoarea cu un secret Pages, fără schimbare de cod.
-[vars]
-WATCH_STORE = "d1"
+# WATCH_STORE (d1 | shadow | turso) NU se pune aici ca [vars]: Pages refuză
+# deploy-ul cu „Binding name 'WATCH_STORE' already in use" dacă există și ca
+# secret. Sursa unică e secretul Pages, pus de deploy.sh din environment
+# (etapa se alege din `cf-relay/watch-stage.txt`). Local: dev.sh --binding.

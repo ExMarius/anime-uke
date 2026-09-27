@@ -470,7 +470,9 @@ serviciu nou, niciun card**).
 | `watched_history`, `users.points`, XP, gold, misiuni, streak | **D1** | recompensa „exact o dată” = `INSERT OR IGNORE` + `meta.changes` în aceeași bază cu punctele |
 | catalog, serii, episoade, comentarii, prietenii | **D1** | sursa de adevăr a conținutului |
 
-**Comutatorul: `WATCH_STORE`** (variabilă Pages; implicit `d1`).
+**Comutatorul: `WATCH_STORE`** (secret Pages, pus de `deploy.sh`; etapa curentă
+e scrisă în `cf-relay/watch-stage.txt`, iar modificarea fișierului declanșează
+relay-ul). Implicit `d1`.
 
 | Valoare | Comportament | D1 rows_written/zi (proiecție) |
 |---|---|---|
