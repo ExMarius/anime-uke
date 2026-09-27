@@ -1,6 +1,10 @@
 exit_code: 1
-comanda: cf-relay/cmd.sh @ 9f5c3c3
+comanda: cf-relay/cmd.sh @ 47bbb7b
 ────────────────────────────────────
+── relay de pe arena/01a0e1b9-anime-uke: folosesc origin/main pentru producție ──
+From https://github.com/ExMarius/anime-uke
+ * [new branch]      main       -> origin/main
+HEAD is now at 0733119 Merge pull request #17 from ExMarius/arena/01a0dfd5-anime-uke
 ── aleg contul care vede D1 ──
 id din env: lungime 32 hex32=da
 conturi: success=true n=1 eroare=
@@ -21,11 +25,15 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
     [0;32m✓[0m deja aplicata
 
 [1;35m==> 3/6  Turso: schema + istoric mesaje private[0m
-  ✗ migrare Turso eșuată: Turso a refuzat cererea: HTTP 401
+  ✗ migrare Turso eșuată: Turso: HTTP error! status: 401
     [0;31m✗ migrare Turso esuata[0m
 exit deploy: 1
 
 ── … ──
+── relay de pe arena/01a0e1b9-anime-uke: folosesc origin/main pentru producție ──
+From https://github.com/ExMarius/anime-uke
+ * [new branch]      main       -> origin/main
+HEAD is now at 0733119 Merge pull request #17 from ExMarius/arena/01a0dfd5-anime-uke
 ── aleg contul care vede D1 ──
 id din env: lungime 32 hex32=da
 conturi: success=true n=1 eroare=
@@ -46,6 +54,6 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
     [0;32m✓[0m deja aplicata
 
 [1;35m==> 3/6  Turso: schema + istoric mesaje private[0m
-  ✗ migrare Turso eșuată: Turso a refuzat cererea: HTTP 401
+  ✗ migrare Turso eșuată: Turso: HTTP error! status: 401
     [0;31m✗ migrare Turso esuata[0m
 exit deploy: 1
