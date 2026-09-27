@@ -17,8 +17,6 @@
 # Lecție păstrată: propagarea Pages durează zeci de secunde — se așteaptă
 # 60s înainte de audit, altfel se verifică deployment-ul anterior.
 # =====================================================================
-# Etapa curentă a mutării progresului de vizionare vine din env (WATCH_STORE):
-# d1 (implicit pe main) | shadow (dual-write) | turso (cutover).
 set -uo pipefail
 
 # Un relay poate fi declanșat dintr-un branch de mentenanță (workflow-ul ascultă
@@ -38,6 +36,17 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ] \
   export RELAY_MAIN_CHECKED_OUT=1
   exec bash cf-relay/cmd.sh
 fi
+
+# Etapa mutării progresului de vizionare. Sursa de adevăr e fișierul comis
+# cf-relay/watch-stage.txt (ultima linie nevidă care nu e comentariu); un
+# input manual sau variabila de repo WATCH_STORE îl pot suprascrie.
+WATCH_STORE="${WATCH_STORE:-}"
+if [ -z "$WATCH_STORE" ] && [ -f cf-relay/watch-stage.txt ]; then
+  WATCH_STORE="$(grep -vE '^[[:space:]]*(#|$)' cf-relay/watch-stage.txt | tail -1 | tr -d '[:space:]')"
+fi
+case "$WATCH_STORE" in d1|shadow|turso) ;; *) WATCH_STORE="d1" ;; esac
+export WATCH_STORE
+echo "── etapa watch_progress: WATCH_STORE=$WATCH_STORE ──"
 
 # Secretul CLOUDFLARE_ACCOUNT_ID poate fi gol, cu spații, sau un ID care nu
 # e contul cu D1. Alegem contul pe care tokenul chiar vede baza anime-db.

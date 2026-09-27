@@ -1,6 +1,10 @@
 exit_code: 1
-comanda: cf-relay/cmd.sh @ 7c74ac9
+comanda: cf-relay/cmd.sh @ 4249f79
 ────────────────────────────────────
+── relay de pe arena/01a0e1fa-anime-uke: folosesc origin/main pentru producție ──
+From https://github.com/ExMarius/anime-uke
+ * [new branch]      main       -> origin/main
+HEAD is now at 6728a5a relay: output (7c74ac9)
 ── aleg contul care vede D1 ──
 id din env: lungime 32 hex32=da
 conturi: success=true n=1 eroare=
@@ -26,38 +30,28 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
   ✓ backfill D1 → Turso: 0 noi / 8 găsite
   ✓ Turso pregătit: 12 mesaje private
     [0;32m✓[0m baza anime-uke-messages este pregatita
-
-[1;35m==> 3b/6  Turso: backfill + comparatie watch_progress (shadow)[0m
-  ✓ backfill D1 → Turso: 8 rânduri trimise, 8 scrise/actualizate
-  D1:    8 rânduri
-  Turso: 8 rânduri
-  lipsă în Turso:      0
-  doar în Turso:       0 (normal după cutover: scrieri noi)
-  diferențe > 300s:     0
-  delta maxim observat: 0s
-  ✓ D1 și Turso coincid (în limita toleranței)
-    [0;32m✓[0m watch_progress sincronizat in Turso
+    [0;32m✓[0m watch_progress ramane in D1 (WATCH_STORE=d1)
 
 [1;35m==> 4/6  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 55.77)
     [0;32m✓[0m secretele Turso sunt legate la Worker DO
 
 [1;35m==> 5/6  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7c74ac9
+    [0;32m✓[0m assete versionate ?v=6728a5a
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m assete minificate: 9 fisiere
     [0;32m✓[0m pagini bundle-uite: 10 (chunk-uri comune: 3)
-    [0;32m✓[0m WATCH_STORE=shadow va fi activ din acest deploy
+    [0;32m✓[0m WATCH_STORE=d1 va fi activ din acest deploy
 
  ⛅️ wrangler 4.131.2 (update available 4.141.0)
 ───────────────────────────────────────────────
 Uploading... (40/50)
-Uploading... (44/50)
-Uploading... (47/50)
+Uploading... (43/50)
+Uploading... (46/50)
 Uploading... (50/50)
-✨ Success! Uploaded 10 files (40 already uploaded) (0.67 sec)
+✨ Success! Uploaded 10 files (40 already uploaded) (0.85 sec)
 
 ✨ Uploading _headers
 ✨ Compiled Worker successfully
@@ -70,11 +64,15 @@ Uploading... (50/50)
   	Failed to publish your Function. Got error: Binding name 'WATCH_STORE' already in use. Please use a different name and try again.
 
 
-🪵  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-09-27_09-17-28_090.log"
+🪵  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-09-27_09-19-13_941.log"
     [0;31m✗ deploy Pages esuat[0m
 exit deploy: 1
 
 ── … ──
+── relay de pe arena/01a0e1fa-anime-uke: folosesc origin/main pentru producție ──
+From https://github.com/ExMarius/anime-uke
+ * [new branch]      main       -> origin/main
+HEAD is now at 6728a5a relay: output (7c74ac9)
 ── aleg contul care vede D1 ──
 id din env: lungime 32 hex32=da
 conturi: success=true n=1 eroare=
@@ -100,38 +98,28 @@ Git build: production_branch="main" root_dir="" build_command="" destination_dir
   ✓ backfill D1 → Turso: 0 noi / 8 găsite
   ✓ Turso pregătit: 12 mesaje private
     [0;32m✓[0m baza anime-uke-messages este pregatita
-
-[1;35m==> 3b/6  Turso: backfill + comparatie watch_progress (shadow)[0m
-  ✓ backfill D1 → Turso: 8 rânduri trimise, 8 scrise/actualizate
-  D1:    8 rânduri
-  Turso: 8 rânduri
-  lipsă în Turso:      0
-  doar în Turso:       0 (normal după cutover: scrieri noi)
-  diferențe > 300s:     0
-  delta maxim observat: 0s
-  ✓ D1 și Turso coincid (în limita toleranței)
-    [0;32m✓[0m watch_progress sincronizat in Turso
+    [0;32m✓[0m watch_progress ramane in D1 (WATCH_STORE=d1)
 
 [1;35m==> 4/6  Worker Durable Objects: anime-uke-do[0m
     [0;32m✓[0m publicat: anime-uke-do (Total Upload: 55.77)
     [0;32m✓[0m secretele Turso sunt legate la Worker DO
 
 [1;35m==> 5/6  Cloudflare Pages: anime-uke[0m
-    [0;32m✓[0m assete versionate ?v=7c74ac9
+    [0;32m✓[0m assete versionate ?v=6728a5a
     [0;32m✓[0m Cache-Control immutable pentru JS/CSS (public/_headers)
     [0;32m✓[0m assetele statice ocolesc workerul (_routes.json)
     [0;32m✓[0m CSS purgat de reguli moarte
     [0;32m✓[0m assete minificate: 9 fisiere
     [0;32m✓[0m pagini bundle-uite: 10 (chunk-uri comune: 3)
-    [0;32m✓[0m WATCH_STORE=shadow va fi activ din acest deploy
+    [0;32m✓[0m WATCH_STORE=d1 va fi activ din acest deploy
 
  ⛅️ wrangler 4.131.2 (update available 4.141.0)
 ───────────────────────────────────────────────
 Uploading... (40/50)
-Uploading... (44/50)
-Uploading... (47/50)
+Uploading... (43/50)
+Uploading... (46/50)
 Uploading... (50/50)
-✨ Success! Uploaded 10 files (40 already uploaded) (0.67 sec)
+✨ Success! Uploaded 10 files (40 already uploaded) (0.85 sec)
 
 ✨ Uploading _headers
 ✨ Compiled Worker successfully
@@ -144,6 +132,6 @@ Uploading... (50/50)
   	Failed to publish your Function. Got error: Binding name 'WATCH_STORE' already in use. Please use a different name and try again.
 
 
-🪵  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-09-27_09-17-28_090.log"
+🪵  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-09-27_09-19-13_941.log"
     [0;31m✗ deploy Pages esuat[0m
 exit deploy: 1
