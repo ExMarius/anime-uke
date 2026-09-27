@@ -39,7 +39,10 @@
           <span class="hint" id="p-friend-status" hidden></span>
         </div>
       </div>
-      <button class="btn btn--accent" id="p-edit-btn" type="button" hidden>✏️ Editează</button>
+      <div class="profile-head__actions">
+        <button class="btn btn--accent" id="p-edit-btn" type="button" hidden>✏️ Editează</button>
+        <button class="btn btn--ghost" id="p-password-btn" type="button" hidden>🔐 Parolă</button>
+      </div>
     </header>
 
     <!-- ============ TABURI: fiecare lucru are pagina lui ============ -->
@@ -95,6 +98,37 @@
         <div class="actions">
           <button class="btn btn--accent" id="profile-save" type="submit">Salvează</button>
           <button class="btn btn--ghost" id="profile-cancel" type="button">Renunță</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ SCHIMBAREA PAROLEI (doar propriul profil) ============ -->
+    <section class="box password-panel" id="p-password-panel" hidden aria-labelledby="password-title">
+      <div class="password-panel__head">
+        <div>
+          <h2 class="box__title" id="password-title">Schimbă parola</h2>
+          <p class="hint">Pentru siguranță, după schimbare celelalte dispozitive vor fi deconectate.</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="password-cancel" type="button">Închide</button>
+      </div>
+      <form id="password-form" novalidate>
+        <div class="field">
+          <label for="f-current-password">Parola curentă</label>
+          <input class="input" id="f-current-password" name="current_password" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="f-new-password">Parola nouă</label>
+            <input class="input" id="f-new-password" name="new_password" type="password" autocomplete="new-password" minlength="4" required>
+            <p class="hint">Minim 4 caractere.</p>
+          </div>
+          <div class="field">
+            <label for="f-confirm-password">Repetă parola nouă</label>
+            <input class="input" id="f-confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="4" required>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="password-save" type="submit">Salvează parola nouă</button>
         </div>
       </form>
     </section>

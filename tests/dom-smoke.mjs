@@ -995,6 +995,13 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Fiecare misiune arata recompensa', p.$$('#econ-missions .mission__reward').every((r) => /🪙/.test(r.textContent)), p.$('#econ-missions')?.textContent?.slice(0, 120));
   check('Rangul tematic e afisat mare pe profil', /Genin|Chunin|Jonin|Kage|Hokage|Membru/.test(p.text('#econ-rank') || ''), p.text('#econ-rank'));
   check('Statisticile reale apar in grid (episoade/comentarii)', p.$$('#econ-stats .econ__stat').length >= 4, `n=${p.$$('#econ-stats .econ__stat').length}`);
+  const passwordBtnOn = await until(() => p.$('#p-password-btn')?.hidden === false);
+  check('Profilul propriu are butonul de schimbare a parolei', passwordBtnOn, `hidden=${p.$('#p-password-btn')?.hidden}`);
+  p.$('#p-password-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const passwordPanelOn = await until(() => p.$('#p-password-panel')?.hidden === false);
+  check('Butonul parolei deschide formularul cu toate cele trei câmpuri',
+    passwordPanelOn && !!p.$('#f-current-password') && !!p.$('#f-new-password') && !!p.$('#f-confirm-password'),
+    `panel=${p.$('#p-password-panel')?.hidden}`);
   await p.teardown();
 }
 
