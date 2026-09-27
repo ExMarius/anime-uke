@@ -16,8 +16,6 @@
        pentru paginile fara efecte secundare la load (/serie/*).
        Browserele fara Speculation Rules ignora scriptul silentios. -->
   <link rel="speculationrules" href="/speculationrules.json">
-  <style>
-  </style>
   <meta property="og:image" content="https://anime-uke.pages.dev/assets/img/og-card.png">
   <meta name="twitter:card" content="summary_large_image">
 </head>
@@ -34,6 +32,13 @@
         <h1 class="hero__title title-responsive" id="series-title">Se încarcă…</h1>
         <p class="ser-alt hint" id="series-alt" hidden></p>
         <p class="hero__sub ser-desc" id="series-desc"></p>
+        <div class="ser-kpis" id="series-kpis" aria-label="Statistici serie" hidden></div>
+        <div class="ser-quick" id="series-quick" aria-label="Acțiuni rapide pentru serie">
+          <a class="btn btn--accent" id="start-episode-btn" href="#episodes-grid" hidden>▶ Începe seria</a>
+          <a class="btn btn--ghost" href="#episodes-section">📺 Episoade</a>
+          <a class="btn btn--ghost" href="#reviews-section">💬 Recenzii</a>
+          <button class="btn btn--ghost" id="share-series-btn" type="button">🔗 Copiază linkul</button>
+        </div>
         <!-- „Informații despre serie" — fișa clasică de pe site-urile de anime:
              teme, vârstă, durată, lansare, țară, link extern, echipă. Apare
              doar dacă adminul a completat măcar un câmp. -->
@@ -74,7 +79,7 @@
       <div class="chests__row" id="chests-row"></div>
     </section>
 
-    <section class="section">
+    <section class="section" id="episodes-section">
       <div class="section__head">
         <h2 class="section__title">Episoade</h2>
         <span class="section__count" id="episodes-count"></span>
@@ -84,6 +89,17 @@
         mai multe episoade decat incap pe o pagina. Fara el, o serie lunga ar
         cere toate episoadele la fiecare vizita.
       -->
+      <div class="episode-tools" id="episode-tools">
+        <label class="sr-only" for="episode-filter">Caută în episoadele afișate</label>
+        <input class="input" id="episode-filter" type="search" placeholder="Caută episodul din intervalul afișat…" autocomplete="off">
+        <label class="sr-only" for="episode-state">Filtrează după progres</label>
+        <select class="select select--sm" id="episode-state">
+          <option value="all">Toate episoadele</option>
+          <option value="unwatched">Nevăzute</option>
+          <option value="started">Începute</option>
+          <option value="watched">Văzute</option>
+        </select>
+      </div>
       <div class="rangebar" id="ep-ranges" hidden></div>
       <div id="episodes-grid" class="grid grid--ep" aria-live="polite"></div>
     </section>

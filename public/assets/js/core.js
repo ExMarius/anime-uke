@@ -796,11 +796,11 @@ function ensureChatDomSync() {
     if (typeof document === 'undefined' || !document.body) return;
     if (document.getElementById('chat-fab') && document.getElementById('chat-modal')) return;
     const frag = document.createRange().createContextualFragment(`
-      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live" style="display:flex">
+      <button class="chat-fab" id="chat-fab" type="button" aria-label="Deschide chat-ul live">
         <span class="chat-fab__dot"></span>
         <span class="chat-fab__label">Chat live</span>
       </button>
-      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live" style="display:none">
+      <div class="chat-modal" id="chat-modal" data-open="false" role="dialog" aria-modal="true" aria-label="Chat live">
         <div class="chat-box">
           <div class="chat-head">
             <span class="chat-head__title">Chat global</span>
