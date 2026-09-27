@@ -60,19 +60,6 @@ export function tursoPipelineUrl(value) {
   return `${tursoBaseUrl(value)}/v3/cursor`;
 }
 
-export function tursoArg(value) {
-  if (value === null || value === undefined) return { type: 'null' };
-  if (typeof value === 'boolean') return { type: 'integer', value: value ? '1' : '0' };
-  if (typeof value === 'bigint') return { type: 'integer', value: String(value) };
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) throw new Error('Parametru SQL numeric invalid');
-    return Number.isInteger(value)
-      ? { type: 'integer', value: String(value) }
-      : { type: 'float', value };
-  }
-  return { type: 'text', value: String(value) };
-}
-
 function safeErrorMessage(error) {
   const message = String(error?.message || error || 'eroare necunoscută');
   // Un server nu ar trebui să repete Authorization, dar nu propagăm niciun

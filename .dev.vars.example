@@ -8,3 +8,7 @@ JWT_SECRET=schimba-cu-o-valoare-aleatoare-lunga
 # locală. În producție sunt obligatorii și vin din GitHub Actions Secrets.
 # TURSO_DATABASE_URL=libsql://anime-uke-messages-ORG.turso.io
 # TURSO_AUTH_TOKEN=token-doar-pentru-baza-de-mesaje
+
+# Etapa de mutare a progresului de vizionare (src/lib/watch-store.js):
+#   d1 (implicit) | shadow (dual-write, D1 oficial) | turso (Turso oficial)
+# Se dă ca variabilă de mediu la ./dev.sh, nu aici: WATCH_STORE=shadow ./dev.sh

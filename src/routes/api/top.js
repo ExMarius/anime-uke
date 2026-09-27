@@ -20,6 +20,7 @@
 //     la fiecare cerere). Acum media stă pe rândul seriei (0028) și
 //     clasamentul e o citire de 5 rânduri dintr-un index.
 import { json } from '../../lib/http.js';
+import { weeklyAggregate } from '../../lib/watch-store.js';
 
 /**
  * Cât timp e bun un top săptămânal (și cât de des se plătește recalculul).
@@ -84,8 +85,32 @@ async function weeklyTop(env) {
     console.error('top weekly: citirea cache-ului a eșuat:', e?.message || e);
   }
 
-  const res = await env.DB.prepare(WEEKLY_SQL).all();
-  const rows = res.results || [];
+  // WATCH_STORE=turso: agregarea se face în Turso (are `series_id`
+  // denormalizat), iar D1 mai dă doar titlul și coperta celor 5 serii —
+  // cinci citiri pe cheia primară. Dacă Turso nu răspunde, `weeklyAggregate`
+  // întoarce null, jurnalizează incidentul și recalculul cade pe D1.
+  let rows = null;
+  const agg = await weeklyAggregate(env);
+  if (agg && agg.length) {
+    const ids = agg.map((r) => r.id);
+    const meta = await env.DB
+      .prepare(`SELECT id, title, cover_image FROM anime_series WHERE id IN (${ids.map(() => '?').join(',')})`)
+      .bind(...ids)
+      .all();
+    const byId = new Map((meta.results || []).map((r) => [Number(r.id), r]));
+    rows = agg
+      .map((r) => {
+        const info = byId.get(r.id);
+        return info ? { id: r.id, title: info.title, cover_image: info.cover_image, watchers: r.watchers, seconds: r.seconds } : null;
+      })
+      .filter(Boolean);
+  } else if (agg) {
+    rows = [];
+  }
+  if (!rows) {
+    const res = await env.DB.prepare(WEEKLY_SQL).all();
+    rows = res.results || [];
+  }
 
   // Cache-ul e o optimizare: dacă scrierea pică, răspunsul rămâne corect.
   try {

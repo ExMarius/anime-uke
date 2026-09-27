@@ -58,6 +58,14 @@ const DAILY_WATCHERS = numArg('daily-watchers', 500);
 const WATCHED_PER_VIEWER = numArg('watched-per-viewer', 12);
 const WATCH_MINUTES = numArg('watch-minutes', 24);
 const HEARTBEAT_SECONDS = 300; // sincron cu page-episode.js și progress.js
+// Unde ajung scrierile de progres în proiecție: `--watch-store d1|shadow|turso`,
+// exact flagul de runtime din src/lib/watch-store.js. În `shadow` D1 plătește
+// în continuare tot (se scrie în ambele); abia `turso` scade cota D1.
+const WATCH_STORE = (() => {
+  const i = argv.indexOf('--watch-store');
+  const v = i === -1 ? 'd1' : String(argv[i + 1] || '').toLowerCase();
+  return ['d1', 'shadow', 'turso'].includes(v) ? v : 'd1';
+})();
 
 // ---------------------------------------------------------------------
 // Pregătirea bazei: migrările reale, apoi date sintetice la scară
@@ -234,6 +242,9 @@ function sqlOf(file, anchor, occurrence = 0) {
     .replace(/\$\{sortSql\(sort\)\}/g, 's.created_at DESC, s.id DESC')
     .replace(/\$\{TOTAL_CAP\}/g, '500')
     .replace(/\$\{minutes\}/g, '60')
+    // Listele de parametri construite dinamic (IN (?,?,…)) se reduc la un
+    // singur parametru: planul e identic, iar „IN ()" n-ar fi SQL valid.
+    .replace(/\$\{[\w.]+\.map\(\(\) => '\?'\)\.join\(','\)\}/g, '?')
     .replace(/\$\{[^}]*\}/g, '');
 }
 
@@ -319,13 +330,22 @@ const Q = [
     //   SEARCH e2 USING COVERING INDEX idx_episodes_series (series_id=? AND episode_number>?)
     // Fără el (sau cu un index doar pe series_id), SQLite ar citi toate
     // episoadele seriei și le-ar sorta — pe One Piece, 1.100 rânduri per card.
-    name: 'PRIMA PAGINĂ: „continuă vizionarea" + următorul episod',
+    name: 'PRIMA PAGINĂ: „continuă vizionarea" — progresul (store)',
+    charge: 'view',
+    file: 'src/lib/watch-store.js',
+    sql: sqlOf('src/lib/watch-store.js', 'SELECT episode_id, seconds, updated_at FROM watch_progress'),
+    params: [1, 8],
+    atMost: true, rows: 8,
+    rowsHow: 'index (user_id, updated_at); cu WATCH_STORE=turso nu atinge D1',
+  },
+  {
+    name: 'PRIMA PAGINĂ: „continuă vizionarea" — metadate + următorul episod',
     charge: 'view',
     file: 'src/routes/api/continue.js',
-    sql: sqlOf('src/routes/api/continue.js', 'SELECT wp.episode_id, wp.seconds, wp.updated_at'),
+    sql: sqlOf('src/routes/api/continue.js', 'SELECT e.id AS episode_id'),
     params: [1],
     atMost: true, rows: 40,
-    rowsHow: 'index (user) + 1 căutare/rând pentru următorul episod',
+    rowsHow: 'chei primare + 1 căutare/rând pentru următorul episod',
   },
   {
     name: 'EPISOD: sursele/legenda episodului',
@@ -356,7 +376,7 @@ const Q = [
     name: 'PROGRES: verificarea episodului (heartbeat)',
     charge: 'view',
     file: 'src/routes/api/progress.js',
-    sql: sqlOf('src/routes/api/progress.js', 'SELECT id FROM episodes WHERE id = ?'),
+    sql: sqlOf('src/routes/api/progress.js', 'SELECT id, series_id FROM episodes WHERE id = ?'),
     params: [1], one: true,
     atMost: true, rows: 1, rowsHow: 'cheie primară',
   },
@@ -473,7 +493,11 @@ const heartbeatWrites = watchedDaily * heartbeatsPerEpisode;
 const completionWrites = watchedDaily * 5;
 const dailyStateWrites = DAILY_WATCHERS * 2;
 const bufferedViewWrites = Math.ceil(watchedDaily / 20);
-const projectedD1Writes = heartbeatWrites + completionWrites + dailyStateWrites + bufferedViewWrites;
+// Heartbeat-urile sunt singura parte care se mută (watch_progress).
+// Recompensele, XP-ul, misiunile și views rămân în D1 prin design.
+const heartbeatWritesD1 = WATCH_STORE === 'turso' ? 0 : heartbeatWrites;
+const heartbeatWritesTurso = WATCH_STORE === 'd1' ? 0 : heartbeatWrites;
+const projectedD1Writes = heartbeatWritesD1 + completionWrites + dailyStateWrites + bufferedViewWrites;
 // HTML SSR + detalii episod + /view, apoi heartbeat-urile. Este deliberat o
 // limită superioară: unele pagini sunt statice și cache-urile reduc traficul.
 const projectedWorkerRequests = DAILY_WATCHERS * 2
@@ -501,10 +525,11 @@ if (!JSON_OUT) {
   console.log(`  ${results.filter((r) => /SCAN/.test(r.scansText)).length} din ${results.length} interogări SCANEAZĂ un tabel întreg.`);
 
   console.log(`\n════════ PROIECȚIE STREAMING — ${fmt(DAILY_WATCHERS)} spectatori × ${fmt(WATCHED_PER_VIEWER)} episoade/zi ════════`);
+  console.log(`  WATCH_STORE = ${WATCH_STORE}${WATCH_STORE === 'shadow' ? ' (dual-write: D1 plătește în continuare)' : ''}`);
   console.log(`  episoade urmărite/zi:                     ${padL(fmt(watchedDaily), 10)}`);
   console.log(`  heartbeat-uri/episod (${WATCH_MINUTES} min, lot ${HEARTBEAT_SECONDS}s): ${padL(fmt(heartbeatsPerEpisode), 10)}`);
   console.log(`  D1 rows_written estimate:                 ${padL(fmt(projectedD1Writes), 10)} / 100.000 (${pct(projectedD1Writes, 100_000)}%)`);
-  console.log(`    progres=${fmt(heartbeatWrites)} · recompense=${fmt(completionWrites)} · stare zilnică=${fmt(dailyStateWrites)} · views buffer=${fmt(bufferedViewWrites)}`);
+  console.log(`    progres D1=${fmt(heartbeatWritesD1)} (Turso=${fmt(heartbeatWritesTurso)}) · recompense=${fmt(completionWrites)} · stare zilnică=${fmt(dailyStateWrites)} · views buffer=${fmt(bufferedViewWrites)}`);
   console.log(`  Worker requests estimate:                 ${padL(fmt(projectedWorkerRequests), 10)} / 100.000 (${pct(projectedWorkerRequests, 100_000)}%)`);
   console.log(`  Durable Object requests estimate:         ${padL(fmt(projectedDoRequests), 10)} / 100.000 (${pct(projectedDoRequests, 100_000)}%)`);
   console.log('  Marja rămasă acoperă poll-uri adaptive, navigare, chat și variația duratei episoadelor.');
@@ -520,6 +545,9 @@ if (JSON_OUT) {
       watchMinutes: WATCH_MINUTES,
       watchedDaily,
       heartbeatsPerEpisode,
+      watchStore: WATCH_STORE,
+      heartbeatWritesD1,
+      heartbeatWritesTurso,
       projectedD1Writes,
       projectedWorkerRequests,
       projectedDoRequests,

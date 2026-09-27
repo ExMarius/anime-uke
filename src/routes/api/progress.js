@@ -5,6 +5,7 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
 import { addRep, bonusFor } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
+import { bumpProgress, watchStoreMode } from '../../lib/watch-store.js';
 
 // =====================================================================
 // POST /api/progress — acumuleaza timp real de vizionare.
@@ -73,20 +74,22 @@ export async function onRequestPost(context) {
   // Rotunjim in sus la cel mult MAX_INCREMENT: un heartbeat onest e 30s.
   const inc = Math.min(Math.ceil(seconds), MAX_INCREMENT);
 
-  const episode = await env.DB.prepare('SELECT id FROM episodes WHERE id = ?').bind(id.value).first();
+  // series_id vine odată cu validarea episodului (aceeași citire pe cheia
+  // primară): în Turso progresul îl stochează denormalizat, ca topul
+  // săptămânal și cuferele să nu aibă nevoie de un JOIN între două baze.
+  const episode = await env.DB.prepare('SELECT id, series_id FROM episodes WHERE id = ?').bind(id.value).first();
   if (!episode) return errorResponse(404, 'Episodul nu există');
 
   try {
-    const up = await env.DB
-      .prepare(
-        `INSERT INTO watch_progress (user_id, episode_id, seconds)
-         VALUES (?, ?, ?)
-         ON CONFLICT(user_id, episode_id)
-         DO UPDATE SET seconds = seconds + ?, updated_at = datetime('now')
-         RETURNING seconds`
-      )
-      .bind(user.id, id.value, inc, inc)
-      .first();
+    // Unde se scrie progresul (D1 / shadow / Turso) decide watch-store.js,
+    // prin WATCH_STORE. Recompensele de mai jos rămân în D1 indiferent de
+    // mod: `watched_history` + puncte trebuie să fie atomice în aceeași bază.
+    const up = await bumpProgress(env, {
+      userId: user.id,
+      episodeId: id.value,
+      seriesId: Number(episode.series_id) || 0,
+      inc,
+    });
 
     const total = Number(up?.seconds) || inc;
     const alreadyWatched = total - inc >= WATCH_THRESHOLD_SECONDS;
@@ -139,6 +142,13 @@ export async function onRequestPost(context) {
       watched: total >= WATCH_THRESHOLD_SECONDS,
       pointsAdded,
       points,
+      // Diagnostic onest, nu decor: clientul (și canarul de pe live) văd din
+      // ce bază a venit totalul și dacă a fost nevoie de fallback.
+      store: up.source,
+      ...(up.fallback ? { fallback: true } : {}),
+      ...(watchStoreMode(env) === 'shadow' && up.shadow
+        ? { shadowDelta: up.shadow.delta }
+        : {}),
     });
   } catch (e) {
     console.error('POST /api/progress esuat:', e?.message || e);

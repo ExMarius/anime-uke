@@ -2,6 +2,7 @@
 # Ruleaza toate suitele locale pe baze de date curate.
 #
 #   ./test.sh          scripts-health + greutate + poll-buget + watch-budget +
+#                      watch-store +
 #                      pulse-online + turso-messages + e2e + dom-smoke (+ build) +
 #                      theme-cache + top-cache +
 #                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
@@ -176,6 +177,15 @@ if [ "$WATCH_BUDGET_RC" -ne 0 ]; then
   cat /tmp/watch-budget.log
 fi
 
+echo "════════ watch-store (WATCH_STORE d1/shadow/turso, fara retea) ════════"
+node tests/watch-store.mjs > /tmp/watch-store.log 2>&1
+WATCH_STORE_RC=$?
+tail -4 /tmp/watch-store.log
+if [ "$WATCH_STORE_RC" -ne 0 ]; then
+  echo "!! watch-store a picat:"
+  cat /tmp/watch-store.log
+fi
+
 echo "════════ pulse-online (cache contor online, fara server) ════════"
 node tests/pulse-online.mjs > /tmp/pulseonline.log 2>&1
 PULSE_RC=$?
@@ -205,6 +215,7 @@ RC=0
 [ "${GREUTATE_RC:-0}" -eq 0 ] || RC=1
 [ "${POLL_RC:-0}" -eq 0 ] || RC=1
 [ "${WATCH_BUDGET_RC:-0}" -eq 0 ] || RC=1
+[ "${WATCH_STORE_RC:-0}" -eq 0 ] || RC=1
 [ "${PULSE_RC:-0}" -eq 0 ] || RC=1
 [ "${TURSO_RC:-0}" -eq 0 ] || RC=1
 echo

@@ -58,12 +58,13 @@ src/
 └── lib/                    session, auth, rankuri, validare, notificări + turso/private-messages
 worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
 migrations/                 schema D1 = suma migrărilor 0001…0030 (NU există alt schema.sql)
-turso/migrations/           schema separată pentru conținutul mesajelor private
+turso/migrations/           schemă separată Turso: 0001 mesaje private · 0002 watch_progress + jurnal
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
 ├── audit-live.mjs          audit read-only al sitului (pagini, SEO, securitate, API, CSRF, rate limit, assete)
 ├── usage.mjs               „cât din cota gratuită am consumat azi" (GraphQL Analytics, read-only)
 ├── bench-scale.mjs         „duce 1000 de serii / 1000 de useri?" — rândurile citite de fiecare interogare
+├── watch-turso.mjs         backfill / comparație D1↔Turso / raport incidente pentru watch_progress
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
@@ -403,7 +404,8 @@ node scripts/bench-scale.mjs --daily-watchers 500 --watched-per-viewer 12 --watc
 ```
 
 La 500 de spectatori × 12 episoade de 24 minute, proiecția conservatoare este aproximativ
-**61.300 rows_written D1 (61%)**, **49.000 invocări Worker (49%)** și **42.000 request-uri
+**61.300 rows_written D1 (61%)** cu `WATCH_STORE=d1` — respectiv **31.300 (31%)** după
+mutarea progresului în Turso (vezi „Progresul de vizionare în Turso” mai jos), **49.000 invocări Worker (49%)** și **42.000 request-uri
 Durable Objects (42%)** pe zi. Rămâne o marjă de circa 39% pentru poll-urile adaptive,
 navigare, chat și variația duratei. Nu este capacitate infinită: dacă durata medie, numărul
 de spectatori sau activitatea socială cresc mult peste ipoteză, `npm run usage` este
@@ -452,6 +454,67 @@ Când traficul crește, în ordinea în care merită atinse:
    se redeploya din repo.
 
 ---
+
+### Progresul de vizionare în Turso (etapizat, reversibil) — 2026-09-27
+
+`watch_progress` era jumătate din bugetul de scrieri D1: la 500 spectatori × 12
+episoade × 24 minute, heartbeat-urile (unul la 5 minute) înseamnă **30.000 din
+cele ~61.300 rows_written/zi**. Progresul e un CONTOR monoton, nu o tranzacție
+de bani — deci e exact partea care se poate muta. A fost mutată în baza Turso
+gratuită existentă (`anime-uke-messages`, aceleași credențiale, **niciun
+serviciu nou, niciun card**).
+
+| Ce | Unde stă | De ce |
+|---|---|---|
+| `watch_progress` (secunde acumulate) | **Turso** (etapa 3) | scriere deasă, contor monoton, fuziune sigură cu MAX() |
+| `watched_history`, `users.points`, XP, gold, misiuni, streak | **D1** | recompensa „exact o dată” = `INSERT OR IGNORE` + `meta.changes` în aceeași bază cu punctele |
+| catalog, serii, episoade, comentarii, prietenii | **D1** | sursa de adevăr a conținutului |
+
+**Comutatorul: `WATCH_STORE`** (variabilă Pages; implicit `d1`).
+
+| Valoare | Comportament | D1 rows_written/zi (proiecție) |
+|---|---|---|
+| `d1` | ca înainte; Turso nu e atins deloc | **61.300** |
+| `shadow` | dual-write; **D1 rămâne sursa oficială**, Turso e umbra verificată, orice delta se jurnalizează | 61.300 (neschimbat, plus scrieri Turso) |
+| `turso` | Turso e sursa oficială; la eroare/timeout → fallback pe D1, incident jurnalizat | **31.300** |
+
+Cifrele se reproduc cu:
+
+```bash
+node scripts/bench-scale.mjs --daily-watchers 500 --watched-per-viewer 12 --watch-minutes 24 --watch-store turso
+```
+
+**Rollback instant:** `WATCH_STORE=d1` (redeploy prin relay sau valoarea din
+dashboard). Nu se dă nicio migrare înapoi și **nu se șterge niciun rând**:
+rândurile vechi din D1 rămân pe loc. Ștergerea/compactarea este o **etapă
+separată**, după o perioadă de verificare.
+
+**Fallback ≠ ascuns.** Fiecare timeout, eșec de scriere/citire și fiecare
+divergență shadow se scriu în `watch_store_audit` (în Turso, ca observabilitatea
+să nu mănânce cota pe care o economisim) și se numără per-izolat
+(`watchStoreStats()`). Se citesc cu `node scripts/watch-turso.mjs report`.
+Scrierile **nu** se reîncearcă (un increment reîncercat ar inventa timp de
+vizionare); citirile se reîncearcă o dată.
+
+**Ordinea de lucru pe producție** (fiecare pas verificabil, fiecare reversibil):
+
+```bash
+# 1. migrare Turso 0002 (o aplică deploy.sh, nu modifică 0001) + deploy cu WATCH_STORE=d1
+# 2. shadow: dual-write, D1 oficial
+WATCH_STORE=shadow ./deploy.sh        # face și backfill + compare
+node scripts/watch-turso.mjs compare /tmp/watch-progress-d1.json --tolerance 300
+node scripts/watch-turso.mjs report   # zero divergențe timp de câteva zile?
+# 3. cutover
+WATCH_STORE=turso ./deploy.sh
+node scripts/watch-turso.mjs count    # verificare directă în Turso
+# rollback oricând: WATCH_STORE=d1 ./deploy.sh
+```
+
+Teste: `tests/watch-store.mjs` (73 de verificări pe SQLite real, fără rețea:
+retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
+„Continuă vizionarea”, comparația D1/Turso) și `tests/watch-budget.mjs`
+(proiecția 61.300 → 31.300 și faptul că `WATCH_STORE` are implicit `d1`).
+
 
 ## Securitate
 

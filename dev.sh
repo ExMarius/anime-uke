@@ -85,6 +85,10 @@ BIND=()
 # lipsește, deci pulse.js ține contorul 60 s (o cerere DO pe minut per izolat,
 # nu una pe fiecare /api/pulse). Testul de regresie „online ≥ 1” are nevoie de 0.
 BIND+=(--binding "ONLINE_CACHE_MS=${ONLINE_CACHE_MS:-0}")
+# Unde se scrie progresul de vizionare: d1 (implicit) | shadow | turso.
+# Local rămâne d1 dacă nu ai credențiale Turso în .dev.vars — watch-store.js
+# cade oricum pe D1 fără ele.
+BIND+=(--binding "WATCH_STORE=${WATCH_STORE:-d1}")
 $W pages dev --port="$PORT" --ip=0.0.0.0 ${BIND[@]+"${BIND[@]}"}
 RC=$?
 set -e

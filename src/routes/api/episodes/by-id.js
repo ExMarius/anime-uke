@@ -2,6 +2,7 @@ import { json, errorResponse } from '../../../lib/http.js';
 import { WATCH_THRESHOLD_SECONDS } from '../progress.js';
 import { validatePositiveInt } from '../../../lib/validate.js';
 import { getSessionUser } from '../../../lib/session.js';
+import { episodeSeconds } from '../../../lib/watch-store.js';
 
 // =====================================================================
 // GET /api/episodes/:id — episodul + seria lui (pentru breadcrumb) +
@@ -60,14 +61,15 @@ export async function onRequestGet(context) {
       // Ambele citiri sunt indexate pe (user_id, episode_id) si vin
       // intr-un singur batch: istoricul „vizionat" si secundele acumulate,
       // ca bara de progres sa porneasca de unde a ramas utilizatorul.
-      const [wRes, pRes] = await env.DB.batch([
+      // `watched_history` rămâne în D1 (recompensa exact-once), progresul
+      // vine din store — în modul d1/shadow tot din D1, deci același cost.
+      const [wRes, seconds] = await Promise.all([
         env.DB.prepare('SELECT id FROM watched_history WHERE user_id = ? AND episode_id = ?')
-          .bind(user.id, id.value),
-        env.DB.prepare('SELECT seconds FROM watch_progress WHERE user_id = ? AND episode_id = ?')
-          .bind(user.id, id.value),
+          .bind(user.id, id.value).all(),
+        episodeSeconds(env, user.id, id.value),
       ]);
       watched = (wRes.results || []).length > 0;
-      progressSeconds = Number(pRes.results?.[0]?.seconds) || 0;
+      progressSeconds = Number(seconds) || 0;
     }
 
     return json({

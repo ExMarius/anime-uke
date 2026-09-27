@@ -18,6 +18,7 @@
 import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { validatePositiveInt } from '../../lib/validate.js';
 import { requireUser } from '../../lib/session.js';
+import { seriesSeconds } from '../../lib/watch-store.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 
 // Praguri in secunde de vizionare acumulata pe serie si punctele aferente.
@@ -61,16 +62,9 @@ const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 /** Secunde acumulate de un utilizator pe o serie, din watch_progress. */
 async function seriesWatchSeconds(env, userId, seriesId) {
-  const row = await env.DB
-    .prepare(
-      `SELECT COALESCE(SUM(wp.seconds), 0) AS total
-       FROM watch_progress wp
-       JOIN episodes e ON e.id = wp.episode_id
-       WHERE wp.user_id = ? AND e.series_id = ?`
-    )
-    .bind(userId, seriesId)
-    .first();
-  return Number(row?.total || 0);
+  // În modul `turso` suma vine din indexul (user_id, series_id) al Turso,
+  // fără JOIN între baze; în d1/shadow rămâne JOIN-ul istoric pe episodes.
+  return seriesSeconds(env, userId, seriesId);
 }
 
 async function claimedTiers(env, userId, seriesId) {
