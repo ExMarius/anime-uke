@@ -192,7 +192,7 @@ DO 100k req/zi. Depășirea cotelor D1 produce eșec hard până la 00:00 UTC, d
 ### Optimizări de buget (toate deliberate, nu accidentale)
 
 0. **Assetele si paginile publice statice NU trec prin worker.** `public/_routes.json`
-   scoate `/assets/*`, `/`, `/login`, `/register`, `/episode`, `/favicon.ico`,
+   scoate `/assets/*`, `/`, `/login`, `/register`, `/reset-password`, `/episode`, `/favicon.ico`,
    `/apple-touch-icon.png`, `/robots.txt`, `/llms.txt`, `/speculationrules.json` de sub
    Pages Functions: fiecare cerere care ajunge în worker consumă o invocare din cota
    gratuită de 100.000/zi, iar un vizitator face 1 pagină + ~6 assete + 2-3 cereri de API.
@@ -537,6 +537,7 @@ retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
 | Parole | **PBKDF2-SHA256, 20.000 iterații**, salt aleator de 16 octeți per utilizator. Măsurat: ~4.45 ms CPU, deci încadrează în limita de 10 ms a planului gratuit. SHA-256 simplu ar fi fost spart instant pe GPU. |
 | Comparație hash | în timp constant (`timingSafeEqual`) |
 | Enumerare conturi | login-ul face un hash „de umplutură" și când userul nu există, deci timpii de răspuns sunt identici; mesajul de eroare e același |
+| Recuperare parolă | solicitarea publică răspunde mereu `202` cu același text (nu devine oracle de email); stafful verifică identitatea, emite manual un cod aleator de 128 biți, iar D1 păstrează numai PBKDF2+salt. Codul expiră în 30 min, se consumă o singură dată într-un batch atomic împreună cu parola și rotește `auth_version`, deci închide toate sesiunile vechi. |
 | Sesiune | JWT HS256 cu `exp` (7 zile), în cookie `HttpOnly; Secure; SameSite=Lax; Path=/` |
 | CSRF | `SameSite=Lax` + verificare explicită a header-ului `Origin` pe toate cererile care modifică date |
 | XSS | **CSP cu `script-src` strict, fără `unsafe-inline`** — tot JS-ul e în fișiere externe, zero handlere inline. (`style-src` are `unsafe-inline` deliberat: snippet A-Ads + pagina 404 din worker; stilurile nu execută JS.) Randarea folosește `textContent`/`createElement`, niciodată `innerHTML` cu date de la utilizator. |
@@ -559,12 +560,12 @@ retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
 | Zonă | Rute | Acces |
 |---|---|---|
 | Catalog | `GET /api/series`, `/api/series/:id`, `/api/episodes/:id`, `/api/genres`, `/api/recent`, `/api/top`, `/api/subtitle` | public |
-| Cont | `POST /api/auth/register|login|logout`, `GET /api/auth/me`, `GET /api/auth/register-options` | public |
+| Cont | `POST /api/auth/register|login|logout|password-reset|password-reset/confirm`, `GET /api/auth/me`, `GET /api/auth/register-options` | public |
 | Vizionare | `POST /api/view`, `POST /api/progress`, `GET /api/continue`, `/api/watchlist`, `POST /api/subscribe` | logat |
 | Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse`, `/api/friends`, `GET/POST /api/messages` | logat / public |
 | Economie | `GET /api/economy`, `/api/chest`, `/api/chests`, `/api/missions`, `GET /api/shop`, `POST /api/shop/buy|activate`, `/api/factions` | logat |
 | Identitate | `GET /api/ranks`, `POST /api/me/theme`, `GET /api/profile/:username`, `PATCH /api/profile`, `/api/notifications*` | logat |
-| Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|mods|rank-themes|reports` | admin |
+| Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|password-resets|mods|rank-themes|reports` | admin |
 | Chat | `WS /chat` → `ChatDO` (`chat` global + `dm` privat între prieteni) | logat |
 
 ---
@@ -574,7 +575,7 @@ retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
   `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
   `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
-  Numărul de verificări: scripts-health 50 · e2e 614 · dom-smoke 214 (210 pe build) · chat-persist 14 · chat-d1 8 · counters 16
+  Numărul de verificări: scripts-health 59 · e2e 636 · dom-smoke 223 (219 pe build) · chat-persist 14 · chat-d1 8 · counters 16
   · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
 - **CI**: `.github/workflows/tests.yml` rulează `./test.sh` la fiecare push (fără secrete, fără
   deploy) și publică logurile ca artefacte; relay-ul rămâne pentru publicare + audit live.

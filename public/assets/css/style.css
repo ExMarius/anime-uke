@@ -404,6 +404,8 @@ img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
 .field { margin-bottom: 1rem; }
 .field > label { display: block; margin-bottom: .4rem; font-size: .82rem; font-weight: 700; color: var(--dim); letter-spacing: -.01em; }
 .hint { margin: .35rem 0 0; font-size: .76rem; color: var(--dim-2); line-height: 1.45; }
+.hint--ok { color: var(--ok); }
+.hint--err { color: var(--accent-hi); }
 
 .input, .select, .textarea {
   width: 100%; padding: .74rem .9rem;
@@ -435,6 +437,8 @@ img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
 .auth-alt a { color: var(--accent-hi); font-weight: 750; }
 .auth-alt a:hover { text-decoration: underline; }
 .auth-back { margin-top: .9rem; text-align: center; }
+.auth-divider { display: flex; align-items: center; gap: .7rem; margin: 1.35rem 0; color: var(--dim-2); }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line-soft); }
 
 /* ============================ TOAST ============================ */
 .toast-wrap { position: fixed; z-index: 100002; bottom: 1.2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .55rem; width: min(430px, calc(100% - 2rem)); pointer-events: none; }

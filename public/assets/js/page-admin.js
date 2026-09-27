@@ -35,6 +35,7 @@ async function guard() {
 const LOADERS = {
   stats: loadStats,
   users: loadUsers,
+  'password-resets': loadPasswordResets,
   sezon: loadSeason,
   ranks: loadRanks,
   reports: loadReports,
@@ -313,6 +314,131 @@ async function applyEcon(u, action, value, okMsg) {
   editorUserId = u.id; // ramane deschis dupa reincarcarea listei
   loadUsers();
   loadStats();
+}
+
+// ---------------------------------------------------------------------
+// RECUPERĂRI DE PAROLĂ — coadă asistată, fără vendor de e-mail.
+// Codul nu se păstrează în DOM după reîncărcare: apare exclusiv în răspunsul
+// POST care l-a emis. Astfel nici o listare ulterioară de admin nu poate
+// expune coduri de recuperare vechi.
+function resetDate(seconds) {
+  const n = Number(seconds || 0);
+  if (!n) return '—';
+  return new Date(n * 1000).toLocaleString('ro-RO', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function resetStatus(status, expired) {
+  if (status === 'pending') return 'În așteptare';
+  if (status === 'issued' && expired) return 'Expirat';
+  if (status === 'issued') return 'Cod emis';
+  return status || '—';
+}
+
+function resetCodeCard(request, recoveryCode, expiresAt) {
+  const card = document.createElement('div');
+  card.className = 'reset-code';
+  const lead = document.createElement('strong');
+  lead.textContent = 'Trimite acum la emailul verificat al membrului:';
+  const detail = document.createElement('p');
+  detail.className = 'hint';
+  detail.textContent = `Solicitarea #${request.id} · codul expiră ${resetDate(expiresAt)}.`;
+  const code = document.createElement('code');
+  code.className = 'reset-code__value';
+  code.textContent = recoveryCode;
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'btn btn--ghost btn--sm';
+  copy.textContent = 'Copiază detaliile';
+  copy.addEventListener('click', async () => {
+    const text = `Solicitarea #${request.id}\nCod de recuperare: ${recoveryCode}`;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard indisponibil');
+      await navigator.clipboard.writeText(text);
+      toast('Numărul solicitării și codul au fost copiate.', 'ok');
+    } catch {
+      toast(`Solicitarea #${request.id} · cod: ${recoveryCode}`, 'info', 9000);
+    }
+  });
+  card.append(lead, detail, code, copy);
+  return card;
+}
+
+async function loadPasswordResets() {
+  const box = document.getElementById('password-reset-list');
+  if (!box) return;
+  const res = await api('/admin/password-resets');
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca solicitările.'; return; }
+  const requests = res.data?.requests || [];
+  box.innerHTML = '';
+  if (!requests.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'Nicio solicitare activă. Cererile noi vor apărea aici.';
+    box.appendChild(empty);
+    return;
+  }
+
+  for (const request of requests) {
+    const row = document.createElement('article');
+    row.className = 'reset-request' + (request.status === 'pending' ? ' reset-request--pending' : '');
+    const main = document.createElement('div');
+    main.className = 'reset-request__main';
+    const name = document.createElement('strong');
+    name.textContent = request.username;
+    const email = document.createElement('span');
+    email.className = 'reset-request__email';
+    email.textContent = request.email;
+    const meta = document.createElement('span');
+    meta.className = 'hint';
+    const details = [
+      `cererea #${request.id}`,
+      `solicitată ${resetDate(request.requested_at)}`,
+    ];
+    if (request.status === 'issued') details.push(`${request.expired ? 'expirat' : 'expiră'} ${resetDate(request.expires_at)}`);
+    meta.textContent = details.join(' · ');
+    main.append(name, email, meta);
+
+    const actions = document.createElement('div');
+    actions.className = 'reset-request__actions';
+    const status = document.createElement('span');
+    status.className = `pill ${request.status === 'pending' ? 'pill--staff' : request.expired ? 'pill--banned' : 'pill--user'}`;
+    status.textContent = resetStatus(request.status, request.expired);
+    actions.appendChild(status);
+
+    if (request.status === 'pending') {
+      const issue = document.createElement('button');
+      issue.type = 'button';
+      issue.className = 'btn btn--accent btn--sm';
+      issue.textContent = 'Emite cod';
+      issue.addEventListener('click', () => withBusy(issue, async () => {
+        if (!confirm(`Ai verificat că ${request.username} controlează adresa ${request.email}? Codul va fi afișat o singură dată.`)) return;
+        const result = await api('/admin/password-resets', { method: 'POST', body: { action: 'issue', id: request.id } });
+        if (!result.ok) { toast(result.data?.error || 'Nu am putut emite codul.', 'err'); return; }
+        status.textContent = 'Cod emis';
+        status.className = 'pill pill--user';
+        issue.remove();
+        row.appendChild(resetCodeCard(result.data.request, result.data.recovery_code, result.data.expires_at));
+        toast('Cod emis — copiază-l și trimite-l în siguranță.', 'ok', 7000);
+      }));
+      actions.appendChild(issue);
+    }
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn btn--ghost btn--sm';
+    cancel.textContent = request.status === 'pending' ? 'Respinge' : 'Anulează';
+    cancel.addEventListener('click', () => withBusy(cancel, async () => {
+      if (!confirm(`Anulezi solicitarea #${request.id} pentru ${request.username}?`)) return;
+      const result = await api('/admin/password-resets', { method: 'POST', body: { action: 'cancel', id: request.id } });
+      if (!result.ok) { toast(result.data?.error || 'Nu am putut anula solicitarea.', 'err'); return; }
+      toast('Solicitare anulată.', 'ok');
+      loadPasswordResets();
+    }));
+    actions.appendChild(cancel);
+
+    row.append(main, actions);
+    box.appendChild(row);
+  }
 }
 
 // ---------------------------------------------------------------------
