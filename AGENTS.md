@@ -569,3 +569,23 @@ zgomotos în loc să raporteze cifre pentru altceva.
    `chmod +x *.sh` după restore-uri de sandbox; snapshot < 128 MB / 10k fișiere.
 8. **Gate public:** catalogul public e decizia curentă (SEO/GSC). Zonele personale
    (profile, admin, chat, PM) rămân strict în spatele login-ului.
+
+---
+
+## Setup pentru o sesiune/agent NOU (copy-paste, ~2 minute)
+
+```bash
+git clone https://github.com/ExMarius/anime-uke.git && cd anime-uke
+# Node >= 22 OBLIGATORIU (suitele de teste folosesc node:sqlite).
+# Daca sistemul are Node 20: instaleaza Node 24 in ~/.cache/node24 si pune-l
+# in fata la PATH: export PATH=$HOME/.cache/node24/bin:$PATH
+npm install --no-audit --no-fund && chmod +x *.sh
+./test.sh          # TOATE suitele verzi inainte de a modifica orice
+```
+
+Secretele NU sunt in repo (nici nu trebuie sa fie): token Cloudflare + account ID
+pentru `./deploy.sh`, token GitHub pentru push. Le cere proprietarului la pornire.
+Dupa deploy/teste: `rm -rf .wrangler /home/user/.config/.wrangler`.
+
+Producția = `main` intotdeauna; deploy DOAR prin `./deploy.sh`; push DIRECT in
+main, fara PR. Prima lectura obligatorie: acest fisier + `README.md`.
