@@ -22,7 +22,7 @@ public/                     assete statice + entrypoint
 ├── episode.html            player + surse + comentarii
 ├── profile.html            profil public / propriu, economie, facțiune, cufăr
 ├── shop.html               shop de cosmetice (gold)
-├── login.html, register.html
+├── login.html, register.html, reset-password.html
 ├── admin.html              panou admin: Statistici · Utilizatori · Grade · Raportări · Jurnal
 ├── admin/serii.html        admin: lista seriilor
 ├── admin/serie.html        admin: o serie + episoadele + sursele ei  (/admin/serie/<id>)
@@ -57,7 +57,7 @@ src/
 ├── do/                     Durable Objects: ChatDO, RateLimitDO, StatsDO
 └── lib/                    session, auth, rankuri, validare, notificări + turso/private-messages
 worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
-migrations/                 schema D1 = suma migrărilor 0001…0030 (NU există alt schema.sql)
+migrations/                 schema D1 = suma migrărilor 0001…0032 (NU există alt schema.sql)
 turso/migrations/           schemă separată Turso: 0001 mesaje private · 0002 watch_progress + jurnal
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)

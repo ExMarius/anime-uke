@@ -13,8 +13,8 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
-  pulse-online 17 · e2e 614 · dom 214 / 210 pe build · theme-cache 7 · top-cache 17 ·
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 59 · poll-buget 22 ·
+  pulse-online 17 · e2e 636 · dom 223 / 219 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
@@ -40,7 +40,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0031**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0033**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -161,6 +161,28 @@ cat cf-relay/last-output.txt
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
 
+### Autentificare: schimbare și recuperare asistată a parolei (2026-09-27, PR #25)
+
+Două pachete din aceeași ramură au întărit fluxurile de parolă:
+
+- `POST /api/auth/password` cere parola actuală înaintea schimbării și rotește
+  `users.auth_version`, invalidând toate sesiunile JWT vechi.
+- Recuperarea nu folosește linkuri/tokenuri publice și nu există furnizor de
+  email: `/reset-password` trimite `POST /api/auth/password-reset`, care răspunde
+  identic cu `202` pentru cont existent sau inexistent (3 cereri/oră/IP). Adminul
+  verifică manual identitatea în tabul **Recuperări**, emite sau anulează cererea
+  și comunică manual numărul cererii + codul la emailul deja asociat contului.
+- Migrarea **0032** adaugă `password_reset_requests`; există cel mult o cerere
+  activă per utilizator. Codul este aleator de 128 biți, este returnat numai la
+  emitere, se păstrează exclusiv ca PBKDF2+salt, expiră în 30 minute și se
+  șterge din rând imediat după consum. Confirmarea face un batch D1 condiționat
+  de `claim_nonce`: consumul codului, parola nouă și `auth_version` sunt legate
+  atomic, inclusiv la două submit-uri paralele.
+- Rutele publice sunt în `PUBLIC_API`, pagina este în `PUBLIC_PAGES`,
+  `STATIC_PAGES` și `_routes.json`; când schimbi una dintre aceste allowlist-uri,
+  păstrează-le sincronizate. API/E2E + DOM acoperă anti-enumerarea, anularea,
+  unică folosință, invalidarea sesiunii, CSRF și UI-ul admin/public.
+
 ### Pregătire lansare publică: conexiuni Pages + observabilitate (2026-09-26, branch `arena/01a0dd39-anime-uke`)
 
 - **Git integration Pages reparată:** buildurile preview eșuau înainte de cod cu
@@ -177,7 +199,7 @@ cat cf-relay/last-output.txt
   prietenie și auditul), ca să nu fie pierdute prin trunchiere.
 - **CI:** diagnosticul de eșec nu mai marchează drept erori cozile tuturor logurilor
   verzi; expune doar ultima probă negativă/excepție prin API. Suitele complete locale
-  au trecut: scripts-health 50 · greutate în buget · e2e 614 · dom 214/210 · restul
+  au trecut: scripts-health 59 · greutate în buget · e2e 636 · dom 223/219 · restul
   suitei verzi. `npm audit` nu raportează vulnerabilități.
 
 ### Prietenie: notificări la cerere și acceptare (2026-09-25, branch `arena/01a0da3a-anime-uke`)
@@ -238,7 +260,7 @@ este în `src/lib/private-messages.js`, `src/lib/turso.js`,
   Workerul `anime-uke-do` scrie DM-ul. Relay-ul validează direct mesajul canar
   în Turso și îl curăță înainte să șteargă conturile temporare.
 
-Următoarea migrare D1 este **0031**; nu modifica 0030. Migrarea Turso 0002
+Următoarea migrare D1 este **0033**; nu modifica migrările deja aplicate. Migrarea Turso 0002
 (progres de vizionare) e descrisă mai jos; următoarea liberă e **0003**.
 
 ### Progresul de vizionare mutat în Turso, în etape (2026-09-27) — LIVE pe `turso`
@@ -311,7 +333,7 @@ trial. Implementarea: `src/lib/watch-store.js`,
   (nereferit nicăieri; `logo.png` rămâne pentru `og:image`, `logo-icon.webp`
   pentru nav) au fost șterse.
 
-Următoarea migrare D1 este **0031**. Următoarea migrare Turso este **0003**;
+Următoarea migrare D1 este **0033**. Următoarea migrare Turso este **0003**;
 nu modifica 0001/0002 după deploy.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
@@ -354,7 +376,7 @@ inclusiv pe tab ascuns, plus un request ChatDO la fiecare `/api/pulse`. Acum:
 - Branch-urile vechi `arena/*` de pe remote au fost șterse (toate erau deja
   în `main`). Pe remote rămâne doar `main` + branch-ul sesiunii curente.
 
-Următoarea migrare, dacă e nevoie de schemă, e **0031** (ultima definită e 0030).
+Următoarea migrare, dacă e nevoie de schemă, e **0033** (ultima definită e 0032).
 Nu edita o migrare deja aplicată.
 
 
