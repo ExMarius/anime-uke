@@ -27,6 +27,12 @@ on:
         description: 'Comanda bash (suprascrie cf-relay/cmd.sh daca e nevida)'
         required: false
         default: ''
+      watch_store:
+        description: 'Etapa progresului de vizionare: d1 | shadow | turso'
+        required: false
+        default: ''
+        type: choice
+        options: ['', 'd1', 'shadow', 'turso']
   push:
     branches:
       - '**'
@@ -115,7 +121,8 @@ jobs:
           # Etapa de mutare a progresului de vizionare (src/lib/watch-store.js).
           # Se schimbă din Settings → Variables → Actions, FĂRĂ deploy de cod:
           #   d1 (implicit, rollback instant) | shadow (dual-write) | turso.
-          WATCH_STORE: ${{ vars.WATCH_STORE || 'd1' }}
+          # Prioritate: inputul manual al rularii > variabila de repo > d1.
+          WATCH_STORE: ${{ github.event.inputs.watch_store || vars.WATCH_STORE || 'd1' }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
           GH_TOKEN: ${{ github.token }}
         run: |
