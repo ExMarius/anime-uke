@@ -14,7 +14,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
 - **Stare:** stabil, curat, toate testele verzi (scripts-health 59 · poll-buget 22 ·
-  pulse-online 17 · e2e 637 · dom 224 / 220 pe build · theme-cache 7 · top-cache 17 ·
+  pulse-online 17 · e2e 639 · dom 225 / 221 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
@@ -40,7 +40,7 @@ npm test                          # ./test.sh — bază curată, ~1 min; loguri 
 ## 2. Ciclul de lucru care funcționează
 
 1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0033**). Niciodată nu edita o migrare aplicată.
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0034**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
 4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
 5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
@@ -183,6 +183,16 @@ Două pachete din aceeași ramură au întărit fluxurile de parolă:
   păstrează-le sincronizate. API/E2E + DOM acoperă anti-enumerarea, anularea,
   unică folosință, invalidarea sesiunii, CSRF și UI-ul admin/public.
 
+### Profil: „Ultima vizionare” privată (2026-09-27, PR #25)
+
+Profilul propriu are acum în **Acces rapid** o legătură către ultimul episod
+marcat ca vizionat. Migrarea **0033** adaugă indexul
+`watched_history(user_id, watched_at DESC, id DESC)`, astfel că ORDER BY + LIMIT
+nu sortează istoricul unui membru. `stats.last_watched` este returnat exclusiv
+când `is_self`; profilurile altor membri păstrează agregatele publice, dar au
+`last_watched: null`. E2E verifică atât linkul propriu, cât și lipsa scurgerii,
+iar DOM verifică linkul afișat.
+
 ### Episod: creditul echipei în player (2026-09-27, PR #25)
 
 Câmpul `anime_series.team` (deja editabil în admin și vizibil în fișa seriei)
@@ -268,7 +278,7 @@ este în `src/lib/private-messages.js`, `src/lib/turso.js`,
   Workerul `anime-uke-do` scrie DM-ul. Relay-ul validează direct mesajul canar
   în Turso și îl curăță înainte să șteargă conturile temporare.
 
-Următoarea migrare D1 este **0033**; nu modifica migrările deja aplicate. Migrarea Turso 0002
+Următoarea migrare D1 este **0034**; nu modifica migrările deja aplicate. Migrarea Turso 0002
 (progres de vizionare) e descrisă mai jos; următoarea liberă e **0003**.
 
 ### Progresul de vizionare mutat în Turso, în etape (2026-09-27) — LIVE pe `turso`
@@ -341,7 +351,7 @@ trial. Implementarea: `src/lib/watch-store.js`,
   (nereferit nicăieri; `logo.png` rămâne pentru `og:image`, `logo-icon.webp`
   pentru nav) au fost șterse.
 
-Următoarea migrare D1 este **0033**. Următoarea migrare Turso este **0003**;
+Următoarea migrare D1 este **0034**. Următoarea migrare Turso este **0003**;
 nu modifica 0001/0002 după deploy.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
@@ -384,7 +394,7 @@ inclusiv pe tab ascuns, plus un request ChatDO la fiecare `/api/pulse`. Acum:
 - Branch-urile vechi `arena/*` de pe remote au fost șterse (toate erau deja
   în `main`). Pe remote rămâne doar `main` + branch-ul sesiunii curente.
 
-Următoarea migrare, dacă e nevoie de schemă, e **0033** (ultima definită e 0032).
+Următoarea migrare, dacă e nevoie de schemă, e **0034** (ultima definită e 0033).
 Nu edita o migrare deja aplicată.
 
 
@@ -562,10 +572,10 @@ zgomotos în loc să raporteze cifre pentru altceva.
   care nu-l mai vede.
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
-- Din referința „exemplu" (un site similar): buton „mulțumesc", link „Ultima vizionare", panou notificări extins,
-  avatar picker, sondaj săptămânal, „Seria săptămânii", „Episoade anunțate", cei mai activi per rol,
-  Hall of fame, mesaje private/blocare în lista online. „Gând" există deja ca `motto` în profil, iar
-  creditul de echipă apare în metadatele episodului.
+- Din referința „exemplu" (un site similar): buton „mulțumesc", panou notificări extins, avatar picker,
+  sondaj săptămânal, „Seria săptămânii", „Episoade anunțate", cei mai activi per rol, Hall of fame,
+  mesaje private/blocare în lista online. „Gând" există deja ca `motto` în profil, creditul de echipă
+  apare în metadatele episodului, iar „Ultima vizionare” este acum legătură privată pe profilul propriu.
 
 ## 8. Reguli de la proprietar
 

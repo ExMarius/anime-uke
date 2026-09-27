@@ -563,7 +563,7 @@ retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
 - `./test.sh` (= `npm test`): pornește `dev.sh` pe o bază curată și rulează `tests/scripts-health.mjs`,
   `tests/e2e.mjs`, `tests/dom-smoke.mjs`, suitele fără server (`theme-cache`, `top-cache`, `chat-persist`,
   `counters`), `chat-d1` (citește fișierul SQLite al D1-ului local), `theme-flow`, `pixel-teme` și `tests/caps-e2e.mjs`.
-  Numărul de verificări: scripts-health 59 · e2e 637 · dom-smoke 224 (220 pe build) · chat-persist 14 · chat-d1 8 · counters 16
+  Numărul de verificări: scripts-health 59 · e2e 639 · dom-smoke 225 (221 pe build) · chat-persist 14 · chat-d1 8 · counters 16
   · theme-cache 7 · top-cache 17 · pixel-teme 8 · plafoane 13. Logurile: `/tmp/e2e.log`, `/tmp/dom.log`.
 - **CI**: `.github/workflows/tests.yml` rulează `./test.sh` la fiecare push (fără secrete, fără
   deploy) și publică logurile ca artefacte; relay-ul rămâne pentru publicare + audit live.
