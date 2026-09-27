@@ -112,6 +112,10 @@ jobs:
           CF_ACCOUNT_ID_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          # Etapa de mutare a progresului de vizionare (src/lib/watch-store.js).
+          # Se schimbă din Settings → Variables → Actions, FĂRĂ deploy de cod:
+          #   d1 (implicit, rollback instant) | shadow (dual-write) | turso.
+          WATCH_STORE: ${{ vars.WATCH_STORE || 'd1' }}
           DISPATCH_CMD: ${{ github.event.inputs.cmd }}
           GH_TOKEN: ${{ github.token }}
         run: |
