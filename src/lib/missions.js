@@ -54,13 +54,18 @@ export function todayKey(d = new Date()) {
 /** Progres +1 pentru o misiune (idempotent peste target prin MIN). */
 export async function bumpMission(env, userId, key) {
   if (!findMission(key)) return;
+  const target = findMission(key).target;
   await env.DB
     .prepare(
       `INSERT INTO daily_missions (user_id, day, mission, progress) VALUES (?, ?, ?, 1)
        ON CONFLICT(user_id, day, mission) DO UPDATE SET
-         progress = MIN(progress + 1, ?)`
+         progress = MIN(progress + 1, ?)
+       WHERE progress < ?`
     )
-    .bind(userId, todayKey(), key, findMission(key).target)
+    // După îndeplinire, WHERE face operația no-op (0 rows_written). Pentru
+    // misiunea zilnică de vizionare asta evită încă 11 scrieri/user/zi în
+    // scenariul de 12 episoade, fără să schimbe răspunsul funcțional.
+    .bind(userId, todayKey(), key, target, target)
     .run();
 }
 
@@ -79,11 +84,15 @@ export async function streakTouch(env, userId) {
     .bind(userId)
     .first();
 
-  let current = 1;
-  if (row) {
-    if (row.last_day === today) current = row.current;
-    else if (row.last_day === yesterday) current = row.current + 1;
+  // Streak-ul se schimbă cel mult o dată pe zi. Evităm un UPDATE identic la
+  // fiecare episod/comentariu/cufăr: D1 taxează și UPDATE-urile care rescriu
+  // aceeași valoare în cota de rows_written.
+  if (row?.last_day === today) {
+    return { current: row.current, best: row.best };
   }
+
+  let current = 1;
+  if (row?.last_day === yesterday) current = row.current + 1;
   const best = Math.max(row?.best || 0, current);
   await env.DB
     .prepare(

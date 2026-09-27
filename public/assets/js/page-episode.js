@@ -71,13 +71,14 @@ function stopHeartbeat() {
   document.removeEventListener('visibilitychange', flushOnHidden);
 }
 
-// Trimitem progresul la 2 minute, nu la 30 de secunde. La 1000 de utilizatori
-// activi pe zi, un heartbeat de 30s ar insemna ~240.000 de scrieri/zi in D1 —
-// peste plafonul planului gratuit (100.000). Acuratetea nu pierde: fiecare
-// secunda vizionata intra intr-un acumulator local si e trimisa in loturi.
-const HEARTBEAT_SEND_MS = 120000;
-// Trebuie sa coincida cu MAX_INCREMENT de pe server (/api/progress).
-const SEND_CAP = 120;
+// Trimitem progresul la 5 minute, nu la 30 de secunde. Scenariul de capacitate
+// este 500 de spectatori × 12 episoade/zi: la 2 minute heartbeat-urile singure
+// se apropiau periculos de plafonul D1 de 100.000 scrieri/zi după ce adăugam
+// premiile, misiunile și restul traficului. Acuratețea nu pierde: fiecare
+// secundă activă intră în acumulator, iar ascunderea/închiderea paginii face
+// flush pentru rest. Valoarea trebuie să coincidă cu MAX_INCREMENT de pe server.
+const HEARTBEAT_SEND_MS = 300000;
+const SEND_CAP = 300;
 
 function flushOnHidden() { if (document.hidden) flushProgress(); }
 

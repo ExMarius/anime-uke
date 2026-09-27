@@ -910,19 +910,19 @@ console.log('\n=== 8. PUNCTE DOAR DUPA 15 MIN DE VIZIONARE ===');
   check('Sub prag nu se acorda puncte', p1.data?.pointsAdded === 0, JSON.stringify(p1.data));
 
   const big = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 99999 });
-  check('Un dump urias de secunde e limitat la 120/cerere', big.data?.seconds === 150, `seconds=${big.data?.seconds}`);
+  check('Un dump urias de secunde e limitat la lotul de 5 minute', big.data?.seconds === 330, `seconds=${big.data?.seconds}`);
   check('Limitarea impiedica sarirea pragului dintr-o cerere', big.data?.watched === false, JSON.stringify(big.data));
 
   let cur = big.data?.seconds || 0;
   let last = big;
   while (cur < 900) {
-    last = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+    last = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 300 });
     cur = last.data?.seconds ?? cur;
   }
   check('La 15 min acumulate se marcheaza vizionat', last.data?.watched === true, JSON.stringify(last.data));
   check('La 15 min se acorda +10 puncte', last.data?.pointsAdded === 10 && last.data?.points === 10, JSON.stringify(last.data));
 
-  const again = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+  const again = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 300 });
   check('Dupa prag nu se mai acorda puncte', again.data?.pointsAdded === 0 && again.data?.points === 10, JSON.stringify(again.data));
 
   const me = await req(j, 'GET', '/api/auth/me');
@@ -986,8 +986,9 @@ console.log('\n=== 8c. CUFAR CU COMORI (timp petrecut pe serie) ===');
   const early = await req(j, 'POST', '/api/chests', { series_id: globalThis.seriesId, tier: 3 });
   check('Cufar nede blocat → 409, fara puncte', early.status === 409, `status=${early.status}`);
 
-  // user2 are deja ~1110s din sectiunea 8; urcam peste pragul de 30 min
-  for (let i = 0; i < 6; i++) await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 120 });
+  // user2 are deja peste 1200s din secțiunea 8; două loturi de 5 minute
+  // îl urcă peste pragul de 30 min fără a simula heartbeat-uri vechi de 2 min.
+  for (let i = 0; i < 2; i++) await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 300 });
 
   const mid = await req(j, 'GET', `/api/chests?series_id=${globalThis.seriesId}`);
   check('Dupa 30 min pe serie, bronzul e deblocat', mid.data?.chests?.[0]?.unlocked === true, `total=${mid.data?.total_seconds}`);
