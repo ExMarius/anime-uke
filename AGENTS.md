@@ -238,8 +238,63 @@ este în `src/lib/private-messages.js`, `src/lib/turso.js`,
   Workerul `anime-uke-do` scrie DM-ul. Relay-ul validează direct mesajul canar
   în Turso și îl curăță înainte să șteargă conturile temporare.
 
-Următoarea migrare D1 este **0031**; nu modifica 0030. Următoarea migrare Turso
-este **0002**; nu modifica `turso/migrations/0001_private_messages.sql` după deploy.
+Următoarea migrare D1 este **0031**; nu modifica 0030. Migrarea Turso 0002
+(progres de vizionare) e descrisă mai jos; următoarea liberă e **0003**.
+
+### Progresul de vizionare mutat în Turso, în etape (2026-09-27)
+
+`watch_progress` = jumătate din scrierile D1 (30.000 din ~61.300/zi la 500
+spectatori × 12 episoade × 24 min). A fost mutat în baza Turso gratuită
+EXISTENTĂ (`anime-uke-messages`) — niciun serviciu nou, niciun card, niciun
+trial. Implementarea: `src/lib/watch-store.js`,
+`turso/migrations/0002_watch_progress.sql`, `scripts/watch-turso.mjs`,
+`tests/watch-store.mjs`.
+
+- **Flag: `WATCH_STORE` = `d1` (implicit) | `shadow` | `turso`.** Fără
+  credențiale Turso, orice valoare cade pe `d1`. `deploy.sh` îl pune ca
+  secret Pages din environment; `[vars]` din `wrangler*.toml` îl ține pe `d1`.
+  **Rollback = `WATCH_STORE=d1 ./deploy.sh`**, fără migrare inversă și fără
+  ștergerea vreunui rând.
+- **Ce NU s-a mutat, deliberat:** `watched_history`, puncte, XP, gold, misiuni,
+  streak. Recompensa exact-once e `INSERT OR IGNORE` + `meta.changes` în
+  aceeași bază cu `users.points`; mutarea ei ar transforma o garanție atomică
+  într-un protocol distribuit. Nu o muta „ca să fie totul la un loc”.
+- **`series_id` e denormalizat în tabelul Turso**: nu există JOIN între două
+  baze, iar topul săptămânal și cuferele au nevoie de serie. Se scrie din
+  aceeași citire pe cheia primară care validează episodul în `progress.js`.
+- **Scrierile NU se reîncearcă** (`TURSO_WRITE_RETRIES = 0`): incrementul nu e
+  idempotent, o reîncercare ar inventa minute vizionate. Citirile se
+  reîncearcă o dată. La eșec/timeout (2,5 s) se scrie în D1 (fallback) și se
+  jurnalizează — progresul nu se pierde niciodată.
+- **Fallback nu înseamnă tăcere:** divergențe shadow, timeout-uri și eșecuri
+  merg în `watch_store_audit` (în Turso) + `console.warn` + contoare
+  (`watchStoreStats()`). `node scripts/watch-turso.mjs report` le citește.
+  Jurnalul are termen propriu (1 s) ca un Turso lent să nu dubleze latența.
+- **Unelte:** `scripts/watch-turso.mjs backfill|compare|report|count`.
+  Backfill-ul e idempotent (fuziune cu `MAX(seconds)`, progresul e monoton).
+  `compare` raportează lipsă/în plus/delta maxim și iese 1 la nepotrivire.
+- **Nu șterge și nu compacta** rândurile vechi din D1 în aceeași lansare cu
+  cutover-ul. E o etapă separată, după o perioadă de verificare cu `report`.
+- **Etapele pe producție** (relay publică doar din `origin/main`):
+  1. merge în `main` cu `WATCH_STORE=d1` → deploy neutru (zero schimbare de
+     comportament), migrarea Turso 0002 se aplică singură în pasul 3 din `deploy.sh`;
+  2. relay cu `WATCH_STORE=shadow` → dual-write + backfill + `compare`;
+     verifică `report` câteva zile (ținta: 0 divergențe);
+  3. relay cu `WATCH_STORE=turso` → cutover; `usage.mjs` trebuie să arate
+     scrierile D1 în scădere spre ~31%;
+  4. canar live: un cont temporar se uită la un episod, apoi verifici DIRECT
+     ambele baze (`wrangler d1 execute ... watch_progress` = fără rând nou,
+     `node scripts/watch-turso.mjs count/compare` = rândul e în Turso).
+- Teste: `node tests/watch-store.mjs` (73 verificări, SQLite real pentru ambele
+  baze, fără rețea) rulează în `test.sh`; `tests/watch-budget.mjs` blochează
+  regresia de buget (61.300 → 31.300).
+- Curățenie în aceeași rundă: `tursoArg()` (rămășiță de la codificatorul Hrana
+  scris de mână, înlocuit de driverul vendored) și `public/assets/img/logo.webp`
+  (nereferit nicăieri; `logo.png` rămâne pentru `og:image`, `logo-icon.webp`
+  pentru nav) au fost șterse.
+
+Următoarea migrare D1 este **0031**. Următoarea migrare Turso este **0003**;
+nu modifica 0001/0002 după deploy.
 
 ### Relay-ul: diagnostic token + alegere automată a contului CF (2026-09-25)
 

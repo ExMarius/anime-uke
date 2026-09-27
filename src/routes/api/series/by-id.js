@@ -2,6 +2,7 @@ import { json, errorResponse } from '../../../lib/http.js';
 import { validatePositiveInt } from '../../../lib/validate.js';
 import { parsePaging, DEFAULT_EPISODES_PER_PAGE, MAX_EPISODES_PER_PAGE } from '../../../lib/paging.js';
 import { requireUser } from '../../../lib/session.js';
+import { progressForEpisodes } from '../../../lib/watch-store.js';
 import { WATCH_THRESHOLD_SECONDS } from '../progress.js';
 
 // =====================================================================
@@ -83,26 +84,12 @@ export async function onRequestGet(context) {
       // căutare în index per episod afișat, nu o scanare. Fără sesiune nu
       // se face nicio citire — pagina publică rămâne la fel de ieftină.
       const ids = episodes.map((e) => e.id);
-      // D1 accepta cel mult 100 de parametri legati intr-o interogare, iar o
-      // pagina are pana la 200 de episoade: fara bucati de 90, pagina 1 a
-      // unei serii lungi lua 500 (101 parametri) si lista rămânea goala.
-      // Bucatile sunt interogari pe cheia primara a lui watch_progress, deci
-      // fiecare e o căutare in index, nu o scanare.
-      const marks = new Map();
-      for (let i = 0; i < ids.length; i += 90) {
-        const chunk = ids.slice(i, i + 90);
-        const res = await env.DB
-          .prepare(
-            `SELECT episode_id, seconds FROM watch_progress
-              WHERE user_id = ? AND episode_id IN (${chunk.map(() => '?').join(',')})`
-          )
-          .bind(gate.user.id, ...chunk)
-          .all();
-        for (const r of res.results || []) marks.set(r.episode_id, Number(r.seconds) || 0);
-      }
-      const seen = marks;
+      // Bucățile de 90 și eventuala rutare spre Turso sunt în watch-store.js
+      // (D1 acceptă cel mult 100 de parametri legați: fără bucăți, pagina 1
+      // a unei serii lungi răspundea 500 și lista rămânea goală).
+      const marks = await progressForEpisodes(env, gate.user.id, ids);
       episodes = episodes.map((e) => {
-        const seconds = seen.get(e.id) || 0;
+        const seconds = marks.get(e.id) || 0;
         return { ...e, progress_seconds: seconds, watched: seconds >= WATCH_THRESHOLD_SECONDS };
       });
     }

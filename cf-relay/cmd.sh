@@ -491,6 +491,56 @@ fi
 echo "   /api/pulse: $(curl -s "$B/api/pulse" | head -c 180)"
 echo
 
+
+# ── 21. CANARUL DE PROGRES (watch_progress: D1 vs Turso) ──────────────
+# Etapa de mutare a progresului de vizionare. Dovada nu vine din API, ci
+# din AMBELE baze citite direct: D1 prin wrangler, Turso prin
+# scripts/watch-turso.mjs. Contul temporar „canarw…" se sterge la final
+# (Turso NU are cascada spre users, deci curatam explicit acolo).
+echo
+echo "── 21. progres de vizionare: canar live + ambele baze (WATCH_STORE=${WATCH_STORE:-d1})"
+WATCH_OUT="$(node cf-relay/watch-canar.mjs "$B" 2>&1)"
+WATCH_RC=$?
+echo "$WATCH_OUT" | sed 's/^/     /'
+WC_USER="$(echo "$WATCH_OUT" | sed -n 's/^  __CANARW_USER__=//p' | head -1)"
+WC_ID="$(echo "$WATCH_OUT" | sed -n 's/^  __CANARW_USER_ID__=//p' | head -1)"
+WC_SEC="$(echo "$WATCH_OUT" | sed -n 's/^  __CANARW_SECONDS__=//p' | head -1)"
+WC_STORE="$(echo "$WATCH_OUT" | sed -n 's/^  __CANARW_STORE__=//p' | head -1)"
+if [ "$WATCH_RC" -ne 0 ]; then
+  echo "   !! canarul de progres a picat (exit $WATCH_RC)"
+fi
+if [ -n "$WC_ID" ]; then
+  echo "   D1 (watch_progress pentru canar): $(q "SELECT COUNT(*) AS n, COALESCE(SUM(seconds),0) AS secunde FROM watch_progress WHERE user_id = $WC_ID")"
+  echo "   Turso (watch_progress pentru canar):"
+  node scripts/watch-turso.mjs user "$WC_ID" 2>&1 | sed 's/^/     /'
+  echo "   recompensa in D1 (watched_history, trebuie 1 rand): $(q "SELECT COUNT(*) AS n FROM watched_history WHERE user_id = $WC_ID")"
+  echo "   puncte in D1 (trebuie 10): $(q "SELECT points FROM users WHERE id = $WC_ID")"
+  case "${WATCH_STORE:-d1}" in
+    turso)
+      case "$(q "SELECT COUNT(*) AS n FROM watch_progress WHERE user_id = $WC_ID")" in
+        *'"n":0'*) echo "   cutover confirmat: D1 nu a primit progres, iar API-ul a raportat store=$WC_STORE" ;;
+        *) echo "   !! D1 a primit totusi progres desi WATCH_STORE=turso (fallback? vezi raportul de mai jos)" ;;
+      esac ;;
+    shadow)
+      echo "   shadow: ambele baze trebuie sa arate ${WC_SEC}s pentru canar (vezi cele doua linii de mai sus)" ;;
+  esac
+fi
+# Jurnalul de incidente: divergente, timeout-uri, fallback-uri. „Fallback"
+# nu inseamna tacere — daca sunt intrari, apar aici.
+if [ "${WATCH_STORE:-d1}" != "d1" ]; then
+  echo "   jurnal Turso (ultimele 24h):"
+  node scripts/watch-turso.mjs report --hours 24 2>&1 | sed 's/^/     /'
+  echo "   total in Turso:"
+  node scripts/watch-turso.mjs count 2>&1 | sed 's/^/     /'
+fi
+# Curatenie: contul din D1 (cascada sterge progresul D1) + randurile din Turso.
+if [ -n "$WC_ID" ]; then
+  node scripts/watch-turso.mjs purge-user "$WC_ID" 2>&1 | sed 's/^/     /'
+fi
+q "DELETE FROM users WHERE username LIKE 'canarw%'" >/dev/null
+q "UPDATE site_meta SET value = (SELECT COUNT(*) FROM users) WHERE key = 'users_total'" >/dev/null
+echo "   dupa curatenie: $(q "SELECT COUNT(*) AS n FROM users WHERE username LIKE 'canarw%'") conturi canarw ramase"
+
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"

@@ -94,6 +94,35 @@ cat /tmp/turso-migrate.txt
 rm -f /tmp/private-messages-d1.json /tmp/private-messages-d1.err /tmp/turso-migrate.txt
 ok "baza anime-uke-messages este pregatita"
 
+# Progresul de vizionare: migrarea Turso 0002 a fost deja aplicată mai sus
+# (același director). Backfill-ul + comparația rulează DOAR când etapa e
+# activă (WATCH_STORE=shadow|turso) — în modul d1 nu atingem nimic.
+WATCH_STORE="${WATCH_STORE:-d1}"
+case "$WATCH_STORE" in
+  shadow|turso)
+    step "3b/6  Turso: backfill + comparatie watch_progress ($WATCH_STORE)"
+    $WRANGLER d1 execute "$DB_BINDING" --remote --json \
+      --command "SELECT wp.user_id, wp.episode_id, e.series_id, wp.seconds, wp.updated_at FROM watch_progress wp JOIN episodes e ON e.id = wp.episode_id" \
+      >/tmp/watch-progress-d1.json 2>/tmp/watch-progress-d1.err \
+      || { cat /tmp/watch-progress-d1.err; die "nu am putut exporta watch_progress din D1"; }
+    node scripts/watch-turso.mjs backfill /tmp/watch-progress-d1.json \
+      >/tmp/watch-backfill.txt 2>&1 || { cat /tmp/watch-backfill.txt; die "backfill watch_progress esuat"; }
+    cat /tmp/watch-backfill.txt
+    # Verificarea e OBLIGATORIE, dar nu blocheaza deployul pe o diferenta de
+    # un heartbeat in zbor (toleranta 300s); rezultatul complet ramane in log.
+    node scripts/watch-turso.mjs compare /tmp/watch-progress-d1.json --tolerance 300 \
+      >/tmp/watch-compare.txt 2>&1
+    WATCH_CMP_RC=$?
+    cat /tmp/watch-compare.txt
+    [ "$WATCH_CMP_RC" -eq 0 ] || echo "  !! D1 si Turso NU coincid — vezi mai sus (deployul continua, dar NU comuta pe turso)"
+    rm -f /tmp/watch-progress-d1.json /tmp/watch-progress-d1.err /tmp/watch-backfill.txt /tmp/watch-compare.txt
+    ok "watch_progress sincronizat in Turso"
+    ;;
+  *)
+    ok "watch_progress ramane in D1 (WATCH_STORE=d1)"
+    ;;
+esac
+
 # ---------------------------------------------------------------------
 step "4/6  Worker Durable Objects: $WORKER"
 set +e
@@ -218,6 +247,13 @@ printf '%s' "$TURSO_AUTH_TOKEN" | $WRANGLER pages secret put TURSO_AUTH_TOKEN --
   >/tmp/pages-turso-token.txt 2>&1 || { cat /tmp/pages-turso-token.txt; die "secretul Turso token nu a ajuns in Pages"; }
 rm -f /tmp/pages-turso-url.txt /tmp/pages-turso-token.txt
 ok "secretele Turso sunt legate la Pages"
+
+# Comutatorul etapei, ca secret Pages: rollback instant = redeploy cu
+# WATCH_STORE=d1 (sau schimbarea valorii din dashboard), fara atingerea codului.
+printf '%s' "$WATCH_STORE" | $WRANGLER pages secret put WATCH_STORE --project-name="$PROJECT" \
+  >/tmp/pages-watch-store.txt 2>&1 || { cat /tmp/pages-watch-store.txt; die "WATCH_STORE nu a ajuns in Pages"; }
+rm -f /tmp/pages-watch-store.txt
+ok "WATCH_STORE=$WATCH_STORE este activ pe Pages"
 # Frații .webp ai imaginilor (hero, logo) sunt COMISAȚI în repo: runner-ul
 # GitHub nu are ImageMagick, iar workerul nu mai negociaza WebP — paginile
 # refera direct .webp. De aceea NU se mai sterge nimic aici.

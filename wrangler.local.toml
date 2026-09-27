@@ -41,3 +41,9 @@ new_classes = ["ChatDO", "RateLimitDO", "StatsDO"]
 # secret public = oricine putea falsifica un token de admin).
 # Se seteaza cu:  wrangler pages secret put JWT_SECRET
 # ---------------------------------------------------------------------
+
+# Unde trăiește `watch_progress`: d1 (implicit, rollback instant) | shadow
+# (dual-write, D1 sursa oficială) | turso (Turso sursa oficială, fallback D1).
+# deploy.sh poate suprascrie valoarea cu un secret Pages, fără schimbare de cod.
+[vars]
+WATCH_STORE = "d1"
