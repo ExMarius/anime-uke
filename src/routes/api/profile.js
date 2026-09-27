@@ -48,13 +48,16 @@ function present(user, profile, stats, isSelf, themes = []) {
       series_watched: stats?.series_watched ?? 0,
       episodes_watched: stats?.episodes_watched ?? 0,
       watchlist: stats?.watchlist ?? 0,
+      // Nu facem istoricul de vizionare public: celălalt membru vede doar
+      // agregatele de mai sus; proprietarul primește un singur link util.
+      last_watched: isSelf ? (stats?.last_watched || null) : null,
     },
     is_self: !!isSelf,
   };
 }
 
-async function loadStats(env, userId) {
-  const [watched, watchlist] = await Promise.all([
+async function loadStats(env, userId, includeLastWatched = false) {
+  const [watched, watchlist, lastWatched] = await Promise.all([
     env.DB
       .prepare(
         `SELECT COUNT(*) AS episodes, COUNT(DISTINCT e.series_id) AS series
@@ -64,12 +67,31 @@ async function loadStats(env, userId) {
       .bind(userId)
       .first(),
     env.DB.prepare('SELECT COUNT(*) AS n FROM watchlist WHERE user_id = ?').bind(userId).first(),
+    // Istoricul de vizionare e personal: numai proprietarul profilului
+    // primește această legătură. Indexul 0033 face ORDER BY + LIMIT o
+    // singură descindere, nu o sortare a întregului istoric.
+    includeLastWatched
+      ? env.DB
+        .prepare(
+          `SELECT e.id AS episode_id, e.episode_number, e.title AS episode_title,
+                  s.id AS series_id, s.title AS series_title, w.watched_at
+           FROM watched_history w
+           JOIN episodes e ON e.id = w.episode_id
+           JOIN anime_series s ON s.id = e.series_id
+           WHERE w.user_id = ?
+           ORDER BY w.watched_at DESC, w.id DESC
+           LIMIT 1`
+        )
+        .bind(userId)
+        .first()
+      : Promise.resolve(null),
   ]);
 
   return {
     series_watched: watched?.series ?? 0,
     episodes_watched: watched?.episodes ?? 0,
     watchlist: watchlist?.n ?? 0,
+    last_watched: lastWatched || null,
   };
 }
 
@@ -97,9 +119,10 @@ export async function onRequestGet(context) {
   }
 
   try {
+    const isSelf = me?.id === user.id;
     const [profile, stats, recommendations, cosmeticsRes] = await Promise.all([
       env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first(),
-      loadStats(env, user.id),
+      loadStats(env, user.id, isSelf),
       // „Serii recomandate": cele mai vizionate serii pe care NU le-a vazut.
       env.DB
         .prepare(
@@ -126,7 +149,7 @@ export async function onRequestGet(context) {
     const owned = new Set((cosmeticsRes?.results || []).map((r) => r.item_id));
 
     return json({
-      ...present(user, profile, stats, me?.id === user.id, await loadRankThemes(env)),
+      ...present(user, profile, stats, isSelf, await loadRankThemes(env)),
       flair: owned.has('flair_nova') ? '🌠' : owned.has('flair_supporter') ? '💎' : '',
       name_gold: owned.has('name_gold'),
       name_color: user.active_name_color || null,
@@ -217,7 +240,7 @@ export async function onRequestPatch(context) {
       .bind(me.id)
       .first();
 
-    const stats = await loadStats(env, me.id);
+    const stats = await loadStats(env, me.id, true);
     return json(present(me, saved, stats, true, await loadRankThemes(env)));
   } catch (e) {
     console.error('PATCH /api/profile esuat:', e?.message || e);

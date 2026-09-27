@@ -967,12 +967,35 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
 
 console.log('\n=== DOM: /profile (clasamentul randat) ===');
 {
+  // Un episod terminat al adminului face verificabilă legătura „Ultima
+  // vizionare” din profil, fără să depindem de fixturele altor secțiuni.
+  const headers = { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE };
+  const made = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ title: `DOM Ultima vizionare ${Date.now()}`, status: 'completed' }),
+  })).json();
+  const lastSeriesId = made?.series?.id ?? made?.id;
+  const addedEpisode = await (await fetch(`${BASE}/api/admin/episodes`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ series_id: lastSeriesId, episode_number: 1, title: 'Episod profil', sources: [] }),
+  })).json();
+  const lastEpisodeId = addedEpisode?.episode?.id ?? addedEpisode?.id;
+  for (let i = 0; i < 3; i++) {
+    await fetch(`${BASE}/api/progress`, { method: 'POST', headers,
+      body: JSON.stringify({ episode_id: lastEpisodeId, seconds: 300 }) });
+  }
+
   const p = await mountPage({ htmlFile: 'public/profile.html', url: '/profile', module: 'page-profile.js' });
   const loaded = await until(() => p.$$('#lb-list .lb__row').length > 0 || /nimeni/i.test(p.text('#lb-note') || ''));
   check('Clasamentul se randeaza pe profil', loaded, `randuri=${p.$$('#lb-list .lb__row').length} note=${p.text('#lb-note')}`);
   check('Fiecare rand are nume si puncte', p.$$('#lb-list .lb__row').every((r) => r.textContent.includes('pct')), p.$('#lb-list')?.textContent?.slice(0, 80));
+  const lastLink = [...p.$$('#p-quick a.quick__item')].find((node) => /Ultima vizionare/.test(node.textContent || ''));
+  check('Acces rapid oferă linkul spre ultima vizionare proprie',
+    lastLink?.getAttribute('href') === `/episode?id=${lastEpisodeId}` && /DOM Ultima vizionare/.test(lastLink?.textContent || ''),
+    `${lastLink?.getAttribute('href')} ${lastLink?.textContent}`);
   check('Nicio eroare de runtime pe profil', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+  await fetch(`${BASE}/api/admin/series?id=${lastSeriesId}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
 console.log('\n=== DOM: /profile (panoul de economie) ===');
