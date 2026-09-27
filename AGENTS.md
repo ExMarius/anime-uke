@@ -14,7 +14,7 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
 - **Stare:** stabil, curat, toate testele verzi (scripts-health 59 · poll-buget 22 ·
-  pulse-online 17 · e2e 636 · dom 223 / 219 pe build · theme-cache 7 · top-cache 17 ·
+  pulse-online 17 · e2e 637 · dom 224 / 220 pe build · theme-cache 7 · top-cache 17 ·
   chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
@@ -182,6 +182,14 @@ Două pachete din aceeași ramură au întărit fluxurile de parolă:
   `STATIC_PAGES` și `_routes.json`; când schimbi una dintre aceste allowlist-uri,
   păstrează-le sincronizate. API/E2E + DOM acoperă anti-enumerarea, anularea,
   unică folosință, invalidarea sesiunii, CSRF și UI-ul admin/public.
+
+### Episod: creditul echipei în player (2026-09-27, PR #25)
+
+Câmpul `anime_series.team` (deja editabil în admin și vizibil în fișa seriei)
+este acum inclus în același `GET /api/episodes/:id` ca `series_team` și afișat în
+metadatele de sub titlul episodului (`📝 Traducere: …`). Nu există migrare și nici
+request suplimentar: JOIN-ul episod–serie era deja necesar. Regresiile verifică API-ul
+și playerul în DOM, inclusiv artefactul bundle-uit.
 
 ### Pregătire lansare publică: conexiuni Pages + observabilitate (2026-09-26, branch `arena/01a0dd39-anime-uke`)
 
@@ -554,10 +562,10 @@ zgomotos în loc să raporteze cifre pentru altceva.
   care nu-l mai vede.
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
-- Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —
-  vezi `src/routes/api/episodes/by-id.js`), buton „mulțumesc", link „Ultima vizionare", panou notificări extins,
-  „Gând" (status scurt pe profil), avatar picker, sondaj săptămânal, „Seria săptămânii", „Episoade anunțate",
-  cei mai activi per rol, Hall of fame, mesaje private/blocare în lista online.
+- Din referința „exemplu" (un site similar): buton „mulțumesc", link „Ultima vizionare", panou notificări extins,
+  avatar picker, sondaj săptămânal, „Seria săptămânii", „Episoade anunțate", cei mai activi per rol,
+  Hall of fame, mesaje private/blocare în lista online. „Gând" există deja ca `motto` în profil, iar
+  creditul de echipă apare în metadatele episodului.
 
 ## 8. Reguli de la proprietar
 
