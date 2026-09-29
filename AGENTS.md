@@ -93,7 +93,7 @@ schimbat. Puține du-te-vino, fără așteptări de ore.
 ## 2. Ciclul de lucru
 
 1. Citește codul zonei pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0031**;
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0034**;
    Turso: **0003**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`**
    (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul dă 405 în producție).
@@ -603,6 +603,37 @@ zgomotos în loc să raporteze cifre pentru altceva.
   16,3 KB (buget 19,5 KB), CSS 18,9 KB (buget 22 KB).
 - Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
   DOM build 215, plus toate suitele auxiliare.
+
+### Autentificare: schimbarea parolei + recuperare asistată de staff (2026-09-29, branch `arena/01a0eddc-anime-uke`)
+
+Pachetul era scris și testat de sesiunea `arena/01a0e393` (PR #25), dar a rămas nepublicat
+trei zile fiindcă producția se putea atinge doar prin merge. Acum, cu publicarea din branch,
+a fost adus prin `git cherry-pick -x` (doar cele 4 commituri de funcționalitate; commiturile
+de docs/relay au fost sărite, ca să nu rescrie regulile noi). **PR #25 rămâne deschis** —
+nu se închide și nu se dă merge până nu spune proprietarul.
+
+- **Schimbarea parolei** (`POST /api/auth/password`): cere parola actuală și rotește
+  `users.auth_version` (migrarea **0031**). JWT-ul e stateless, deci fără versiune în DB
+  toate cookie-urile vechi ar fi rămas valide; acum orice sesiune veche pică instant.
+- **Recuperare fără vendor de e-mail** (migrarea **0032**): pagina publică `/reset-password`
+  nu enumeră conturi; cererea intră într-o coadă în admin, unde staff-ul o validează și emite
+  un cod de 128 de biți, arătat **o singură dată** și stocat doar ca PBKDF2 + salt. Expiră în
+  30 de minute și se consumă atomic, în același batch D1 cu rotirea `auth_version`
+  (`claim_nonce` împiedică două revendicări paralele). Un singur cod activ per cont
+  (index unic parțial). **Motivul deciziei: buget 0** — MailChannels nu mai e gratuit, iar
+  orice alt furnizor ar fi însemnat vendor nou, deci întrebare către proprietar.
+- **Credit de echipă pe episod:** câmpul `team` al seriei ajunge în `GET /api/episodes/:id`
+  și în metadatele playerului, fără request suplimentar.
+- **Ultima vizionare pe profil:** link către ultimul episod terminat, doar pe profilul propriu
+  (migrarea **0033** adaugă indexul, ca să nu sorteze tot istoricul).
+- Verificat: `./test.sh` complet verde — e2e **642**, DOM sursă **228**, DOM build **224**,
+  greutate în buget (cea mai grea pagină: profile 44,3 KB gzip din 45 permise).
+
+Capcană de sandbox întâlnită aici: după recrearea mediului, `node_modules` lipsea parțial
+(`ws`, `purgecss`) — suita pica „aiurea”, cu CSS peste buget și module negăsite. `npm ci`
+rezolvă; nu căuta bug-ul în cod înainte să verifici dependențele.
+
+---
 
 ### Publicare din branch-ul sesiunii + gardă anti-merge (2026-09-29, branch `arena/01a0eddc-anime-uke`)
 
