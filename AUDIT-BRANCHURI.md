@@ -20,6 +20,11 @@ git push origin <sha>:refs/heads/arena/<id>-anime-uke
 
 ## Rezultatul verificării (2026-09-29, din sesiunea `arena/01a0eddc-anime-uke`)
 
+Cele 5 branch-uri marcate „ȘTERS” au fost **re-verificate imediat înainte de ștergere**
+(integrat + 0 commituri unice + diff gol + niciun PR deschis) și apoi șterse manual,
+o singură dată, la cererea explicită a proprietarului. Ștergerea NU e automatizată
+nicăieri în repo — `tests/no-merge-guard.mjs` interzice permanent asta.
+
 | Branch | SHA | Integrat | Commituri unice | Diff vs main | PR-uri | Ultim commit (UTC) | Decizie |
 |---|---|---|---|---|---|---|---|
 | `arena/01a0d983-anime-uke` | `f303526` | nu | 1 | diferă | #8 CLOSED | 2026-09-25 18:27 | **PĂSTRAT** — are muncă neintegrată |

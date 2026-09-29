@@ -634,6 +634,23 @@ Cerere explicită a proprietarului: sesiunile Arena trebuie să poată publica �
   `CLAUDE.md` și `README.md` trimit acum aici, iar conținutul lor util a fost mutat, nu șters.
 - **Setări de repo verificate** (rămân așa): `allow_auto_merge=false`,
   `delete_branch_on_merge=false`, fără rulesets.
+- **Verificat live**, de două ori, direct din branch (fără merge): commit `ad4c873`
+  (push care atinge `cf-relay/*`) și commit `334d699` (prin `./publish.sh`). Ambele:
+  `exit deploy: 0`, `?v=` din producție = SHA-ul branch-ului, audit live
+  **✅ 190 · 🟡 0 · 🔴 0 · ℹ️ 36**, `exit audit: 0`, canarul de prietenie + DM OK.
+- **Curățenie de branch-uri** (verificată întâi, vezi `AUDIT-BRANCHURI.md`): șterse
+  5 branch-uri Arena complet integrate, fără commituri unice și fără PR deschis
+  (`01a0d9c7`, `01a0da3a`, `01a0e1b9`, `01a0e1fa`, `01a0e2e9`). Păstrate cele cu
+  commituri unice (`01a0d983`, `01a0dd39`, `01a0df81`, `01a0dfd5`), cel cu PR deschis
+  (`01a0e393`, PR #25) și cel din sesiunea imediat anterioară (`01a0edbf`).
+  SHA-urile sunt în tabel: orice ștergere e reversibilă cu
+  `git push origin <sha>:refs/heads/<branch>`.
+- **Rămâne de decis cu proprietarul:** Cloudflare Pages are încă Git integration
+  activă, deci fiecare push pe branch produce și un *deployment de preview*
+  (`env=preview`, URL de forma `https://<hash>.anime-uke.pages.dev`). Producția nu e
+  afectată. Se poate opri din configurația proiectului Pages
+  (`preview_deployment_setting: none`), dar atunci relay-ul pierde semnalul de
+  sănătate „buildul Git a trecut”. Nu s-a atins nimic fără acordul lui.
 
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
