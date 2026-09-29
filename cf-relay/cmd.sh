@@ -578,8 +578,16 @@ echo "   /reset-password → $(curl -s -o /dev/null -w '%{http_code}' "$B/reset-
 case "$(curl -s "$B/login")" in *reset-password*) echo "   link de recuperare (Ai uitat parola) pe /login = da" ;; *) echo "   !! lipseste linkul de recuperare de pe /login" ;; esac
 echo "   POST /api/auth/password fara sesiune → $(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/password" -H 'Content-Type: application/json' -H "Origin: $B" -d '{}') (trebuie 401)"
 echo "   GET /api/admin/password-resets anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/password-resets") (trebuie 401)"
-RESET_INEXISTENT="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identificator":"canar-inexistent-fara-cont"}')"
-echo "   POST /api/auth/password-reset pe un cont inexistent → ${RESET_INEXISTENT} (fara enumerare: acelasi raspuns ca la un cont real)"
+# Anti-enumerare: cheia corecta din body e `identifier` (sau email/username).
+# Un cont inexistent TREBUIE sa primeasca 202 + acelasi mesaj generic ca unul
+# real; orice alt cod face din formular un oracle pentru adresele membrilor.
+RESET_INEXISTENT="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identifier":"canar-inexistent-fara-cont"}')"
+echo "   POST /api/auth/password-reset pe un cont inexistent → ${RESET_INEXISTENT} (trebuie 202, fara enumerare)"
+case "$(curl -s -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identifier":"canar-inexistent-fara-cont"}')" in
+  *'Dacă există un cont'*) echo "   mesaj generic identic pentru conturi inexistente = da" ;;
+  *) echo "   !! raspunsul difera de mesajul generic (risc de enumerare)" ;;
+esac
+echo "   corp fara camp de existenta: $(curl -s -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identifier":"canar-inexistent-fara-cont"}' | head -c 160)"
 echo "   cereri de resetare in coada dupa verificare: $(q "SELECT COUNT(*) AS n FROM password_reset_requests WHERE status IN ('pending','issued')")"
 
 echo "════════ AUDIT LIVE ════════"
