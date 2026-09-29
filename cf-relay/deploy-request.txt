@@ -1,0 +1,11 @@
+# Cerere explicită de publicare în producție (https://anime-uke.pages.dev).
+#
+# Orice modificare a acestui fișier, pe ORICE branch, declanșează
+# .github/workflows/cloudflare-relay.yml, care publică EXACT commitul
+# respectiv — fără merge în main, fără PR, fără preview.
+#
+# Nu-l edita manual: rulează `./publish.sh "ce publici"` (verifică branch-ul,
+# arborele curat, scrie linia de mai jos, comite și împinge).
+#
+# Format: <UTC ISO-8601> | <branch> | <commit> | <motiv>
+2026-09-29T00:00:00Z | main | 0000000 | initializare: canalul de publicare din branch

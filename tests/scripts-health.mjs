@@ -136,18 +136,25 @@ for (const f of jsFiles) {
       cmd.includes(f) && existsSync(join(ROOT, f)),
       cmd.includes(f) ? 'lipsește din repo' : 'nu mai e invocat');
   }
-  check('relay-ul declanșat de pe branch publică exact origin/main',
-    cmd.includes('RELAY_MAIN_CHECKED_OUT=1')
-      && cmd.includes('git checkout -- cf-relay/last-output.txt')
-      && cmd.includes('git checkout --detach origin/main')
-      && cmd.includes('exec bash cf-relay/cmd.sh'),
-    'fără această gardă, un push de mentenanță poate publica cod neintegrat');
+  // 29.09.2026: regula s-a INVERSAT la cererea proprietarului. Relay-ul nu
+  // mai deturnează deploy-ul către origin/main; publică exact commitul care
+  // l-a declanșat, ca o sesiune Arena să poată ajunge live fără merge.
+  // Interdicțiile de merge/close/ștergere sunt în tests/no-merge-guard.mjs.
+  check('relay-ul publică exact commitul care l-a declanșat (fără deturnare spre main)',
+    cmd.includes('PUBLICA_BRANCHUL_CURENT=1')
+      && cmd.includes('RELAY_REF')
+      && cmd.includes('RELAY_SHA')
+      && !cmd.includes('RELAY_MAIN_CHECKED_OUT'),
+    'fără asta, branch-ul sesiunii nu poate publica în producție fără merge');
   const workflow = readFileSync(join(ROOT, '.github/workflows/cloudflare-relay.yml'), 'utf8');
-  check('workflow-ul păstrează branch-ul trigger după checkout-ul la main',
+  check('workflow-ul comite output-ul pe branch-ul care l-a declanșat',
     workflow.includes('git checkout -B "$BRANCH" "origin/$BRANCH"')
       && workflow.includes('cp cf-relay/last-output.txt "$OUTPUT"')
       && workflow.includes('git checkout -- cf-relay/last-output.txt'),
-    'commitul de output ar rescrie branch-ul de mentenanță cu main sau checkout-ul ar eșua');
+    'altfel commitul de output ar ateriza pe alt ref sau checkout-ul ar eșua');
+  check('workflow-ul are poarta de teste înainte de deploy (nu publică cod roșu)',
+    workflow.includes('Poarta de teste') && workflow.includes('head_sha=${GITHUB_SHA}'),
+    'producția trebuie să primească numai commituri cu suita tests verde');
 
   const deploy = readFileSync(join(ROOT, 'deploy.sh'), 'utf8');
   check('relay-ul primește ambele secrete Turso din GitHub Actions',

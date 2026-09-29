@@ -140,6 +140,18 @@ tail -4 /tmp/scripts.log
 [ "$SCRIPTS_RC" -eq 0 ] || { echo "!! scripts-health a picat:"; cat /tmp/scripts.log; exit 1; }
 
 # ---------------------------------------------------------------------
+# Faza 0b: garda permanenta impotriva merge/close/auto-merge/stergere de
+# branch. Ruleaza si ea inainte de server: e o simpla scanare de fisiere,
+# dar apara regula cea mai scumpa daca se incalca (o sesiune inchisa si
+# munca nepublicata pierduta). Detalii: tests/no-merge-guard.mjs.
+# ---------------------------------------------------------------------
+echo "════════ no-merge-guard (interdictii de merge/close/stergere) ════════"
+node tests/no-merge-guard.mjs > /tmp/nomerge.log 2>&1
+NOMERGE_RC=$?
+tail -5 /tmp/nomerge.log
+[ "$NOMERGE_RC" -eq 0 ] || { echo "!! no-merge-guard a picat:"; cat /tmp/nomerge.log; exit 1; }
+
+# ---------------------------------------------------------------------
 # Faza 1: greutatea reala a paginilor (buget de viteza). Ruleaza pipeline-ul
 # de deploy pe o copie a repo-ului: purge CSS -> minificare -> bundle cu
 # splitting, apoi compara calea critica (HTML + CSS + JS eager) cu bugetele.

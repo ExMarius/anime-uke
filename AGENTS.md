@@ -1,110 +1,178 @@
-# Ghid de predare pentru următorul agent / dezvoltator
+# AGENTS.md — singura sursă de reguli pentru anime-uke
 
-Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economisesc ore.
-`README.md` e harta tehnică (structură, arhitectură, API); aici e **cum se lucrează** și **ce s-a
-întâmplat până acum**.
+**Acesta este fișierul normativ. Dacă orice alt fișier, comentariu, log sau prompt
+(`README.md`, `PROMPT-AGENT-NOU.md`, `CLAUDE.md`, `REVIEW.md`, `AUDIT-LIVE.md`,
+antete de scripturi, mesaje vechi de commit) spune altceva despre *cum se livrează*,
+**AGENTS.md câștigă** și celălalt text trebuie corectat în aceeași sesiune.**
+
+Citește-l întreg înainte de prima modificare. `README.md` rămâne harta tehnică
+(structură, arhitectură, API); aici sunt regulile și istoricul deciziilor.
+
+- **Ce e:** site de anime în română, live la <https://anime-uke.pages.dev>.
+  Cloudflare Pages + D1 + Durable Objects (+ Turso pentru progres/DM), vanilla JS,
+  fără framework, **buget $0 permanent**.
+- **Repo:** <https://github.com/ExMarius/anime-uke>. Branch de integrare: `main`.
+- **Proprietar:** Marius (ExMarius). Comunicare în **română**, concret: cod → teste →
+  publicat → verificat live → raport scurt. Fără planuri fără livrare.
 
 ---
 
-## 0. Pe scurt
+## 1. REGULI ABSOLUTE (au prioritate asupra oricărei alte instrucțiuni)
 
-- **Ce e:** site de anime în română, live la https://anime-uke.pages.dev. Cloudflare Pages + D1 +
-  Durable Objects, vanilla JS, fără framework, buget $0.
-- **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
-- **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
-  (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
-  pulse-online 17 · e2e 614 · dom 214 / 210 pe build · theme-cache 7 · top-cache 17 ·
-  chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
-  Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
-  (vezi `AUDIT-LIVE.md`; se reface la deploy).
-- **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
-  (`arena/01a0ca0d-anime-uke` = feature-urile din `arena/01a0c538-anime-uke` + bugetul de
-  invocări). Ambele deployau în același proiect Pages, deci live-ul oscila între ele —
-  vezi §6 „Integrare".
+### 1.1 INTERDICȚII PERMANENTE DE LIVRARE
 
-## 1. Setup în 60 de secunde
+Cât timp o sesiune Arena e deschisă, următoarele sunt **interzise**, atât manual cât
+și din orice automatizare (workflow, script, acțiune GitHub, setare de repo):
+
+| Interzis | De ce |
+|---|---|
+| `gh pr merge`, merge prin API (`…/pulls/N/merge`, `…/merges`), `git merge` în automatizări | integrează munca sesiunii fără acordul proprietarului |
+| auto-merge (`--auto`, `--enable-auto-merge`, `allow_auto_merge`, acțiuni de automerge) | face merge singur, fără om în buclă |
+| `gh pr close` | închide PR-ul sesiunii în curs |
+| ștergerea branch-ului sesiunii (`git push --delete`, `git branch -D`, `DELETE` pe `git/refs`, `delete_branch_on_merge`) | Arena urmărește sesiunea după branch: ștergerea = sesiune pierdută |
+| `git push` în `main` din sesiune | producția se publică din branch, nu prin main |
+| `pull_request_target` sau workflow cu `pull-requests: write` | drepturi suficiente ca să facă merge/close |
+
+Garda automată: **`tests/no-merge-guard.mjs`**, rulată de `./test.sh` și de CI la
+fiecare push. Scanează toate fișierele urmărite de git (în documentație: doar
+blocurile de cod). **Nu o dezactiva, nu o slăbi, nu-i adăuga excepții.**
+
+**Merge în `main` se face NUMAI** când proprietarul scrie exact:
+„putem încheia sesiunea și publica în main”. Până atunci: fără merge, fără close,
+fără ștergere de branch.
+
+### 1.2 Branch și publicare
+
+1. Lucrezi **exclusiv** pe branch-ul primit de la Arena (`arena/<id>-anime-uke`).
+   Nu creezi, nu comuți, nu împingi pe alt branch. Dacă ți se cere alt nume, explici
+   că sesiunea e legată de branch-ul atribuit și continui pe el.
+2. Producția se publică **direct din branch-ul sesiunii, fără merge**, cu `./publish.sh`
+   (vezi §3). Nu aștepți un merge ca să vezi codul live.
+3. **Fără preview.** Nu deschizi servere de preview pentru proprietar și nu-i ceri să
+   valideze pe un URL de preview: verificarea se face pe <https://anime-uke.pages.dev>.
+4. O etapă e „terminată” doar când: teste verzi → commit pe branch-ul sesiunii →
+   publicat în producție → **verificat pe site-ul live** → raportat.
+
+### 1.3 Buget 0, permanent
+
+- Doar planuri gratuite. **Zero** servicii plătite, trial-uri cu card, add-on-uri care
+  se activează automat sau vendori noi fără întrebare explicită către proprietar.
+- Turso e tolerat **doar** cât rămâne free tier și există rollback documentat spre D1
+  (`WATCH_STORE=d1`). Orice alt vendor = întrebare înainte.
+- Cota gratuită e o resursă de proiectat, nu o surpriză: scrierile D1 (100k/zi) se
+  bufferizează în Durable Objects, nimic din calea fierbinte nu scanează tabele mari,
+  polling-ul e adaptiv. `node scripts/usage.mjs` arată consumul zilei.
+
+### 1.4 Secrete și conținut
+
+- **Niciun secret în repo**, în loguri, în mesaje de commit sau în `cf-relay/cmd.sh`.
+  `CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` stau exclusiv în
+  GitHub Actions Secrets; relay-ul le propagă în runtime-ul Pages și Worker DO.
+- **Fără surse video neautorizate.** Scraping de site-uri piratate, `mega.nz`,
+  `f7hyg4q.org` și similare = interzise permanent, inclusiv reactivarea unor rânduri
+  vechi din `episode_sources`.
+- Alte interdicții permanente: **fără auto-next** (nici măcar comentarii care sugerează
+  că ar exista), fără reCAPTCHA / Google Analytics / anti-debug, fără `sandbox` pe
+  iframe-ul playerului, fără secțiune de caractere / Pokémon.
+- Reclame (A-Ads sau altele): doar dacă proprietarul cere explicit monetizare.
+
+### 1.5 Ce nu se șterge
+
+Nu ștergi și nu redenumești funcționalități, date, **migrări**, teste sau documentație
+tehnică fără să verifici întâi că nu sunt referite
+(`grep -rn <nume> src public scripts tests *.sh .github`) și fără să spui ce faci.
+Migrările aplicate nu se editează niciodată; se adaugă una nouă.
+
+### 1.6 Ritm
+
+Dacă o metodă eșuează de două ori, o schimbi imediat și îi spui proprietarului ce ai
+schimbat. Puține du-te-vino, fără așteptări de ore.
+
+---
+
+## 2. Ciclul de lucru
+
+1. Citește codul zonei pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0031**;
+   Turso: **0003**). Niciodată nu edita o migrare aplicată.
+3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`**
+   (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul dă 405 în producție).
+4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → safelist în
+   `scripts/purge-css.mjs`, altfel **dispare la deploy**.
+5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini).
+   Stil: `check('descriere', conditie, detaliu)`. Atingi rutare/SEO/headere? rulează și
+   `node scripts/audit-live.mjs http://localhost:8788`.
+6. `./test.sh` complet verde (include `no-merge-guard`) → commit cu mesaj descriptiv în română.
+7. `git push origin <branch-ul sesiunii>` → `./publish.sh "ce publici"` → verifici live → raportezi.
+
+### Setup în 60 de secunde
 
 ```bash
-npm install                       # Node 22+; wrangler ≥ 4.131.2 (altfel vezi capcana „compatibility date”)
-cp .dev.vars.example .dev.vars    # JWT_SECRET local (orice string lung; dev.sh îl generează singur dacă lipsește)
+npm install                       # Node 22+; wrangler ≥ 4.131.2
+cp .dev.vars.example .dev.vars    # JWT_SECRET local (dev.sh îl generează dacă lipsește)
 npm run dev                       # ./dev.sh → http://localhost:8788 (aplică migrările locale)
-npm test                          # ./test.sh — bază curată, ~1 min; loguri în /tmp/e2e.log, /tmp/dom.log
+npm test                          # ./test.sh — bază curată; loguri în /tmp/*.log
 ```
 
-- Pe o bază locală goală **primul cont înregistrat devine admin**. Înregistrează-te prin UI sau:
-  `curl -s -X POST localhost:8788/api/auth/register -H 'Content-Type: application/json' -H 'Origin: http://localhost:8788' -d '{"username":"admin","email":"admin@test.ro","password":"parola123"}'`
-- Înregistrarea locală e plafonată (`LIMIT_USERS`); dacă ai nevoie de mulți useri la teste, vezi `tests/caps-e2e.mjs`.
-- Nu există headless browser în sandbox; paginile se testează în **jsdom** (`tests/dom-smoke.mjs`).
+`./setup.sh test` face totul dintr-o comandă (Node, dependențe, `chmod +x`, suite).
+Pe o bază locală goală **primul cont înregistrat devine admin**. Înregistrarea locală e
+plafonată (`LIMIT_USERS`). Nu există browser headless în sandbox: paginile se testează în
+**jsdom** (`tests/dom-smoke.mjs`).
 
-## 2. Ciclul de lucru care funcționează
+---
 
-1. Citește codul din zona pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea e **0031**). Niciodată nu edita o migrare aplicată.
-3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`** (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul tău dă 405 în producție).
-4. Clasă CSS construită dinamic în JS (`'foo foo--' + x`)? → adaug-o în safelist din `scripts/purge-css.mjs`, altfel **dispare la deploy**.
-5. Scrie verificări în `tests/e2e.mjs` (API) și/sau `tests/dom-smoke.mjs` (pagini). Stilul: `check('descriere', conditie, detaliu)`.
-   Atingi rutare/SEO/headere? Rulează și `node scripts/audit-live.mjs http://localhost:8788` — prinde soft-404,
-   redirecturi greșite, headere lipsă, sitemap incoerent (pe live se rulează tot prin relay, vezi §3).
-6. `./test.sh` verde → commit cu mesaj descriptiv (în română, ca restul istoricului).
-7. Deploy (secțiunea 3) → verifică pe live → raportează utilizatorului ce s-a schimbat, concret.
+## 3. Publicare în producție (fără merge, fără preview)
 
-## 3. Deploy fără acces de rețea la Cloudflare (relay)
-
-Sandbox-urile de agent de obicei **nu pot accesa** `api.cloudflare.com`/`pages.dev` direct (curl dă
-timeout). Nu insista; folosește relay-ul prin GitHub Actions:
+Sandbox-ul agentului **nu are rețea** către `api.cloudflare.com` și nici către
+`pages.dev` (TLS blocat). Singurul drum spre producție e relay-ul din GitHub Actions,
+care rulează pe un runner cu secretele din GitHub.
 
 ```bash
-# 1. scrie ce vrei rulat pe runner (are wrangler, npm ci, curl, token-ul din Secrets):
-cat > cf-relay/cmd.sh <<'EOF'
-#!/usr/bin/env bash
-set -uo pipefail
-./deploy.sh
-echo "exit deploy: $?"
-# + verificări post-deploy cu curl pe https://anime-uke.pages.dev (grep în JS/CSS, statusuri API)
-EOF
-# 2. commit + push → workflow-ul pornește automat (orice branch, doar când se schimbă cmd.sh).
-#    Dacă e un branch, relay-ul face checkout explicit la origin/main înainte de deploy.
-git add cf-relay/cmd.sh && git commit -m "relay: deploy <ce>" && git push origin <branch>
-# 3. așteaptă și citește rezultatul
-sleep 15; ID=$(gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId')
-gh run watch $ID --exit-status
-git stash; git pull --rebase origin <branch>; git stash pop     # runner-ul comite cf-relay/last-output.txt
-cat cf-relay/last-output.txt
+./test.sh                                  # totul verde, obligatoriu
+git add -A && git commit -m "..."          # pe branch-ul sesiunii
+./publish.sh "ce publici, pe scurt"        # împinge branch-ul + declanșează relay-ul
 ```
 
-- `deploy.sh` face totul în ordine: D1 → **migrări remote** → Worker DO → Pages → JWT_SECRET, plus purge CSS,
-  bundle/minify JS, versionare `?v=<commit>`. Nu trebuie să rulezi migrările separat.
-- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox. Canalul principal de citit rezultatul
-  (de la 25.09) e **comentariul pe commit** pe care îl lasă relay-ul: `gh api repos/ExMarius/anime-uke/commits/<sha>/comments`.
-  Înaintea capului/cozii de output (cu tokenii redactați), comentariul scoate explicit reperele de predare: `exit deploy`,
-  `?v=` din HTML, canarul de prietenie și totalul/exit-ul auditului — nu le pierde la trunchierea logului. `last-output.txt`
-  se comite și el când push-ul trece, dar comentariul e garantat.
-- `CLOUDFLARE_ACCOUNT_ID` e opțional și poate fi invalid (de ex. 53 caractere în loc de 32 hex): `cf-relay/cmd.sh`
-  alege singur contul pe care tokenul chiar vede D1-ul `anime-db`. Dacă secretul e setat corect, verifică doar paritatea.
-- `node scripts/usage.mjs` (`npm run usage`, rulat și de `cf-relay/cmd.sh`) arată procentul
-  consumat azi din cotele gratuite (Functions / D1 / DO). Cere permisiunea
-  „Account Analytics: Read" pe token; fără ea scrie clar ce lipsește, nu crapă.
-- **Un singur deploy odată.** Toate trigger-ele relay publică în ACELAȘI proiect Pages; ele
-  rulează acum codul din `origin/main`, dar două sesiuni paralele se pot totuși călca la migrări,
-  cache și audit. Concurența workflow-ului le serializează; verifică `git log --all --oneline -15`
+Ce se întâmplă:
+
+1. `publish.sh` refuză `main`, refuză un arbore murdar, adaugă o linie în
+   `cf-relay/deploy-request.txt`, comite și împinge **numai branch-ul curent**.
+2. Push-ul pornește două workflow-uri:
+   - `tests.yml` — toate suitele, pe orice branch;
+   - `cloudflare-relay.yml` — **poarta de teste** (așteaptă verdictul suitei pentru
+     exact acest commit; roșu ⇒ nu publică), apoi `cf-relay/cmd.sh`.
+3. `cf-relay/cmd.sh` publică **exact commitul care l-a declanșat** (marker
+   `PUBLICA_BRANCHUL_CURENT=1`, log `publicare DIRECTĂ … din <branch>@<sha>`), rulează
+   `./deploy.sh` (D1 → migrări remote → Turso → Worker DO → Pages `--branch=main` →
+   JWT), apoi auditul live pe <https://anime-uke.pages.dev>.
+4. Rezultatul se citește în două locuri: **comentariul pe commit** (canalul garantat,
+   cu tokenii redactați) și `cf-relay/last-output.txt`, comis înapoi pe branch.
+
+```bash
+gh api repos/ExMarius/anime-uke/commits/<sha>/comments --jq '.[-1].body'
+git pull --rebase origin <branch-ul sesiunii> && tail -80 cf-relay/last-output.txt
+```
+
+Reguli de operare ale relay-ului:
+
+- **Un singur deploy odată.** Toate declanșările publică în ACELAȘI proiect Pages;
+  `concurrency: cf-relay` le serializează. Verifică `git log --all --oneline -15`
   înainte de un trigger manual.
-- **Atenție, Git integration activă:** proiectul Pages face build automat la fiecare push (inclusiv
-  commit-urile `relay: output` — de aici preview-urile). Un merge în `main` declanșează deploy de
-  producție **din git** (fără `?v=`/purge/minify/migrări — dar cu bindinguri corecte din `wrangler.toml`
-  comis). După un merge în `main`, rulează un deploy prin relay ca să readuci producția la forma optimizată.
-- Pentru verificări read-only pe live ai două căi: (1) tool-ul de fetch al agentului (merge direct, fără
-  relay): `robots.txt`, `sitemap.xml`, `speculationrules.json`, `/api/pulse` se văd ca text, paginile vin
-  randate (cu JS executat), iar `/404` dovedește 404-ul real. Ce NU vezi prin fetch: headerele HTTP
-  (CSP/HSTS/Cache) — pentru alea rămâne relay-ul cu `curl -sI`. (2) auditul complet, care acoperă zeci de
-  probe deodată: `node scripts/audit-live.mjs https://anime-uke.pages.dev` în `cmd.sh` (rulează și fără
-  `./deploy.sh`, dacă vrei doar auditul). Iese cu cod 1 dacă găsește 🔴.
-- Token-urile Cloudflare/Turso stau **doar** în GitHub Secrets
-  (`CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`). **Nu le
-  scrie niciodată în fișiere**, mesaje de commit sau `cmd.sh`. Relay-ul copiază
-  credențialele Turso în secretele runtime Pages + Worker DO la deploy.
-- Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca marker de deploy; folosește
-  identificatori (nume de funcții, id-uri HTML, clase CSS).
+- Logurile Actions **nu** se pot citi cu `gh run view --log` din sandbox; folosește
+  comentariul pe commit.
+- `CLOUDFLARE_ACCOUNT_ID` e opțional: `cmd.sh` alege singur contul care vede D1-ul `anime-db`.
+- Migrările D1/Turso rulează în `deploy.sh`, deci la fiecare publicare. Nu le rula separat.
+- **Pages Git integration e activă:** fiecare push construiește și un deployment din git.
+  Producția optimizată (`?v=`, purge, minify) vine din relay, nu din buildul git — după
+  orice publicare din git, rulează un `./publish.sh` ca să readuci forma optimizată.
+- `auto-deploy.yml` publică automat numai pe `main` (după merge-ul final aprobat de
+  proprietar). Nu atinge branch-urile de sesiune.
+- Comentariile din JS sunt stripate la minificare — nu folosi text din comentarii ca
+  marker de deploy; folosește identificatori (nume de funcții, id-uri HTML, clase CSS).
+- Igienă după deploy/teste locale: `rm -rf .wrangler /home/user/.config/.wrangler`;
+  `chmod +x *.sh` după restore-uri de sandbox.
+
+---
 
 ## 4. Capcane cunoscute (toate au mușcat cel puțin o dată)
 
@@ -536,6 +604,37 @@ zgomotos în loc să raporteze cifre pentru altceva.
 - Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
   DOM build 215, plus toate suitele auxiliare.
 
+### Publicare din branch-ul sesiunii + gardă anti-merge (2026-09-29, branch `arena/01a0eddc-anime-uke`)
+
+Cerere explicită a proprietarului: sesiunile Arena trebuie să poată publica în producție
+**fără merge**, iar mecanismele care pot închide o sesiune (merge / close / auto-merge /
+ștergere de branch) trebuie să devină imposibile, nu doar nerecomandate.
+
+- **Relay-ul publică branch-ul care îl declanșează.** Până acum `cf-relay/cmd.sh` făcea
+  checkout detașat pe `origin/main` și publica alt cod decât cel care pornise workflow-ul —
+  adică nimic nu ajungea live fără merge. Deturnarea a fost scoasă; în loc, scriptul
+  exportă `PUBLICA_BRANCHUL_CURENT=1`, `RELAY_REF`, `RELAY_SHA` și logează
+  `publicare DIRECTĂ în producție din <branch>@<sha> (fără merge)`.
+- **Canal explicit de publicare:** `cf-relay/deploy-request.txt` (nou) e în `paths`-ul
+  workflow-ului; `./publish.sh "motiv"` (nou) scrie linia, comite, împinge **doar**
+  branch-ul curent, așteaptă rularea și afișează verdictul + auditul.
+- **Poarta de teste în relay:** înainte de deploy, workflow-ul așteaptă (max 7 min)
+  verdictul suitei `tests` pentru exact acel SHA; roșu ⇒ deploy oprit, absent ⇒
+  avertisment și continuare. `timeout-minutes` a urcat la 30.
+- **Gardă permanentă `tests/no-merge-guard.mjs`** (prima fază din `test.sh`, după
+  `scripts-health`): scanează toate fișierele urmărite de git după `gh pr merge/close`,
+  `--auto`, `allow_auto_merge`, `delete_branch_on_merge`, `git merge`, `git branch -D`,
+  `git push --delete`, `DELETE` pe `git/refs`, acțiuni de automerge, `pull_request_target`,
+  `git push … main` — în documentație doar în blocurile de cod. Plus gărzi pozitive:
+  relay-ul nu revine la `origin/main`, niciun workflow nu cere `pull-requests: write`,
+  `publish.sh` refuză `main`, `test.sh` chiar rulează garda, AGENTS.md ține regula scrisă.
+- **Reguli unificate:** AGENTS.md a devenit singura sursă normativă. Instrucțiunile
+  contradictorii („push direct în main, fără PR”, „producția = main întotdeauna”,
+  „relay-ul face checkout la origin/main”) au fost înlocuite; `PROMPT-AGENT-NOU.md`,
+  `CLAUDE.md` și `README.md` trimit acum aici, iar conținutul lor util a fost mutat, nu șters.
+- **Setări de repo verificate** (rămân așa): `allow_auto_merge=false`,
+  `delete_branch_on_merge=false`, fără rulesets.
+
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
 - Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): canonical/og hardcodate pe
@@ -552,67 +651,45 @@ zgomotos în loc să raporteze cifre pentru altceva.
   „Gând" (status scurt pe profil), avatar picker, sondaj săptămânal, „Seria săptămânii", „Episoade anunțate",
   cei mai activi per rol, Hall of fame, mesaje private/blocare în lista online.
 
-## 8. Reguli de la proprietar
+---
 
-- Nu scrie secrete în cod. Token-ul Cloudflare rămâne activ în GitHub Secrets (nu cere rotirea lui decât la final).
-- Fă lucrurile complet: cod → teste → deploy → verificare pe live → raport clar în română.
-- Nu șterge/redenumi lucruri „de curățenie" fără să verifici că nu sunt referite (`grep -rn` în `src public scripts tests deploy.sh dev.sh test.sh`).
-- Când termini o sesiune mai lungă, **actualizează acest fișier** (secțiunile 6 și 7) pentru următorul.
+## 8. Roadmap confirmat cu proprietarul (în ordinea asta)
+
+Conținut mutat aici din `PROMPT-AGENT-NOU.md`, ca să existe o singură listă.
+Înainte de a începe un punct, confirmă-l — prioritățile se pot fi schimbat.
+
+**P0 — decis, de terminat**
+
+1. **Surse video piratate (mega.nz, f7hyg4q.org) = interzise permanent.** Au fost
+   dezactivate în producție (`is_active=0`, 4 rânduri, seriile 1015/1019). Decizia
+   proprietarului: ori ștergi seriile adăugate fără surse proprii (1015 Liar Game,
+   1017 Jitsu wa, 1018 DanMachi, 1019 Lord of Mysteries), ori le pui surse deținute
+   sau controlate de el. Niciodată nu reactivezi linkuri piratate.
+
+**P1 — de întrebat înainte de cod**
+
+2. **Reclame A-Ads** (iframe `acceptable.a-ads.com`) pe `index.html`, `series.html`,
+   `episode.html` — adăugate fără aprobare. Implicit: scoase, dacă nu cere monetizare.
+   Atenție la layout-ul cinema/fullscreen după scoatere.
+3. **Turso** = vendor extern peste regula „doar Cloudflare”; tolerat cât e free tier și
+   există rollback (`WATCH_STORE=d1`). Întreabă dacă rămâne.
+4. **Catalogul**: regula veche era „doar One Piece (1014)”; acum sunt 5 serii.
+   Confirmă ce vrea în catalog.
+
+**P2 — de adăugat**
+
+5. Flux de **resetare parolă** (auth are doar login/register/logout/me/options).
+   Există lucru neintegrat pe branch-ul `arena/01a0e393-anime-uke` (PR #25, deschis).
+6. Completare profil → facțiuni → știri automate → upgrade-uri chat →
+   căutare/filtre sezoniere/sondaje → 2FA. Mini-jocul cu creaturi la urmă.
+7. Conținut: subtitrări `.vtt` lipite pe episoadele din producție
+   (admin → serie → edit episod; proxy-ul `/api/subtitle` funcționează).
+8. Verifică OG image + favicon pentru sharing (Discord/Telegram).
 
 ---
 
-## Regulile proprietarului (adicate manual, au prioritate MAXIMA)
+## 9. Predare
 
-1. **Flux de livrare:** build → `./test.sh` verde → commit → **push direct în main** →
-   deploy. **FĂRĂ pull requests.** (PR-urile #21–#23 au fost excepția altui agent,
-   nu regula.)
-2. **Viteză:** puține du-te-vino; dacă o metodă eșuează de două ori, schimbă metoda
-   imediat și spune ce ai schimbat. Fără așteptare de ore.
-3. **Buget 0:** doar planuri gratuite. Turso e tolerat DOAR cât rămâne free tier și
-   există rollback documentat spre D1; orice alt vendor nou = întrebare explicită
-   către proprietar înainte.
-4. **Interdicții:** fără scraping de site-uri piratate și fără linkuri mega.nz /
-   similare; **fără auto-next** (scos la cerere explicită — nici măcar comentarii
-   care să sugereze că există); fără reCAPTCHA / Google Analytics / anti-debug;
-   fără secțiune de caractere / Pokémon.
-5. **Player:** video inline; fără buton propriu de fullscreen; fullscreen-ul nativ al
-   providerului trebuie să meargă; `allow="fullscreen *; …"`; **fără `sandbox`** pe
-   iframe-ul playerului.
-6. **Puncte:** doar după 15 minute de vizionare, prin progresul de vizionare
-   (indiferent de store-ul activ: D1 sau Turso).
-7. **Igienă:** `rm -rf .wrangler /home/user/.config/.wrangler` după deploy/teste;
-   `chmod +x *.sh` după restore-uri de sandbox; snapshot < 128 MB / 10k fișiere.
-8. **Gate public:** catalogul public e decizia curentă (SEO/GSC). Zonele personale
-   (profile, admin, chat, PM) rămân strict în spatele login-ului.
-
----
-
-## REGULA DE AUR pentru o sesiune/agent NOU
-Lucrezi DOAR pe site-ul EXISTENT: `https://anime-uke.pages.dev`, proiectul Cloudflare
-Pages `anime-uke`, repo-ul `ExMarius/anime-uke`, baza D1 `anime-db` (+ Turso pentru
-progres). **NICIODATĂ site/proiect/repo nou, niciodată rebuild de la zero.**
-„Clone"-ul de mai jos NU face un al doilea site: doar descarcă codul curent ca să-l
-modifici pe loc; după push în main + `./deploy.sh`, modificarea apare pe ACELAȘI site.
-
-## Setup pentru o sesiune/agent NOU — AUTOMAT
-
-```bash
-git clone https://github.com/ExMarius/anime-uke.git && cd anime-uke
-./setup.sh test    # Node 24 automat, dependente, permisiuni, toate testele
-```
-Atat. `setup.sh` instaleaza singur Node >=22 daca lipseste, face npm install,
-chmod pe scripturi si (cu argumentul `test`) ruleaza toate suitele.
-
-## Deploy AUTOMAT (fara secrete in sandbox)
-Push pe main → CI `tests.yml` ruleaza toate suitele → daca-s verzi,
-`auto-deploy.yml` face deploy singur (Worker DO + Pages) cu tokenul din
-GitHub Secrets. Agentul NU are nevoie de token Cloudflare niciodata.
-Comenzi wrangler punctuale / migrari D1: prin `cf-relay` (cmd.sh) sau
-`./deploy.sh` local daca sandbox-ul are acces la api.cloudflare.com.
-
-Secretele NU sunt in repo (nici nu trebuie sa fie): token Cloudflare + account ID
-pentru `./deploy.sh`, token GitHub pentru push. Le cere proprietarului la pornire.
-Dupa deploy/teste: `rm -rf .wrangler /home/user/.config/.wrangler`.
-
-Producția = `main` intotdeauna; deploy DOAR prin `./deploy.sh`; push DIRECT in
-main, fara PR. Prima lectura obligatorie: acest fisier + `README.md`.
+Când închei o sesiune mai lungă, actualizează **§6** (ce ai făcut) și **§7/§8**
+(ce rămâne) — pentru următorul agent ăsta e singurul context de încredere.
+Raportul către proprietar: în română, scurt, cu ce s-a schimbat și linkul live.

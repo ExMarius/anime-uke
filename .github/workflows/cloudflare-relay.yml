@@ -2,12 +2,19 @@
 # Cloudflare relay — ruleaza comenzi wrangler/curl pe un runner GitHub,
 # pentru ca sandbox-ul de lucru nu are acces de retea la api.cloudflare.com.
 #
+# PUBLICARE DIRECTA IN PRODUCTIE DIN BRANCH-UL SESIUNII (29.09.2026):
+#   relay-ul deployeaza EXACT commitul care l-a declansat, pe orice branch,
+#   fara merge in main si fara PR. Metoda recomandata de declansare e
+#   `./publish.sh "motiv"` (scrie cf-relay/deploy-request.txt, comite si
+#   impinge pe branch-ul curent). Vezi AGENTS.md §1-§3.
+#
 # Cum functioneaza:
 #   1. Secrete obligatorii: CLOUDFLARE_API_TOKEN, TURSO_DATABASE_URL și
 #      TURSO_AUTH_TOKEN (Settings → Secrets and variables → Actions).
 #      CLOUDFLARE_ACCOUNT_ID e optional — se descopera automat din API.
 #   2. Comanda de rulat sta in cf-relay/cmd.sh (comis in repo).
-#   3. Declansare: orice push (pe ORICE branch) care modifica cmd.sh
+#   3. Declansare: orice push (pe ORICE branch) care modifica
+#      cf-relay/deploy-request.txt, cf-relay/cmd.sh sau cf-relay/watch-stage.txt,
 #      SAU manual prin workflow_dispatch (input "cmd").
 #   4. Output-ul e scris inapoi in cf-relay/last-output.txt pe acelasi
 #      branch (logurile de Actions nu se pot citi din sandbox).
@@ -37,6 +44,7 @@ on:
     branches:
       - '**'
     paths:
+      - 'cf-relay/deploy-request.txt'
       - 'cf-relay/cmd.sh'
       - 'cf-relay/watch-stage.txt'
 
@@ -50,7 +58,7 @@ permissions:
 jobs:
   relay:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -61,6 +69,47 @@ jobs:
 
       - name: Instaleaza dependinte
         run: npm ci --no-audit --no-fund
+
+      # Regula proprietarului: in productie nu ajunge cod netestat. Suita
+      # "tests" ruleaza la fiecare push; aici asteptam verdictul pentru EXACT
+      # acest commit. Esec = oprim deploy-ul inainte sa atinga Cloudflare.
+      # Lipsa rularii (ex. workflow_dispatch pe un commit vechi) = avertisment
+      # si continuam, ca sa nu blocam o interventie manuala.
+      - name: Poarta de teste (suita tests pe acest commit)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          echo "astept verdictul suitei tests pentru ${GITHUB_SHA::7} (max 7 min)"
+          ABSENTE=0
+          DEADLINE=$(( SECONDS + 420 ))
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=50" 2>/dev/null || printf '{}')"
+            STARE="$(printf '%s' "$JSON" | jq -r '
+              [.workflow_runs[]? | select(.name == "tests")] as $r
+              | if ($r | length) == 0 then "absent"
+                else ($r | sort_by(.created_at) | last | .conclusion // "in_progress") end' 2>/dev/null || printf 'absent')"
+            case "$STARE" in
+              success)
+                echo "suita tests e verde pe acest commit - continui deploy-ul"
+                exit 0 ;;
+              failure|cancelled|timed_out|startup_failure|action_required)
+                echo "::error title=teste rosii::suita tests a iesit cu '${STARE}' pe ${GITHUB_SHA::7} - NU public in productie"
+                exit 1 ;;
+              absent)
+                ABSENTE=$(( ABSENTE + 1 ))
+                if [ "$ABSENTE" -ge 6 ]; then
+                  echo "::warning title=fara rulare de teste::nu exista o rulare tests pentru ${GITHUB_SHA::7} - continui pe raspunderea declansatorului"
+                  exit 0
+                fi
+                echo "  inca nu s-a inregistrat nicio rulare tests (${ABSENTE}/6)" ;;
+              *)
+                ABSENTE=0
+                echo "  tests: ${STARE}" ;;
+            esac
+            sleep 20
+          done
+          echo "::warning title=teste neconcluzive::verdictul suitei tests nu a venit in 7 minute - continui"
 
       - name: Verifica secretul si descopera Account ID
         env:

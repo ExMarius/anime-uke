@@ -3,8 +3,11 @@
 # Deploy + verificare LIVE: tot ce face deploy.sh (D1, migrări remote,
 # Worker DO, Pages, JWT, purge/minify, ?v=), apoi verificările
 # post-deploy pe https://anime-uke.pages.dev (sectiunile 1–20 din mai jos).
-# Redeploy de activare după propagarea secretului Turso în Pages: migrare,
-# deploy complet și canar live pe codul integrat în origin/main.
+#
+# SURSA DEPLOY-ULUI (29.09.2026): commitul care a declanșat workflow-ul,
+# indiferent de branch. Publicarea din branch-ul sesiunii Arena direct în
+# producție, FĂRĂ merge, e regula proprietarului — vezi blocul de mai jos și
+# `publish.sh` (metoda sigură de declanșare).
 #
 # Comportament (25.09):
 #   - alege mai întâi contul Cloudflare care chiar vede D1-ul anime-db
@@ -19,22 +22,26 @@
 # =====================================================================
 set -uo pipefail
 
-# Un relay poate fi declanșat dintr-un branch de mentenanță (workflow-ul ascultă
-# toate branch-urile), dar producția nu trebuie să primească niciodată codul
-# neintegrat al acelui branch. Pe Actions trecem explicit la main și relansăm
-# comanda din commitul de producție. Marcajul previne recursia după exec.;
-# diagnosticul tranzitoriu al workflow-ului este salvat separat înainte de checkout.
-if [ "${GITHUB_ACTIONS:-}" = "true" ] \
-  && [ "${GITHUB_REF_NAME:-}" != "main" ] \
-  && [ "${RELAY_MAIN_CHECKED_OUT:-}" != "1" ]; then
-  echo "── relay de pe ${GITHUB_REF_NAME}: folosesc origin/main pentru producție ──"
-  # Pasul anterior din workflow inițializează last-output.txt pentru diagnostic.
-  # Nu e sursă de deploy, iar checkout-ul trebuie să poată schimba arborele.
-  git checkout -- cf-relay/last-output.txt
-  git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
-  git checkout --detach origin/main
-  export RELAY_MAIN_CHECKED_OUT=1
-  exec bash cf-relay/cmd.sh
+# ── PUBLICARE DIRECTĂ DIN BRANCH-UL SESIUNII (fără merge) ─────────────
+# Regula proprietarului (AGENTS.md §1, 29.09.2026): producția se publică
+# EXACT din branch-ul de sesiune Arena, fără merge în main și fără PR.
+# Până la data asta relay-ul își muta singur arborele pe origin/main (checkout
+# detașat) și publica altceva decât codul care îl declanșase — adică munca unei
+# sesiuni nu putea ajunge live decât după un merge. Deturnarea aia a fost
+# ȘTEARSĂ intenționat; `tests/no-merge-guard.mjs` verifică permanent să nu revină.
+#
+# Ce publicăm acum: exact commitul cu care a pornit workflow-ul (checkout-ul
+# implicit al actions/checkout). Îl scriem în log ca auditul să spună clar ce
+# cod a ajuns în producție.
+PUBLICA_BRANCHUL_CURENT=1
+export PUBLICA_BRANCHUL_CURENT
+RELAY_REF="${GITHUB_REF_NAME:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo necunoscut)}"
+RELAY_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo necunoscut)"
+export RELAY_REF RELAY_SHA
+echo "── publicare DIRECTĂ în producție din ${RELAY_REF}@${RELAY_SHA} (fără merge) ──"
+if [ -f cf-relay/deploy-request.txt ]; then
+  echo "── cerere de publicare ──"
+  grep -vE '^[[:space:]]*(#|$)' cf-relay/deploy-request.txt | tail -3 | sed 's/^/     /'
 fi
 
 # Etapa mutării progresului de vizionare. Sursa de adevăr e fișierul comis

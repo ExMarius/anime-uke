@@ -154,13 +154,25 @@ npm run deploy                    # ./deploy.sh
 bundle-uiește/minifică JS-ul per pagină și versionează assetele cu `?v=<commit>`. Migratează
 idempotent în Turso orice DM creat anterior în tabelul D1.
 
-**Fără acces de rețea la Cloudflare** (ex. sandbox de agent): scrie comanda în `cf-relay/cmd.sh`, comite pe un
-branch `arena/**`, push. Workflow-ul `cloudflare-relay` o rulează pe un runner GitHub (token-urile sunt în
-secretele repo-ului `CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, niciodată în cod)
-și comite rezultatul în `cf-relay/last-output.txt`.
-Dacă triggerul pornește de pe un branch, relay-ul trece explicit la `origin/main` înainte de deploy: producția
-primește numai codul integrat, iar output-ul este apoi comis înapoi pe branch-ul care a declanșat rularea.
-Deploy complet = `cmd.sh` apelează `./deploy.sh`.
+**Fără acces de rețea la Cloudflare** (cazul obișnuit într-un sandbox de agent: `api.cloudflare.com` și
+`pages.dev` sunt blocate): publicarea se face prin relay-ul din GitHub Actions.
+
+```bash
+./test.sh                              # verde, obligatoriu
+git commit -am "..."                   # pe branch-ul sesiunii
+./publish.sh "ce publici"              # push + declanșare relay + verdict
+```
+
+`publish.sh` adaugă o linie în `cf-relay/deploy-request.txt` și împinge **numai branch-ul curent**
+(refuză `main` și un arbore murdar). Workflow-ul `cloudflare-relay` așteaptă verdictul suitei `tests`
+pentru acel commit, apoi rulează `cf-relay/cmd.sh` → `./deploy.sh` → audit live.
+**Relay-ul publică EXACT commitul care l-a declanșat, din orice branch, fără merge în `main`** —
+așa ajunge codul unei sesiuni în producție fără să fie integrat mai întâi.
+Token-urile stau în secretele repo-ului (`CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`,
+`TURSO_AUTH_TOKEN`), niciodată în cod. Rezultatul: comentariu pe commit + `cf-relay/last-output.txt`.
+
+Regulile de livrare (inclusiv interdicțiile de merge/close/ștergere de branch) sunt în
+[`AGENTS.md`](AGENTS.md) §1–§3 și sunt verificate automat de `tests/no-merge-guard.mjs`.
 
 ### De ce există `worker-do/`
 
