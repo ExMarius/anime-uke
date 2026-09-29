@@ -863,6 +863,80 @@ async function renderContinue() {
 // „Continuă vizionarea" — decizia rămâne a serverului.
 const WATCH_DONE_SECONDS = 15 * 60;
 
+// Descoperire după stare: butoanele aleg primul gen care există cu adevărat
+// în catalog. Astfel „Mister” poate cădea pe „Dark Fantasy”, fără rezultat gol
+// și fără o cerere nouă — lista de genuri vine deja prin /api/home.
+function initMoodDiscovery() {
+  document.querySelectorAll('#mood-grid .mood').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const home = await homeData();
+      const available = home.ok ? (home.data.genres || []) : [];
+      const wanted = String(button.dataset.genres || '').split(',').map((x) => x.trim()).filter(Boolean);
+      const picked = wanted
+        .map((want) => available.find((g) => String(g).toLocaleLowerCase('ro') === want.toLocaleLowerCase('ro')))
+        .find(Boolean) || wanted[0] || '';
+      if (!picked) { toast('Catalogul nu are încă genuri configurate.', 'info'); return; }
+      genreFilter = picked;
+      statusFilter = '';
+      query = '';
+      page = 1;
+      applyFilters();
+      toast(`${button.dataset.mood || 'Vibe ales'} · ${picked}`, 'ok');
+      document.getElementById('serii')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+// Un spotlight editorial din clasamentul real al comunității. Preferăm seria
+// cu cea mai multă vizionare din ultimele 7 zile, apoi cea mai bine notată.
+// Ambele seturi (inclusiv coperta) sunt deja în /api/home.
+async function renderWeeklyPick() {
+  const section = document.getElementById('weekly-pick');
+  const art = document.getElementById('weekly-pick-art');
+  if (!section || !art) return;
+  const home = await homeData();
+  if (!home.ok) return;
+  const weekly = home.data.top?.weekly || [];
+  const rated = home.data.top?.rated || [];
+  const pick = weekly[0] || rated[0];
+  if (!pick?.id) return;
+
+  document.getElementById('weekly-pick-title').textContent = pick.title || 'Alegerea săptămânii';
+  document.getElementById('weekly-pick-link').href = `/series?id=${encodeURIComponent(pick.id)}`;
+  art.innerHTML = '';
+  if (pick.cover_image) {
+    art.appendChild(coverImg(pick.cover_image, {
+      w: 800, widths: [300, 500, 800], sizes: '(max-width: 540px) 100vw, 36vw',
+      alt: '',
+    }));
+  } else {
+    art.appendChild(genPoster(pick.title));
+  }
+
+  const copy = document.getElementById('weekly-pick-copy');
+  const facts = document.getElementById('weekly-pick-facts');
+  facts.innerHTML = '';
+  const addFact = (text) => {
+    if (!text) return;
+    const span = document.createElement('span');
+    span.textContent = text;
+    facts.appendChild(span);
+  };
+  if (weekly[0]) {
+    const minutes = Math.max(1, Math.round((Number(pick.seconds) || 0) / 60));
+    copy.textContent = 'Seria care a ținut comunitatea cel mai mult cu ochii pe ecran în ultimele șapte zile.';
+    addFact(`👥 ${Number(pick.watchers) || 0} spectatori`);
+    addFact(`▶ ${minutes.toLocaleString('ro-RO')} minute urmărite`);
+  } else {
+    copy.textContent = 'Una dintre seriile cel mai bine cotate de comunitatea Anime-Uke.';
+    addFact(`★ ${Number(pick.average || 0).toFixed(1)} rating`);
+    addFact(`${Number(pick.votes) || 0} voturi`);
+  }
+  addFact('RO SUB');
+  section.hidden = false;
+  observeReveals(section);
+}
+
 function initQuickActions() {
   document.getElementById('quick-random')?.addEventListener('click', async () => {
     const home = await homeData();
@@ -912,8 +986,10 @@ async function loadTops() {
 }
 
 initCatalogFilters();
+initMoodDiscovery();
 initQuickActions();
 loadRecent().catch(() => { /* secțiunea e optională */ });
+renderWeeklyPick().catch(() => { /* recomandarea editorială e opțională */ });
 // Filtrele din URL se aplica INAINTE de prima cerere, ca pagina sa se
 // incarce direct pe rezultatele cerute (fara un al doilea apel).
 readUrlState();

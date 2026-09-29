@@ -237,6 +237,19 @@ console.log('\n=== 1. VIZITATOR ===');
     check('faviconul și og:image rămân PNG (WebP nu e acceptat de iOS/crawlere)',
       homeHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && homeHtml.includes('/assets/img/og-card.png'), 'verifică <link rel=icon> și og:image');
     check('og:image de pe / e cardul OG propriu (PNG wide, nu logo pătrat)', homeHtml.includes('/assets/img/og-card.png'), homeHtml.match(/og:image[^>]*>/)?.[0]);
+    check('Homepage are JSON-LD WebSite + SearchAction + CollectionPage',
+      homeHtml.includes('"@type": "WebSite"') && homeHtml.includes('"@type": "SearchAction"')
+        && homeHtml.includes('"@type": "CollectionPage"') && homeHtml.includes('{search_term_string}'),
+      'lipsesc datele structurate ale catalogului');
+    check('Cardul social de homepage declara dimensiuni si format mare pentru Twitter',
+      homeHtml.includes('property="og:image:width" content="1200"')
+        && homeHtml.includes('property="og:image:height" content="630"')
+        && homeHtml.includes('name="twitter:card" content="summary_large_image"'),
+      'metadate OG/Twitter incomplete');
+    check('Homepage are continut editorial indexabil pentru descoperire',
+      homeHtml.includes('id="descopera"') && homeHtml.includes('Spune-ne ce vibe ai')
+        && homeHtml.includes('id="weekly-pick"'),
+      'lipsesc descoperirea sau alegerea saptamanii');
     const loginHtml = await (await fetch(BASE + '/login')).text();
     check('Login folosește logo-ul (favicon + marca auth)',
       loginHtml.includes('rel="icon" href="/assets/img/logo-icon.png"') && loginHtml.includes('auth-logo__mark'),
