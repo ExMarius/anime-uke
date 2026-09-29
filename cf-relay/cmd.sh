@@ -559,6 +559,29 @@ q "DELETE FROM users WHERE username LIKE 'canarw%'" >/dev/null
 q "UPDATE site_meta SET value = (SELECT COUNT(*) FROM users) WHERE key = 'users_total'" >/dev/null
 echo "   dupa curatenie: $(q "SELECT COUNT(*) AS n FROM users WHERE username LIKE 'canarw%'") conturi canarw ramase"
 
+# ── 22. AUTENTIFICARE: schimbarea parolei + recuperarea asistata ──────
+# Migrarile 0031-0033 au ajuns in productie o data cu acest pachet. Un
+# ALTER/CREATE care nu s-a aplicat NU se vede din API (endpointul da 500 abia
+# cand il foloseste cineva), deci citim direct schema D1 de productie.
+# Verificarile de API sunt STRICT read-only: nu creeaza conturi si nu emit
+# coduri. Un cont inexistent trebuie sa primeasca acelasi raspuns ca unul real
+# (fara enumerare) — daca cineva strica asta, se vede aici, nu intr-un raport
+# de securitate.
+echo
+echo "── 22. autentificare: schimbarea parolei + recuperarea asistata (migrarile 0031-0033)"
+echo "   users.auth_version exista: $(q "SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name = 'auth_version'")"
+echo "   tabelul password_reset_requests: $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'password_reset_requests'")"
+echo "   index un singur cod activ/cont: $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name = 'idx_password_reset_one_active_per_user'")"
+echo "   index ultima vizionare (0033): $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name = 'idx_watched_user_recent'")"
+echo "   coduri stocate in clar (trebuie 0): $(q "SELECT COUNT(*) AS n FROM password_reset_requests WHERE token_hash <> '' AND length(token_hash) < 32")"
+echo "   /reset-password → $(curl -s -o /dev/null -w '%{http_code}' "$B/reset-password") (trebuie 200)"
+case "$(curl -s "$B/login")" in *reset-password*) echo "   link de recuperare (Ai uitat parola) pe /login = da" ;; *) echo "   !! lipseste linkul de recuperare de pe /login" ;; esac
+echo "   POST /api/auth/password fara sesiune → $(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/password" -H 'Content-Type: application/json' -H "Origin: $B" -d '{}') (trebuie 401)"
+echo "   GET /api/admin/password-resets anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/password-resets") (trebuie 401)"
+RESET_INEXISTENT="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identificator":"canar-inexistent-fara-cont"}')"
+echo "   POST /api/auth/password-reset pe un cont inexistent → ${RESET_INEXISTENT} (fara enumerare: acelasi raspuns ca la un cont real)"
+echo "   cereri de resetare in coada dupa verificare: $(q "SELECT COUNT(*) AS n FROM password_reset_requests WHERE status IN ('pending','issued')")"
+
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"
