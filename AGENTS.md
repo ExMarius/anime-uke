@@ -521,6 +521,21 @@ zgomotos în loc să raporteze cifre pentru altceva.
 
 ---
 
+### Homepage editorial + SEO de catalog (2026-09-29)
+
+- Homepage-ul are acum o zonă originală **„Spune-ne ce vibe ai”** cu patru stări.
+  Butoanele aleg primul gen existent în catalog din lista deja inclusă în `/api/home`,
+  aplică filtrul partajabil și nu adaugă nicio invocare Worker.
+- **„Alegerea comunității · săptămâna aceasta”** refolosește primul rând din topul
+  săptămânal (fallback: top rating), inclusiv coperta; zero endpoint sau query nou.
+- Head-ul paginii declară `WebSite` + `SearchAction`, `Organization` și `CollectionPage`
+  în JSON-LD, plus dimensiunile cardului OG și `summary_large_image` pentru Twitter.
+- Designul nou e CSS pur, responsive, fără fonturi/imagini/dependențe externe. Măsurat după
+  pipeline-ul real: homepage **40,1 KB gzip** pe calea critică (buget 45 KB), JS critic
+  16,3 KB (buget 19,5 KB), CSS 18,9 KB (buget 22 KB).
+- Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
+  DOM build 215, plus toate suitele auxiliare.
+
 ## 7. Backlog (idei discutate cu proprietarul, neîncepute — cere confirmare înainte)
 
 - Din audit (`AUDIT-LIVE.md` §3 — alegeri de produs, nu defecte): canonical/og hardcodate pe

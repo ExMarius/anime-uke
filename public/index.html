@@ -12,13 +12,57 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://anime-uke.pages.dev/">
   <meta property="og:image" content="https://anime-uke.pages.dev/assets/img/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Anime-Uke — anime subtitrat în română">
   <meta property="og:locale" content="ro_RO">
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Anime-Uke — Anime Subtitrat în Română Online">
   <meta name="twitter:description" content="Urmărește gratuit seriile anime subtitrate în română. Puncte, chat live, comunitate.">
   <meta name="twitter:image" content="https://anime-uke.pages.dev/assets/img/og-card.png">
   <link rel="canonical" href="https://anime-uke.pages.dev/">
   <title>Anime-Uke — Anime Subtitrat în Română Online</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://anime-uke.pages.dev/#website",
+        "url": "https://anime-uke.pages.dev/",
+        "name": "Anime-Uke",
+        "inLanguage": "ro-RO",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://anime-uke.pages.dev/?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://anime-uke.pages.dev/#organization",
+        "name": "Anime-Uke",
+        "url": "https://anime-uke.pages.dev/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://anime-uke.pages.dev/assets/img/logo.png"
+        }
+      },
+      {
+        "@type": "CollectionPage",
+        "@id": "https://anime-uke.pages.dev/#catalog",
+        "url": "https://anime-uke.pages.dev/",
+        "name": "Catalog anime subtitrat în română",
+        "description": "Catalog de serii și episoade anime subtitrate în limba română.",
+        "isPartOf": { "@id": "https://anime-uke.pages.dev/#website" },
+        "about": { "@type": "Thing", "name": "Anime subtitrat în română" }
+      }
+    ]
+  }
+  </script>
   <link rel="icon" href="/assets/img/logo-icon.png">
   <!-- Coperțile seriilor vin de pe m.media-amazon.com: deschidem conexiunea
        (TCP+TLS) cât se descarcă HTML/CSS, ca prima copertă să nu plătească
@@ -100,7 +144,52 @@
       </div>
     </header>
 
-    <!-- ========== PUBLICITATE (A-Ads) ========== -->
+    <!-- Descoperire editorială: o intrare originală în catalog, nu încă un
+         carusel generic. Tot textul este în HTML, deci rămâne util și fără JS
+         și explică motoarelor de căutare ce oferă pagina. -->
+    <section class="section discovery" id="descopera" aria-labelledby="discovery-title">
+      <div class="discovery__intro">
+        <span class="section-kicker">Nu știi ce să alegi?</span>
+        <h2 class="discovery__title" id="discovery-title">Spune-ne ce vibe ai.<br><em>Noi deschidem raftul potrivit.</em></h2>
+        <p>Descoperă anime subtitrat în română după starea ta de azi. Fiecare alegere filtrează catalogul real, fără quiz-uri lungi și fără pagini inutile.</p>
+      </div>
+      <div class="mood-grid" id="mood-grid">
+        <button class="mood mood--spark" type="button" data-genres="Acțiune,Aventură" data-mood="Adrenalină">
+          <span class="mood__icon" aria-hidden="true">⚡</span>
+          <span><b>Vreau adrenalină</b><small>Lupte, aventură, ritm rapid</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+        <button class="mood mood--soft" type="button" data-genres="Romantism,Slice of Life,Comedie" data-mood="Ceva cald">
+          <span class="mood__icon" aria-hidden="true">🌸</span>
+          <span><b>Ceva cald</b><small>Romantism, zâmbete, seri liniștite</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+        <button class="mood mood--dark" type="button" data-genres="Mister,Dark Fantasy,Groază" data-mood="Minte în alertă">
+          <span class="mood__icon" aria-hidden="true">🌘</span>
+          <span><b>Minte în alertă</b><small>Mister, tensiune, lumi întunecate</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+        <button class="mood mood--world" type="button" data-genres="Fantasy,Sci-Fi,Isekai" data-mood="Altă lume">
+          <span class="mood__icon" aria-hidden="true">✦</span>
+          <span><b>Du-mă în altă lume</b><small>Fantasy, SF, universuri noi</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Alegerea săptămânii refolosește topul deja inclus în /api/home.
+         Zero request-uri noi, dar oferă catalogului o voce editorială. -->
+    <section class="section weekly-pick" id="weekly-pick" aria-labelledby="weekly-pick-title" hidden>
+      <div class="weekly-pick__art" id="weekly-pick-art" aria-hidden="true"></div>
+      <div class="weekly-pick__body">
+        <span class="section-kicker">Alegerea comunității · săptămâna aceasta</span>
+        <h2 id="weekly-pick-title">Se pregătește recomandarea…</h2>
+        <p id="weekly-pick-copy">Seria care a ținut comunitatea cel mai mult cu ochii pe ecran.</p>
+        <div class="weekly-pick__facts" id="weekly-pick-facts"></div>
+        <a class="btn btn--accent" id="weekly-pick-link" href="#serii">Vezi seria <span aria-hidden="true">→</span></a>
+      </div>
+      <span class="weekly-pick__stamp" aria-hidden="true">PICK<br><b>07</b></span>
+    </section>
 
     <!-- Randul „Continua vizionarea": din progresul real, nu din istoric fals. -->
     <section class="section" id="continue-section" hidden>

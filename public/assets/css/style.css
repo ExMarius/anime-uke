@@ -244,6 +244,100 @@ img.nav__brand__mark, img.auth-logo__mark { object-fit: cover; }
 .section__count { color: var(--dim-2); font-size: .86rem; font-weight: 650; }
 .section__title--plain::before { display: none; }
 
+/* ===================== DESCOPERIRE EDITORIALĂ =====================
+   O semnătură vizuală proprie pentru homepage: stări, nu încă o listă de
+   genuri. Nu folosește imagini/fonturi externe și nu adaugă request-uri. */
+.section-kicker {
+  display: inline-flex; align-items: center; gap: .45rem;
+  margin-bottom: .7rem; color: var(--accent-hi);
+  font-size: .7rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase;
+}
+.section-kicker::before { content: ""; width: 24px; height: 1px; background: currentColor; }
+.discovery {
+  display: grid; grid-template-columns: minmax(230px, .72fr) minmax(0, 1.55fr);
+  gap: clamp(1.4rem, 4vw, 3.8rem); align-items: center;
+  margin: .6rem 0 1rem; padding: clamp(1.3rem, 3vw, 2.4rem);
+  border: 1px solid var(--line-soft); border-radius: calc(var(--r-lg) + 6px);
+  background:
+    linear-gradient(125deg, rgba(220,20,60,.09), transparent 38%),
+    rgba(18,11,14,.72);
+  box-shadow: 0 24px 70px -48px rgba(220,20,60,.75);
+}
+.discovery__title {
+  margin: 0; font-size: clamp(1.65rem, 3.5vw, 2.65rem);
+  line-height: 1.04; letter-spacing: -.045em;
+}
+.discovery__title em { color: var(--accent-hi); font-style: normal; }
+.discovery__intro p { margin: .9rem 0 0; color: var(--dim); max-width: 40ch; font-size: .92rem; }
+.mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.mood {
+  --mood: 220,20,60;
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: 104px; display: grid; grid-template-columns: auto 1fr auto;
+  gap: .75rem; align-items: center; padding: .9rem;
+  text-align: left; color: var(--text); border-radius: var(--r-md);
+  border: 1px solid rgba(var(--mood), .24);
+  background: linear-gradient(135deg, rgba(var(--mood), .13), rgba(255,255,255,.025));
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.mood::after {
+  content: ""; position: absolute; z-index: -1; width: 80px; height: 80px;
+  right: -32px; top: -35px; border-radius: 50%; background: rgba(var(--mood), .18); filter: blur(12px);
+}
+.mood:hover { transform: translateY(-3px); border-color: rgba(var(--mood), .62); box-shadow: 0 16px 32px -24px rgba(var(--mood), .9); }
+.mood--soft { --mood: 236,112,160; }
+.mood--dark { --mood: 113,90,173; }
+.mood--world { --mood: 42,170,184; }
+.mood__icon {
+  width: 42px; height: 42px; display: grid; place-items: center;
+  border-radius: 13px; background: rgba(var(--mood), .16); font-size: 1.25rem;
+}
+.mood b, .mood small { display: block; }
+.mood b { font-size: .9rem; letter-spacing: -.01em; }
+.mood small { margin-top: .15rem; color: var(--dim); font-size: .7rem; line-height: 1.3; }
+.mood > i { color: rgba(var(--mood), .95); font-style: normal; font-size: 1.15rem; transition: transform .18s; }
+.mood:hover > i { transform: translateX(3px); }
+
+/* Recomandarea săptămânii: coperta devine fundal cinematic, textul rămâne
+   lizibil chiar când imaginea lipsește (posterul generat umple aceeași cutie). */
+.weekly-pick {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; grid-template-columns: minmax(180px, .55fr) minmax(0, 1.25fr);
+  min-height: 300px; margin: 1rem 0 2rem; padding: 0;
+  border: 1px solid var(--line); border-radius: calc(var(--r-lg) + 6px);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.weekly-pick__art { position: relative; min-height: 300px; overflow: hidden; background: var(--surface-2); }
+.weekly-pick__art::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 45%, var(--surface) 100%);
+}
+.weekly-pick__art img, .weekly-pick__art .poster__gen { width: 100%; height: 100%; object-fit: cover; }
+.weekly-pick__body { align-self: center; padding: clamp(1.4rem, 4vw, 3.2rem); padding-left: clamp(1rem, 3vw, 2.3rem); }
+.weekly-pick__body h2 { margin: 0; max-width: 18ch; font-size: clamp(1.8rem, 4vw, 3.15rem); line-height: 1; letter-spacing: -.05em; }
+.weekly-pick__body > p { max-width: 52ch; margin: .85rem 0; color: var(--dim); }
+.weekly-pick__facts { display: flex; gap: .5rem; flex-wrap: wrap; margin: 0 0 1.25rem; }
+.weekly-pick__facts span { padding: .28rem .6rem; border: 1px solid var(--line-soft); border-radius: 99px; color: var(--dim); font-size: .72rem; font-weight: 750; }
+.weekly-pick__stamp {
+  position: absolute; right: 1.1rem; top: 1rem; color: rgba(255,255,255,.11);
+  font-size: .65rem; font-weight: 900; line-height: .8; letter-spacing: .16em; text-align: center;
+}
+.weekly-pick__stamp b { font-size: 2.1rem; letter-spacing: -.08em; }
+@media (max-width: 760px) {
+  .discovery { grid-template-columns: 1fr; }
+  .weekly-pick { grid-template-columns: 115px minmax(0,1fr); min-height: 250px; }
+  .weekly-pick__art { min-height: 250px; }
+  .weekly-pick__art::after { background: linear-gradient(90deg, transparent, var(--surface)); }
+}
+@media (max-width: 540px) {
+  .mood-grid { grid-template-columns: 1fr; }
+  .mood { min-height: 82px; }
+  .weekly-pick { grid-template-columns: 1fr; }
+  .weekly-pick__art { position: absolute; inset: 0; z-index: -1; opacity: .28; }
+  .weekly-pick__art::after { background: linear-gradient(0deg, var(--surface), transparent 80%); }
+  .weekly-pick__body { padding: 2rem 1.2rem; }
+}
+
 .crumb { display: inline-flex; align-items: center; gap: .4rem; padding: .6rem 0; color: var(--dim); font-size: .88rem; font-weight: 650; }
 .crumb:hover { color: var(--accent-hi); }
 

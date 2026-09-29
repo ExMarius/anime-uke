@@ -313,6 +313,17 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
   check('Hero bannerul exista in DOM', !!p.$('#hero-banner'), 'lipseste #hero-banner');
   check('Hero bannerul e prima sectiune din main (sus de tot)', p.$('main')?.firstElementChild?.id === 'hero-banner', p.$('main')?.firstElementChild?.id);
   check('Butonul de shuffle „Alt anime” exista', !!p.$('#hero-shuffle'), 'lipseste #hero-shuffle');
+  check('Descoperirea dupa stare are patru alegeri accesibile',
+    p.$$('#mood-grid button.mood').length === 4 && p.$$('#mood-grid button.mood').every((b) => b.type === 'button' && b.dataset.genres),
+    `mood-uri=${p.$$('#mood-grid button.mood').length}`);
+  const weeklyOn = await until(() => p.$('#weekly-pick')?.hidden === false);
+  check('Alegerea saptamanii se randeaza din topul inclus in /api/home',
+    weeklyOn && /^\/series\?id=\d+$/.test(p.$('#weekly-pick-link')?.getAttribute('href') || '')
+      && (p.text('#weekly-pick-title') || '').length > 1,
+    `hidden=${p.$('#weekly-pick')?.hidden} title=${p.text('#weekly-pick-title')}`);
+  check('Alegerea saptamanii nu adauga alta cerere API',
+    p.requests.filter((u) => u.split('?')[0] === '/api/home').length === 1,
+    p.requests.filter((u) => u.startsWith('/api/')).join(' '));
   check('Randul „Continua vizionarea” exista in DOM', !!p.$('#continue-section'), 'lipseste #continue-section');
   if (p.$('#hero-banner')?.hidden === false) {
     check('TOT bannerul e un link catre seria afisata', p.$('#hero-banner')?.tagName === 'A' && /^\/series\?id=\d+$/.test(p.$('#hero-banner')?.getAttribute('href') || ''), `${p.$('#hero-banner')?.tagName} ${p.$('#hero-banner')?.getAttribute('href')}`);
