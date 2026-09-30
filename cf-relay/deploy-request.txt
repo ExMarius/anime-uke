@@ -16,3 +16,4 @@
 2026-09-29T18:15:21Z | arena/01a0eddc-anime-uke | 3091d64 | corectie verificare anti-enumerare
 2026-09-30T07:14:17Z | arena/01a0eddc-anime-uke | 5910af3 | Noutati: jurnalul primei pagini (migrarea 0034)
 2026-09-30T18:38:16Z | arena/01a0eddc-anime-uke | ba80d98 | Chat: moderare live (migrarea 0035)
+2026-09-30T19:59:51Z | arena/01a0eddc-anime-uke | d113c60 | SEO: pagini de gen indexabile /gen/<slug>
