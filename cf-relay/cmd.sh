@@ -610,6 +610,19 @@ echo "   GET /api/admin/news anonim → $(curl -s -o /dev/null -w '%{http_code}'
 case "$(curl -s "$B/api/home")" in *'"news"'*) echo "   /api/home livreaza si noutatile = da" ;; *) echo "   !! /api/home nu mai contine cheia news" ;; esac
 case "$(curl -s "$B/")" in *news-section*) echo "   sectiunea Noutati e in prima pagina = da" ;; *) echo "   !! lipseste sectiunea Noutati din prima pagina" ;; esac
 
+# ── 24. MODERAREA CHATULUI (migrarea 0035) ───────────────────────────
+# Coloana `mid` e conditia ca stergerea unui mesaj sa functioneze: fara ea,
+# un mesaj ajuns in arhiva nu mai poate fi legat de cel afisat in pagina.
+# Verificam si ca modul lent nu e accesibil fara drept de moderare.
+echo
+echo "── 24. moderarea chatului live (migrarea 0035)"
+echo "   chat_messages.mid exista: $(q "SELECT COUNT(*) AS n FROM pragma_table_info('chat_messages') WHERE name = 'mid'")"
+echo "   index pe mid: $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name = 'idx_chat_mid'")"
+echo "   mesaje in arhiva: $(q "SELECT COUNT(*) AS n FROM chat_messages")"
+echo "   GET /api/admin/chat-slow anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/chat-slow") (trebuie 401)"
+echo "   POST /api/admin/chat-slow anonim → $(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/chat-slow" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"seconds":10}') (trebuie 401)"
+echo "   actiuni de moderare in jurnal: $(q "SELECT COUNT(*) AS n FROM admin_log WHERE action LIKE 'chat_%'")"
+
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"

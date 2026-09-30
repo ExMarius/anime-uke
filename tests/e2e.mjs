@@ -2620,6 +2620,39 @@ console.log('\n=== 22. NOUTATI: jurnalul primei pagini (automat + anunturi) ==='
   check('/api/home livreaza si noutatile', Array.isArray(home.data?.news), JSON.stringify(Object.keys(home.data || {})));
 }
 
+console.log('\n=== 23. CHAT: modul lent din panoul de staff ===');
+{
+  const j = globalThis.admin;
+
+  const anon = await req(jar(), 'GET', '/api/admin/chat-slow');
+  check('GET /api/admin/chat-slow anonim → 401', anon.status === 401, `status=${anon.status}`);
+  const nonStaff = jar();
+  await req(nonStaff, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const forb = await req(nonStaff, 'POST', '/api/admin/chat-slow', { seconds: 10 });
+  check('Un membru obisnuit nu poate porni modul lent → 403', forb.status === 403, `status=${forb.status}`);
+
+  const g0 = await req(j, 'GET', '/api/admin/chat-slow');
+  check('Starea initiala: mod lent oprit', g0.status === 200 && g0.data?.slow === 0, JSON.stringify(g0.data));
+
+  const bad = await req(j, 'POST', '/api/admin/chat-slow', { seconds: 9999 });
+  check('Interval peste plafon → 400', bad.status === 400, `status=${bad.status}`);
+  const badType = await req(j, 'POST', '/api/admin/chat-slow', { seconds: 'zece' });
+  check('Interval non-numeric → 400', badType.status === 400, `status=${badType.status}`);
+
+  const on = await req(j, 'POST', '/api/admin/chat-slow', { seconds: 10 });
+  check('Pornirea modului lent → 200', on.status === 200 && on.data?.slow === 10, JSON.stringify(on.data));
+  const g1 = await req(j, 'GET', '/api/admin/chat-slow');
+  check('  ...si starea se citeste inapoi din Durable Object', g1.data?.slow === 10, JSON.stringify(g1.data));
+
+  const off = await req(j, 'POST', '/api/admin/chat-slow', { seconds: 0 });
+  check('Oprirea modului lent → 200', off.status === 200 && off.data?.slow === 0, JSON.stringify(off.data));
+
+  const log = await req(j, 'GET', '/api/admin/log');
+  check('Comutarea intra in jurnalul de audit',
+    (log.data?.entries || log.data?.log || []).some((e) => e.action === 'chat_slow'),
+    JSON.stringify((log.data?.entries || log.data?.log || []).slice(0, 3)));
+}
+
 console.log('\n' + '='.repeat(56));
 console.log(`REZULTAT: ${pass} trecute, ${fail} esuate`);
 if (fail) { console.log('\nEsuate:'); failures.forEach(f => console.log('  • ' + f)); }

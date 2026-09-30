@@ -70,6 +70,7 @@ import * as adminUsers from './routes/api/admin/users.js';
 import * as adminPasswordResets from './routes/api/admin/password-resets.js';
 import * as adminSeason from './routes/api/admin/season.js';
 import * as adminNews from './routes/api/admin/news.js';
+import * as adminChatSlow from './routes/api/admin/chat-slow.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
@@ -153,6 +154,7 @@ const ROUTES = [
   { method: '*', path: '/api/admin/password-resets', mod: adminPasswordResets },
   { method: '*', path: '/api/admin/season', mod: adminSeason },
   { method: '*', path: '/api/admin/news', mod: adminNews },
+  { method: '*', path: '/api/admin/chat-slow', mod: adminChatSlow },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },

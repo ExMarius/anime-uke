@@ -39,7 +39,7 @@ const LOADERS = {
   sezon: loadSeason,
   ranks: loadRanks,
   news: loadNews,
-  reports: loadReports,
+  reports: () => { loadReports(); loadChatSlow(); },
   log: loadLog,
 };
 
@@ -859,6 +859,41 @@ function actionsCell(items) {
 
   td.appendChild(wrap);
   return td;
+}
+
+// ---------------------------------------------------------------------
+// CHAT LIVE: modul lent (buget — vezi src/routes/api/admin/chat-slow.js).
+// Setarea sta in storage-ul ChatDO, deci comutarea nu costa nicio scriere D1.
+// ---------------------------------------------------------------------
+const SLOW_SECONDS = 10;
+let slowWired = false;
+
+async function loadChatSlow() {
+  const btn = document.getElementById('chat-slow-toggle');
+  const eticheta = document.getElementById('chat-slow-state');
+  if (!btn) return;
+
+  const res = await api('/admin/chat-slow');
+  if (!res.ok) { btn.textContent = 'Indisponibil'; btn.disabled = true; return; }
+  paintSlow(Number(res.data?.slow) || 0);
+
+  if (!slowWired) {
+    slowWired = true;
+    btn.addEventListener('click', () => withBusy(btn, async () => {
+      const acum = Number(btn.dataset.slow) || 0;
+      const r = await api('/admin/chat-slow', { method: 'POST', body: { seconds: acum ? 0 : SLOW_SECONDS } });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut schimba modul lent', 'error'); return; }
+      const nou = Number(r.data?.slow) || 0;
+      paintSlow(nou);
+      toast(nou ? `Mod lent pornit: un mesaj la ${nou} secunde` : 'Mod lent oprit', 'success');
+    }));
+  }
+
+  function paintSlow(secunde) {
+    btn.dataset.slow = String(secunde);
+    btn.textContent = secunde ? `🐇 Oprește modul lent` : `🐢 Pornește modul lent (${SLOW_SECONDS}s)`;
+    if (eticheta) eticheta.textContent = secunde ? `activ: un mesaj la ${secunde}s` : 'oprit';
+  }
 }
 
 // ---------------------------------------------------------------------

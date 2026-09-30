@@ -5,7 +5,7 @@
 #                      watch-store +
 #                      pulse-online + turso-messages + e2e + dom-smoke (+ build) +
 #                      theme-cache + top-cache +
-#                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
+#                      counters + chat-persist + chat-mod + chat-d1 + theme-flow + pixel-teme + plafoane
 #
 # Nu atinge productia: porneste dev.sh pe :8788 cu migrari locale si sterge
 # .wrangler/state la inceput, ca bootstrap-ul (primul user devine admin)
@@ -301,6 +301,17 @@ if [ $CHATP_RC -ne 0 ]; then
   grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/chatpersist.log | tail -12
 fi
 [ "$CHATP_RC" -eq 0 ] || RC=1
+
+echo
+echo "════════ chat-mod (moderare live: stergere, tacere, mod lent) ════════"
+node tests/chat-mod.mjs > /tmp/chatmod.log 2>&1
+CHATMOD_RC=$?
+tail -6 /tmp/chatmod.log
+if [ $CHATMOD_RC -ne 0 ]; then
+  echo "!! chat-mod s-a oprit cu codul $CHATMOD_RC — ultimele erori:"
+  grep -nE "Error|at .*\.mjs|Cannot|is not" /tmp/chatmod.log | tail -12
+fi
+[ "$CHATMOD_RC" -eq 0 ] || RC=1
 
 echo
 echo "════════ counters (contoare denormalizate, fara server) ════════"

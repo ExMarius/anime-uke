@@ -63,6 +63,11 @@ const RATE_MAX_PER_WINDOW = 20;      // max 20 mesaje/minut
 const MSG_PREFIX = 'm:';          // cheia unui mesaj inca nescis in D1
 const SEQ_KEY = 'seqmax';         // ultimul numar de ordine scris in D1
 const PRUNE_KEY = 'sinceprune';   // cate mesaje de la ultima curatenie
+const MOD_KEY = 'moderare';       // { mutes: {userId: expira}, slow: secunde }
+
+// Moderare (0035): duratele oferite in interfata + plafonul modului lent.
+const MUTE_MINUTES = [5, 15, 60];
+const SLOW_MAX_SECONDS = 60;
 
 /** Cheie ordonabila (zero-padded) pentru un mesaj din bufferul durabil. */
 const msgKey = (seq) => MSG_PREFIX + String(seq).padStart(12, '0');
@@ -82,6 +87,42 @@ export class ChatDO {
     this.buffered = null;       // cate mesaje sunt in bufferul durabil (lazy)
     this.flushPromise = null;   // un singur flush odata (altfel se dubleaza scrierile)
     this.rate = new Map();      // userId -> { last, stamps: [] }
+    this.mod = null;            // { mutes, slow } — citit lazy din storage
+  }
+
+  /**
+   * Starea de moderare (reduceri la tacere + mod lent).
+   *
+   * Traieste in STORAGE, nu in memorie: altfel o evictie a DO-ului ar ridica
+   * singura toate sanctiunile — exact ce ar astepta un spammer. Se citeste o
+   * data dupa trezire si se tine in memorie, ca sa nu atingem storage-ul la
+   * fiecare mesaj.
+   */
+  async modState() {
+    if (this.mod) return this.mod;
+    const saved = (await this.state.storage.get(MOD_KEY)) || {};
+    this.mod = { mutes: saved.mutes || {}, slow: Number(saved.slow) || 0 };
+    return this.mod;
+  }
+
+  async saveMod() {
+    await this.state.storage.put(MOD_KEY, this.mod);
+  }
+
+
+
+  /** Cate milisecunde mai are de asteptat userul, 0 daca nu e redus la tacere. */
+  async muteLeft(userId) {
+    const mod = await this.modState();
+    const until = Number(mod.mutes[userId]) || 0;
+    if (!until) return 0;
+    if (until <= Date.now()) {
+      // Expirata: o stergem la prima atingere, ca sa nu creasca obiectul.
+      delete mod.mutes[userId];
+      await this.saveMod();
+      return 0;
+    }
+    return until - Date.now();
   }
 
   // -------------------------------------------------------------------
@@ -97,6 +138,30 @@ export class ChatDO {
     // GET /chat?state=online — folosit de client la reconnectare
     if (url.pathname.endsWith('/state')) {
       return Response.json({ online: this.onlineList() });
+    }
+
+    // Modul lent se comuta din panoul de admin, nu din bula de chat: codul
+    // chatului se descarca pe TOATE paginile si are un buget de 8 KB gzip,
+    // iar un comutator folosit de doi-trei oameni nu are ce cauta acolo.
+    // Autentificarea si dreptul de moderare se verifica in ruta de admin.
+    if (url.pathname.endsWith('/slow')) {
+      const mod = await this.modState();
+      if (request.method === 'GET') return Response.json({ slow: mod.slow });
+      let body = {};
+      try { body = await request.json(); } catch { /* corp gol = citire */ }
+      const seconds = Number(body.seconds);
+      if (!Number.isInteger(seconds) || seconds < 0 || seconds > SLOW_MAX_SECONDS) {
+        return Response.json({ error: 'Interval invalid (0-60 secunde)' }, { status: 400 });
+      }
+      mod.slow = seconds;
+      await this.saveMod();
+      const by = String(body.by || 'staff');
+      this.broadcast({
+        type: 'slow',
+        seconds,
+        text: seconds ? `Mod lent pornit: un mesaj la ${seconds} secunde (${by})` : `Mod lent oprit (${by})`,
+      });
+      return Response.json({ slow: seconds });
     }
 
     return new Response('Expected WebSocket', { status: 400 });
@@ -132,6 +197,11 @@ export class ChatDO {
     this.state.acceptWebSocket(server);
     server.serializeAttachment({
       userId: user.id, username: user.username,
+      // Dreptul de moderare vine calculat din ruta /chat (canModerate pe
+      // sesiunea din D1). DO-ul nu il recalculeaza: nu are sesiunea, iar
+      // clientul nu poate falsifica parametrul — singura cale spre DO trece
+      // prin ruta autentificata.
+      can_mod: user.can_mod ? 1 : 0,
       rank_label: user.rank_label || '', rank_icon: user.rank_icon || '', staff_role: user.staff_role || '',
       flair: user.flair || '', name_gold: user.name_gold ? 1 : 0,
       name_color: user.name_color || '',
@@ -148,11 +218,13 @@ export class ChatDO {
   async onConnected(ws, user) {
     const history = await this.loadHistory();
 
+    const mod = await this.modState();
     ws.send(JSON.stringify({
       type: 'init',
-      you: { id: user.id, username: user.username },
+      you: { id: user.id, username: user.username, can_mod: user.can_mod ? 1 : 0 },
       history,
       online: this.onlineList(),
+      slow: mod.slow,
     }));
 
     this.broadcast({ type: 'system', text: `${user.username} a intrat în chat`, online: this.onlineList() }, ws);
@@ -187,7 +259,32 @@ export class ChatDO {
       await this.handleDirectMessage(ws, att, data);
       return;
     }
+    if (data.type === 'mod') {
+      await this.handleModeration(ws, att, data);
+      return;
+    }
     if (data.type !== 'chat') return;
+
+    // --- redus la tacere? verificam INAINTE de rate limit, ca mesajul sa
+    //     primeasca motivul corect, nu „prea repede" ---
+    const left = await this.muteLeft(att.userId);
+    if (left > 0) {
+      const min = Math.max(1, Math.ceil(left / 60000));
+      ws.send(JSON.stringify({ type: 'error', text: `Nu poți scrie în chat încă ${min} ${min === 1 ? 'minut' : 'minute'}.` }));
+      return;
+    }
+
+    // --- mod lent: un interval minim impus de staff, peste rate limit ---
+    const mod = await this.modState();
+    if (mod.slow > 0 && !att.can_mod) {
+      const rec = this.rate.get(att.userId);
+      const trecut = rec ? Date.now() - rec.last : Infinity;
+      if (trecut < mod.slow * 1000) {
+        const sec = Math.ceil((mod.slow * 1000 - trecut) / 1000);
+        ws.send(JSON.stringify({ type: 'error', text: `Mod lent: mai ai ${sec} ${sec === 1 ? 'secundă' : 'secunde'} de așteptat.` }));
+        return;
+      }
+    }
 
     // --- rate limit per utilizator ---
     const verdict = this.checkRate(att.userId);
@@ -200,7 +297,14 @@ export class ChatDO {
     if (!v.ok) return;
     const message = v.value;
 
+    await this.ensureSeq();
+    const seq = ++this.seq;     // sincron: ordinea cheilor = ordinea mesajelor
+
     const entry = {
+      // Identificatorul stabil al mesajului (0035): aceeasi valoare in
+      // bufferul durabil si in arhiva D1, ca moderarea sa-l gaseasca oriunde
+      // ar fi ajuns intre timp.
+      mid: String(seq),
       user_id: att.userId,
       username: att.username,
       message,
@@ -218,8 +322,6 @@ export class ChatDO {
 
     // --- 1. DURABIL, inainte de orice: storage-ul DO-ului supravietuieste
     //     evictiei, spre deosebire de memorie (vezi antetul modulului) ---
-    await this.ensureSeq();
-    const seq = ++this.seq;     // sincron: ordinea cheilor = ordinea mesajelor
     await this.state.storage.put(msgKey(seq), entry);
     this.buffered = (this.buffered || 0) + 1;
 
@@ -443,7 +545,7 @@ export class ChatDO {
   async historyFromD1(limit) {
     try {
       const res = await this.env.DB.prepare(
-        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar
+        `SELECT user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar, mid
          FROM chat_messages ORDER BY id DESC LIMIT ?`
       ).bind(limit).all();
       this.buffered = this.buffered || 0;
@@ -476,8 +578,8 @@ export class ChatDO {
 
     const entries = [...map.entries()];     // [cheie, mesaj], in ordine cronologica
     const stmt = this.env.DB.prepare(
-      `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO chat_messages (user_id, username, message, created_at, rank_label, rank_icon, staff_role, flair, name_gold, name_color, avatar, mid)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     // Ordinea bind-urilor TREBUIE sa fie identica cu ordinea coloanelor de
     // mai sus (bug istoric: avatarul ajungea in rank_label, iar avatarul
@@ -486,7 +588,8 @@ export class ChatDO {
       await this.env.DB.batch(entries.map(([, m]) =>
         stmt.bind(m.user_id, m.username, m.message, m.created_at,
           m.rank_label || '', m.rank_icon || '', m.staff_role || '',
-          m.flair || '', m.name_gold ? 1 : 0, m.name_color || '', m.avatar || '')
+          m.flair || '', m.name_gold ? 1 : 0, m.name_color || '', m.avatar || '',
+          m.mid || '')
       ));
     } catch (e) {
       // NU pierdem nimic: cheile raman in storage, se reincearca mai tarziu.
@@ -551,6 +654,123 @@ export class ChatDO {
   async scheduleFlush() {
     const current = await this.state.storage.getAlarm();
     if (!current) this.state.storage.setAlarm(Date.now() + FLUSH_ALARM_MS);
+  }
+
+  // -------------------------------------------------------------------
+  // MODERARE LIVE (0035) — stergere mesaj, reducere la tacere, mod lent.
+  //
+  // Totul se intampla in DO: sanctiunile stau in storage-ul lui (gratuit),
+  // nu in D1. Singurele scrieri in D1 sunt stergerea unui mesaj arhivat si
+  // randul de audit — actiuni rare, facute de oameni.
+  // -------------------------------------------------------------------
+  async handleModeration(ws, att, data) {
+    if (!att.can_mod) {
+      // Nu spunem „nu ai voie" cu detalii: cine trimite comanda fara drept
+      // incearca deja ceva ce interfata nu-i ofera.
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Nu ai dreptul să moderezi chatul' }));
+      return;
+    }
+    const by = { id: att.userId, username: att.username };
+
+    switch (data.action) {
+      case 'mute':   return this.modMute(ws, by, Number(data.user_id), Number(data.minutes));
+      case 'delete': return this.modDelete(ws, by, String(data.mid || ''));
+      default:
+        ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Acțiune de moderare necunoscută' }));
+    }
+  }
+
+  /** Sterge un mesaj din AMBELE locuri: bufferul durabil si arhiva D1. */
+  async modDelete(ws, by, mid) {
+    if (!mid) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Mesajul e prea vechi ca să poată fi șters' }));
+      return;
+    }
+    const cheie = msgKey(Number(mid));
+    const inBuffer = await this.state.storage.get(cheie);
+    if (inBuffer) await this.state.storage.delete(cheie);
+
+    let sters = !!inBuffer;
+    try {
+      const r = await this.env.DB.prepare('DELETE FROM chat_messages WHERE mid = ?').bind(mid).run();
+      sters = sters || !!r?.meta?.changes;
+    } catch (e) {
+      console.error('ChatDO: stergerea din arhiva a esuat:', e?.message || e);
+    }
+
+    // Difuzam chiar daca randul nu s-a gasit nicaieri: mesajul e oricum pe
+    // ecranele tuturor si trebuie sa dispara de acolo.
+    this.broadcast({ type: 'deleted', mid, by: by.username });
+    this.state.waitUntil(this.logMod(by, 'chat_delete', inBuffer?.user_id || null,
+      `mid ${mid}${sters ? '' : ' (negasit in stocare)'}`));
+  }
+
+  /**
+   * Comutator: daca userul e deja redus la tacere, ii ridicam sanctiunea.
+   *
+   * De ce comutator si nu doua comenzi: interfata are un singur buton pe
+   * mesaj, iar clientul nu mai trebuie sa tina minte cine e sanctionat
+   * (adevarul e oricum aici). Chatul e cod incarcat pe TOATE paginile, deci
+   * fiecare stare mutata pe server e greutate scoasa din browser.
+   */
+  async modMute(ws, by, userId, minutes) {
+    if (await this.muteLeft(userId)) return this.modUnmute(ws, by, userId);
+    if (!Number.isInteger(userId) || userId <= 0 || !MUTE_MINUTES.includes(minutes)) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Durată invalidă' }));
+      return;
+    }
+    if (userId === by.id) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Nu te poți reduce la tăcere pe tine' }));
+      return;
+    }
+    // Staff-ul nu se modereaza intre ei din chat: ar fi o cearta cu butoane.
+    const tinta = this.state.getWebSockets()
+      .map((s) => s.deserializeAttachment())
+      .find((a) => a?.userId === userId);
+    if (tinta?.can_mod) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Nu poți reduce la tăcere un membru al staff-ului' }));
+      return;
+    }
+
+    const mod = await this.modState();
+    mod.mutes[userId] = Date.now() + minutes * 60_000;
+    await this.saveMod();
+
+    const nume = tinta?.username || `#${userId}`;
+    this.broadcast({ type: 'system', text: `${nume} nu mai poate scrie ${minutes} minute (${by.username})`, online: this.onlineList() });
+    for (const s of this.state.getWebSockets()) {
+      if (s.deserializeAttachment()?.userId === userId) {
+        s.send(JSON.stringify({ type: 'error', text: `Ai fost redus la tăcere ${minutes} minute de ${by.username}.` }));
+      }
+    }
+    this.state.waitUntil(this.logMod(by, 'chat_mute', userId, `${nume}, ${minutes} min`));
+  }
+
+  async modUnmute(ws, by, userId) {
+    const mod = await this.modState();
+    if (!mod.mutes[userId]) {
+      ws.send(JSON.stringify({ type: 'error', scope: 'mod', text: 'Utilizatorul nu e redus la tăcere' }));
+      return;
+    }
+    delete mod.mutes[userId];
+    await this.saveMod();
+    const nume = this.state.getWebSockets()
+      .map((s) => s.deserializeAttachment())
+      .find((a) => a?.userId === userId)?.username || `#${userId}`;
+    this.broadcast({ type: 'system', text: `${nume} poate scrie din nou (${by.username})`, online: this.onlineList() });
+    this.state.waitUntil(this.logMod(by, 'chat_unmute', userId, nume));
+  }
+
+  /** Jurnal de audit. O actiune de moderare e rara, deci scrierea e ieftina. */
+  async logMod(by, action, targetId, details) {
+    try {
+      await this.env.DB.prepare(
+        `INSERT INTO admin_log (admin_id, admin_name, action, target_type, target_id, details)
+         VALUES (?, ?, ?, 'chat', ?, ?)`
+      ).bind(by.id, String(by.username).slice(0, 20), action, targetId, String(details).slice(0, 500)).run();
+    } catch (e) {
+      console.error('ChatDO: audit moderare esuat:', e?.message || e);
+    }
   }
 
   checkRate(userId) {

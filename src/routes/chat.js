@@ -1,5 +1,5 @@
 import { errorResponse } from '../lib/http.js';
-import { getSessionUser } from '../lib/session.js';
+import { getSessionUser, canModerate } from '../lib/session.js';
 import { identity, loadRankThemes } from '../lib/ranks.js';
 import { leaderClassFor, monthKey } from '../lib/factions.js';
 
@@ -80,6 +80,10 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   url.searchParams.set('u', JSON.stringify({
     id: user.id, username: user.username,
+    // Dreptul de moderare in chat (0035) se decide AICI, din sesiunea
+    // verificata, cu aceeasi functie ca restul site-ului. DO-ul nu are
+    // sesiunea, deci ar fi trebuit sa creada clientul pe cuvant.
+    can_mod: canModerate(user) ? 1 : 0,
     rank_label: me.rank.label, rank_icon: me.rank.icon, staff_role: me.staff,
     flair: owned.has('flair_nova') ? '🌠' : owned.has('flair_supporter') ? '💎' : '',
     name_gold: owned.has('name_gold') ? 1 : 0,

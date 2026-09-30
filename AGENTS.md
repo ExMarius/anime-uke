@@ -93,7 +93,7 @@ schimbat. Puține du-te-vino, fără așteptări de ore.
 ## 2. Ciclul de lucru
 
 1. Citește codul zonei pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0035**;
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0036**;
    Turso: **0003**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`**
    (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul dă 405 în producție).
@@ -226,6 +226,12 @@ Reguli de operare ale relay-ului:
 - **Economie**: puncte (doar vizionare, clasament) ≠ XP/nivel (toată activitatea) ≠ gold (cufere/misiuni → shop). Nu le amesteca.
 - **Scrieri în D1 = resursa scumpă** (100k/zi pe free). Chat-ul și view-urile se bufferizează în DO. Nu adăuga scrieri per-request fără motiv.
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
+- **Moderarea chatului** (0035): `chat_messages.mid` = cheia mesajului din ChatDO,
+  scrisă și în arhivă, ca ștergerea să-l găsească în ambele locuri. Sancțiunile
+  (tăcere temporară, mod lent) stau în **storage-ul DO-ului**, nu în D1 — altfel
+  o evicție le-ar ridica singură. Dreptul vine din `can_mod` pus în attachment de
+  `src/routes/chat.js` (`canModerate` pe sesiunea din D1), niciodată din client.
+  Modul lent se comută din `/api/admin/chat-slow` (panoul de staff), NU din chat.
 - **Noutăți** (`news`, 0034): jurnalul primei pagini. Tipuri: `serie` (automat, la
   creare), `sezon` (automat, la activarea temei), `anunt` (manual, din admin).
   Știrile automate se adaugă cu `newsStmt(env, {...})` **în batch-ul D1 care există
@@ -609,6 +615,26 @@ zgomotos în loc să raporteze cifre pentru altceva.
 - Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
   DOM build 215, plus toate suitele auxiliare.
 
+### Moderarea chatului live (2026-09-30, branch `arena/01a0eddc-anime-uke`)
+
+Chatul era singurul loc din site fără unelte de moderare: comentariile au
+raportări, utilizatorii au ban, chatul — nimic. Un moderator care vedea spam sau
+un link piratat putea doar să privească.
+
+- `migrations/0035_chat_moderation.sql` — `chat_messages.mid` + `idx_chat_mid`.
+- `ChatDO`: comenzi `mod` pe socketul existent (`delete`, `mute`), stare în
+  `storage` (`MOD_KEY`), rută internă `/slow` pentru modul lent, audit în `admin_log`.
+- `mute` e **comutator**: al doilea apel ridică tăcerea. Așa clientul nu mai ține
+  lista celor sancționați (adevărul e în DO) — mai puțin cod livrat tuturor.
+- Protecții: staff-ul nu se moderează între ei, nu te poți reduce la tăcere pe
+  tine, durate doar din `MUTE_MINUTES` (5/15/60), mod lent 0-60 s.
+- `/api/admin/chat-slow` (GET/POST, moderator) + comutator în tabul „🚩 Raportări".
+- **Bugetul JS a dictat arhitectura**: `chat.js` se descarcă pe toate paginile și
+  are 8.0 KB gzip plafon. Prima variantă (listă de mute în client, buton de mod
+  lent în antet) a dus la 8.5 KB. Soluția: starea a rămas pe server, iar modul
+  lent a plecat în panoul de admin, unde greutatea nu o plătesc vizitatorii.
+- Teste: `tests/chat-mod.mjs` (30, rulat de `test.sh`), e2e §23 (9).
+
 ### Noutăți: jurnalul primei pagini (2026-09-30, branch `arena/01a0eddc-anime-uke`)
 
 Prima pagină arăta „Ultimele episoade", dar nimic nu spunea că a apărut o **serie
@@ -756,7 +782,8 @@ Conținut mutat aici din `PROMPT-AGENT-NOU.md`, ca să existe o singură listă.
 5. Flux de **resetare parolă** (auth are doar login/register/logout/me/options).
    Există lucru neintegrat pe branch-ul `arena/01a0e393-anime-uke` (PR #25, deschis).
 6. Completare profil ✅ → facțiuni (blocat: proprietarul trebuie să spună ce nu merge)
-   → **știri automate ✅ (2026-09-30, secțiunea „Noutăți")** → upgrade-uri chat →
+   → **știri automate ✅ (2026-09-30, secțiunea „Noutăți")** →
+   **upgrade-uri chat: moderare live ✅ (2026-09-30)** →
    căutare ✅ / filtre sezoniere / sondaje → 2FA. Mini-jocul cu creaturi la urmă.
 7. Conținut: subtitrări `.vtt` lipite pe episoadele din producție
    (admin → serie → edit episod; proxy-ul `/api/subtitle` funcționează).

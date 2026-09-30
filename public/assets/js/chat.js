@@ -30,6 +30,9 @@ let activeFriend = null;
 let dmInbox = [];
 let inboxLoaded = false;
 let inboxLoading = null;
+// Moderare live (0035): butoanele din bula. Modul lent se comuta din panoul
+// de admin (pagina de staff), ca sa nu incarce chatul livrat tuturor.
+const MUTE_MINUTES = 15;           // durata aplicata de butonul din bula
 
 const MAX_RETRY_DELAY = 20000;
 
@@ -328,6 +331,9 @@ function connect() {
       return;
     }
     if (data.type === 'message') { renderMessage(data); if (data.online) renderOnline(data.online); scrollDown(); return; }
+    // Mesaj sters de un moderator: dispare de pe ecranele tuturor, imediat.
+    if (data.type === 'deleted') { removeMessage(data.mid); return; }
+    if (data.type === 'slow') { renderSystem(data.text || ''); scrollDown(); return; }
     if (data.type === 'dm') { handleDirectMessage(data); return; }
     if (data.type === 'system') { renderSystem(data.text); if (data.online) renderOnline(data.online); scrollDown(); return; }
     if (data.type === 'error') {
@@ -802,6 +808,57 @@ function sendSticker(id) {
 }
 
 /** Construieste noduri cu textContent — niciodata innerHTML cu date de la utilizator. */
+// ---------------------------------------------------------------------
+// MODERARE LIVE (0035) — unelte pentru staff, direct in bula de chat.
+//
+// Doua reguli care au modelat codul:
+//  1. Zero CSS nou: butoanele refolosesc .chat-close (buton transparent, cu
+//     hover rosu) peste .msg__time (text mic, sters). O regula noua in
+//     style.css s-ar plati pe toate paginile, iar bugetul e la limita.
+//  2. Zero stare duplicata: chat.js se incarca pe TOATE paginile si are un
+//     buget de 8 KB gzip. Cine e redus la tacere stie serverul; butonul de
+//     tacere doar comuta, iar rezultatul vine inapoi ca mesaj de sistem.
+// ---------------------------------------------------------------------
+
+function modButton(label, title, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chat-close msg__time';
+  b.textContent = label;
+  b.title = title;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/** Butonasele de moderare atasate unui mesaj (doar daca ai dreptul). */
+function modButtons(m) {
+  if (!me?.can_mod || !m.mid) return [];
+  const out = [modButton('🗑', 'Șterge mesajul', () => {
+    // Singura actiune ireversibila din cele trei, deci singura cu confirmare.
+    if (confirm('Ștergi mesajul?')) sendMod({ action: 'delete', mid: m.mid });
+  })];
+  // Nu ne moderam pe noi si nu moderam alt membru al staff-ului: serverul
+  // refuza oricum, dar butonul nu trebuie sa promita ce nu se poate.
+  if (m.user_id !== me.id && !m.staff_role) {
+    out.push(modButton('🔇', 'Oprește/repornește scrisul',
+      () => sendMod({ action: 'mute', user_id: m.user_id, minutes: MUTE_MINUTES })));
+  }
+  return out;
+}
+
+function sendMod(payload) {
+  // Socketul inchis = butonul nu face nimic; reconectarea automata il repune
+  // in functiune, deci nu merita un mesaj de eroare propriu.
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'mod', ...payload }));
+}
+
+/** Scoate din pagina un mesaj retras de un moderator. */
+function removeMessage(mid) {
+  // mid e mereu numeric (secventa chatului), deci se poate pune direct in
+  // selector fara escape — nu poate contine ghilimele.
+  if (mid) document.querySelector(`#chat-body .msg[data-mid="${Number(mid)}"]`)?.remove();
+}
+
 function renderMessage(m) {
   const body = document.getElementById('chat-body');
   if (!body) return;
@@ -810,6 +867,9 @@ function renderMessage(m) {
   const row = document.createElement('div');
   row.className = 'msg' + (me && m.user_id === me.id ? ' msg--own' : '');
   row.style.display = 'block';
+  // Identificatorul serverului: dupa el stergem mesajul din pagina cand un
+  // moderator il retrage (mesajele dinainte de 0035 nu au mid).
+  if (m.mid) row.dataset.mid = m.mid;
 
   // mesajele care sunt DOAR un sticker se randeaza ca imagine mare; un tag
   // necunoscut sau amestecat cu text ramane text simplu (sigur)
@@ -825,6 +885,7 @@ function renderMessage(m) {
       time.textContent = String(m.created_at).slice(11, 16);
       row.appendChild(time);
     }
+    row.append(...modButtons(m));
     body.appendChild(row);
     trimBody(body);
     return;
@@ -853,6 +914,7 @@ function renderMessage(m) {
     time.textContent = String(m.created_at).slice(11, 16);
     row.appendChild(time);
   }
+  row.append(...modButtons(m));
 
   body.appendChild(row);
   trimBody(body);
