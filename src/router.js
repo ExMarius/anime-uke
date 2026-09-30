@@ -46,6 +46,7 @@ import * as reportRoute from './routes/api/report.js';
 import * as subtitleRoute from './routes/api/subtitle.js';
 import * as genresRoute from './routes/api/genres.js';
 import * as recentRoute from './routes/api/recent.js';
+import * as newsRoute from './routes/api/news.js';
 import * as homeRoute from './routes/api/home.js';
 import * as commentsVoteRoute from './routes/api/comments-vote.js';
 import * as reviewsRoute from './routes/api/reviews.js';
@@ -68,6 +69,7 @@ import * as adminEpisodeSources from './routes/api/admin/episode-sources.js';
 import * as adminUsers from './routes/api/admin/users.js';
 import * as adminPasswordResets from './routes/api/admin/password-resets.js';
 import * as adminSeason from './routes/api/admin/season.js';
+import * as adminNews from './routes/api/admin/news.js';
 import * as adminLog from './routes/api/admin/log.js';
 import * as chatRoute from './routes/chat.js';
 import * as profileRoute from './routes/api/profile.js';
@@ -113,6 +115,7 @@ const ROUTES = [
   { method: 'GET', path: '/api/subtitle', mod: subtitleRoute },
   { method: 'GET', path: '/api/genres', mod: genresRoute },
   { method: 'GET', path: '/api/recent', mod: recentRoute },
+  { method: 'GET', path: '/api/news', mod: newsRoute },
   { method: 'GET', path: '/api/home', mod: homeRoute },
   { method: 'POST', path: '/api/comments/vote', mod: commentsVoteRoute },
   { method: 'GET', path: '/api/reviews', mod: reviewsRoute },
@@ -149,6 +152,7 @@ const ROUTES = [
   { method: '*', path: '/api/admin/users', mod: adminUsers },
   { method: '*', path: '/api/admin/password-resets', mod: adminPasswordResets },
   { method: '*', path: '/api/admin/season', mod: adminSeason },
+  { method: '*', path: '/api/admin/news', mod: adminNews },
 
   // --- chat (WebSocket + fallback pentru lista online) ---
   { method: '*', path: '/chat', mod: chatRoute },

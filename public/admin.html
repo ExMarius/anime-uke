@@ -40,6 +40,7 @@
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
       <button class="tab" role="tab" id="tab-password-resets" aria-controls="panel-password-resets" aria-selected="false" type="button">🔐 Recuperări</button>
       <button class="tab" role="tab" id="tab-sezon"    aria-controls="panel-sezon"    aria-selected="false" type="button">🍂 Sezon</button>
+      <button class="tab" role="tab" id="tab-news"     aria-controls="panel-news"     aria-selected="false" type="button">📣 Noutăți</button>
       <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
       <button class="tab" role="tab" id="tab-reports"  aria-controls="panel-reports"  aria-selected="false" type="button">🚩 Raportări</button>
       <button class="tab" role="tab" id="tab-log"      aria-controls="panel-log"      aria-selected="false" type="button">📜 Jurnal</button>
@@ -92,6 +93,21 @@
 
     <!-- ============ JURNAL ============ -->
     <!-- ===================== INVITATII ===================== -->
+    <!-- ============ NOUTĂȚI ============ -->
+    <section class="panel" id="panel-news" role="tabpanel" aria-labelledby="tab-news" hidden>
+      <div class="box">
+        <h2 class="box__title">Anunț nou pe prima pagină</h2>
+        <p class="box__hint">Seriile noi și temele de sezon ajung <b>automat</b> în „Noutăți” — aici scrii doar anunțurile echipei (mentenanță, concursuri, schimbări de reguli). Linkul e opțional și trebuie să fie <b>intern</b>, adică să înceapă cu <code>/</code>.</p>
+        <form id="news-form" class="staff-form">
+          <input type="text" id="news-title" maxlength="140" placeholder="Titlul anunțului" required>
+          <input type="text" id="news-body" maxlength="500" placeholder="Detalii (opțional)">
+          <input type="text" id="news-link" maxlength="200" placeholder="Link intern, ex. /serie/1014 (opțional)">
+          <button class="btn btn--primary btn--sm" type="submit">Publică</button>
+        </form>
+        <div class="news-admin" id="news-admin-list"><div class="loading"><div class="spinner"></div>Se încarcă…</div></div>
+      </div>
+    </section>
+
     <!-- ===================== GRADE (STAFF) ===================== -->
     <section class="panel" id="panel-ranks" role="tabpanel" aria-labelledby="tab-ranks" hidden>
       <div class="box">

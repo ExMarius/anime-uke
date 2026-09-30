@@ -439,6 +439,80 @@ async function loadRecent() {
 
 
 
+// ---------------------------------------------------------------------
+// NOUTĂȚI — jurnalul site-ului (serii noi, teme de sezon, anunțuri).
+// Vine din /api/home, deci nu costă nicio cerere în plus. Secțiunea se
+// arată doar dacă există ceva de spus: un site gol nu afișează un titlu
+// „Noutăți" urmat de nimic.
+//
+// Randată EXCLUSIV cu clase care există deja (.card--ep, .ep-num,
+// .card__body, .card__title, .card__meta, .card__desc): componenta arată
+// ca restul site-ului și nu adaugă niciun octet la bugetul de CSS.
+// ---------------------------------------------------------------------
+const NEWS_TAGS = {
+  serie: { label: 'Serie nouă', icon: '🆕' },
+  sezon: { label: 'Sezon', icon: '🍂' },
+  anunt: { label: 'Anunț', icon: '📣' },
+};
+
+async function loadNews() {
+  const section = document.getElementById('news-section');
+  const list = document.getElementById('news-list');
+  if (!section || !list) return;
+
+  const home = await homeData();
+  const items = home.ok ? home.data.news || [] : [];
+  if (!items.length) { section.hidden = true; return; }
+
+  list.innerHTML = '';
+  for (const it of items) {
+    const meta = NEWS_TAGS[it.kind] || NEWS_TAGS.anunt;
+    // Link doar dacă e intern; safeUrl respinge orice altceva, deci o știre
+    // cu link stricat rămâne card simplu, nu o cale de scăpare de pe site.
+    const href = it.link ? safeUrl(it.link, '') : '';
+    const el = document.createElement(href ? 'a' : 'div');
+    el.className = 'card card--ep rv';
+    if (href) el.href = href;
+
+    const icon = document.createElement('span');
+    icon.className = 'ep-num';
+    icon.textContent = meta.icon;
+    el.appendChild(icon);
+
+    const body = document.createElement('div');
+    body.className = 'card__body';
+
+    const h = document.createElement('h3');
+    h.className = 'card__title';
+    h.textContent = it.title || '';
+    body.appendChild(h);
+
+    const sub = document.createElement('p');
+    sub.className = 'card__meta';
+    const eticheta = document.createElement('span');
+    eticheta.textContent = meta.label;
+    const sep = document.createElement('i');
+    sep.textContent = '•';
+    const cand = document.createElement('time');
+    cand.dateTime = String(it.created_at || '');
+    cand.textContent = relativeTime(it.created_at);
+    sub.append(eticheta, sep, cand);
+    body.appendChild(sub);
+
+    if (it.body) {
+      const d = document.createElement('p');
+      d.className = 'card__desc';
+      d.textContent = it.body;
+      body.appendChild(d);
+    }
+
+    el.appendChild(body);
+    list.appendChild(el);
+  }
+  section.hidden = false;
+  observeReveals(list);
+}
+
 async function load({ append = false, silent = false } = {}) {
   const grid = document.getElementById('series-grid');
   if (!append && !silent) skeletons(Math.min(PER_PAGE, 10));
@@ -989,6 +1063,7 @@ initCatalogFilters();
 initMoodDiscovery();
 initQuickActions();
 loadRecent().catch(() => { /* secțiunea e optională */ });
+loadNews().catch(() => { /* jurnalul e optional */ });
 renderWeeklyPick().catch(() => { /* recomandarea editorială e opțională */ });
 // Filtrele din URL se aplica INAINTE de prima cerere, ca pagina sa se
 // incarce direct pe rezultatele cerute (fara un al doilea apel).

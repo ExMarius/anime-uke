@@ -2,6 +2,8 @@ import { json, errorResponse, isSameOrigin } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
 import { validateSeries, validateSeriesPatch, validatePositiveInt, SERIES_DETAIL_FIELDS } from '../../../lib/validate.js';
 import { logAdminAction } from '../../../lib/audit.js';
+import { newsStmt } from '../../../lib/news.js';
+import { invalidateNewsCache } from '../news.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { parsePaging, parseQuery, parseSort, sortSql, sortOptions, escapeLike, readMeta, bumpMetaStmt, counterStmts } from '../../../lib/paging.js';
 import { DEFAULT_LIMIT_SERIES, resolveLimit, seriesFullMessage } from '../../../lib/limits.js';
@@ -160,7 +162,17 @@ export async function onRequestPost(context) {
         `INSERT INTO admin_log (admin_id, admin_name, action, target_type, target_id, details)
          VALUES (?, ?, 'create_series', 'series', ?, ?)`
       ).bind(admin.id, admin.username, id, `„${v.value.title}"`),
-    ]);
+      // Stirea de pe prima pagina, in ACEEASI tranzactie: fara round-trip D1
+      // in plus si fara riscul de a anunta o serie care nu s-a salvat.
+      newsStmt(env, {
+        kind: 'serie',
+        title: `Serie noua: ${v.value.title}`,
+        body: v.value.genre ? `Gen: ${v.value.genre}` : '',
+        link: `/serie/${id}`,
+        authorId: admin.id,
+      }),
+    ].filter(Boolean));
+    invalidateNewsCache();
 
     return json({ success: true, id, series: { id, episode_count: 0, ...v.value } }, { status: 201 });
   } catch (e) {

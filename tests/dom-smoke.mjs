@@ -238,6 +238,32 @@ console.log('=== DOM: pagina principala (cautare + paginare pe server) ===');
       apiCalls.every((u) => pathOf(u) === '/api/home' || pathOf(u).startsWith('/api/auth') || pathOf(u).startsWith('/api/notifications') || pathOf(u) === '/api/continue'),
       apiCalls.join(' '));
   }
+  // -------------------------------------------------------------------
+  // NOUTATI: sectiunea se randeaza din /api/home, deci fara nicio cerere
+  // noua. Daca jurnalul e gol, sectiunea trebuie sa RAMANA ascunsa — un
+  // titlu „Noutati" urmat de nimic arata a site stricat.
+  // -------------------------------------------------------------------
+  {
+    const stiri = await (await fetch(`${BASE}/api/news`, { headers: { Cookie: COOKIE } })).json();
+    const n = (stiri.items || []).length;
+    const sec = p.$('#news-section');
+    check('Sectiunea „Noutati" exista in pagina', !!sec, 'lipseste #news-section');
+    await until(() => (p.$('#news-list')?.children.length || 0) === n);
+    check('  ...randeaza exact stirile din API', (p.$('#news-list')?.children.length || 0) === n,
+      `dom=${p.$('#news-list')?.children.length} api=${n}`);
+    check('  ...vizibila doar cand exista noutati', !!sec && sec.hidden === (n === 0), `hidden=${sec?.hidden} n=${n}`);
+    check('  ...fara cerere separata catre /api/news',
+      p.requests.filter((u) => u.split('?')[0] === '/api/news').length === 0, p.requests.join(' '));
+    if (n) {
+      const prima = p.$('#news-list > *');
+      check('  ...fiecare stire are pictograma, titlu si data', !!prima?.querySelector('.ep-num')
+        && !!prima?.querySelector('.card__title') && !!prima?.querySelector('.card__meta time'),
+        prima?.outerHTML?.slice(0, 200));
+      check('  ...si nu adauga CSS propriu (refoloseste clasele .card)',
+        prima?.className?.includes('card--ep'), prima?.className);
+    }
+  }
+
   // Vizibilitatea butonului trebuie sa fie congruenta cu has_more de pe
   // server, indiferent daca baza are 1 serie sau 1000.
   const meta = await (await fetch(`${BASE}/api/series?per_page=24`, { headers: { Cookie: COOKIE } })).json();

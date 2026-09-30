@@ -4,6 +4,8 @@
 import { json, errorResponse, isSameOrigin } from '../../../lib/http.js';
 import { requireAdmin } from '../../../lib/session.js';
 import { logAdminAction } from '../../../lib/audit.js';
+import { newsStmt } from '../../../lib/news.js';
+import { invalidateNewsCache } from '../news.js';
 import { checkRateLimit, tooManyRequests } from '../../../lib/ratelimit.js';
 import { getSeasonalTheme, setSeasonalTheme, seasonalThemes } from '../../../lib/season.js';
 
@@ -43,6 +45,27 @@ export async function onRequestPost(context) {
       resetati = r?.meta?.changes ?? 0;
     }
     await logAdminAction(env, admin, 'set_seasonal', 'site', 0, `${v || '(gol)'} | resetati: ${resetati}`);
+    // Anuntam doar ACTIVAREA unei teme; oprirea ei nu e o noutate pentru
+    // vizitator, doar revenirea la normal.
+    if (v) {
+      const numeTema = seasonalThemes().find((t) => t.id === v)?.name || v;
+      const stmt = newsStmt(env, {
+        kind: 'sezon',
+        title: `Tema de sezon: ${numeTema}`,
+        body: 'Site-ul si-a schimbat culorile. O poti inlocui oricand cu o tema proprie din magazin.',
+        link: '/shop',
+        authorId: admin.id,
+      });
+      if (stmt) {
+        try {
+          await stmt.run();
+          invalidateNewsCache();
+        } catch (e) {
+          // O stire ratata nu are voie sa anuleze schimbarea temei.
+          console.error('stire sezon esuata:', e?.message || e);
+        }
+      }
+    }
     return json({ success: true, seasonal_theme: v, reset_users: resetati });
   } catch {
     return errorResponse(400, 'Tema de sezon invalida (alege din lista sau gol)');

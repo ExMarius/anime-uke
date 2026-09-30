@@ -38,6 +38,7 @@ const LOADERS = {
   'password-resets': loadPasswordResets,
   sezon: loadSeason,
   ranks: loadRanks,
+  news: loadNews,
   reports: loadReports,
   log: loadLog,
 };
@@ -858,6 +859,92 @@ function actionsCell(items) {
 
   td.appendChild(wrap);
   return td;
+}
+
+// ---------------------------------------------------------------------
+// NOUTATI: anunturile echipei pentru prima pagina. Seriile noi si temele
+// de sezon se scriu automat la eveniment (src/lib/news.js), aici e doar
+// canalul manual + retragerea unei stiri gresite.
+// ---------------------------------------------------------------------
+const NEWS_LABEL = { serie: 'Serie nouă', sezon: 'Sezon', anunt: 'Anunț' };
+let newsFormWired = false;
+
+async function loadNews() {
+  const box = document.getElementById('news-admin-list');
+  if (!box) return;
+  wireNewsForm();
+
+  const res = await api('/admin/news');
+  if (!res.ok) { box.textContent = res.data?.error || 'Nu am putut încărca noutățile.'; return; }
+
+  const items = res.data.items || [];
+  box.innerHTML = '';
+  if (!items.length) {
+    const p = document.createElement('p');
+    p.className = 'box__hint';
+    p.textContent = 'Încă nu există nicio noutate publicată.';
+    box.appendChild(p);
+    return;
+  }
+
+  for (const it of items) {
+    const row = document.createElement('div');
+    row.className = 'ranks-row';
+
+    const title = document.createElement('span');
+    title.className = 'ranks-row__title';
+    const eticheta = NEWS_LABEL[it.kind] || NEWS_LABEL.anunt;
+    title.textContent = `[${eticheta}] ${it.title}` + (it.author ? ` — ${it.author}` : '');
+    title.title = `${formatDate(it.created_at)}${it.link ? ' · ' + it.link : ''}`;
+    row.appendChild(title);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn btn--ghost btn--sm';
+    del.textContent = '🗑 Retrage';
+    del.addEventListener('click', () => withBusy(del, async () => {
+      if (!confirm(`Retragi „${it.title}" de pe prima pagină?`)) return;
+      const r = await api(`/admin/news?id=${encodeURIComponent(it.id)}`, { method: 'DELETE' });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut retrage știrea', 'error'); return; }
+      toast('Știre retrasă', 'success');
+      loadNews();
+    }));
+    row.appendChild(del);
+
+    box.appendChild(row);
+  }
+}
+
+function wireNewsForm() {
+  if (newsFormWired) return;            // tabul se reincarca la fiecare click
+  const form = document.getElementById('news-form');
+  if (!form) return;
+  newsFormWired = true;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    const title = document.getElementById('news-title');
+    const body = document.getElementById('news-body');
+    const link = document.getElementById('news-link');
+    const valLink = (link?.value || '').trim();
+    // Verificam aici ca sa nu piarda omul textul scris: serverul ar taia
+    // linkul extern in tacere si ar publica anuntul fara el.
+    if (valLink && (!valLink.startsWith('/') || valLink.startsWith('//'))) {
+      toast('Linkul trebuie să fie intern și să înceapă cu / (ex. /serie/1014)', 'error');
+      return;
+    }
+    await withBusy(btn, async () => {
+      const r = await api('/admin/news', {
+        method: 'POST',
+        body: { title: title?.value || '', body: body?.value || '', link: valLink },
+      });
+      if (!r.ok) { toast(r.data?.error || 'Nu am putut publica anunțul', 'error'); return; }
+      toast('Anunț publicat pe prima pagină 📣', 'success');
+      form.reset();
+      loadNews();
+    });
+  });
 }
 
 function emptyRow(colspan, text) {

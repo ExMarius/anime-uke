@@ -590,6 +590,26 @@ esac
 echo "   corp fara camp de existenta: $(curl -s -X POST "$B/api/auth/password-reset" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"identifier":"canar-inexistent-fara-cont"}' | head -c 160)"
 echo "   cereri de resetare in coada dupa verificare: $(q "SELECT COUNT(*) AS n FROM password_reset_requests WHERE status IN ('pending','issued')")"
 
+# ── 23. NOUTATI: jurnalul primei pagini (migrarea 0034) ──────────────
+# Sectiunea „Noutati" e alimentata din tabelul `news`. Stirile automate se
+# scriu in acelasi batch D1 cu evenimentul (serie noua, tema de sezon), deci
+# daca migrarea nu s-a aplicat, ADAUGAREA UNEI SERII ar cadea cu totul — nu
+# doar jurnalul. De aceea verificam intai schema, direct in D1.
+# Totul e read-only: nu scriem nicio stire de pe relay.
+echo
+echo "── 23. noutati: jurnalul primei pagini (migrarea 0034)"
+echo "   tabelul news exista: $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'news'")"
+echo "   index de citire (created_at DESC): $(q "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name = 'idx_news_recent'")"
+echo "   stiri in jurnal: $(q "SELECT COUNT(*) AS n FROM news")"
+echo "   tipuri folosite: $(q "SELECT kind, COUNT(*) AS n FROM news GROUP BY kind")"
+echo "   linkuri externe scapate in jurnal (trebuie 0): $(q "SELECT COUNT(*) AS n FROM news WHERE link <> '' AND link NOT LIKE '/%'")"
+echo "   GET /api/news public → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/news") (trebuie 200)"
+echo "   corp: $(curl -s "$B/api/news" | head -c 200)"
+echo "   POST /api/admin/news anonim → $(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/news" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"title":"canar"}') (trebuie 401)"
+echo "   GET /api/admin/news anonim → $(curl -s -o /dev/null -w '%{http_code}' "$B/api/admin/news") (trebuie 401)"
+case "$(curl -s "$B/api/home")" in *'"news"'*) echo "   /api/home livreaza si noutatile = da" ;; *) echo "   !! /api/home nu mai contine cheia news" ;; esac
+case "$(curl -s "$B/")" in *news-section*) echo "   sectiunea Noutati e in prima pagina = da" ;; *) echo "   !! lipseste sectiunea Noutati din prima pagina" ;; esac
+
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"

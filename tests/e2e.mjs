@@ -2537,6 +2537,89 @@ console.log('\n=== Facțiuni (alegere lunară) + shop/activate ===');
   }
 }
 
+console.log('\n=== 22. NOUTATI: jurnalul primei pagini (automat + anunturi) ===');
+{
+  const j = globalThis.admin;
+
+  // Seriile create la §5 si §8 au trecut deja prin carligul automat, deci
+  // jurnalul NU trebuie sa fie gol inainte sa scriem ceva manual.
+  const pub0 = await req(jar(), 'GET', '/api/news');
+  check('GET /api/news public → 200 + lista', pub0.status === 200 && Array.isArray(pub0.data?.items), `status=${pub0.status}`);
+  check('Seriile adaugate de admin au intrat automat in noutati',
+    (pub0.data?.items || []).some((n) => n.kind === 'serie'),
+    JSON.stringify((pub0.data?.items || []).map((n) => n.kind)));
+  check('Stirea de serie trimite catre pagina seriei',
+    (pub0.data?.items || []).filter((n) => n.kind === 'serie').every((n) => /^\/serie\/\d+$/.test(n.link || '')),
+    JSON.stringify((pub0.data?.items || []).filter((n) => n.kind === 'serie').map((n) => n.link)));
+  check('Prima pagina nu cere mai mult de 6 noutati', (pub0.data?.items || []).length <= 6, `n=${pub0.data?.items?.length}`);
+
+  // Episoadele NU intra in jurnal: ar dubla sectiunea „Ultimele episoade".
+  check('Episoadele nu produc stiri (nu dubleaza „Ultimele episoade")',
+    !(pub0.data?.items || []).some((n) => /episod/i.test(n.title || '')),
+    JSON.stringify((pub0.data?.items || []).map((n) => n.title)));
+
+  // Autentificare si autorizare pe canalul manual.
+  const anon = await req(jar(), 'GET', '/api/admin/news');
+  check('GET /api/admin/news anonim → 401', anon.status === 401, `status=${anon.status}`);
+  const nonAdmin = jar();
+  await req(nonAdmin, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const forb = await req(nonAdmin, 'POST', '/api/admin/news', { title: 'Anunt fals' });
+  check('Non-admin nu poate publica anunturi → 403', forb.status === 403, `status=${forb.status}`);
+
+  // Validare.
+  const scurt = await req(j, 'POST', '/api/admin/news', { title: 'ab' });
+  check('Titlu prea scurt → 400', scurt.status === 400, `status=${scurt.status} ${scurt.data?.error}`);
+
+  // Anunt manual valid.
+  const ok = await req(j, 'POST', '/api/admin/news', {
+    title: 'Mentenanta programata',
+    body: 'Site-ul va fi oprit 10 minute sambata seara.',
+    link: '/shop',
+  });
+  check('Anunt manual → 201', ok.status === 201 && Number(ok.data?.id) > 0, `status=${ok.status} ${JSON.stringify(ok.data)}`);
+
+  const pub1 = await req(jar(), 'GET', '/api/news');
+  check('Anuntul apare imediat public (cache invalidat la scriere)',
+    (pub1.data?.items || [])[0]?.title === 'Mentenanta programata', JSON.stringify((pub1.data?.items || [])[0]));
+  check('  ...cu tipul anunt si linkul pastrat',
+    (pub1.data?.items || [])[0]?.kind === 'anunt' && (pub1.data?.items || [])[0]?.link === '/shop',
+    JSON.stringify((pub1.data?.items || [])[0]));
+
+  // Linkurile externe se curata: o stire nu are voie sa scoata omul de pe site.
+  const ext = await req(j, 'POST', '/api/admin/news', { title: 'Anunt cu link extern', link: 'https://evil.example/x' });
+  const pubExt = await req(jar(), 'GET', '/api/news');
+  const stireExt = (pubExt.data?.items || []).find((n) => n.title === 'Anunt cu link extern');
+  check('Linkul extern e respins, anuntul ramane fara link', ext.status === 201 && stireExt?.link === '', JSON.stringify(stireExt));
+  const proto = await req(j, 'POST', '/api/admin/news', { title: 'Anunt cu protocol', link: 'javascript:alert(1)' });
+  const pubProto = await req(jar(), 'GET', '/api/news');
+  check('Linkul javascript: e respins', proto.status === 201
+    && (pubProto.data?.items || []).find((n) => n.title === 'Anunt cu protocol')?.link === '', '');
+
+  // Lista de administrare arata autorul si permite retragerea.
+  const adm = await req(j, 'GET', '/api/admin/news');
+  check('GET /api/admin/news ca admin → 200 cu autor', adm.status === 200
+    && (adm.data?.items || []).some((n) => n.title === 'Mentenanta programata' && !!n.author), `status=${adm.status}`);
+
+  const delGhost = await req(j, 'DELETE', '/api/admin/news?id=999999');
+  check('Retragerea unei stiri inexistente → 404', delGhost.status === 404, `status=${delGhost.status}`);
+  const delBad = await req(j, 'DELETE', '/api/admin/news?id=abc');
+  check('ID invalid la retragere → 400', delBad.status === 400, `status=${delBad.status}`);
+
+  for (const t of ['Anunt cu link extern', 'Anunt cu protocol']) {
+    const id = (adm.data?.items || []).find((n) => n.title === t)?.id;
+    if (id) await req(j, 'DELETE', `/api/admin/news?id=${id}`);
+  }
+  const idOk = ok.data?.id;
+  const del = await req(j, 'DELETE', `/api/admin/news?id=${idOk}`);
+  const pub2 = await req(jar(), 'GET', '/api/news');
+  check('Retragerea scoate stirea de pe prima pagina', del.status === 200
+    && !(pub2.data?.items || []).some((n) => n.id === idOk), JSON.stringify(del.data));
+
+  // Integrare in agregatul primei pagini: fara invocare suplimentara.
+  const home = await req(jar(), 'GET', '/api/home');
+  check('/api/home livreaza si noutatile', Array.isArray(home.data?.news), JSON.stringify(Object.keys(home.data || {})));
+}
+
 console.log('\n' + '='.repeat(56));
 console.log(`REZULTAT: ${pass} trecute, ${fail} esuate`);
 if (fail) { console.log('\nEsuate:'); failures.forEach(f => console.log('  • ' + f)); }

@@ -2,6 +2,7 @@ import { json } from '../../lib/http.js';
 import * as seriesRoute from './series.js';
 import * as topRoute from './top.js';
 import * as recentRoute from './recent.js';
+import * as newsRoute from './news.js';
 import * as genresRoute from './genres.js';
 import * as pulseRoute from './pulse.js';
 
@@ -38,23 +39,25 @@ async function bodyOr(res) {
 export async function onRequestGet(context) {
   const sub = { ...context, params: {} };
 
-  const [seriesRes, topRes, recentRes, genresRes, pulseRes] = await Promise.all([
+  const [seriesRes, topRes, recentRes, genresRes, pulseRes, newsRes] = await Promise.all([
     seriesRoute.onRequestGet(sub),
     topRoute.onRequestGet(sub),
     recentRoute.onRequestGet(sub),
     genresRoute.onRequestGet(sub),
     pulseRoute.onRequestGet(sub),
+    newsRoute.onRequestGet(sub),
   ]);
 
   const series = await bodyOr(seriesRes);
   // Catalogul e miezul paginii: dacă el a picat, întoarcem exact eroarea lui.
   if (!series) return seriesRes;
 
-  const [top, recent, genres, pulse] = await Promise.all([
+  const [top, recent, genres, pulse, news] = await Promise.all([
     bodyOr(topRes),
     bodyOr(recentRes),
     bodyOr(genresRes),
     bodyOr(pulseRes),
+    bodyOr(newsRes),
   ]);
 
   return json(
@@ -63,6 +66,7 @@ export async function onRequestGet(context) {
       top: top || { weekly: [], rated: [] },
       recent: recent?.items || [],
       genres: genres?.genres || [],
+      news: news?.items || [],
       pulse,
     },
     // 30 s doar în browserul propriu (navigare înapoi/înainte), fără cache

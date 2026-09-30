@@ -60,6 +60,7 @@ const PUBLIC_API = new Set([
   '/api/pulse',          // doar un contor agregat („N online”), fara date personale
   '/api/genres',         // lista de genuri pentru filtre (zero date personale)
   '/api/recent',         // ultimele episoade adaugate (date de catalog)
+  '/api/news',           // noutatile site-ului (serii noi, sezon, anunturi publice)
   '/api/home',           // prima pagina intr-o singura cerere (series+top+recent+genres+pulse)
   '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
   '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont

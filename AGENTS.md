@@ -93,7 +93,7 @@ schimbat. Puține du-te-vino, fără așteptări de ore.
 ## 2. Ciclul de lucru
 
 1. Citește codul zonei pe care o atingi (fiecare fișier are un antet care explică *de ce* există).
-2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0034**;
+2. Schimbare de schemă? → **migrare nouă** `migrations/00NN_nume.sql` (următoarea: **0035**;
    Turso: **0003**). Niciodată nu edita o migrare aplicată.
 3. Endpoint nou? → fișier în `src/routes/api/`, **înregistrat în `src/router.js`**
    (metoda `'*'` dacă ai mai mulți handleri în fișier — altfel GET-ul dă 405 în producție).
@@ -226,6 +226,11 @@ Reguli de operare ale relay-ului:
 - **Economie**: puncte (doar vizionare, clasament) ≠ XP/nivel (toată activitatea) ≠ gold (cufere/misiuni → shop). Nu le amesteca.
 - **Scrieri în D1 = resursa scumpă** (100k/zi pe free). Chat-ul și view-urile se bufferizează în DO. Nu adăuga scrieri per-request fără motiv.
 - Fișa seriei (0024): `alt_titles, themes, age_rating, ep_duration, release_date, country, external_url, team, next_ep_note, next_ep_at` — validate în `src/lib/validate.js`.
+- **Noutăți** (`news`, 0034): jurnalul primei pagini. Tipuri: `serie` (automat, la
+  creare), `sezon` (automat, la activarea temei), `anunt` (manual, din admin).
+  Știrile automate se adaugă cu `newsStmt(env, {...})` **în batch-ul D1 care există
+  deja la locul evenimentului** — zero round-trip în plus. Episoadele NU produc știri
+  (ar dubla secțiunea „Ultimele episoade"). Linkurile sunt doar interne (`/...`).
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
 
@@ -604,6 +609,28 @@ zgomotos în loc să raporteze cifre pentru altceva.
 - Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
   DOM build 215, plus toate suitele auxiliare.
 
+### Noutăți: jurnalul primei pagini (2026-09-30, branch `arena/01a0eddc-anime-uke`)
+
+Prima pagină arăta „Ultimele episoade", dar nimic nu spunea că a apărut o **serie
+nouă**, că s-a schimbat **tema de sezon** sau că echipa are un **anunț**.
+
+- `migrations/0034_news.sql` — tabelul `news` (`kind`, `title`, `body`, `link`,
+  `created_at`, `author_id`) + `idx_news_recent`.
+- `src/lib/news.js` — `newsStmt()` (statement pentru batch), `validateAnnouncement()`,
+  `sanitizeNewsLink()` (respinge `//`, `http(s)://`, `javascript:` → doar linkuri interne).
+- Cârlige automate: `admin/series.js` (în batch-ul cu `bumpMetaStmt`, deci o serie
+  care nu se salvează nu produce știre) și `admin/season.js` (doar la ACTIVARE).
+- `GET /api/news` public, cache 60 s în izolat (ca `/api/recent`), inclus în
+  `/api/home` → **zero invocări noi**. `invalidateNewsCache()` se apelează la scriere.
+- `/api/admin/news` GET/POST/DELETE + tab „📣 Noutăți" în admin.
+- **Front-end fără CSS nou**: secțiunea refolosește `.card--ep`, `.ep-num`,
+  `.card__body/__title/__meta/__desc`. Prima variantă, cu clase proprii, a împins
+  CSS-ul paginilor de admin la 22.1 KB (buget 22.0) — `style.css` e un fișier comun,
+  deci orice regulă nouă se plătește pe TOATE paginile.
+- Rutele publice noi trebuie trecute în `PUBLIC_API` din `src/worker.js`, altfel
+  primesc 401 înainte să ajungă la router (asta a picat prima rulare e2e).
+- Teste: e2e §22 (18 verificări), dom-smoke (6), relay §23 (verificare live).
+
 ### Autentificare: schimbarea parolei + recuperare asistată de staff (2026-09-29, branch `arena/01a0eddc-anime-uke`)
 
 Pachetul era scris și testat de sesiunea `arena/01a0e393` (PR #25), dar a rămas nepublicat
@@ -728,8 +755,9 @@ Conținut mutat aici din `PROMPT-AGENT-NOU.md`, ca să existe o singură listă.
 
 5. Flux de **resetare parolă** (auth are doar login/register/logout/me/options).
    Există lucru neintegrat pe branch-ul `arena/01a0e393-anime-uke` (PR #25, deschis).
-6. Completare profil → facțiuni → știri automate → upgrade-uri chat →
-   căutare/filtre sezoniere/sondaje → 2FA. Mini-jocul cu creaturi la urmă.
+6. Completare profil ✅ → facțiuni (blocat: proprietarul trebuie să spună ce nu merge)
+   → **știri automate ✅ (2026-09-30, secțiunea „Noutăți")** → upgrade-uri chat →
+   căutare ✅ / filtre sezoniere / sondaje → 2FA. Mini-jocul cu creaturi la urmă.
 7. Conținut: subtitrări `.vtt` lipite pe episoadele din producție
    (admin → serie → edit episod; proxy-ul `/api/subtitle` funcționează).
 8. Verifică OG image + favicon pentru sharing (Discord/Telegram).
