@@ -623,6 +623,31 @@ echo "   GET /api/admin/chat-slow anonim → $(curl -s -o /dev/null -w '%{http_c
 echo "   POST /api/admin/chat-slow anonim → $(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/chat-slow" -H 'Content-Type: application/json' -H "Origin: $B" -d '{"seconds":10}') (trebuie 401)"
 echo "   actiuni de moderare in jurnal: $(q "SELECT COUNT(*) AS n FROM admin_log WHERE action LIKE 'chat_%'")"
 
+# ── 25. SEO: pagini de gen indexabile (/gen/<slug>) ──────────────────
+# Prima pagina de aterizare reala pentru „anime <gen> subtitrat in romana".
+# Verificam pe LIVE ce vede un crawler: status, titlu, canonical, date
+# structurate, linkuri catre serii in HTML si prezenta in sitemap. Slugul
+# se ia din primul gen din catalog, ca sa nu depindem de date fixe.
+echo
+echo "── 25. SEO: pagini de gen indexabile (/gen/<slug>)"
+GEN_SLUG="$(curl -s "$B/sitemap.txt" | grep -o '/gen/[a-z0-9-]*' | head -n1 | sed 's|/gen/||')"
+echo "   genuri in sitemap: $(curl -s "$B/sitemap.txt" | grep -c '/gen/')"
+if [ -n "$GEN_SLUG" ]; then
+  echo "   gen verificat: $GEN_SLUG"
+  GEN_HTML="$(curl -s "$B/gen/$GEN_SLUG")"
+  echo "   GET /gen/$GEN_SLUG → $(curl -s -o /dev/null -w '%{http_code}' "$B/gen/$GEN_SLUG") (trebuie 200)"
+  echo "   titlu: $(printf '%s' "$GEN_HTML" | grep -o '<title>[^<]*' | head -c 120)"
+  case "$GEN_HTML" in *'"CollectionPage"'*) echo "   date structurate CollectionPage = da" ;; *) echo "   !! lipseste CollectionPage" ;; esac
+  case "$GEN_HTML" in *'"BreadcrumbList"'*) echo "   breadcrumb pentru Google = da" ;; *) echo "   !! lipseste BreadcrumbList" ;; esac
+  case "$GEN_HTML" in *'id="gen-ssr"'*) echo "   linkuri catre serii randate pe server = da" ;; *) echo "   !! lipsesc linkurile randate pe server" ;; esac
+  case "$GEN_HTML" in *"/gen/$GEN_SLUG"*) echo "   canonical pe pagina de gen = da" ;; *) echo "   !! canonical gresit" ;; esac
+else
+  echo "   !! niciun gen in sitemap (catalogul nu are genuri completate?)"
+fi
+echo "   gen inexistent → $(curl -s -o /dev/null -w '%{http_code}' "$B/gen/gen-inexistent-canar") (trebuie 404)"
+echo "   robots.txt permite /gen: $(curl -s "$B/robots.txt" | grep -c '^Allow: /gen')"
+case "$(curl -s "$B/serie/1014")" in *'"BreadcrumbList"'*) echo "   pagina de serie are breadcrumb = da" ;; *) echo "   !! pagina de serie fara breadcrumb" ;; esac
+
 echo "════════ AUDIT LIVE ════════"
 node scripts/audit-live.mjs "$B"
 echo "exit audit: $?"

@@ -74,8 +74,10 @@ async function login() {
  * nevoie modulele (document/window/location/fetch/WebSocket) si ruleaza
  * scriptul de pagina ca modul ES. Intoarce erorile prinse pe parcurs.
  */
-async function mountPage({ htmlFile, url, module, cookie = COOKIE }) {
-  const html = readFileSync(`${ROOT}${htmlFile}`, 'utf8');
+async function mountPage({ htmlFile, url, module, cookie = COOKIE, patch = (h) => h }) {
+  // `patch` imita ce face workerul cu HTML-ul inainte sa-l trimita (SSR:
+  // meta/JSON-LD injectate), ca sa putem testa paginile randate pe server.
+  const html = patch(readFileSync(`${ROOT}${htmlFile}`, 'utf8'));
   const dom = new JSDOM(html, { url: `${BASE}${url}`, pretendToBeVisual: true });
   const { window } = dom;
   const errors = [];
@@ -1178,6 +1180,56 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Shop explica economia: cel puțin 4 carduri „cum funcționează"', p.$$('.howto .howto__card').length >= 4, `n=${p.$$('.howto .howto__card').length}`);
   check('Nicio eroare de runtime in shop', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+}
+
+console.log('=== DOM: pagini de gen (/gen/<slug>) ===');
+{
+  // Chip-urile de gen erau <button>: un crawler nu vede acolo niciun link,
+  // deci paginile de gen ar fi ramas nedescoperite. Acum sunt <a href>.
+  const p = await mountPage({ htmlFile: 'public/index.html', url: '/', module: 'page-index.js' });
+  // Genurile vin din /api/home, care memoreaza o lista goala cateva secunde;
+  // pe o baza proaspata (rulare imediat dupa e2e) chip-urile apar cu
+  // intarziere, deci asteptam mai mult decat implicitul.
+  await until(() => p.$$('.genre-chip').length > 1, 25000);
+  const chips = p.$$('.genre-chip');
+  check('Chip-urile de gen sunt linkuri reale (crawlabile)',
+    chips.length > 1 && chips.every((c) => c.tagName === 'A' && c.getAttribute('href')),
+    chips.slice(0, 3).map((c) => `${c.tagName}:${c.getAttribute('href')}`).join(' '));
+  const cuGen = chips.find((c) => c.dataset.genre);
+  check('  ...si duc spre /gen/<slug> fara diacritice',
+    !!cuGen && /^\/gen\/[a-z0-9-]+$/.test(cuGen.getAttribute('href')), cuGen?.getAttribute('href'));
+  check('  ...„Toate" ramane pe pagina principala',
+    chips[0]?.getAttribute('href') === '/', chips[0]?.getAttribute('href') ?? 'niciun chip randat');
+  const gen = cuGen?.dataset.genre || '';
+  await p.teardown();
+
+  // Pagina randata de server: filtrul vine din CALE (prin meta auk-genre),
+  // ca vizitatorul sa vada exact ce a indexat Google la acel URL.
+  if (gen) {
+    const slug = cuGen.getAttribute('href').replace('/gen/', '');
+    const p2 = await mountPage({
+      htmlFile: 'public/index.html',
+      url: `/gen/${slug}`,
+      module: 'page-index.js',
+      patch: (h) => h
+        .replace('</head>', `<meta name="auk-genre" content="${gen}">\n</head>`)
+        .replace('</body>', '<nav id="gen-ssr"><ul><li><a href="/serie/1">X</a></li></ul></nav></body>'),
+    });
+    await until(() => p2.$$('#series-grid .card, #series-grid .poster-card').length > 0
+      || /rezultate|afișate/.test(p2.text('#series-count') || ''));
+    check('Pagina /gen/<slug> aplica singura filtrul de gen',
+      p2.$('#genre-select')?.value === gen, `select=${p2.$('#genre-select')?.value} asteptat=${gen}`);
+    check('  ...si marcheaza chip-ul activ',
+      p2.$$('.genre-chip.is-active').some((c) => c.dataset.genre === gen),
+      p2.$$('.genre-chip.is-active').map((c) => c.dataset.genre).join(',') || 'niciunul');
+    check('  ...lista randata de server dispare cand preia JS-ul (fara continut dublat)',
+      !p2.$('#gen-ssr'), 'inca prezenta');
+    check('  ...si URL-ul ramane /gen/<slug>, fara ?gen= duplicat',
+      p2.window.location.pathname.startsWith('/gen/') && !p2.window.location.search.includes('gen='),
+      `${p2.window.location.pathname}${p2.window.location.search}`);
+    check('  ...fara erori de runtime pe pagina de gen', p2.errors.length === 0, p2.errors.slice(0, 2).join(' | '));
+    await p2.teardown();
+  }
 }
 
 console.log('\n' + '='.repeat(56));

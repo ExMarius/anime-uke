@@ -578,6 +578,9 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   check('SSR: titlul seriei e în HTML (nu „Se încarcă")', prettyHtml.includes('One Piece'), `len=${prettyHtml.length}`);
   check('SSR: meta description injectată', prettyHtml.includes('meta name="description"'), '');
   check('SSR: JSON-LD TVSeries injectat', prettyHtml.includes('"TVSeries"'), '');
+  // Firul Acasa → gen → serie: Google il afiseaza sub titlu in rezultate.
+  check('SSR serie: breadcrumb Acasă → gen → serie',
+    prettyHtml.includes('"BreadcrumbList"') && prettyHtml.includes('/gen/'), '');
   check('SSR: canonical pe /serie/:id', prettyHtml.includes(`/serie/${r.data?.id}`), '');
 
   // Soft 404 rezolvat: id-urile inexistente primesc status 404 real, cu noindex,
@@ -2651,6 +2654,44 @@ console.log('\n=== 23. CHAT: modul lent din panoul de staff ===');
   check('Comutarea intra in jurnalul de audit',
     (log.data?.entries || log.data?.log || []).some((e) => e.action === 'chat_slow'),
     JSON.stringify((log.data?.entries || log.data?.log || []).slice(0, 3)));
+}
+
+console.log('\n=== 24. SEO: pagini de gen indexabile (/gen/<slug>) ===');
+{
+  // Filtrarea traia doar in query string (`/?gen=Acțiune`), iar Google
+  // rareori indexeaza asa ceva ca pagina separata — deci nu aveam nicio
+  // pagina de aterizare pentru „anime actiune subtitrat in romana".
+  const j = globalThis.admin;
+  await req(j, 'PATCH', '/api/admin/series', { id: globalThis.seriesId, genre: 'Acțiune, Aventură' });
+
+  const r = await fetch(`${BASE}/gen/actiune`, { redirect: 'manual' });
+  check('GET /gen/actiune → 200 (pagina reala, nu parametru)', r.status === 200, `status=${r.status}`);
+  const html = await r.text();
+
+  check('  ...titlul tinteste interogarea reala („anime X subtitrat in romana")',
+    /<title>Anime Acțiune subtitrat în română/.test(html), (html.match(/<title>[^<]*/) || [''])[0]);
+  check('  ...are meta description propriu', /<meta name="description" content="[^"]{40,}"/.test(html), '');
+  check('  ...canonical pe /gen/actiune (fara diacritice in URL)',
+    html.includes('rel="canonical"') && html.includes('/gen/actiune'), '');
+  check('  ...JSON-LD CollectionPage + ItemList', html.includes('"CollectionPage"') && html.includes('"ItemList"'), '');
+  check('  ...breadcrumb pentru rezultatele Google', html.includes('"BreadcrumbList"'), '');
+  check('  ...linkuri catre serii direct in HTML (fara JS)',
+    /<nav id="gen-ssr"[\s\S]*?href="\/serie\/\d+"/.test(html), '');
+  check('  ...si semnalul pentru client (meta auk-genre)',
+    /<meta name="auk-genre" content="Acțiune">/.test(html), '');
+
+  // Slug inexistent = 404 real, nu pagina goala indexabila (soft 404).
+  const ghost = await fetch(`${BASE}/gen/gen-inventat-xyz`, { redirect: 'manual' });
+  check('Gen inexistent → 404 real (fara soft 404)', ghost.status === 404, `status=${ghost.status}`);
+  const ghostHtml = await ghost.text();
+  check('  ...si noindex pe pagina de 404', /noindex/.test(ghostHtml), '');
+
+  // Sitemap: paginile de gen sunt cele mai valoroase pagini de aterizare.
+  const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  check('Sitemap-ul contine paginile de gen', sm.includes('/gen/actiune'), sm.slice(0, 200));
+  check('  ...si ramane XML valid', sm.startsWith('<?xml') && sm.includes('</urlset>'), sm.slice(0, 80));
+  const dublate = (sm.match(/<loc>/g) || []).length !== new Set((sm.match(/<loc>([^<]+)<\/loc>/g) || [])).size;
+  check('  ...fara URL-uri duplicate', !dublate, '');
 }
 
 console.log('\n' + '='.repeat(56));

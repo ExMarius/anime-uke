@@ -6,6 +6,8 @@ Allow: /
 Allow: /episode
 Allow: /serie
 Allow: /episod
+# Paginile de gen (/gen/actiune) sunt pagini de aterizare reale, nu filtre.
+Allow: /gen
 # Utilitarele rămân Allow + noindex în pagină (nu Disallow: crawlerul trebuie
 # să vadă noindex-ul, altfel URL-ul poate apărea ca listare fără conținut).
 Allow: /login

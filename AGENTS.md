@@ -215,6 +215,14 @@ Reguli de operare ale relay-ului:
   imaginea din `<picture>`, iar `<source>`-urile (AVIF/WebP) devin inutile — browserul
   descarcă mereu rezerva JPEG. Adaugă în fundal doar imaginea creată de JS (`if (!img.parentNode)`).
 
+- **`slugify()` există în două locuri** (`src/lib/slug.js` pe server,
+  `genreSlug()` în `public/assets/js/page-index.js`) pentru că bundle-ul
+  clientului nu importă din `src/`. Dacă schimbi una fără cealaltă, chip-urile
+  de gen duc în 404. Testul DOM „pagini de gen” prinde asta.
+- **Rutele de pagină noi (`/gen/...`) au nevoie de trei intrări** în
+  `src/worker.js`: `DYNAMIC_PAGES` (ce asset se servește), lista de căi publice
+  (altfel cer autentificare) și, dacă vrei SSR, un bloc în `serveStatic`.
+
 ## 5. Modelul de date pe care trebuie să-l respecți
 
 - **Două sisteme de grade, separate** (detalii în README → „Grade și drepturi"):
@@ -615,6 +623,40 @@ zgomotos în loc să raporteze cifre pentru altceva.
 - Verificare înainte de livrare: `./test.sh` complet verde — e2e 617, DOM sursă 219,
   DOM build 215, plus toate suitele auxiliare.
 
+### Pagini de gen indexabile `/gen/<slug>` (2026-09-30, branch `arena/01a0eddc-anime-uke`)
+
+Filtrarea pe gen exista doar ca query (`/?gen=Acțiune`). Google tratează
+parametrii ca variante ale aceleiași pagini și rareori le indexează separat,
+deci site-ul **nu avea nicio pagină** pentru „anime acțiune subtitrat în
+română" — exact tiparul de căutare care aduce trafic.
+
+- `src/lib/slug.js` — `slugify()` (diacritice → ASCII, max 40 caractere) și
+  `genreFromSlug()`. **Aceeași funcție e duplicată intenționat** în
+  `page-index.js` (`genreSlug`): dacă cele două nu dau același rezultat,
+  linkurile interne ar duce în 404. Le modifici împreună.
+- `src/worker.js`: regulă `DYNAMIC_PAGES` pentru `/gen/<slug>` (servește `/`),
+  `genresForSeo()` + `seriesInGenre()` (cache 5 min în izolat, ca restul SSR-ului),
+  `genreSeoTags()` + `injectGenreSeo()` — titlu, descriere, canonical, OG,
+  JSON-LD `CollectionPage` + `ItemList` + `BreadcrumbList`.
+- Slug inexistent → **404 real**, nu pagină goală indexabilă (soft 404).
+  Dacă D1 pică, se servește shell-ul obișnuit — nu inventăm 404-uri.
+- `<meta name="auk-genre">` e semnalul spre client: `page-index.js` citește
+  meta-ul, aplică filtrul și nu mai adaugă `?gen=` în URL (altfel ar rezulta
+  două adrese pentru același conținut).
+- Chip-urile de gen sunt acum `<a href="/gen/...">`, nu `<button>`: așa
+  crawlerul descoperă paginile. Click-ul rămâne instant (filtrare pe loc,
+  `preventDefault`), dar Ctrl/Cmd-click deschide normal în tab nou.
+- Serverul randează și o listă `<nav id="gen-ssr">` cu linkuri către serii,
+  pentru crawler și pentru vizitatorii fără JS; JS-ul o elimină la boot.
+- Paginile de gen intră în **sitemap** și în `robots.txt`. Sitemap-ul nu mai
+  memorează o oră varianta de fallback (D1 căzut / catalog gol).
+- Paginile de serie au primit `BreadcrumbList` (Acasă → gen → serie), pe care
+  Google îl afișează sub titlu în rezultate.
+- `/api/genres`: lista goală se ține 10 s (era 1 min) — de ea depind acum și
+  linkurile interne, nu doar filtrul.
+- Teste: e2e §24 (13), DOM „pagini de gen" (7). Suite: e2e 683, DOM sursă 242,
+  DOM build 238. Toate paginile rămân în buget.
+
 ### Moderarea chatului live (2026-09-30, branch `arena/01a0eddc-anime-uke`)
 
 Chatul era singurul loc din site fără unelte de moderare: comentariile au
@@ -785,6 +827,8 @@ Conținut mutat aici din `PROMPT-AGENT-NOU.md`, ca să existe o singură listă.
    → **știri automate ✅ (2026-09-30, secțiunea „Noutăți")** →
    **upgrade-uri chat: moderare live ✅ (2026-09-30)** →
    căutare ✅ / filtre sezoniere / sondaje → 2FA. Mini-jocul cu creaturi la urmă.
+   **SEO: pagini de gen `/gen/<slug>` ✅ (2026-09-30)** — la cererea proprietarului
+   („să fim foarte în top”).
 7. Conținut: subtitrări `.vtt` lipite pe episoadele din producție
    (admin → serie → edit episod; proxy-ul `/api/subtitle` funcționează).
 8. Verifică OG image + favicon pentru sharing (Discord/Telegram).

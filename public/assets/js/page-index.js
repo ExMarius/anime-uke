@@ -59,10 +59,28 @@ let searchTimer = null;
 // istoric, ca „Înapoi" să scoată filtrul), iar popstate re-citește URL-ul și
 // reîncarcă lista. La încărcarea paginii, filtrele vin din URL.
 // ---------------------------------------------------------------------
+/** Slug de gen, identic cu slugify() din src/lib/slug.js (server).
+ *  Trebuie sa dea ACELASI rezultat, altfel linkul intern ar duce in 404. */
+const DIAC = { 'ă': 'a', 'â': 'a', 'î': 'i', 'ș': 's', 'ş': 's', 'ț': 't', 'ţ': 't' };
+function genreSlug(value) {
+  return [...String(value || '').toLowerCase().trim()]
+    .map((ch) => DIAC[ch] || (/[a-z0-9]/.test(ch) ? ch : '-'))
+    .join('')
+    .replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+}
+
+/** Genul paginii /gen/<slug>, pus de server in <meta name="auk-genre">. */
+function genreFromPath() {
+  if (!location.pathname.startsWith('/gen/')) return '';
+  return document.querySelector('meta[name="auk-genre"]')?.content?.trim().slice(0, 40) || '';
+}
+
 function readUrlState() {
   const p = new URLSearchParams(location.search);
   query = (p.get('q') || '').trim().slice(0, 60);
-  genreFilter = (p.get('gen') || '').trim().slice(0, 40);
+  // Pe /gen/<slug> filtrul vine din CALE, nu din query: pagina randata
+  // trebuie sa arate exact ce a indexat Google la acel URL.
+  genreFilter = genreFromPath() || (p.get('gen') || '').trim().slice(0, 40);
   statusFilter = ['ongoing', 'completed'].includes(p.get('status')) ? p.get('status') : '';
   const s = p.get('sort');
   sort = ['latest', 'oldest', 'title', 'episodes', 'rating'].includes(s) ? s : 'latest';
@@ -73,8 +91,11 @@ function readUrlState() {
 /** Scrie starea curenta in URL (fara sa reincarce pagina). */
 function writeUrlState({ push = true } = {}) {
   const p = new URLSearchParams();
+  const peGen = location.pathname.startsWith('/gen/');
   if (query) p.set('q', query);
-  if (genreFilter) p.set('gen', genreFilter);
+  // Pe pagina de gen, genul e deja in cale — pus si in query ar produce doua
+  // URL-uri pentru acelasi continut (continut duplicat pentru Google).
+  if (genreFilter && !(peGen && genreFilter === genreFromPath())) p.set('gen', genreFilter);
   if (statusFilter) p.set('status', statusFilter);
   if (sort !== 'latest') p.set('sort', sort);
   if (page > 1) p.set('page', String(page));
@@ -320,19 +341,25 @@ function renderGenreChips(genres = []) {
   if (!popular.length) { row.hidden = true; return; }
   row.hidden = false;
   row.innerHTML = '';
+  // Chip-urile sunt <a href="/gen/actiune">, nu butoane: asa Google
+  // descopera paginile de gen prin linkuri interne (un <button> cu JS nu e
+  // un link pentru crawler). Click-ul ramane instant — filtram pe loc si
+  // doar actualizam adresa, fara reincarcare.
   const addChip = (value, label) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'genre-chip';
-    b.dataset.genre = value;
-    b.textContent = label;
-    b.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.className = 'genre-chip';
+    a.dataset.genre = value;
+    a.textContent = label;
+    a.href = value ? `/gen/${genreSlug(value)}` : '/';
+    a.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;  // „deschide in tab nou"
+      e.preventDefault();
       genreFilter = value;
       page = 1;
       applyFilters();
       document.getElementById('serii')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-    row.appendChild(b);
+    row.appendChild(a);
   };
   addChip('', 'Toate');
   for (const g of popular) addChip(g, g);
@@ -1058,6 +1085,11 @@ async function loadTops() {
   fill('top-rated', rated, (r) => `★ ${r.average} · ${r.votes} ${r.votes === 1 ? 'vot' : 'voturi'}`);
   sec.hidden = false;
 }
+
+// Lista de linkuri randata de server pe /gen/<slug> si-a facut treaba
+// (crawler + vizitator fara JS). Cand JS-ul preia pagina, grila obisnuita o
+// inlocuieste, deci o scoatem ca sa nu apara acelasi continut de doua ori.
+document.getElementById('gen-ssr')?.remove();
 
 initCatalogFilters();
 initMoodDiscovery();

@@ -1,4 +1,5 @@
 import { matchRoute } from './router.js';
+import { slugify, genreFromSlug } from './lib/slug.js';
 import { SECURITY_HEADERS } from './lib/http.js';
 import { getSessionUser } from './lib/session.js';
 
@@ -45,7 +46,7 @@ const STATIC_PAGES = new Set([
 function isPublicPage(path) {
   if (PUBLIC_PAGES.has(path)) return true;
   // URL-urile pretty de catalog: publice (site public).
-  if (path.startsWith('/serie/') || path.startsWith('/episod/')) return true;
+  if (path.startsWith('/serie/') || path.startsWith('/episod/') || path.startsWith('/gen/')) return true;
   return false;
 }
 const PUBLIC_API = new Set([
@@ -216,15 +217,28 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
     // /series (face 301 spre / — un URL de sitemap care redirecteaza la alt
     // URL e semnal de calitate slabă).
     let urls = null;
+    let dinFallback = false;
     try {
-      const seriesRes = await env.DB.prepare('SELECT id FROM anime_series ORDER BY id DESC LIMIT 2000').all();
+      const seriesRes = await env.DB.prepare('SELECT id, genre FROM anime_series ORDER BY id DESC LIMIT 2000').all();
       const epRes = await env.DB.prepare('SELECT id FROM episodes ORDER BY id DESC LIMIT 5000').all();
       urls = ['/'];
+      // Paginile de gen sunt principalele pagini de ATERIZARE („anime
+      // actiune subtitrat in romana"), deci intra in sitemap inaintea
+      // episoadelor individuale: sunt putine si aduc cele mai multe intrari.
+      const genuri = new Set();
+      for (const r of seriesRes.results || []) {
+        for (const token of String(r.genre || '').split(',')) {
+          const slug = slugify(token);
+          if (slug) genuri.add(slug);
+        }
+      }
+      for (const g of [...genuri].sort()) urls.push(`/gen/${g}`);
       for (const r of seriesRes.results || []) urls.push(`/serie/${r.id}`);
       for (const r of epRes.results || []) urls.push(`/episod/${r.id}`);
       if (urls.length <= 1) throw new Error('empty');
     } catch (e) {
       console.error('sitemap D1 esuat, folosesc fallback static:', e?.message || e);
+      dinFallback = true;
       // Fallback 100% static — garantat valid chiar daca D1 e down.
       urls = ['/', '/serie/1019', '/serie/1018', '/serie/1017', '/serie/1015', '/serie/1014',
         '/episod/4212', '/episod/4211', '/episod/4210', '/episod/4209', '/episod/4208'];
@@ -236,7 +250,10 @@ async function sitemapHandler(request, env, forPath = '/sitemap.xml') {
       urls.map((loc) => `  <url><loc>${esc(origin + loc)}</loc></url>`).join('\n') +
       `\n</urlset>`;
     sitemapCache.bodyTxt = urls.map((loc) => origin + loc).join('\n');
-    sitemapCache.at = now;
+    // Fallback-ul (D1 indisponibil sau catalog gol) NU se tine o ora: altfel
+    // un singur hiccup ar servi crawlerilor o harta ciunta pana la expirare.
+    // Doar harta reala merita memorata.
+    sitemapCache.at = dinFallback ? 0 : now;
   }
 
   // Varianta text (un URL pe linie) — ceruta de Google Search Console ca
@@ -287,6 +304,9 @@ const DYNAMIC_PAGES = [
   // /serie/1014 in loc de /series?id=1014. Same pagina, adresa citibila.
   { re: /^\/serie\/\d+\/?$/, asset: '/series' },
   { re: /^\/episod\/\d+\/?$/, asset: '/episode' },
+  // Pagini de gen indexabile: /gen/actiune. Servesc catalogul (prima pagina)
+  // cu filtrul deja aplicat — vezi genreSeoTags() pentru ce vede crawlerul.
+  { re: /^\/gen\/[a-z0-9-]{1,40}\/?$/, asset: '/' },
 ];
 
 // ---------------------------------------------------------------------
@@ -379,6 +399,133 @@ async function episodeForSeo(env, id) {
   }
 }
 
+/**
+ * Genurile catalogului + seriile dintr-un gen, pentru paginile /gen/<slug>.
+ *
+ * O pagina de gen costa DOUA citiri D1 la fiecare 5 minute (lista de genuri
+ * si primele serii), apoi se serveste din cache-ul izolatului. Un crawler
+ * care parcurge 20 de genuri consuma cat unul singur.
+ */
+async function genresForSeo(env) {
+  const cached = seoCacheGet('genres');
+  if (cached.hit) return cached.row;
+  try {
+    const res = await env.DB.prepare(`SELECT genre FROM anime_series WHERE genre != '' LIMIT 1500`).all();
+    const set = new Set();
+    for (const r of res.results || []) {
+      for (const token of String(r.genre || '').split(',')) {
+        const g = token.trim();
+        if (g.length >= 2 && g.length <= 30) set.add(g);
+      }
+    }
+    const list = [...set].sort((a, b) => a.localeCompare(b, 'ro'));
+    seoCacheSet('genres', list);
+    return list;
+  } catch {
+    return undefined;   // eroare D1: nu stim, deci nu dam 404
+  }
+}
+
+/** Primele serii dintr-un gen (pentru ItemList + textul din pagina). */
+async function seriesInGenre(env, genre, limit = 12) {
+  const key = `g:${genre}`;
+  const cached = seoCacheGet(key);
+  if (cached.hit) return cached.row;
+  try {
+    const res = await env.DB
+      .prepare(
+        `SELECT id, title, cover_image, year, status FROM anime_series
+         WHERE genre LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT ?`
+      )
+      .bind(`%${String(genre).replace(/[\\%_]/g, '\\$&')}%`, limit)
+      .all();
+    const rows = res.results || [];
+    seoCacheSet(key, rows);
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Tagurile <head> pentru /gen/<slug>.
+ *
+ * Titlul pune exact interogarea dupa care ne cauta lumea („anime actiune
+ * subtitrat in romana"), iar ItemList da Google lista de serii fara sa
+ * ruleze JS. `auk-genre` e semnalul pentru client: page-index.js citeste
+ * meta-ul si aplica filtrul, ca pagina randata sa coincida cu cea indexata.
+ */
+function genreSeoTags(env, request, genre, serii) {
+  const origin = canonicalOrigin(env, request);
+  const canonical = `${origin}/gen/${slugify(genre)}`;
+  const title = `Anime ${genre} subtitrat în română — listă completă | Anime-Uke`;
+  const nume = serii.slice(0, 5).map((s) => s.title).join(', ');
+  const desc = (serii.length
+    ? `Toate seriile anime de ${genre.toLowerCase()} subtitrate în română pe Anime-Uke${nume ? `: ${nume}` : ''}.`
+    : `Anime ${genre.toLowerCase()} subtitrat în română, gratuit, pe Anime-Uke.`
+  ).slice(0, 160);
+
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: `Anime ${genre} subtitrat în română`,
+        description: desc,
+        url: canonical,
+        inLanguage: 'ro',
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: serii.length,
+          itemListElement: serii.map((s, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `${origin}/serie/${s.id}`,
+            name: s.title,
+          })),
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Acasă', item: `${origin}/` },
+          { '@type': 'ListItem', position: 2, name: `Anime ${genre}`, item: canonical },
+        ],
+      },
+    ],
+  };
+
+  return `  <title>${escAttr(title)}</title>
+  <meta name="description" content="${escAttr(desc)}">
+  <link rel="canonical" href="${escAttr(canonical)}">
+  <meta name="auk-genre" content="${escAttr(genre)}">
+  <meta property="og:title" content="${escAttr(`Anime ${genre} subtitrat în română`)}">
+  <meta property="og:description" content="${escAttr(desc)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${escAttr(canonical)}">
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+}
+
+/**
+ * Injecteaza tagurile de gen SI o lista de linkuri vizibile catre serii.
+ *
+ * Linkurile conteaza dublu: crawlerul descopera seriile fara sa ruleze JS,
+ * iar vizitatorul fara JavaScript vede totusi continut, nu o pagina goala.
+ * JS-ul le inlocuieste la randare cu grila obisnuita.
+ */
+function injectGenreSeo(env, request, html, genre, serii) {
+  const tags = genreSeoTags(env, request, genre, serii);
+  const linkuri = serii.length
+    ? `<nav id="gen-ssr" aria-label="Serii din genul ${escAttr(genre)}"><h2>Anime ${escAttr(genre)} subtitrat în română</h2><ul>` +
+      serii.map((s) => `<li><a href="/serie/${s.id}">${escAttr(s.title)}${s.year ? ` (${s.year})` : ''}</a></li>`).join('') +
+      `</ul></nav>`
+    : '';
+  return html
+    .replace(/<title>.*?<\/title>/i, '')
+    .replace(/<\/head>/i, `${tags}\n</head>`)
+    .replace(/<\/body>/i, `${linkuri}</body>`);
+}
+
 function escAttr(v) {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -391,8 +538,17 @@ function seriesSeoTags(env, request, series) {
   const desc = String(series.description || '').trim().slice(0, 160)
     || `${series.title} — anime subtitrat în română, gratuit, pe Anime-Uke.`;
 
-  const ld = {
-    '@context': 'https://schema.org',
+  // Primul gen devine veriga de breadcrumb: „Acasa → Anime Actiune → Serie".
+  // Google afiseaza firul in rezultate (mai mult spatiu, CTR mai bun) si
+  // intelege ca pagina de gen e parintele seriei.
+  const genPrim = String(series.genre || '').split(',')[0]?.trim() || '';
+  const drum = [{ '@type': 'ListItem', position: 1, name: 'Acasă', item: `${origin}/` }];
+  if (genPrim && slugify(genPrim)) {
+    drum.push({ '@type': 'ListItem', position: 2, name: `Anime ${genPrim}`, item: `${origin}/gen/${slugify(genPrim)}` });
+  }
+  drum.push({ '@type': 'ListItem', position: drum.length + 1, name: series.title, item: canonical });
+
+  const serial = {
     '@type': 'TVSeries',
     name: series.title,
     description: String(series.description || '').slice(0, 500) || undefined,
@@ -409,6 +565,10 @@ function seriesSeoTags(env, request, series) {
     countryOfOrigin: series.country ? { '@type': 'Country', name: series.country } : undefined,
     contentRating: series.age_rating || undefined,
     sameAs: series.external_url || undefined,
+  };
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [serial, { '@type': 'BreadcrumbList', itemListElement: drum }],
   };
 
   return `  <title>${escAttr(title)}</title>
@@ -593,6 +753,25 @@ async function serveStatic(request, env) {
         headers.delete('etag');
         return new Response(injectEpisodeSeo(env, request, html, ep), { status: 200, headers });
       }
+    }
+
+    // /gen/<slug>: pagina de aterizare a unui gen. Un slug care nu corespunde
+    // niciunui gen real → 404 onest, ca sa nu producem pagini goale
+    // indexabile (soft 404) pentru orice cuvant pus in URL.
+    const genMatch = path.match(/^\/gen\/([a-z0-9-]{1,40})\/?$/);
+    if (genMatch && res.status === 200 && (res.headers.get('content-type') || '').includes('text/html')) {
+      const genuri = await genresForSeo(env);
+      if (genuri === undefined) return res;     // eroare D1 → shell, fara 404 fals
+      const genre = genreFromSlug(genuri, genMatch[1]);
+      if (!genre) {
+        return notFoundPage('Gen inexistent', `Nu avem niciun anime în genul „${genMatch[1]}" pe anime-uke.`);
+      }
+      const serii = await seriesInGenre(env, genre);
+      const html = await res.text();
+      const headers = new Headers(res.headers);
+      headers.delete('content-length');
+      headers.delete('etag');
+      return new Response(injectGenreSeo(env, request, html, genre, serii), { status: 200, headers });
     }
 
     // Cache-Control pentru JS/CSS vine din public/_headers (no-cache local,

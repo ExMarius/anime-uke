@@ -13,10 +13,12 @@ import { json } from '../../lib/http.js';
 // =====================================================================
 
 const CACHE_MS = 60 * 60 * 1000;
-// O listă GOALĂ se ține doar un minut: pe un catalog proaspăt (sau imediat
+// O listă GOALĂ se ține doar 10 secunde: pe un catalog proaspăt (sau imediat
 // după un deploy, înainte să apară prima serie cu gen) un „nimic" ținut o oră
 // ar lăsa filtrul de gen gol pentru toată lumea până la următorul restart.
-const EMPTY_CACHE_MS = 60 * 1000;
+// De aici pleacă și paginile /gen/<slug>, deci un „nimic" memorat înseamnă
+// linkuri interne lipsă — merită cele câteva citiri în plus pe minut.
+const EMPTY_CACHE_MS = 10 * 1000;
 const cache = { at: 0, list: null, ttl: CACHE_MS };
 
 export async function onRequestGet(context) {
