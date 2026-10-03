@@ -30,7 +30,8 @@ export async function onRequestGet(context) {
       .prepare(
         `SELECT
            e.id, e.series_id, e.episode_number, e.title, e.subtitle_url, e.views, e.created_at,
-           s.title AS series_title, s.cover_image AS series_cover, s.status AS series_status
+           s.title AS series_title, s.cover_image AS series_cover, s.status AS series_status,
+           s.team AS series_team
          FROM episodes e
          JOIN anime_series s ON s.id = e.series_id
          WHERE e.id = ?`
@@ -79,6 +80,9 @@ export async function onRequestGet(context) {
         series_title: epRes.series_title,
         series_cover: epRes.series_cover,
         series_status: epRes.series_status,
+        // Creditul e setat o dată pe serie în admin, dar îl expunem și în
+        // răspunsul episodului ca playerul să nu facă un al doilea request.
+        series_team: epRes.series_team || '',
         episode_number: epRes.episode_number,
         title: epRes.title,
         subtitle_url: epRes.subtitle_url || '',

@@ -26,7 +26,7 @@ const API_404 = { error: 'Endpoint inexistent' };
 // Site public: catalogul si episoadele se pot viziona fara cont. Ce rămâne
 // in spatele porții: tot ce e personal sau comunitar (progres, puncte, chat,
 // comentarii de scris, ratinguri, cufere, shop, profil, admin).
-const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap', '/llms.txt', '/speculationrules.json']);
+const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register', '/reset-password', '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap', '/llms.txt', '/speculationrules.json']);
 
 // Paginile HTML publicate în public/ (+ cele servite de routerul Pages).
 // Tot ce NU e aici și nu e nici API, nici asset, e rută inexistentă și primește
@@ -34,7 +34,7 @@ const PUBLIC_PAGES = new Set(['/', '/series', '/episode', '/login', '/register',
 // cădeau pe poarta de autentificare și răspundeau 302 → /login?next=/package.json,
 // adică dezvăluiau că fișierul există în repo și umpleau crawl-ul de gunoi.
 const STATIC_PAGES = new Set([
-  '/', '/index', '/series', '/episode', '/login', '/register', '/profile', '/shop',
+  '/', '/index', '/series', '/episode', '/login', '/register', '/reset-password', '/profile', '/shop',
   '/admin', '/admin/serii',
   '/favicon.ico', '/apple-touch-icon.png', '/robots.txt', '/sitemap.xml', '/sitemap.txt', '/sitemap',
   '/llms.txt', '/speculationrules.json',
@@ -54,6 +54,8 @@ const PUBLIC_API = new Set([
   '/api/auth/register-options',
   '/api/auth/logout',
   '/api/auth/me',
+  '/api/auth/password-reset',
+  '/api/auth/password-reset/confirm',
   '/api/top',            // clasamente publice (agregari anonime)
   '/api/pulse',          // doar un contor agregat („N online”), fara date personale
   '/api/genres',         // lista de genuri pentru filtre (zero date personale)

@@ -38,6 +38,7 @@
     <div class="tabs" role="tablist" aria-label="Secțiuni admin">
       <button class="tab" role="tab" id="tab-stats"    aria-controls="panel-stats"    aria-selected="true"  type="button">📊 Statistici</button>
       <button class="tab" role="tab" id="tab-users"    aria-controls="panel-users"    aria-selected="false" type="button">👥 Utilizatori</button>
+      <button class="tab" role="tab" id="tab-password-resets" aria-controls="panel-password-resets" aria-selected="false" type="button">🔐 Recuperări</button>
       <button class="tab" role="tab" id="tab-sezon"    aria-controls="panel-sezon"    aria-selected="false" type="button">🍂 Sezon</button>
       <button class="tab" role="tab" id="tab-ranks"    aria-controls="panel-ranks"    aria-selected="false" type="button">🎖️ Grade</button>
       <button class="tab" role="tab" id="tab-reports"  aria-controls="panel-reports"  aria-selected="false" type="button">🚩 Raportări</button>
@@ -65,6 +66,15 @@
           <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Puncte</th><th>Gold</th><th>Nivel</th><th>Rol</th><th>Status</th><th>Acțiuni</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ============ RECUPERĂRI PAROLĂ ============ -->
+    <section class="panel" id="panel-password-resets" role="tabpanel" aria-labelledby="tab-password-resets" hidden>
+      <div class="box">
+        <h2 class="box__title">Solicitări de recuperare</h2>
+        <p class="box__hint">Verifică întâi că persoana controlează emailul contului. La emitere, codul apare <b>o singură dată</b>; trimite-i manual numărul solicitării și codul. Codul expiră după 30 de minute.</p>
+        <div class="reset-requests" id="password-reset-list"><div class="loading"><div class="spinner"></div>Se încarcă…</div></div>
       </div>
     </section>
 

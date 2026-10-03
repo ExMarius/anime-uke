@@ -12,7 +12,7 @@
 import { verifyJWT } from './jwt.js';
 import { getCookie, clearAuthCookie, errorResponse, COOKIE_NAME } from './http.js';
 
-const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, staff_role, rank_theme, active_name_color, active_theme, faction_slug, faction_month';
+const USER_COLUMNS = 'id, username, email, points, is_admin, is_banned, created_at, xp, level, gold, staff_role, rank_theme, active_name_color, active_theme, faction_slug, faction_month, auth_version';
 
 /**
  * @returns {Promise<object|null>} user din DB sau null
@@ -31,6 +31,12 @@ export async function getSessionUser(request, env) {
 
   if (!user) return null;
   if (user.is_banned) return null; // banat => sesiune invalida
+
+  // Tokenurile emise înainte de migrarea 0031 nu aveau auth_version; ele
+  // corespund versiunii initiale 0 si raman valide. Dupa schimbarea parolei
+  // versiunea urca, iar orice cookie vechi este respins aici.
+  const tokenVersion = Number.isInteger(payload.auth_version) ? payload.auth_version : 0;
+  if (tokenVersion !== Number(user.auth_version || 0)) return null;
 
   return {
     id: user.id,

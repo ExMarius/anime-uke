@@ -739,6 +739,19 @@ console.log('\n=== DOM: /series?id=… cu serie lunga (selector de intervale) ==
   await fetch(`${BASE}/api/admin/series?id=${sid}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
+console.log('\n=== DOM: /reset-password (solicitare publică) ===');
+{
+  const p = await mountPage({ htmlFile: 'public/reset-password.html', url: '/reset-password', module: 'page-reset-password.js', cookie: '' });
+  check('Pagina de recuperare are ambele formulare', !!p.$('#reset-request-form') && !!p.$('#reset-confirm-form'), 'lipseste un formular');
+  check('Codul se cere împreună cu numărul solicitării, nu prin URL', !!p.$('#reset-request-id') && !p.$('#reset-code')?.value, 'lipsesc câmpurile sigure');
+  p.$('#reset-identifier').value = 'dom-no-account@test.ro';
+  p.$('#reset-request-form')?.dispatchEvent(new p.window.Event('submit', { bubbles: true, cancelable: true }));
+  const genericReply = await until(() => !p.$('#reset-request-result')?.hidden);
+  check('Formularul public arată răspunsul generic al solicitării', genericReply && /solicitarea/i.test(p.text('#reset-request-result') || ''), p.text('#reset-request-result'));
+  check('Nicio eroare de runtime pe pagina de recuperare', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+}
+
 console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
 {
   const p = await mountPage({ htmlFile: 'public/admin.html', url: '/admin', module: 'page-admin.js' });
@@ -760,7 +773,11 @@ console.log('\n=== DOM: /admin (dashboard-ul fara taburile mutate) ===');
   const repTabOn = await until(() => p.$('#panel-reports')?.hidden === false);
   check('Tabul de raportari deschide panoul', repTabOn, `hidden=${p.$('#panel-reports')?.hidden}`);
   const repListOn = await until(() => p.$$('#reports-list .report-row-admin').length > 0 || /Nicio raportare|Nu am putut/.test(p.text('#reports-list') || ''));
-  check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));  await p.teardown();
+  check('Lista de raportari se incarca (randuri sau stare vida)', repListOn, p.text('#reports-list')?.slice(0, 80));
+  p.$('#tab-password-resets')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const resetsOn = await until(() => p.$('#panel-password-resets')?.hidden === false && /Nicio solicitare|recuperare|Nu am putut/i.test(p.text('#password-reset-list') || ''));
+  check('Tabul de recuperări deschide coada asistată', resetsOn, p.text('#password-reset-list')?.slice(0, 100));
+  await p.teardown();
 }
 
 console.log('\n=== DOM: /admin tab Sezon (setare din UI + banner) ===');
@@ -840,7 +857,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // nu depinda de ce a mai ramas in baza de la alte suite.
   const created = await (await fetch(`${BASE}/api/admin/series`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE },
-    body: JSON.stringify({ title: `DOM Ep Test ${Date.now()}`, status: 'completed' }),
+    body: JSON.stringify({ title: `DOM Ep Test ${Date.now()}`, status: 'completed', team: 'Traducere: DOM Ana' }),
   })).json();
   const sid = created?.series?.id ?? created?.id;
   await fetch(`${BASE}/api/admin/episodes`, {
@@ -860,6 +877,7 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
   // bug-ul care a trimis in productie un spinner vesnic.
   const loaded = await until(() => /Episodul \d/.test(p.text('#episode-title') || ''));
   check('Bootstrap-ul termina: titlul devine eticheta episodului', loaded, `titlu=${p.text('#episode-title')}`);
+  check('Creditul echipei seriei apare în metadatele episodului', /Traducere: DOM Ana/.test(p.text('#episode-meta') || ''), p.text('#episode-meta'));
   check('Nu s-a afisat starea de esec in player', !p.$('.player .empty'), 'playerul arata mesajul de esec');
   check('Nicio eroare de runtime la montarea playerului', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   check('Bara de progres spre 15 minute e in DOM', !!p.$('#watch-progress'), 'lipseste #watch-progress');
@@ -960,12 +978,35 @@ console.log('\n=== DOM: /episode (player, surse, progres) ===');
 
 console.log('\n=== DOM: /profile (clasamentul randat) ===');
 {
+  // Un episod terminat al adminului face verificabilă legătura „Ultima
+  // vizionare” din profil, fără să depindem de fixturele altor secțiuni.
+  const headers = { 'Content-Type': 'application/json', Cookie: COOKIE, Origin: BASE };
+  const made = await (await fetch(`${BASE}/api/admin/series`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ title: `DOM Ultima vizionare ${Date.now()}`, status: 'completed' }),
+  })).json();
+  const lastSeriesId = made?.series?.id ?? made?.id;
+  const addedEpisode = await (await fetch(`${BASE}/api/admin/episodes`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ series_id: lastSeriesId, episode_number: 1, title: 'Episod profil', sources: [] }),
+  })).json();
+  const lastEpisodeId = addedEpisode?.episode?.id ?? addedEpisode?.id;
+  for (let i = 0; i < 3; i++) {
+    await fetch(`${BASE}/api/progress`, { method: 'POST', headers,
+      body: JSON.stringify({ episode_id: lastEpisodeId, seconds: 300 }) });
+  }
+
   const p = await mountPage({ htmlFile: 'public/profile.html', url: '/profile', module: 'page-profile.js' });
   const loaded = await until(() => p.$$('#lb-list .lb__row').length > 0 || /nimeni/i.test(p.text('#lb-note') || ''));
   check('Clasamentul se randeaza pe profil', loaded, `randuri=${p.$$('#lb-list .lb__row').length} note=${p.text('#lb-note')}`);
   check('Fiecare rand are nume si puncte', p.$$('#lb-list .lb__row').every((r) => r.textContent.includes('pct')), p.$('#lb-list')?.textContent?.slice(0, 80));
+  const lastLink = [...p.$$('#p-quick a.quick__item')].find((node) => /Ultima vizionare/.test(node.textContent || ''));
+  check('Acces rapid oferă linkul spre ultima vizionare proprie',
+    lastLink?.getAttribute('href') === `/episode?id=${lastEpisodeId}` && /DOM Ultima vizionare/.test(lastLink?.textContent || ''),
+    `${lastLink?.getAttribute('href')} ${lastLink?.textContent}`);
   check('Nicio eroare de runtime pe profil', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
   await p.teardown();
+  await fetch(`${BASE}/api/admin/series?id=${lastSeriesId}`, { method: 'DELETE', headers: { Cookie: COOKIE, Origin: BASE } });
 }
 
 console.log('\n=== DOM: /profile (panoul de economie) ===');
@@ -995,6 +1036,13 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   check('Fiecare misiune arata recompensa', p.$$('#econ-missions .mission__reward').every((r) => /🪙/.test(r.textContent)), p.$('#econ-missions')?.textContent?.slice(0, 120));
   check('Rangul tematic e afisat mare pe profil', /Genin|Chunin|Jonin|Kage|Hokage|Membru/.test(p.text('#econ-rank') || ''), p.text('#econ-rank'));
   check('Statisticile reale apar in grid (episoade/comentarii)', p.$$('#econ-stats .econ__stat').length >= 4, `n=${p.$$('#econ-stats .econ__stat').length}`);
+  const passwordBtnOn = await until(() => p.$('#p-password-btn')?.hidden === false);
+  check('Profilul propriu are butonul de schimbare a parolei', passwordBtnOn, `hidden=${p.$('#p-password-btn')?.hidden}`);
+  p.$('#p-password-btn')?.dispatchEvent(new p.window.Event('click', { bubbles: true }));
+  const passwordPanelOn = await until(() => p.$('#p-password-panel')?.hidden === false);
+  check('Butonul parolei deschide formularul cu toate cele trei câmpuri',
+    passwordPanelOn && !!p.$('#f-current-password') && !!p.$('#f-new-password') && !!p.$('#f-confirm-password'),
+    `panel=${p.$('#p-password-panel')?.hidden}`);
   await p.teardown();
 }
 

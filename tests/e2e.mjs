@@ -135,7 +135,7 @@ console.log('\n=== 1. VIZITATOR ===');
   }
 
   // Paginile de autentificare raman publice, altfel nimeni nu ar putea intra
-  for (const page of ['/login', '/register']) {
+  for (const page of ['/login', '/register', '/reset-password']) {
     const r = await fetch(BASE + page, { redirect: 'manual' });
     check(`GET ${page} → 200 public`, r.status === 200, `status=${r.status}`);
   }
@@ -449,6 +449,108 @@ console.log('\n=== 4. LOGIN ===');
 
   const me = await req(j, 'GET', '/api/auth/me');
   check('Sesiune persista dupa login', me.data?.user?.username === 'marius');
+
+  // Schimbarea parolei cere parola curenta si trebuie sa inchida toate
+  // celelalte sesiuni. `j2` este cookie-ul de pe al doilea „dispozitiv".
+  const guestChange = await req(jar(), 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: 'AltaParola123',
+  });
+  check('Schimbare parola fara sesiune → 401', guestChange.status === 401, `status=${guestChange.status}`);
+
+  const wrongCurrent = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'nu-e-parola', new_password: 'AltaParola123',
+  });
+  check('Schimbare parola cu parola curenta gresita → 401', wrongCurrent.status === 401, `status=${wrongCurrent.status}`);
+
+  const tooShort = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: '123',
+  });
+  check('Schimbare parola prea scurta → 400', tooShort.status === 400, `status=${tooShort.status}`);
+
+  const changed = await req(j, 'POST', '/api/auth/password', {
+    current_password: 'parola123', new_password: 'ParolaNoua123',
+  });
+  check('Schimbare parola reusita → 200 + cookie nou',
+    changed.status === 200 && /HttpOnly/i.test(String(changed.headers.get('set-cookie'))), `status=${changed.status}`);
+  const oldDevice = await req(j2, 'GET', '/api/auth/me');
+  check('Schimbarea parolei invalideaza cealalta sesiune',
+    oldDevice.status === 200 && oldDevice.data?.user === null, `status=${oldDevice.status} user=${JSON.stringify(oldDevice.data?.user)}`);
+  const oldLogin = await req(jar(), 'POST', '/api/auth/login', { email: 'marius@test.ro', password: 'parola123' });
+  check('Parola veche nu mai permite login', oldLogin.status === 401, `status=${oldLogin.status}`);
+  const fresh = jar();
+  const newLogin = await req(fresh, 'POST', '/api/auth/login', { email: 'marius@test.ro', password: 'ParolaNoua123' });
+  check('Parola noua permite login', newLogin.status === 200, `status=${newLogin.status}`);
+
+  // Restabilim parola fixture-ului ca restul suitei sa poata ramane concis;
+  // `fresh` devine singura sesiune admin valida folosita mai jos.
+  const restored = await req(fresh, 'POST', '/api/auth/password', {
+    current_password: 'ParolaNoua123', new_password: 'parola123',
+  });
+  check('Parola fixture-ului se poate restabili', restored.status === 200, `status=${restored.status}`);
+  globalThis.admin = fresh;
+}
+
+console.log('\n=== 4b. RECUPERARE PAROLĂ ASISTATĂ ===');
+{
+  const owner = jar();
+  const created = await req(owner, 'POST', '/api/auth/register', {
+    username: 'recoveru', email: 'recoveru@test.ro', password: 'parola123',
+  });
+  check('Contul fixture pentru recuperare este creat', created.status === 201, `status=${created.status}`);
+
+  const missing = await req(jar(), 'POST', '/api/auth/password-reset', { identifier: 'nimeni-reset@test.ro' });
+  const requested = await req(jar(), 'POST', '/api/auth/password-reset', { identifier: 'recoveru@test.ro' });
+  check('Cererea de recuperare nu dezvăluie conturile inexistente',
+    missing.status === 202 && requested.status === 202 && missing.data?.message === requested.data?.message,
+    `${missing.status}/${requested.status} ${missing.data?.message}`);
+
+  const queue = await req(globalThis.admin, 'GET', '/api/admin/password-resets');
+  const firstPending = (queue.data?.requests || []).find((r) => r.username === 'recoveru');
+  check('Adminul vede cererea pending, cu emailul de contact',
+    queue.status === 200 && firstPending?.status === 'pending' && firstPending.email === 'recoveru@test.ro', JSON.stringify(firstPending));
+  const cancelled = await req(globalThis.admin, 'POST', '/api/admin/password-resets', { action: 'cancel', id: firstPending?.id });
+  const queueAfterCancel = await req(globalThis.admin, 'GET', '/api/admin/password-resets');
+  check('Adminul poate anula o cerere, care dispare din coada activă',
+    cancelled.status === 200 && cancelled.data?.request?.status === 'cancelled'
+      && !(queueAfterCancel.data?.requests || []).some((r) => r.id === firstPending?.id),
+    `${cancelled.status} ${JSON.stringify(cancelled.data)}`);
+  // Cererea a fost anulată, deci membrul poate relua fluxul; acesta e al
+  // treilea și ultimul POST public din fereastra de 3/oră/IP a testului.
+  const requestedAgain = await req(jar(), 'POST', '/api/auth/password-reset', { identifier: 'recoveru@test.ro' });
+  const queueAgain = await req(globalThis.admin, 'GET', '/api/admin/password-resets');
+  const pending = (queueAgain.data?.requests || []).find((r) => r.username === 'recoveru');
+  check('După anulare, o nouă cerere pentru același cont poate fi pusă în coadă',
+    requestedAgain.status === 202 && pending?.status === 'pending' && pending.id !== firstPending?.id,
+    `${requestedAgain.status} ${JSON.stringify(pending)}`);
+
+  const issued = await req(globalThis.admin, 'POST', '/api/admin/password-resets', { action: 'issue', id: pending?.id });
+  check('Adminul emite codul o singură dată, cu expirare',
+    issued.status === 200 && /^AUK-(?:[A-F0-9]{8}-){3}[A-F0-9]{8}$/.test(issued.data?.recovery_code || '')
+      && Number(issued.data?.expires_at) > Math.floor(Date.now() / 1000),
+    JSON.stringify(issued.data).slice(0, 220));
+
+  const badCode = await req(jar(), 'POST', '/api/auth/password-reset/confirm', {
+    request_id: pending?.id, recovery_code: 'AUK-00000000-00000000-00000000-00000000', new_password: 'ParolaRecuperata123',
+  });
+  check('Cod de recuperare greșit → 400', badCode.status === 400, `status=${badCode.status}`);
+
+  const confirmed = await req(jar(), 'POST', '/api/auth/password-reset/confirm', {
+    request_id: pending?.id, recovery_code: issued.data?.recovery_code, new_password: 'ParolaRecuperata123',
+  });
+  check('Codul valid setează parola nouă → 200', confirmed.status === 200 && confirmed.data?.success === true, `status=${confirmed.status}`);
+  const oldSession = await req(owner, 'GET', '/api/auth/me');
+  check('Resetarea parolei invalidează sesiunea veche', oldSession.data?.user === null, JSON.stringify(oldSession.data));
+  const oldPassword = await req(jar(), 'POST', '/api/auth/login', { email: 'recoveru@test.ro', password: 'parola123' });
+  const recovered = await req(jar(), 'POST', '/api/auth/login', { email: 'recoveru@test.ro', password: 'ParolaRecuperata123' });
+  check('Doar parola recuperată permite login', oldPassword.status === 401 && recovered.status === 200, `${oldPassword.status}/${recovered.status}`);
+
+  const reused = await req(jar(), 'POST', '/api/auth/password-reset/confirm', {
+    request_id: pending?.id, recovery_code: issued.data?.recovery_code, new_password: 'AltaParola123',
+  });
+  check('Codul de recuperare este de unică folosință', reused.status === 400, `status=${reused.status}`);
+  const queueAfter = await req(globalThis.admin, 'GET', '/api/admin/password-resets');
+  check('Cererea finalizată nu mai apare în coada activă',
+    !(queueAfter.data?.requests || []).some((r) => r.id === pending?.id), JSON.stringify(queueAfter.data?.requests));
 }
 
 console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) ===');
@@ -465,6 +567,7 @@ console.log('\n=== 5. ADMIN ADAUGA SERIE + EPISOD (fluxul obligatoriu din spec) 
   const r = await req(j, 'POST', '/api/admin/series', {
     title: 'One Piece', description: 'Piratul rege Luffy!', cover_image: 'https://picsum.photos/id/1015/600/900',
     status: 'ongoing', genre: 'Acțiune, Aventură', year: 1999,
+    team: 'Traducere: Ana · Verificare: Dan',
   });
   check('Adaugare serie → 201', r.status === 201, `status=${r.status} ${JSON.stringify(r.data).slice(0,150)}`);
 
@@ -619,6 +722,8 @@ console.log('\n=== 5b. SURSE VIDEO (CRUD) ===');
   const pub = await req(j, 'GET', `/api/episodes/${epId}`);
   check('API public intoarce sursele active, in ordine', pub.data?.sources?.map((x) => x.label).join(',') === 'DoodStream,MP4 direct,Extern,StreamTape RO', JSON.stringify(pub.data?.sources));
   check('API public nu expune id-urile de episod inactive', pub.data?.sources?.every((x) => x.kind !== undefined && x.url.startsWith('https://')) === true, JSON.stringify(pub.data?.sources).slice(0, 150));
+  check('API episod trimite creditul echipei seriei fără apel suplimentar',
+    pub.data?.episode?.series_team === 'Traducere: Ana · Verificare: Dan', pub.data?.episode?.series_team);
 
   const del = await req(j, 'DELETE', `/api/admin/episode-sources?id=${srcId}`);
   check('Stergere sursa → 200', del.status === 200 && del.data?.success === true, `status=${del.status}`);
@@ -1062,6 +1167,15 @@ console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
   check('Profilul include statisticile (structura)', typeof opts.data?.stats?.episodes_watched === 'number', JSON.stringify(opts.data?.stats));
   check('Profilul NU expune email-ul', !JSON.stringify(opts.data).includes('marius@test.ro'), '');
 
+  // Ultima vizionare este practică pe propriul profil, dar deliberat privată.
+  const viewer = jar();
+  await req(viewer, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
+  const ownWatching = await req(viewer, 'GET', '/api/profile/me');
+  check('Profilul propriu include linkul spre ultimul episod vizionat',
+    ownWatching.data?.stats?.last_watched?.episode_id === globalThis.epId
+      && ownWatching.data?.stats?.last_watched?.series_id === globalThis.seriesId,
+    JSON.stringify(ownWatching.data?.stats?.last_watched));
+
   const bad1 = await req(j, 'PATCH', '/api/profile', { birth_date: '2099-01-01' });
   check('Data în viitor → 400', bad1.status === 400, `status=${bad1.status}`);
   const bad2 = await req(j, 'PATCH', '/api/profile', { birth_date: '2007-02-30' });
@@ -1089,6 +1203,7 @@ console.log('\n=== 8b. PROFIL PUBLIC + LISTA DE VIZIONAT ===');
   const publicProfile = await req(j, 'GET', '/api/profile/user2');
   check('Profilul public al altui utilizator', publicProfile.status === 200 && publicProfile.data?.user?.username === 'user2' && publicProfile.data?.is_self === false, `status=${publicProfile.status}`);
   check('Statistica reala: user2 are 1 episod vizionat', publicProfile.data?.stats?.episodes_watched === 1 && publicProfile.data?.stats?.series_watched === 1, JSON.stringify(publicProfile.data?.stats));
+  check('Profilul public nu expune ultima vizionare personală', publicProfile.data?.stats?.last_watched === null, JSON.stringify(publicProfile.data?.stats));
   check('Profilul altui user NU ii expune email-ul', !JSON.stringify(publicProfile.data).includes('user2@test.ro'), '');
   const anonProfile = await req(jar(), 'GET', '/api/profile/marius');
   check('Profilul cere autentificare → 401', anonProfile.status === 401, `status=${anonProfile.status}`);
@@ -1252,7 +1367,7 @@ console.log('\n=== 10. STATISTICI + JURNAL AUDIT ===');
 {
   const j = globalThis.admin;
   const s = await req(j, 'GET', '/api/admin/stats');
-  check('Statistici: total_users=7 (+econu din §9b)', s.data?.stats?.total_users === 7, JSON.stringify(s.data?.stats));
+  check('Statistici: total_users=8 (+recoveru și econu)', s.data?.stats?.total_users === 8, JSON.stringify(s.data?.stats));
   check('Statistici: plafoanele implicite sunt 1000/1000', s.data?.stats?.limit_users === 1000 && s.data?.stats?.limit_series === 1000, JSON.stringify(s.data?.stats));
   check('Statistici: total_series=1, total_episodes=3', s.data?.stats?.total_series === 1 && s.data?.stats?.total_episodes === 3, JSON.stringify(s.data?.stats));
   check('Statistici: total_watched=1', s.data?.stats?.total_watched === 1, JSON.stringify(s.data?.stats));
@@ -1290,6 +1405,12 @@ console.log('\n=== 12. SECURITATE: rute & metode ===');
   check('Ruta API inexistenta → 404 JSON', m404.status === 404, `status=${m404.status}`);
   const noOrigin = await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example' }, body: JSON.stringify({ email: 'marius@test.ro', password: 'parola123' }) });
   check('Cerere cu Origin strain → 403 (anti-CSRF)', noOrigin.status === 403, `status=${noOrigin.status}`);
+  const resetCrossOrigin = await fetch(BASE + '/api/auth/password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example' },
+    body: JSON.stringify({ identifier: 'marius@test.ro' }),
+  });
+  check('Recuperarea publică respinge Origin străin (anti-CSRF)', resetCrossOrigin.status === 403, `status=${resetCrossOrigin.status}`);
   const xss = await req(globalThis.admin, 'POST', '/api/admin/series', { title: '<img src=x onerror=alert(1)>', description: '<script>alert(1)</script>' });
   check('Serie cu payload XSS acceptata ca TEXT (va fi escapata la randare)', xss.status === 201, `status=${xss.status}`);
   const list = await req(j, 'GET', '/api/series');

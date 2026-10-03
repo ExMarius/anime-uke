@@ -129,6 +129,17 @@ tbody tr:last-child td { border-bottom: none; }
 .box__head .box__title { margin-bottom: .8rem; }
 
 
+/* ================== RECUPERĂRI PAROLĂ (admin) ================== */
+.reset-requests { display: flex; flex-direction: column; gap: .65rem; }
+.reset-request { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .9rem; padding: .8rem .9rem; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); }
+.reset-request--pending { border-color: color-mix(in srgb, var(--accent) 42%, var(--line-soft)); }
+.reset-request__main { min-width: 0; display: grid; gap: .1rem; }
+.reset-request__email { color: var(--dim); font-size: .82rem; overflow-wrap: anywhere; }
+.reset-request__actions { display: flex; align-items: center; justify-content: flex-end; gap: .4rem; flex-wrap: wrap; flex: 0 0 auto; }
+.reset-code { grid-column: 1 / -1; display: grid; gap: .35rem; padding: .8rem; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--line-soft)); background: color-mix(in srgb, var(--ok) 7%, var(--surface-2)); }
+.reset-code__value { display: block; width: fit-content; max-width: 100%; overflow-wrap: anywhere; color: var(--text); font-size: .92rem; letter-spacing: .035em; padding: .35rem .5rem; border-radius: .4rem; background: rgba(0, 0, 0, .24); }
+@media (max-width: 640px) { .reset-request { grid-template-columns: 1fr; align-items: stretch; } .reset-request__actions { justify-content: flex-start; } }
+
 /* ================== ADMIN: SERII / EPISOADE (pagini proprii) ================== */
 
 /* .filters era deja folosit pentru filtrele de invitatii (butoane intr-un

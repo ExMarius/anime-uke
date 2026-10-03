@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, safeUrl, coverImg, staffBadge, staffIcon, rankChip, whenActive, initChat } from './core.js';
+import { api, renderNav, toast, withBusy, safeUrl, coverImg, staffBadge, staffIcon, rankChip, whenActive, initChat, clearSession } from './core.js';
 
 // =====================================================================
 // Pagina de profil public — sectiunile „Informatii" si „Acces rapid".
@@ -77,6 +77,16 @@ function renderQuick() {
     { icon: '⭐', label: 'Serii recomandate', href: '#p-reco-section' },
     { icon: '🏆', label: 'Puncte', value: data.user.points },
   ];
+  // Este transmis numai pentru profilul propriu. Astfel legătura e practică
+  // pentru membru, fără să transforme istoricul de vizionare în date publice.
+  const last = s.last_watched;
+  if (last?.episode_id && last?.series_id) {
+    items.unshift({
+      icon: '⏯️', value: last.series_title || 'Serie',
+      label: `Ultima vizionare · EP ${last.episode_number}`,
+      href: `/episode?id=${encodeURIComponent(last.episode_id)}`,
+    });
+  }
   if (data.profile.mal_url) {
     items.push({ icon: '🔗', label: 'MyAnimeList', href: data.profile.mal_url, external: true });
   }
@@ -141,6 +151,7 @@ function renderHead() {
   }
 
   document.getElementById('p-edit-btn').hidden = !data.is_self;
+  document.getElementById('p-password-btn').hidden = !data.is_self;
 }
 
 function seriesCard(s, opts = {}) {
@@ -324,6 +335,68 @@ function updateMottoCount() {
 document.getElementById('f-motto')?.addEventListener('input', updateMottoCount);
 document.getElementById('p-edit-btn')?.addEventListener('click', openEditor);
 document.getElementById('profile-cancel')?.addEventListener('click', closeEditor);
+
+// ---------------------------------------------------------------------
+// Schimbarea parolei ramane in profil (nu pe un endpoint „set password"
+// usor de abuzat). Backendul cere parola curenta si roteste auth_version,
+// iar aici doar prevenim doua greseli frecvente: parole noi diferite intre
+// campuri sau prea scurte. Cookie-ul nou este HttpOnly, deci refresh-ul
+// navbar-ului vine din /api/auth/me, nu din localStorage.
+function openPasswordEditor() {
+  const panel = document.getElementById('p-password-panel');
+  const form = document.getElementById('password-form');
+  if (!panel || !form) return;
+  form.reset();
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('f-current-password')?.focus();
+}
+
+function closePasswordEditor() {
+  const panel = document.getElementById('p-password-panel');
+  const form = document.getElementById('password-form');
+  if (panel) panel.hidden = true;
+  form?.reset();
+}
+
+document.getElementById('p-password-btn')?.addEventListener('click', openPasswordEditor);
+document.getElementById('password-cancel')?.addEventListener('click', closePasswordEditor);
+document.getElementById('password-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const current = String(form.current_password?.value || '');
+  const next = String(form.new_password?.value || '');
+  const confirmPassword = String(form.confirm_password?.value || '');
+  const btn = document.getElementById('password-save');
+
+  if (!current || !next || !confirmPassword) {
+    toast('Completează toate câmpurile parolei.', 'warn');
+    return;
+  }
+  if (next.length < 4) {
+    toast('Parola nouă trebuie să aibă minimum 4 caractere.', 'warn');
+    return;
+  }
+  if (next !== confirmPassword) {
+    toast('Parola nouă nu se potrivește cu repetarea ei.', 'warn');
+    return;
+  }
+
+  await withBusy(btn, async () => {
+    const res = await api('/auth/password', {
+      method: 'POST',
+      body: { current_password: current, new_password: next },
+    });
+    if (!res.ok) {
+      toast(res.data?.error || 'Nu am putut schimba parola.', 'err', 5000);
+      return;
+    }
+    clearSession();
+    closePasswordEditor();
+    renderNav('').catch(() => {});
+    toast('Parolă schimbată. Celelalte dispozitive au fost deconectate.', 'ok', 6000);
+  });
+});
 
 document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();

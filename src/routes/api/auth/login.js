@@ -39,7 +39,7 @@ export async function onRequestPost(context) {
 
   const user = await env.DB
     .prepare(
-      `SELECT id, username, email, password_hash, password_salt, points, is_admin, is_banned
+      `SELECT id, username, email, password_hash, password_salt, points, is_admin, is_banned, auth_version
        FROM users WHERE email = ? OR username = ?`
     )
     .bind(identifier, identifier)
@@ -63,7 +63,10 @@ export async function onRequestPost(context) {
     return errorResponse(403, 'Contul tău este banat. Contactează un administrator.');
   }
 
-  const token = await signJWT({ id: user.id, username: user.username }, env.JWT_SECRET);
+  const token = await signJWT(
+    { id: user.id, username: user.username, auth_version: Number(user.auth_version || 0) },
+    env.JWT_SECRET
+  );
 
   // Actualizam last_login_at „best effort" — un esec nu trebuie sa blocheze login-ul.
   await env.DB
