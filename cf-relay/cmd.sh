@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # =====================================================================
+# Rulare de lansare 2026-11-08: aplică migrarea 0031 (realizări) în D1-ul
+# de producție și verifică live build-ul de lansare. Deploy-ul complet este
+# cel din origin/main (relay-ul face checkout pe main înainte să ruleze), deci
+# acest fișier e doar declanșatorul documentat al rulării de azi.
+# =====================================================================
 # Deploy + verificare LIVE: tot ce face deploy.sh (D1, migrări remote,
 # Worker DO, Pages, JWT, purge/minify, ?v=), apoi verificările
 # post-deploy pe https://anime-uke.pages.dev (sectiunile 1–20 din mai jos).
