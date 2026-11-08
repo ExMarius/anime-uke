@@ -13,9 +13,10 @@ Citește fișierul ăsta **înainte** de orice. Sunt ~5 minute și îți economi
 - **Repo:** https://github.com/ExMarius/anime-uke — branch-ul de referință e **`main`**. Pornește de acolo.
 - **Proprietar:** Marius (ExMarius). Comunică în **română**. Vrea lucruri concrete, făcute până la capăt
   (cod + teste + deploy + verificare), nu planuri.
-- **Stare:** stabil, curat, toate testele verzi (scripts-health 50 · poll-buget 22 ·
-  pulse-online 17 · e2e 614 · dom 214 / 210 pe build · theme-cache 7 · top-cache 17 ·
-  chat-persist 14 · counters 16 · chat-d1 8 · theme-flow PASS · pixel-teme 8 · plafoane 13).
+- **Stare:** stabil, curat, toate testele verzi (scripts-health 60 · greutate în buget ·
+  achievements 36 · poll-buget 22 · pulse-online 17 · e2e 630 · dom 227 / 223 pe build ·
+  theme-cache 7 · top-cache 17 · chat-persist 14 · counters 16 · chat-d1 8 ·
+  theme-flow PASS · pixel-teme 8 · plafoane 13).
   Auditul live de dinaintea rundei de poll (build `c0ae601`): ✅ 179 · 🟡 0 · 🔴 0 · ℹ️ 32
   (vezi `AUDIT-LIVE.md`; se reface la deploy).
 - **2026-09-22: cele două linii de lucru au fost INTEGRATE** într-un singur branch
@@ -161,6 +162,38 @@ cat cf-relay/last-output.txt
 
 ## 6. Ce s-a făcut recent (ca să nu refaci)
 
+### Realizări + domeniu canonic, build de lansare (2026-11-08, branch `arena/2534f1f0-anime-uke`)
+
+- **Realizări (migrarea `0031_achievements.sql`)**: 14 praguri pe termen lung, catalog în
+  `src/lib/achievements.js`, rută `GET /api/achievements[?u=<username>]` (+ forma
+  `/api/achievements/:username`, publică). Recompensa e **doar gold**, o singură dată:
+  `INSERT OR IGNORE` + `meta.changes` face a doua evaluare fără scrieri. XP-ul NU se atinge
+  (altfel boost-ul ×2 ar dubla un trofeu unic, iar e2e-ul de boost ar fi minciună).
+- **Costul**: starea unui user = un `SELECT` pe cheia primară; toate contoarele = **un batch** de
+  ~11 interogări indexate (am adăugat `idx_reviews_user` în 0031, lipsea). Evaluarea rulează pe
+  evenimente de prag (progres, cufăr, comentariu, recenzie, prietenie) și pe propriul profil —
+  nu la fiecare request. Dacă adaugi o realizare nouă: doar în catalog (+ `STAT_QUERIES` dacă e o
+  statistică nouă), **fără migrație**.
+- **UI**: `#p-ach` în tabul „Progres" din `public/profile.html`; CSS-ul stă în
+  `public/assets/css/page-user.css` (nu în `style.css` — doar profile/shop îl încarcă, iar bugetul
+  e 22 KB gzip **pe pagină**). `announceAchievements()` din `core.js` afișează toastul din
+  răspunsul care a declanșat pragul; clopotul duce la `/profile#progres`.
+- **Domeniu canonic**: `canonicalRedirectTarget()` în `src/worker.js` + variabilele
+  `CANONICAL_ORIGIN` și `FORCE_CANONICAL_REDIRECT=1` (opt-in deliberat, ca preview-urile să
+  rămână utilizabile). **API-ul și `/chat` nu se redirectează niciodată** — un 301 pe POST devine
+  GET. Pașii de mutare pe un domeniu gratuit (DigitalPlat `.dpdns.org`, EU.org, is-a.dev) sunt în
+  `LAUNCH.md`. **Capcană**: `/`, `/login`, `/register`, `/episode` și `/assets/*` sunt EXCLUSE din
+  worker de `public/_routes.json` (buget 0), deci 301-ul din cod nu le acoperă — mutarea completă
+  cere și o **Redirect Rule** în Cloudflare (hostname → domeniu). Ambele straturi sunt descrise în
+  `LAUNCH.md` §2.
+- **Teste**: `tests/achievements.mjs` (36 verificări, fără server: catalog, progres, recompensă
+  unică pe un D1 fals, 301) e prima suită nouă de la `watch-budget` încoace; e2e §„Realizări" (13)
+  și dom-smoke §„/profile (realizări)" (8). Suita completă: e2e 630 · dom 227/223.
+- **Atenție la teste existente**: notificările contului `user2` se golesc la începutul secțiunii
+  13h — contul acumulează și notificări de realizare din suitele anterioare, iar verificările
+  numără exact ce aduce abonarea.
+
+
 ### Pregătire lansare publică: conexiuni Pages + observabilitate (2026-09-26, branch `arena/01a0dd39-anime-uke`)
 
 - **Git integration Pages reparată:** buildurile preview eșuau înainte de cod cu
@@ -238,7 +271,7 @@ este în `src/lib/private-messages.js`, `src/lib/turso.js`,
   Workerul `anime-uke-do` scrie DM-ul. Relay-ul validează direct mesajul canar
   în Turso și îl curăță înainte să șteargă conturile temporare.
 
-Următoarea migrare D1 este **0031**; nu modifica 0030. Migrarea Turso 0002
+Următoarea migrare D1 este **0032** (0031 = realizări); nu modifica 0030 sau 0031. Migrarea Turso 0002
 (progres de vizionare) e descrisă mai jos; următoarea liberă e **0003**.
 
 ### Progresul de vizionare mutat în Turso, în etape (2026-09-27) — LIVE pe `turso`
@@ -547,6 +580,11 @@ zgomotos în loc să raporteze cifre pentru altceva.
   care nu-l mai vede.
 
 - Probleme la **facțiuni** pe care proprietarul a zis că le va descrie (întreabă-l: „ce nu merge la facțiuni?").
+- **Lansarea pe domeniu** (necesită acțiunea proprietarului, ~10 minute): `LAUNCH.md` §2.
+  Codul e gata — `CANONICAL_ORIGIN` + `FORCE_CANONICAL_REDIRECT=1`, un deploy, verificările cu curl.
+- Realizările au acum 14 praguri; idei neîncepute: „serii complete" (o serie întreagă vizionată),
+  realizări de sezon (Halloween/iarnă) și un panou admin cu „câte conturi au deblocat X" (ar cere
+  un index pe `ach_id`, deliberat amânat).
 - Din referința „exemplu" (un site similar): meta „tradus de {team}" pe episod (câmpul `team` există deja pe serie —
   vezi `src/routes/api/episodes/by-id.js`), buton „mulțumesc", link „Ultima vizionare", panou notificări extins,
   „Gând" (status scurt pe profil), avatar picker, sondaj săptămânal, „Seria săptămânii", „Episoade anunțate",

@@ -1,4 +1,4 @@
-import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge, whenActive, coverImg, initChat, formatDate, staffBadge, rankChip } from './core.js';
+import { api, renderNav, toast, safeUrl, getSession, withBusy, genPoster, getParam, startGuestNudge, whenActive, coverImg, initChat, formatDate, staffBadge, rankChip, announceAchievements } from './core.js';
 
 // Pagina unei serii: detalii + toate episoadele, dintr-un singur apel API.
 
@@ -834,6 +834,7 @@ async function loadReviews(seriesId) {
         btn.disabled = false;
         if (!r.ok) { toast(r.data?.error || 'Nu am putut salva recenzia.', 'error'); return; }
         toast(r.data.created ? 'Recenzia ta e live! Mulțumim. 💬' : 'Recenzie actualizată.', 'success');
+        announceAchievements(r.data?.achievements, 400);
         loadReviews(seriesId);
       });
     }

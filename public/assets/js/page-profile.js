@@ -1,4 +1,4 @@
-import { api, renderNav, toast, withBusy, safeUrl, coverImg, staffBadge, staffIcon, rankChip, whenActive, initChat } from './core.js';
+import { api, renderNav, toast, withBusy, safeUrl, coverImg, staffBadge, staffIcon, rankChip, whenActive, initChat, announceAchievements } from './core.js';
 
 // =====================================================================
 // Pagina de profil public — sectiunile „Informatii" si „Acces rapid".
@@ -74,6 +74,7 @@ function renderQuick() {
     { icon: '📺', label: 'Serii vizionate', value: s.series_watched },
     { icon: '🎬', label: 'Episoade vizionate', value: s.episodes_watched },
     { icon: '🔖', label: 'Serii de vizionat', value: s.watchlist, href: '#p-watchlist-section' },
+    { icon: '🏅', label: 'Realizări', href: '#progres' },
     { icon: '⭐', label: 'Serii recomandate', href: '#p-reco-section' },
     { icon: '🏆', label: 'Puncte', value: data.user.points },
   ];
@@ -941,6 +942,7 @@ async function openChest() {
     if (fresh.ok) econData = fresh.data;
     renderEconomy();
     if (r.reward === 'xp') toast(`+${r.amount} XP!`, 'success');
+    announceAchievements(r.achievements, 900);
     renderNav('').catch(() => {});
   } catch {
     btn.classList.remove('chest-shake');
@@ -1125,6 +1127,82 @@ function paintFaction() {
   }
 }
 
+// ---------------------------------------------------------------------
+// Realizări: catalog complet + stare, într-un singur apel.
+//
+// Se încarcă pentru ORICE profil (sunt publice, ca profilul): pe al tău
+// serverul evaluează pragurile întâi, pe al altcuiva doar citește.
+// ---------------------------------------------------------------------
+async function loadAchievements() {
+  const res = await api(target === 'me' ? '/achievements' : `/achievements/${encodeURIComponent(target)}`);
+  if (!res.ok || !res.data) return;
+  renderAchievements(res.data);
+}
+
+function renderAchievements(data) {
+  const box = document.getElementById('p-ach');
+  if (!box) return;
+
+  const count = document.getElementById('p-ach-count');
+  if (count) count.textContent = `${data.unlocked} / ${data.total} deblocate`;
+
+  const fill = document.getElementById('p-ach-fill');
+  if (fill) fill.style.width = `${data.percent}%`;
+
+  const summary = document.getElementById('p-ach-summary');
+  if (summary) {
+    if (!data.unlocked) {
+      summary.textContent = data.user.is_self
+        ? 'Încă niciuna. Primul episod terminat îți dă primul card — și 10 Gold.'
+        : `${data.user.username} nu a deblocat încă nicio realizare.`;
+    } else if (data.next && data.user.is_self) {
+      summary.textContent = `Următoarea la un pas: ${data.next.icon} ${data.next.name} — ${data.next.current}/${data.next.target}.`;
+    } else {
+      summary.textContent = `${data.user.username} a deblocat ${data.unlocked} din ${data.total} realizări (${data.percent}%).`;
+    }
+  }
+
+  const grid = document.getElementById('p-ach-grid');
+  if (!grid) return;
+  grid.textContent = '';
+
+  for (const a of data.achievements) {
+    const card = el('article', `ach-card ach-card--${a.tier}${a.unlocked ? ' is-unlocked' : ''}`);
+    card.setAttribute(
+      'aria-label',
+      a.unlocked
+        ? `${a.name} — deblocată`
+        : `${a.name} — ${a.progress.current} din ${a.progress.target}`
+    );
+    card.appendChild(el('span', 'ach-card__icon', a.icon));
+
+    const body = el('div', 'ach-card__body');
+    const top = el('div', 'ach-card__top');
+    top.appendChild(el('b', 'ach-card__name', a.name));
+    top.appendChild(el('span', 'ach-card__tier', a.tier_label));
+    body.appendChild(top);
+    body.appendChild(el('span', 'ach-card__desc', a.desc));
+
+    if (a.unlocked) {
+      const reward = [a.gold ? `+${a.gold} 🪙` : '', a.xp ? `+${a.xp} XP` : ''].filter(Boolean).join(' · ');
+      const when = a.unlocked_at ? ` · ${String(a.unlocked_at).slice(0, 10)}` : '';
+      body.appendChild(el('span', 'ach-card__meta ach-card__meta--done', `Deblocată${when}${reward ? ` · ${reward}` : ''}`));
+    } else {
+      const bar = el('div', 'ach-card__bar');
+      const barFill = el('div', 'ach-card__fill');
+      barFill.style.width = `${a.progress.percent}%`;
+      bar.appendChild(barFill);
+      body.appendChild(bar);
+      body.appendChild(el('span', 'ach-card__meta', `${a.req} · ${a.progress.current}/${a.progress.target}`));
+    }
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  }
+
+  box.hidden = false;
+}
+
 async function initEconomy() {
   const res = await api('/economy');
   if (!res.ok) return;
@@ -1163,6 +1241,7 @@ async function initEconomy() {
 }
 
 await Promise.all([renderNav(''), load()]);
+loadAchievements().catch(() => { /* realizările sunt bonus, profilul merge oricum */ });
 whenActive(() => initChat().catch(() => { /* chat optional */ }));
 if (target === 'me') initEconomy().catch(() => { /* panoul e bonus, profilul merge oricum */ });
 
@@ -1188,6 +1267,13 @@ function initProfileTabs() {
   };
 
   btns.forEach((b) => b.addEventListener('click', () => activate(b.dataset.ptab, true)));
+  // Linkurile din „Acces rapid" (ex. #progres de la Realizări) trebuie să
+  // deschidă tabul, nu doar să schimbe hash-ul: fără asta, click-ul părea
+  // că nu face nimic.
+  window.addEventListener('hashchange', () => {
+    const id = (location.hash || '').slice(1);
+    if (id) activate(id, false);
+  });
 
   let initial = '';
   try { initial = sessionStorage.getItem('ptab') || ''; } catch { /* privat */ }

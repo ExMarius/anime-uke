@@ -220,6 +220,22 @@ export async function logout() {
 // ---------------------------------------------------------------------
 // TOAST (inlocuieste alert()-ul din v1, care bloca firul de executie)
 // ---------------------------------------------------------------------
+/** Anunță realizările proaspăt deblocate.
+ *
+ * Răspunsurile API care pot atinge un prag (progres, cufăr, comentariu,
+ * recenzie, prietenie) trimit `achievements: [{icon,name,gold,xp}]`. Un toast
+ * per realizare, decalat, ca două deblocări simultane să nu se acopere.
+ */
+export function announceAchievements(list, delay = 0) {
+  if (!Array.isArray(list) || !list.length) return;
+  list.forEach((a, i) => {
+    setTimeout(() => {
+      const reward = [a.gold ? `+${a.gold} 🪙` : '', a.xp ? `+${a.xp} XP` : ''].filter(Boolean).join(' · ');
+      toast(`🏅 Realizare deblocată: ${a.icon || '🏅'} ${a.name}${reward ? ` — ${reward}` : ''}`, 'ok', 6500);
+    }, delay + i * 800);
+  });
+}
+
 export function toast(message, type = 'info', ms = 3800) {
   let wrap = document.querySelector('.toast-wrap');
   if (!wrap) {
@@ -491,6 +507,9 @@ let bellPoll = null;
 
 function notifHref(n) {
   const p = n.payload || {};
+  // Realizările nu au episod/serie: duc pe propriul profil, la tabul de
+  // progres, unde cardul proaspăt aprins e vizibil imediat.
+  if (p.ach_id) return '/profile#progres';
   if (p.episode_id) return `/episode?id=${encodeURIComponent(p.episode_id)}`;
   if (p.series_id) return `/series?id=${encodeURIComponent(p.series_id)}`;
   // Notificarile de prietenie (cerere primită / acceptată) duc la profilul

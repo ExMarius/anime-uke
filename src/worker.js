@@ -60,6 +60,7 @@ const PUBLIC_API = new Set([
   '/api/recent',         // ultimele episoade adaugate (date de catalog)
   '/api/home',           // prima pagina intr-o singura cerere (series+top+recent+genres+pulse)
   '/api/comments',       // citirea comentariilor; scrierea isi cere singura sesiune
+  '/api/achievements',   // realizările sunt publice (ca profilul); „me” cere sesiune
   '/api/subtitle',       // subtitrarile, pentru vizionarea fara cont
 ]);
 function isPublicApi(path) {
@@ -68,6 +69,8 @@ function isPublicApi(path) {
   // mearga vizionarea fara cont. Nu expun decat continut de catalog.
   if (path === '/api/series' || path.startsWith('/api/series/')) return true;
   if (path.startsWith('/api/episodes/')) return true;
+  // Realizările sunt publice ca profilul (catalog + stare per user).
+  if (path.startsWith('/api/achievements')) return true;
   return false;
 }
 
@@ -103,6 +106,16 @@ export async function handleFetch(request, env, ctx) {
     // vizitatori — un 302 catre /login ar dezvalui ca ruta exista.
     if (BLOCKED_PATHS.includes(path) || path.startsWith('/.git') || path.startsWith('/migrations')) {
       return applySecurityHeaders(jsonResponse({ error: 'Not found' }, 404));
+    }
+
+    // Un singur host canonic: dacă domeniul propriu e activat, orice alt host
+    // (pages.dev, preview) primește 301. Vezi canonicalRedirectTarget().
+    const movedTo = canonicalRedirectTarget(env, url);
+    if (movedTo) {
+      return applySecurityHeaders(new Response(null, {
+        status: 301,
+        headers: { Location: movedTo, 'Cache-Control': 'no-store' },
+      }));
     }
 
     // `/series` fără id e pagină moartă: JS-ul făcea location.replace('/'), iar
@@ -302,6 +315,36 @@ const SEO_CACHE_MS = 5 * 60 * 1000;
  * CANONICAL_ORIGIN (ex. https://anime-uke.dpdns.org) in configurarea Pages —
  * si TOATE referintele SEO comuta odata, fara modificari de cod.
  */
+/**
+ * 301 către domeniul propriu, când ownerul îl activează.
+ *
+ * De ce e nevoie: după mutarea pe un domeniu (gratuit sau plătit), același
+ * conținut ar răspunde pe DOUĂ hosturi (pages.dev + domeniu). Google ar
+ * împărți autoritatea între ele, iar linkurile vechi ar rămâne pe hostul
+ * vechi. Un 301 face tranziția curată.
+ *
+ * Se activează EXPLICIT cu FORCE_CANONICAL_REDIRECT=1, ca preview-urile de
+ * branch (care rulează pe alt host) să rămână utilizabile până la mutare.
+ * API-ul nu se redirecționează niciodată: un 301 pe POST devine GET în
+ * browser și ar rupe formularul exact în ziua lansării.
+ *
+ * @returns {string|null} URL-ul absolut către care se face 301, sau null.
+ */
+export function canonicalRedirectTarget(env, url) {
+  if (String(env?.FORCE_CANONICAL_REDIRECT || '') !== '1') return null;
+  const raw = String(env?.CANONICAL_ORIGIN || '').trim();
+  if (!raw.startsWith('http')) return null;
+
+  let target;
+  try { target = new URL(raw); } catch { return null; }
+  if (!target.host || target.host === url.host) return null;
+
+  const path = url.pathname;
+  if (path === '/api' || path.startsWith('/api/') || path === '/chat') return null;
+
+  return `${target.origin}${path}${url.search}`;
+}
+
 function canonicalOrigin(env, request) {
   const raw = String(env.CANONICAL_ORIGIN || '').trim();
   return raw.startsWith('http') ? raw.replace(/\/+$/, '') : new URL(request.url).origin;

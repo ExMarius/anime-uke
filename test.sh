@@ -3,7 +3,9 @@
 #
 #   ./test.sh          scripts-health + greutate + poll-buget + watch-budget +
 #                      watch-store +
-#                      pulse-online + turso-messages + e2e + dom-smoke (+ build) +
+#                      pulse-online + turso-messages +
+#                      achievements (catalog + 301 canonic, fara server) +
+#                      e2e + dom-smoke (+ build) +
 #                      theme-cache + top-cache +
 #                      counters + chat-persist + chat-d1 + theme-flow + pixel-teme + plafoane
 #
@@ -204,6 +206,15 @@ if [ "$TURSO_RC" -ne 0 ]; then
   cat /tmp/turso.log
 fi
 
+echo "════════ achievements (catalog + 301 canonic, fara server) ════════"
+node tests/achievements.mjs > /tmp/ach.log 2>&1
+ACH_RC=$?
+tail -4 /tmp/ach.log
+if [ "$ACH_RC" -ne 0 ]; then
+  echo "!! achievements a picat:"
+  cat /tmp/ach.log
+fi
+
 echo "── reset baza locala ──"
 rm -rf .wrangler/state
 # TOP_CACHE_MINUTES=0: topul săptămânal se recalculează la fiecare cerere, ca
@@ -218,6 +229,7 @@ RC=0
 [ "${WATCH_STORE_RC:-0}" -eq 0 ] || RC=1
 [ "${PULSE_RC:-0}" -eq 0 ] || RC=1
 [ "${TURSO_RC:-0}" -eq 0 ] || RC=1
+[ "${ACH_RC:-0}" -eq 0 ] || RC=1
 echo
 echo "════════ e2e (API) ════════"
 # Logul complet ramane pe disc: un crash la mijlocul suitei ar fi altfel

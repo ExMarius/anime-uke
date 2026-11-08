@@ -1700,6 +1700,11 @@ console.log('\n=== 13h. ABONARI LA SERII + NOTIFICARI ===');
   const j = jar();
   await req(j, 'POST', '/api/auth/login', { email: 'user2@test.ro', password: 'parola123' });
 
+  // Clopoțelul se golește ÎNTÂI: contul de test acumulează notificări și din
+  // alte suite (realizări deblocate la vizionare, cereri de prietenie).
+  // Verificările de mai jos numără EXACT ce aduce abonarea, deci plecăm de la 0.
+  await req(j, 'POST', '/api/notifications/read', { all: 1 });
+
   // --- abonare: toggle idempotent + flag in ruta seriei
   const anon = await req(jar(), 'POST', '/api/subscribe', { series_id: globalThis.seriesId, on: 1 });
   check('Abonarea anonima → 401', anon.status === 401, `status=${anon.status}`);
@@ -2413,6 +2418,82 @@ console.log('\n=== Facțiuni (alegere lunară) + shop/activate ===');
     check('Tip necunoscut la activare → 400', unknown.status === 400, `status=${unknown.status}`);
   } else {
     check('Factiuni: skip (inregistrare esuata)', true, `register=${reg.status}`);
+  }
+}
+
+// =====================================================================
+// REALIZĂRI — catalog public, deblocare la prag, recompensă o singură dată.
+// =====================================================================
+console.log('\n=== Realizări (achievements) ===');
+{
+  const j = jar();
+  const uname = `ach_${Date.now() % 100000}`;
+  const reg = await req(j, 'POST', '/api/auth/register', {
+    username: uname, email: `${uname}@test.ro`, password: 'ParolaMare123',
+  });
+
+  if (reg.status === 201) {
+    const cat = await req(j, 'GET', '/api/achievements');
+    check('GET /api/achievements → catalogul complet',
+      cat.status === 200 && cat.data?.total >= 12 && cat.data?.achievements?.length === cat.data.total,
+      `status=${cat.status} total=${cat.data?.total} lista=${cat.data?.achievements?.length}`);
+    check('Cont nou: nicio realizare deblocată',
+      cat.data?.unlocked === 0 && cat.data?.percent === 0,
+      JSON.stringify({ unlocked: cat.data?.unlocked, percent: cat.data?.percent }));
+    check('Cardurile nedeblocate au cerință și prag',
+      (cat.data?.achievements || []).every((a) => !a.unlocked && a.req && a.progress?.target > 0),
+      JSON.stringify((cat.data?.achievements || [])[0]));
+
+    // Pragul de vizionare e 15 minute; 3 × 5 minute îl trec.
+    let last;
+    for (let i = 0; i < 3; i++) {
+      last = await req(j, 'POST', '/api/progress', { episode_id: globalThis.epId, seconds: 300 });
+    }
+    check('Vizionarea anunță „Primul cadru” în răspunsul de progres',
+      (last.data?.achievements || []).some((a) => a.id === 'first_episode'),
+      JSON.stringify(last.data?.achievements));
+
+    const afterWatch = await req(j, 'GET', '/api/achievements');
+    const card = (afterWatch.data?.achievements || []).find((a) => a.id === 'first_episode');
+    check('Cardul „Primul cadru” e deblocat, cu dată',
+      card?.unlocked === true && !!card?.unlocked_at, JSON.stringify(card));
+    check('Procentul de completare crește după deblocare',
+      afterWatch.data?.percent > 0, `percent=${afterWatch.data?.percent}`);
+
+    const goldA = (await req(j, 'GET', '/api/auth/me')).data?.user?.gold || 0;
+    await req(j, 'GET', '/api/achievements');
+    const goldB = (await req(j, 'GET', '/api/auth/me')).data?.user?.gold || 0;
+    check('Recompensa în gold se acordă o singură dată', goldA === goldB && goldA >= 10, `${goldA} -> ${goldB}`);
+
+    const notif = await req(j, 'GET', '/api/notifications');
+    check('Notificarea de realizare apare în clopot',
+      (notif.data?.notifications || []).some((n) => n.type === 'achievement' && /Primul cadru/.test(n.text || '')),
+      JSON.stringify((notif.data?.notifications || []).slice(0, 2)));
+
+    const pub = await req(jar(), 'GET', `/api/achievements?u=${uname}`);
+    check('Realizările altui utilizator sunt publice',
+      pub.status === 200 && pub.data?.user?.is_self === false && pub.data?.unlocked >= 1,
+      `status=${pub.status} ${JSON.stringify(pub.data?.user)}`);
+
+    const byPath = await req(jar(), 'GET', `/api/achievements/${uname}`);
+    check('Ruta /api/achievements/:username răspunde',
+      byPath.status === 200 && byPath.data?.user?.username === uname,
+      `status=${byPath.status}`);
+
+    const anon = await req(jar(), 'GET', '/api/achievements?u=me');
+    check('„me” fără sesiune → 401', anon.status === 401, `status=${anon.status}`);
+
+    const missing = await req(jar(), 'GET', '/api/achievements?u=nuexista_xyz9');
+    check('Utilizator inexistent → 404', missing.status === 404, `status=${missing.status}`);
+
+    const c = await req(j, 'POST', '/api/comments', {
+      episode_id: globalThis.epId, body: 'Realizare: prima părere, din teste.',
+    });
+    check('Comentariul deblochează „Prima părere”',
+      (c.data?.achievements || []).some((a) => a.id === 'first_comment'),
+      `status=${c.status} ${JSON.stringify(c.data?.achievements)}`);
+  } else {
+    check('Realizări: skip (înregistrare eșuată)', true, `register=${reg.status}`);
   }
 }
 

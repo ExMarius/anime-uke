@@ -6,6 +6,7 @@ import { addActivity, grantBadge } from '../../lib/xp.js';
 import { addRep, bonusFor } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
 import { bumpProgress, watchStoreMode } from '../../lib/watch-store.js';
+import { evaluateAchievements } from '../../lib/achievements.js';
 
 // =====================================================================
 // POST /api/progress — acumuleaza timp real de vizionare.
@@ -96,6 +97,9 @@ export async function onRequestPost(context) {
 
     let pointsAdded = 0;
     let points = user.points;
+    // Realizările deblocate EXACT acum, ca pagina să le poată anunța imediat
+    // (toast), fără o cerere suplimentară.
+    let justUnlocked = [];
 
     // Pragul tocmai a fost trecut: marcam vizionat + acordam punctele,
     // atomic. INSERT OR IGNORE intoarce changes=0 daca exista deja randul,
@@ -130,6 +134,15 @@ export async function onRequestPost(context) {
           .bind(user.id)
           .first();
         if ((wc?.n || 0) >= 50) await grantBadge(env, user.id, 'watcher_50');
+
+        // Pragurile de realizări (primul episod, 10, 50, 100…). Rulează după
+        // ce punctele sunt deja scrise: un eșec aici nu are voie să anuleze
+        // recompensa de vizionare.
+        try {
+          justUnlocked = await evaluateAchievements(env, user.id);
+        } catch (e) {
+          console.error('evaluateAchievements (progress) a eșuat:', e?.message || e);
+        }
       }
     } else if (total >= WATCH_THRESHOLD_SECONDS) {
       const cur = await env.DB.prepare('SELECT points FROM users WHERE id = ?').bind(user.id).first();
@@ -142,6 +155,7 @@ export async function onRequestPost(context) {
       watched: total >= WATCH_THRESHOLD_SECONDS,
       pointsAdded,
       points,
+      achievements: justUnlocked,
       // Diagnostic onest, nu decor: clientul (și canarul de pe live) văd din
       // ce bază a venit totalul și dacă a fost nevoie de fallback.
       store: up.source,

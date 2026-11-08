@@ -1,4 +1,4 @@
-import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive, initChat } from './core.js';
+import { api, renderNav, toast, getSession, clearSession, withBusy, safeUrl, getParam, escapeHtml, formatDate, staffBadge, rankChip, startGuestNudge , whenActive, initChat, announceAchievements } from './core.js';
 
 
 // Pagina episodului: player cu surse multiple + contor vizualizari + puncte.
@@ -105,6 +105,9 @@ async function flushProgress() {
     clearSession();          // forteaza recitirea punctelor in navbar
     await renderNav('');
   }
+  // Realizările atinse pe drum (primul episod, 10, 50…) se anunță imediat,
+  // în același răspuns — fără o cerere suplimentară.
+  announceAchievements(res.data.achievements, 600);
 }
 
 function startHeartbeat() {
@@ -719,6 +722,7 @@ async function initComments(episodeId) {
     input.value = '';
     hint.textContent = '';
     toast('Comentariul a fost postat.', 'ok');
+    announceAchievements(r.data?.achievements, 400);
     loadComments(episodeId);
   });
 }

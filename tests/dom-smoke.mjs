@@ -998,6 +998,31 @@ console.log('\n=== DOM: /profile (panoul de economie) ===');
   await p.teardown();
 }
 
+console.log('\n=== DOM: /profile (realizări) ===');
+{
+  const p = await mountPage({ htmlFile: 'public/profile.html', url: '/profile', module: 'page-profile.js' });
+  const on = await until(() => p.$('#p-ach') && !p.$('#p-ach').hidden);
+  check('Secțiunea de realizări apare pe profil', on, `hidden=${p.$('#p-ach')?.hidden}`);
+
+  const cards = p.$$('#p-ach-grid .ach-card');
+  check('Catalogul randează un card pentru fiecare realizare', cards.length >= 14, `n=${cards.length}`);
+  check('Fiecare card are icon, nume și stare (progres sau deblocat)',
+    cards.length > 0 && cards.every((c) => c.querySelector('.ach-card__icon')
+      && c.querySelector('.ach-card__name')
+      && (c.querySelector('.ach-card__bar') || c.querySelector('.ach-card__meta--done'))),
+    cards[0]?.textContent?.slice(0, 120));
+  check('Contorul arată „deblocate / total”', /\d+ \/ \d+ deblocate/.test(p.text('#p-ach-count') || ''), p.text('#p-ach-count'));
+  check('Bara de completare are o lățime reală', /%$/.test(p.$('#p-ach-fill')?.style?.width || ''), p.$('#p-ach-fill')?.style?.width);
+  check('Treapta fiecărui card e o clasă CSS reală',
+    cards.every((c) => /ach-card--(bronze|silver|gold|legend)/.test(c.className)),
+    cards[0]?.className);
+  check('Cardurile nedeblocate spun ce trebuie făcut',
+    cards.filter((c) => !c.classList.contains('is-unlocked')).every((c) => /Vizionează|Scrie|Cumpără|Adaugă|Deschide|Fă-ți|Notează|Intră|Ajunge/.test(c.textContent)),
+    cards.filter((c) => !c.classList.contains('is-unlocked'))[0]?.textContent?.slice(0, 140));
+  check('Nicio eroare de runtime în secțiunea de realizări', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+  await p.teardown();
+}
+
 {
   console.log('=== DOM: notificari UI (badge + marcat citit) ===');
   // Serie proprie: fixturele anterioare sunt sterse de sectiunile lor.

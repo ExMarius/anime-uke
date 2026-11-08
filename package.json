@@ -1,6 +1,6 @@
 {
   "name": "animesphere",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "description": "Site de anime pe Cloudflare Pages + D1 + Durable Objects, buget zero",

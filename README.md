@@ -1,6 +1,6 @@
 # 🎌 anime-uke
 
-Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel / gold / cufere / misiuni / shop), facțiuni lunare, grade, panou admin, chat live și mesaje private între prieteni.
+Site de anime cu conturi, puncte pentru episoade vizionate, economie (XP / nivel / gold / cufere / misiuni / **realizări** / shop), facțiuni lunare, grade, panou admin, chat live și mesaje private între prieteni.
 
 **Stack:** Cloudflare Pages + D1 + Durable Objects + WebSockets · vanilla HTML/CSS/JS, fără framework
 **Cost:** $0/lună — rulează integral în planul gratuit Cloudflare
@@ -20,7 +20,7 @@ public/                     assete statice + entrypoint
 ├── index.html              catalog + banner + chat
 ├── series.html             fișa unei serii (+ episoade, recenzii, „Episodul următor")
 ├── episode.html            player + surse + comentarii
-├── profile.html            profil public / propriu, economie, facțiune, cufăr
+├── profile.html            profil public / propriu, economie, realizări, facțiune, cufăr
 ├── shop.html               shop de cosmetice (gold)
 ├── login.html, register.html
 ├── admin.html              panou admin: Statistici · Utilizatori · Grade · Raportări · Jurnal
@@ -53,11 +53,12 @@ src/
 │       ├── admin/          series, episodes, episode-sources, users, mods, rank-themes, reports, stats, log
 │       ├── series/by-id.js, episodes/by-id.js
 │       └── …               comments, reviews, ratings, leaderboard, economy, chest(s), missions,
-│                           shop(-buy/-activate), factions, notifications, profile, watchlist, …
+│                           achievements, shop(-buy/-activate), factions, notifications,
+│                           profile, watchlist, …
 ├── do/                     Durable Objects: ChatDO, RateLimitDO, StatsDO
-└── lib/                    session, auth, rankuri, validare, notificări + turso/private-messages
+└── lib/                    session, auth, rankuri, realizări, validare, notificări + turso/private-messages
 worker-do/                  Worker separat care GĂZDUIEȘTE DO-urile în producție (vezi mai jos)
-migrations/                 schema D1 = suma migrărilor 0001…0030 (NU există alt schema.sql)
+migrations/                 schema D1 = suma migrărilor 0001…0031 (NU există alt schema.sql)
 turso/migrations/           schemă separată Turso: 0001 mesaje private · 0002 watch_progress + jurnal
 scripts/
 ├── purge-css.mjs           rulat de deploy.sh: scoate CSS-ul mort (safelist pentru clase dinamice!)
@@ -68,6 +69,7 @@ scripts/
 └── seed.mjs                catalog de demo prin API, pe serverul local
 tests/
 ├── e2e.mjs                 suita API completă (local)          ┐
+├── achievements.mjs        catalog + recompensă unică + 301    │
 ├── dom-smoke.mjs           paginile în jsdom (local)           │
 ├── chat-persist.mjs        chatul supraviețuiește evicției DO  │
 ├── chat-d1.mjs             mesajul live ajunge chiar în tabelul D1
@@ -161,6 +163,11 @@ secretele repo-ului `CLOUDFLARE_API_TOKEN`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TO
 Dacă triggerul pornește de pe un branch, relay-ul trece explicit la `origin/main` înainte de deploy: producția
 primește numai codul integrat, iar output-ul este apoi comis înapoi pe branch-ul care a declanșat rularea.
 Deploy complet = `cmd.sh` apelează `./deploy.sh`.
+
+**Domeniu propriu (gratuit sau plătit):** nu se schimbă cod, doar două variabile în Pages —
+`CANONICAL_ORIGIN` (canonical/og/sitemap comută odată) și `FORCE_CANONICAL_REDIRECT=1` (301 din
+`pages.dev` către domeniu, fără să atingă API-ul). Opțiunile de domeniu gratuit „pe vecie", pașii
+exacți și checklist-ul de lansare sunt în [`LAUNCH.md`](LAUNCH.md).
 
 ### De ce există `worker-do/`
 
@@ -271,6 +278,27 @@ Tot cu buget zero — nicio cerere în plus pe prima pagină, nicio migrare nou�
 Costul măsurat (bench-scale, 1.000 serii / 1.000 utilizatori): prima pagină
 74 rânduri citite per vizită (era 64) — 414.904 rânduri/zi la 2.000 de vizite,
 adică ~8% din cota de 5M. Invocările rămân 2 per vizită.
+
+## Realizări (2026-11-08) — progresul pe termen lung
+
+Misiunile dau un motiv să revii **mâine**, nivelul crește singur — dar niciuna nu răspundea la
+„merită să continui săptămâna viitoare?". Realizările sunt acele praguri fixe, vizibile pe profil,
+care se deblochează **o singură dată** și rămân ca dovadă (migrarea `0031`).
+
+| Zonă | Detaliu |
+|---|---|
+| Catalogul | 14 realizări în `src/lib/achievements.js`, pe 4 trepte (bronz/argint/aur/legendă): primul episod, 10/50/100 episoade, primul comentariu, 25 de comentarii, prima recenzie, 10 cufere, 3 prieteni, 5 notări, 5 serii în watchlist, 7 zile de streak, nivel 10, prima achiziție |
+| Recompensa | **doar gold** (5…200), acordată o singură dată. XP-ul rămâne strict activitatea — altfel boost-ul ×2 ar dubla un trofeu unic |
+| Pe profil | grid de carduri (publice, apar și pe profilul altcuiva): card aprins pentru cele deblocate, bară de progres + cerință exactă pentru celelalte, contor „X / 14" și bara de completare |
+| În clopot | `notifyUser(..., 'achievement')` cu numele și recompensa; linkul duce la `/profile#progres` |
+| Imediat | răspunsurile care pot atinge un prag (`/api/progress`, `/api/chest`, `/api/comments`, `/api/reviews`, `/api/friends`) întorc `achievements: [...]`, iar pagina afișează toastul fără o cerere în plus |
+
+**Costul, măsurat pe design (nu pe noroc):** catalogul stă în cod (zero citiri, zero migrații pentru
+realizări noi), starea per utilizator e un singur `SELECT` pe cheia primară, iar toate contoarele se
+citesc într-un **singur batch** de ~11 interogări indexate. Evaluarea rulează pe evenimente de prag și
+când îți deschizi propriul profil — nu la fiecare request; `INSERT OR IGNORE` face a doua evaluare
+gratuită (0 rânduri scrise). Garanția că rămâne așa stă în `tests/achievements.mjs`: pe un D1 fals verifică faptul că recompensa
+nu se dublează și că, fără prag atins, **nu se scrie nimic**.
 
 ## Notificări de prietenie (2026-09-25)
 
@@ -551,6 +579,7 @@ retry, concurență, timeout, fallback, recompensă unică, cufere, topuri,
 | Vizionare | `POST /api/view`, `POST /api/progress`, `GET /api/continue`, `/api/watchlist`, `POST /api/subscribe` | logat |
 | Comunitate | `/api/comments`, `POST /api/comments/vote`, `/api/reviews`, `POST /api/ratings`, `POST /api/report`, `GET /api/leaderboard`, `GET /api/pulse`, `/api/friends`, `GET/POST /api/messages` | logat / public |
 | Economie | `GET /api/economy`, `/api/chest`, `/api/chests`, `/api/missions`, `GET /api/shop`, `POST /api/shop/buy|activate`, `/api/factions` | logat |
+| Realizări | `GET /api/achievements[?u=<username>]`, `GET /api/achievements/:username` | public („me" cere sesiune) |
 | Identitate | `GET /api/ranks`, `POST /api/me/theme`, `GET /api/profile/:username`, `PATCH /api/profile`, `/api/notifications*` | logat |
 | Admin | `/api/admin/stats|log|series|episodes|episode-sources|users|mods|rank-themes|reports` | admin |
 | Chat | `WS /chat` → `ChatDO` (`chat` global + `dm` privat între prieteni) | logat |
@@ -606,5 +635,6 @@ DELETE FROM chat_messages WHERE id NOT IN
 | ⚔️ **XP → Nivel** | toată activitatea (vizionare, comentarii, cufere, misiuni) | îți dă **gradul de nivel** vizibil (Genin → Hokage, după tema aleasă) — nu e grad de staff |
 | 🪙 **Gold** | cufăr (noroc, /4h) + misiuni zilnice (sigur) | shop: chei de cufăr, nume de aur, flair suporter |
 | 🎯 **Misiuni** | 3/zi, reset UTC: vezi un episod, comentează, deschide cufărul | gold + XP garantate pe fiecare |
+| 🏅 **Realizări** | 14 praguri pe termen lung (episoade, comentarii, recenzii, cufere, prieteni, streak, nivel) | gold, o singură dată; rămân pe profil ca dovadă |
 | 🔥 **Streak** | zile consecutive cu cel puțin o misiune | record personal, afișat pe profil |
 | 📊 **Activitate lunară** | aceleași acțiuni ca XP-ul, contor separat | bară pe profil; insigna „Utilizator activ" la 10.000 |

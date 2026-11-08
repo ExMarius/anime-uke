@@ -15,6 +15,7 @@ import { validatePositiveInt } from '../../lib/validate.js';
 import { addActivity } from '../../lib/xp.js';
 import { saveRating } from '../../lib/ratings.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
+import { evaluateAchievements } from '../../lib/achievements.js';
 
 const MAX_LEN = 2000;
 const MIN_LEN = 10;
@@ -126,11 +127,19 @@ export async function onRequestPost(context) {
   // +5 XP doar la prima nota, ca in spec — editarea recenziei nu farmeaza.
   if (!hadRating) await addActivity(env, user.id, 5);
 
+  // Realizările de recenzie/notare („Critic de anime”, „Juriu”).
+  let justUnlocked = [];
+  try {
+    justUnlocked = await evaluateAchievements(env, user.id);
+  } catch (e) {
+    console.error('evaluateAchievements (reviews) a eșuat:', e?.message || e);
+  }
 
   return json({
     success: true,
     created: !hadReview,
     average: agg.average,
     count: agg.count,
+    achievements: justUnlocked,
   }, { status: hadReview ? 200 : 201 });
 }
