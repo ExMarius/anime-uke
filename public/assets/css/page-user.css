@@ -449,3 +449,38 @@ a.quick__item:hover {
 .ptab { display: none; }
 .ptab.is-active { display: block; animation: ptab-in .18s ease; }
 @keyframes ptab-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* =====================================================================
+   REALIZĂRI (profil) — grid de carduri cu stare + progres.
+   Stă aici, nu în style.css: doar profile/shop încarcă fișierul ăsta, deci
+   paginile care nu afișează realizări (episod, admin, login) nu plătesc
+   pentru el. Bugetul de CSS e 22 KB gzip pe pagină și se măsoară per pagină.
+   ===================================================================== */
+.ach__head { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+.ach__count {
+  font-size: .74rem; font-weight: 800; text-transform: uppercase;
+  color: var(--dim); border: 1px solid var(--line-soft); border-radius: 999px; padding: .18rem .6rem;
+}
+.ach__bar { height: 7px; border-radius: 999px; overflow: hidden; margin: .55rem 0 .7rem; background: rgba(255,255,255,.07); }
+.ach__bar-fill { height: 100%; width: 0; border-radius: inherit; background: var(--grad); }
+.ach-grid { display: grid; gap: .65rem; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
+.ach-card {
+  display: flex; gap: .6rem; padding: .7rem .75rem; border-radius: var(--r-md);
+  border: 1px solid var(--line-soft); background: linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.ach-card__icon { font-size: 1.45rem; line-height: 1.1; filter: grayscale(1); opacity: .5; }
+.ach-card__body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .2rem; }
+.ach-card__top { display: flex; justify-content: space-between; gap: .35rem; }
+.ach-card__name { font-size: .88rem; font-weight: 800; line-height: 1.2; }
+.ach-card__tier { font-size: .6rem; font-weight: 800; text-transform: uppercase; color: var(--dim-2); }
+.ach-card__desc { font-size: .74rem; color: var(--dim); }
+.ach-card__bar { height: 4px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); }
+.ach-card__fill { height: 100%; width: 0; background: var(--accent); }
+.ach-card__meta { font-size: .68rem; color: var(--dim-2); }
+.ach-card__meta--done { color: var(--ok); font-weight: 700; }
+/* starea deblocată: iconiță colorată + chenar pe treaptă */
+.ach-card.is-unlocked .ach-card__icon { filter: none; opacity: 1; }
+.ach-card--bronze.is-unlocked { border-color: rgba(205,127,50,.45); }
+.ach-card--silver.is-unlocked { border-color: rgba(192,199,214,.45); }
+.ach-card--gold.is-unlocked { border-color: rgba(240,192,64,.5); }
+.ach-card--legend.is-unlocked { border-color: rgba(244,40,79,.6); box-shadow: 0 0 22px -8px var(--accent-glow); }

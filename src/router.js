@@ -33,6 +33,7 @@ import * as continueRoute from './routes/api/continue.js';
 import * as chestRoute from './routes/api/chest.js';
 import * as economyRoute from './routes/api/economy.js';
 import * as missionsRoute from './routes/api/missions.js';
+import * as achievementsRoute from './routes/api/achievements.js';
 import * as ranksRoute from './routes/api/ranks.js';
 import * as meThemeRoute from './routes/api/me-theme.js';
 import * as adminRankThemesRoute from './routes/api/admin/rank-themes.js';
@@ -93,6 +94,8 @@ const ROUTES = [
   { method: 'GET', path: '/api/continue', mod: continueRoute },
   { method: '*', path: '/api/chest', mod: chestRoute },
   { method: 'GET', path: '/api/economy', mod: economyRoute },
+  { method: 'GET', path: '/api/achievements', mod: achievementsRoute },
+  { method: 'GET', path: '/api/achievements/:username', mod: achievementsRoute },
   { method: 'GET', path: '/api/missions', mod: missionsRoute },
   { method: 'POST', path: '/api/missions', mod: missionsRoute },
   { method: 'GET', path: '/api/ranks', mod: ranksRoute },

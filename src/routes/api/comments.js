@@ -17,6 +17,7 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
 import { addRep } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
+import { evaluateAchievements } from '../../lib/achievements.js';
 import { identity, loadRankThemes } from '../../lib/ranks.js';
 
 const MAX_LEN = 2000;
@@ -140,7 +141,15 @@ export async function onRequestPost(context) {
   const cc = await env.DB.prepare('SELECT COUNT(*) AS n FROM episode_comments WHERE user_id = ?').bind(user.id).first();
   if ((cc?.n || 0) >= 25) await grantBadge(env, user.id, 'commenter_25');
 
-  return json({ success: true, id: ins.meta.last_row_id, parent_id: parentId }, { status: 201 });
+  // Realizările care depind de comentarii (prima părere, 25 de comentarii).
+  let justUnlocked = [];
+  try {
+    justUnlocked = await evaluateAchievements(env, user.id);
+  } catch (e) {
+    console.error('evaluateAchievements (comments) a eșuat:', e?.message || e);
+  }
+
+  return json({ success: true, id: ins.meta.last_row_id, parent_id: parentId, achievements: justUnlocked }, { status: 201 });
 }
 
 export async function onRequestDelete(context) {

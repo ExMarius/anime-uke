@@ -12,6 +12,13 @@ export const NOTIF_TYPES = {
   // — celălalt nu are nevoie de „știre" și ar fi zgomot în clopot.
   friend_request: { icon: '👥', text: (p) => `${p.username} ți-a trimis o cerere de prietenie` },
   friend_accepted: { icon: '🤝', text: (p) => `${p.username} ți-a acceptat cererea de prietenie` },
+  // Realizările se anunță în clopot, cu recompensa în text: altfel gold-ul
+  // pare că apare din senin. Linkul din notificare duce la profil (core.js).
+  achievement: {
+    icon: '🏅',
+    text: (p) => `Realizare deblocată: ${p.icon ? `${p.icon} ` : ''}${p.name}` +
+      [p.gold ? `+${p.gold} 🪙` : '', p.xp ? `+${p.xp} XP` : ''].filter(Boolean).map((x) => ` · ${x}`).join(''),
+  },
 };
 
 /**

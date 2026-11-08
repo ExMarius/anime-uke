@@ -2,6 +2,7 @@ import { json, errorResponse, isSameOrigin } from '../../lib/http.js';
 import { getSessionUser } from '../../lib/session.js';
 import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { notifyUser } from '../../lib/notify.js';
+import { evaluateAchievements } from '../../lib/achievements.js';
 
 // =====================================================================
 // /api/friends — sistem de prietenie
@@ -23,6 +24,19 @@ import { notifyUser } from '../../lib/notify.js';
 // notificare esuata nu pica actiunea — vezi src/lib/notify.js.
 //
 // =====================================================================
+
+/**
+ * Realizările nu au voie să strice prietenia: o eroare se loghează și
+ * răspunsul rămâne cel normal, cu lista goală.
+ */
+async function safeAchievements(env, userId) {
+  try {
+    return await evaluateAchievements(env, userId);
+  } catch (e) {
+    console.error('evaluateAchievements (friends) a eșuat:', e?.message || e);
+    return [];
+  }
+}
 
 function normalizeUsername(u) {
   return String(u || '').trim();
@@ -177,7 +191,8 @@ export async function onRequestPost(context) {
           // Cel care ceruse primul află că s-a făcut prietenie — nu știa că
           // celălalt tocmai a apăsat „adaugă” în locul lui.
           await notifyUser(env, other.id, 'friend_accepted', { username: me.username, user_id: me.id });
-          return json({ ok: true, status: 'friends', message: 'Cerere acceptată automat — erați deja invitați' });
+          const justUnlocked = await safeAchievements(env, me.id);
+          return json({ ok: true, status: 'friends', message: 'Cerere acceptată automat — erați deja invitați', achievements: justUnlocked });
         }
         if (st === 'blocked') return errorResponse(403, 'Nu poți trimite cerere');
         // daca a fost respinsa, permitem re-trimitere: stergem vechea intrare si cream noua
@@ -207,7 +222,8 @@ export async function onRequestPost(context) {
       ).bind(existing.id).run();
       // Cel care a cerut află că e acceptat — asta e „vestea bună".
       await notifyUser(env, existing.requester_id, 'friend_accepted', { username: me.username, user_id: me.id });
-      return json({ ok: true, status: 'friends' });
+      const justUnlocked = await safeAchievements(env, me.id);
+      return json({ ok: true, status: 'friends', achievements: justUnlocked });
     }
 
     if (action === 'reject') {

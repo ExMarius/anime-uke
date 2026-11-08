@@ -14,6 +14,7 @@ import { checkRateLimit, tooManyRequests } from '../../lib/ratelimit.js';
 import { addActivity, grantBadge } from '../../lib/xp.js';
 import { addRep, bonusFor } from '../../lib/factions.js';
 import { bumpMission, streakTouch } from '../../lib/missions.js';
+import { evaluateAchievements } from '../../lib/achievements.js';
 
 export const CHEST_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
@@ -124,6 +125,14 @@ export async function onRequestPost(context) {
 
   const me = await env.DB.prepare('SELECT gold FROM users WHERE id = ?').bind(user.id).first();
 
+  // Realizările atinse prin cufăr (10 deschideri) se anunță în același răspuns.
+  let justUnlocked = [];
+  try {
+    justUnlocked = await evaluateAchievements(env, user.id);
+  } catch (e) {
+    console.error('evaluateAchievements (chest) a eșuat:', e?.message || e);
+  }
+
   return json({
     success: true,
     used_key: usedKey,
@@ -132,5 +141,6 @@ export async function onRequestPost(context) {
     text: chosen.text.replace('{amount}', String(amount)),
     gold: me?.gold || 0,
     chest: after,
+    achievements: justUnlocked,
   });
 }
